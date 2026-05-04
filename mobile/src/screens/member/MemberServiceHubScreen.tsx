@@ -12,7 +12,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -188,6 +187,16 @@ function findSlotInBucket(
   day: Date,
   bucketHour: number,
 ): SlotRow | null {
+  const dayStart = startOfLocalDay(day);
+  const windowStart = new Date(dayStart);
+  windowStart.setHours(bucketHour, 0, 0, 0);
+  const windowEnd = new Date(dayStart);
+  windowEnd.setHours(bucketHour + 1, 0, 0, 0);
+  const w0 = windowStart.getTime();
+  const w1 = windowEnd.getTime();
+
+  let best: SlotRow | null = null;
+  let bestT = Infinity;
   for (const s of rows) {
     if (s.trainerId !== trainerId) {
       continue;
@@ -196,11 +205,15 @@ function findSlotInBucket(
     if (!sameLocalCalendarDay(st, day)) {
       continue;
     }
-    if (st.getHours() === bucketHour) {
-      return s;
+    const t0 = st.getTime();
+    if (t0 >= w0 && t0 < w1) {
+      if (t0 < bestT) {
+        bestT = t0;
+        best = s;
+      }
     }
   }
-  return null;
+  return best;
 }
 
 function formatHourBucketLabel(startHour: number): string {
@@ -344,7 +357,12 @@ export function MemberServiceHubScreen({ mode }: Props) {
           tenantSubdomain: tenant.subdomain,
         });
         setSlots(rows);
-        setSelectedSlotId(null);
+        setSelectedSlotId((prev) => {
+          if (!prev) {
+            return null;
+          }
+          return rows.some((s) => s.id === prev) ? prev : null;
+        });
       } catch (e) {
         Alert.alert(
           t('alerts.availability'),
@@ -424,6 +442,19 @@ export function MemberServiceHubScreen({ mode }: Props) {
     }
     setCalendarDayIndex(0);
   }, [calendarTrainer, sixDayPage]);
+
+  /** Ensure a package is selected when the booking modal is open (footer CTA needs it). */
+  useEffect(() => {
+    if (!calendarTrainer || filteredPackages.length === 0) {
+      return;
+    }
+    setSelectedPackageId((prev) => {
+      if (prev && filteredPackages.some((p) => p.id === prev)) {
+        return prev;
+      }
+      return filteredPackages[0]?.id ?? null;
+    });
+  }, [calendarTrainer, filteredPackages]);
 
   const upcomingRes = useMemo(() => {
     const now = Date.now();
@@ -956,8 +987,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
             {calendarTrainer ? (
               <>
                 <ScrollView
-                  keyboardShouldPersistTaps="handled"
+                  keyboardShouldPersistTaps="always"
                   nestedScrollEnabled
+                  removeClippedSubviews={false}
                   showsVerticalScrollIndicator={false}
                   style={{ maxHeight: windowHeight * 0.58 }}
                   contentContainerStyle={styles.calendarScrollContent}
@@ -1132,16 +1164,23 @@ export function MemberServiceHubScreen({ mode }: Props) {
                         );
                         if (canBook && slot) {
                           return (
-                            <TouchableOpacity
+                            <Pressable
                               key={`hour-${h}`}
                               accessibilityRole="button"
                               accessibilityState={{ selected: sel }}
-                              activeOpacity={0.82}
+                              hitSlop={6}
+                              delayPressIn={0}
+                              {...(Platform.OS === 'android'
+                                ? { android_ripple: { color: 'rgba(255,255,255,0.18)' } }
+                                : {})}
+                              style={({ pressed }) => [
+                                ...cardStyle,
+                                pressed ? styles.hourCardPressed : null,
+                              ]}
                               onPress={() => setSelectedSlotId(slot.id)}
-                              style={cardStyle}
                             >
                               {inner}
-                            </TouchableOpacity>
+                            </Pressable>
                           );
                         }
                         return (
@@ -1774,6 +1813,10 @@ const styles = StyleSheet.create({
   },
   hourCardMuted: {
     opacity: 0.55,
+  },
+  hourCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.992 }],
   },
   hourCardPast: {
     borderColor: 'rgba(148,163,184,0.35)',

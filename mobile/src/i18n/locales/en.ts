@@ -266,7 +266,7 @@ export default {
     noPast: 'No past sessions to show.',
     viewProfile: 'Profile',
     profileClose: 'Close',
-    profilePick: 'Load calendar',
+    profilePick: 'View calendar',
     noBio: 'No biography added yet.',
     memberSince: 'With the club since {{date}}',
     ratingDisclaimer: 'Ratings reflect completed reviews and are for reference only.',
@@ -278,7 +278,7 @@ export default {
     slotGone: 'That time may be full or no longer available. Refresh and pick another slot.',
     pt: {
       screenTitle: 'Personal training',
-      screenSub: 'Open a trainer profile and tap Load calendar for weekly slots and booking.',
+      screenSub: 'Open a trainer profile and tap View calendar for availability and booking.',
       staffTitle: 'Trainers',
       staffEmpty: 'No trainers yet. They will appear when your club adds them.',
       pickStaffFirst: 'Select a trainer card first.',
@@ -288,7 +288,7 @@ export default {
     },
     massage: {
       screenTitle: 'Massage',
-      screenSub: 'Open a profile and tap Load calendar for weekly slots and booking.',
+      screenSub: 'Open a profile and tap View calendar for availability and booking.',
       staffTitle: 'Massage therapists',
       staffEmpty: 'No massage therapists listed yet. They will appear when your club adds them.',
       pickStaffFirst: 'Select a therapist card first.',

@@ -266,7 +266,7 @@ export default {
     noPast: 'Geçmiş kayıt görünmüyor.',
     viewProfile: 'Profil',
     profileClose: 'Kapat',
-    profilePick: 'Takvimi yükle',
+    profilePick: 'Takvimi Gör',
     noBio: 'Biyografi henüz eklenmemiş.',
     memberSince: 'Kulüpte: {{date}}',
     ratingDisclaimer: 'Puan, tamamlanan değerlendirmelere dayanır ve bilgi amaçlıdır.',
@@ -278,8 +278,7 @@ export default {
     slotGone: 'Bu saat dolmuş veya iptal edilmiş olabilir. Listeyi yenileyip başka bir slot seçin.',
     pt: {
       screenTitle: 'Özel dersler',
-      screenSub:
-        'Antrenör kartından profile girip Takvimi yükle ile haftalık müsaitlik ve rezervasyon.',
+      screenSub: 'Antrenör kartından profile girip Takvimi Gör ile müsaitlik ve rezervasyon.',
       staffTitle: 'Antrenörler',
       staffEmpty: 'Kayıtlı antrenör görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
       pickStaffFirst: 'Önce antrenör kartından birini seçin.',
@@ -290,8 +289,7 @@ export default {
     },
     massage: {
       screenTitle: 'Masaj',
-      screenSub:
-        'Masöz kartından profile girip Takvimi yükle ile haftalık müsaitlik ve rezervasyon.',
+      screenSub: 'Masöz kartından profile girip Takvimi Gör ile müsaitlik ve rezervasyon.',
       staffTitle: 'Masözler',
       staffEmpty: 'Kayıtlı masöz görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
       pickStaffFirst: 'Önce masöz kartından birini seçin.',
