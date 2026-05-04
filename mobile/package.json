@@ -16,7 +16,7 @@
     "@react-navigation/native-stack": "^7.14.12",
     "@rezidans-fitness/shared": "file:../shared",
     "i18next": "^26.0.8",
-    "react": "19.2.3",
+    "react": "^19.2.5",
     "react-i18next": "^17.0.6",
     "react-native": "0.85.2",
     "react-native-gesture-handler": "^2.31.2",
@@ -37,12 +37,12 @@
     "@react-native/metro-config": "0.85.2",
     "@react-native/typescript-config": "0.85.2",
     "@types/jest": "^29.5.13",
-    "@types/react": "^19.2.3",
+    "@types/react": "^19.2.14",
     "@types/react-test-renderer": "^19.1.0",
     "eslint": "^8.19.0",
     "jest": "^29.6.3",
     "prettier": "^3.4.2",
-    "react-test-renderer": "19.2.3",
+    "react-test-renderer": "^19.2.5",
     "typescript": "^5.8.3"
   },
   "engines": {

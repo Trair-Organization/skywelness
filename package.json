@@ -35,11 +35,6 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.4.2"
   },
-  "overrides": {
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-test-renderer": "19.2.3"
-  },
   "engines": {
     "node": ">=20"
   }
