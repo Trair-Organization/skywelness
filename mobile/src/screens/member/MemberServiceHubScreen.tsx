@@ -282,6 +282,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [requestNote, setRequestNote] = useState('');
   const [requestSending, setRequestSending] = useState(false);
   const [packageRequestOpen, setPackageRequestOpen] = useState(false);
+  const [packageRequestTrainerId, setPackageRequestTrainerId] = useState<string | null>(null);
+  const [trainerRequestPickerOpen, setTrainerRequestPickerOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [iosPickerValue, setIosPickerValue] = useState(() => new Date());
@@ -290,6 +292,14 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const prefix = mode === 'personal_training' ? 'serviceHub.pt' : 'serviceHub.massage';
 
   const credits = useMemo(() => sumRemainingForType(packages, mode), [packages, mode]);
+
+  const packageRequestTrainerLabel = useMemo(() => {
+    if (!packageRequestTrainerId) {
+      return null;
+    }
+    const tr = trainers.find((row) => row.id === packageRequestTrainerId);
+    return tr ? `${tr.user.firstName} ${tr.user.lastName}`.trim() : null;
+  }, [trainers, packageRequestTrainerId]);
 
   const filteredPackages = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -456,6 +466,13 @@ export function MemberServiceHubScreen({ mode }: Props) {
     });
   }, [calendarTrainer, filteredPackages]);
 
+  useEffect(() => {
+    if (!packageRequestOpen) {
+      setPackageRequestTrainerId(null);
+      setTrainerRequestPickerOpen(false);
+    }
+  }, [packageRequestOpen]);
+
   const upcomingRes = useMemo(() => {
     const now = Date.now();
     return reservations.filter(
@@ -561,6 +578,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
         body: JSON.stringify({
           sessionType: mode,
           message: requestNote.trim() || undefined,
+          preferredTrainerId: packageRequestTrainerId ?? undefined,
         }),
       });
       setRequestNote('');
@@ -574,7 +592,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
     } finally {
       setRequestSending(false);
     }
-  }, [token, tenant, requestNote, mode, t, prefix]);
+  }, [token, tenant, requestNote, mode, t, prefix, packageRequestTrainerId]);
 
   const cancelReservation = useCallback(
     async (id: string) => {
@@ -1422,6 +1440,39 @@ export function MemberServiceHubScreen({ mode }: Props) {
               </View>
             ) : null}
             <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
+              {trainers.length > 0 ? (
+                <View style={styles.requestTrainerBlock}>
+                  <Text style={styles.requestTrainerFieldLabel}>
+                    {mode === 'massage'
+                      ? t('serviceHub.requestPickTrainerLabelMassage')
+                      : t('serviceHub.requestPickTrainerLabelPt')}
+                  </Text>
+                  <Text style={styles.requestTrainerFieldHint}>
+                    {t('serviceHub.requestPickTrainerHint')}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setTrainerRequestPickerOpen(true)}
+                    style={({ pressed }) => [
+                      styles.requestTrainerField,
+                      pressed && styles.requestTrainerFieldPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.requestTrainerFieldValue,
+                        !packageRequestTrainerLabel && styles.requestTrainerFieldPlaceholder,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {packageRequestTrainerLabel ?? t('serviceHub.requestPickTrainerPlaceholder')}
+                    </Text>
+                    <Text style={styles.requestTrainerChevron}>▾</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Text style={styles.muted}>{t('serviceHub.requestNoTrainersForPicker')}</Text>
+              )}
               <Text style={styles.muted}>{t(`${prefix}.requestHint`)}</Text>
               <TextInput
                 value={requestNote}
@@ -1448,6 +1499,67 @@ export function MemberServiceHubScreen({ mode }: Props) {
             </ScrollView>
           </View>
         </Pressable>
+      </Modal>
+
+      <Modal
+        visible={trainerRequestPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTrainerRequestPickerOpen(false)}
+      >
+        <View style={styles.trainerPickerBackdrop}>
+          <Pressable
+            style={styles.trainerPickerDismiss}
+            onPress={() => setTrainerRequestPickerOpen(false)}
+          />
+          <View style={styles.trainerPickerSheet}>
+            <Text style={styles.trainerPickerTitle}>
+              {t('serviceHub.requestPickTrainerSheetTitle')}
+            </Text>
+            <ScrollView
+              keyboardShouldPersistTaps="always"
+              style={styles.trainerPickerList}
+              showsVerticalScrollIndicator={false}
+            >
+              <Pressable
+                style={({ pressed }) => [
+                  styles.trainerPickerRow,
+                  pressed && styles.trainerPickerRowPressed,
+                ]}
+                onPress={() => {
+                  setPackageRequestTrainerId(null);
+                  setTrainerRequestPickerOpen(false);
+                }}
+              >
+                <Text style={styles.trainerPickerRowTxt}>
+                  {t('serviceHub.requestPickTrainerNone')}
+                </Text>
+              </Pressable>
+              {trainers.map((tr) => {
+                const name = `${tr.user.firstName} ${tr.user.lastName}`.trim();
+                const sel = tr.id === packageRequestTrainerId;
+                return (
+                  <Pressable
+                    key={tr.id}
+                    style={({ pressed }) => [
+                      styles.trainerPickerRow,
+                      sel && styles.trainerPickerRowOn,
+                      pressed && styles.trainerPickerRowPressed,
+                    ]}
+                    onPress={() => {
+                      setPackageRequestTrainerId(tr.id);
+                      setTrainerRequestPickerOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.trainerPickerRowTxt, sel && styles.trainerPickerRowTxtOn]}>
+                      {name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
     </GradientBackground>
   );
@@ -2210,6 +2322,106 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: premium.textMuted,
     lineHeight: 32,
+  },
+  requestTrainerBlock: {
+    marginBottom: 12,
+  },
+  requestTrainerFieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  requestTrainerFieldHint: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: premium.textMuted,
+    marginBottom: 8,
+  },
+  requestTrainerField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    gap: 8,
+  },
+  requestTrainerFieldPressed: {
+    opacity: 0.88,
+  },
+  requestTrainerFieldValue: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 15,
+    fontWeight: '600',
+    color: premium.text,
+  },
+  requestTrainerFieldPlaceholder: {
+    color: premium.textMuted,
+    fontWeight: '500',
+  },
+  requestTrainerChevron: {
+    fontSize: 14,
+    color: premium.accentGreen,
+  },
+  trainerPickerBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  trainerPickerDismiss: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 0,
+  },
+  trainerPickerSheet: {
+    zIndex: 2,
+    elevation: 16,
+    maxHeight: '72%',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingBottom: 24,
+    paddingTop: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  trainerPickerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 10,
+  },
+  trainerPickerList: {
+    maxHeight: 420,
+  },
+  trainerPickerRow: {
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: premium.glassBorder,
+  },
+  trainerPickerRowOn: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#38bdf8',
+    paddingLeft: 9,
+  },
+  trainerPickerRowPressed: {
+    opacity: 0.85,
+  },
+  trainerPickerRowTxt: {
+    fontSize: 16,
+    color: premium.text,
+    fontWeight: '600',
+  },
+  trainerPickerRowTxtOn: {
+    color: '#7dd3fc',
   },
   btnOutline: {
     paddingVertical: 12,

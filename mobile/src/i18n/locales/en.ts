@@ -253,6 +253,15 @@ export default {
       'You picked a time, but no remaining sessions are available for this service. You cannot complete the booking yet. Contact the club if needed.',
     noRightsOpenRequest: 'Request a package',
     noRightsAlertClose: 'OK',
+    requestPickTrainerLabelPt: 'Preferred trainer',
+    requestPickTrainerLabelMassage: 'Preferred therapist',
+    requestPickTrainerHint:
+      'Your request goes to the club; this preference is informational until staff confirms.',
+    requestPickTrainerPlaceholder: 'Tap to choose (optional)',
+    requestPickTrainerNone: 'No preference',
+    requestPickTrainerSheetTitle: 'Choose staff',
+    requestNoTrainersForPicker:
+      'No staff listed for this service yet; you can still send your message below.',
     requestSend: 'Send request',
     requestOk: 'Your request was saved. The club will contact you soon.',
     requestFail: 'Could not send the request. Check your connection and try again.',

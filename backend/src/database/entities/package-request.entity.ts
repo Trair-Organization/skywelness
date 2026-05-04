@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
+import { Trainer } from './trainer.entity';
 import { User } from './user.entity';
 
 @Entity({ name: 'package_request' })
@@ -33,6 +34,13 @@ export class PackageRequest {
 
   @Column({ type: 'text', nullable: true })
   message!: string | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'preferred_trainer_id' })
+  preferredTrainerId!: string | null;
+
+  @ManyToOne(() => Trainer, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'preferred_trainer_id' })
+  preferredTrainer!: Trainer | null;
 
   @Column({ type: 'varchar', length: 24, default: 'pending' })
   status!: string;

@@ -188,15 +188,21 @@ export class MailService {
     clubName: string;
     sessionType: SessionType;
     messagePreview: string | null;
+    preferredTrainerSummary?: string | null;
   }): Promise<void> {
     const kind = this.sessionTypeLabel(params.sessionType);
     const subject = `${params.clubName} — Paket talebiniz alındı`;
     const extra = params.messagePreview
       ? `<p style="margin:12px 0 0;padding:12px 14px;background:rgba(15,23,42,0.5);border-radius:8px;font-size:14px;color:#cbd5e1;">${escapeHtml(params.messagePreview)}</p>`
       : '';
+    const trainerLine =
+      params.preferredTrainerSummary && params.preferredTrainerSummary.length > 0
+        ? `<p style="margin:0 0 16px;font-size:14px;color:#e2e8f0;">Tercih ettiğiniz ekip üyesi: <strong style="color:#f8fafc;">${escapeHtml(params.preferredTrainerSummary)}</strong> (talep notu; kesin atama resepsiyon onayına bağlıdır).</p>`
+        : '';
     const inner = `
 <p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.memberFirstName)},</p>
 <p style="margin:0 0 16px;">${escapeHtml(kind)} paket talebiniz kulübe iletildi. Resepsiyon veya satış ekibi onayladığında bilgilendirileceksiniz.</p>
+${trainerLine}
 ${extra}
 <p style="margin:16px 0 0;font-size:13px;color:#94a3b8;">Bu e-posta otomatik gönderilmiştir.</p>`;
     const html = emailShell({
@@ -209,6 +215,7 @@ ${extra}
       `Merhaba ${params.memberFirstName},`,
       ``,
       `${kind} paket talebiniz kulübe iletildi.`,
+      params.preferredTrainerSummary ? `Tercih (bilgi): ${params.preferredTrainerSummary}` : '',
       params.messagePreview ?? '',
       ``,
       params.clubName,
@@ -224,18 +231,24 @@ ${extra}
     sessionType: SessionType;
     messagePreview: string | null;
     requestId: string;
+    preferredTrainerSummary?: string | null;
   }): Promise<void> {
     const kind = this.sessionTypeLabel(params.sessionType);
     const subject = `[${params.clubName}] Yeni paket talebi — ${kind}`;
     const msg = params.messagePreview
       ? escapeHtml(params.messagePreview)
       : '<span style="color:#64748b;">(mesaj yok)</span>';
+    const trainerLine =
+      params.preferredTrainerSummary && params.preferredTrainerSummary.length > 0
+        ? `<p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Üye tercihi (eğitmen/terapist):</strong> ${escapeHtml(params.preferredTrainerSummary)}</p>`
+        : '';
     const inner = `
 <p style="margin:0 0 12px;font-size:14px;color:#94a3b8;">Salon panelinden talebi inceleyin.</p>
 <div style="margin:16px 0;padding:16px 18px;background:rgba(15,23,42,0.6);border-radius:12px;border:1px solid rgba(148,163,184,0.2);">
   <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Üye:</strong> ${escapeHtml(params.memberName)}</p>
   <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">E-posta:</strong> ${escapeHtml(params.memberEmail)}</p>
   <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Tür:</strong> ${escapeHtml(kind)}</p>
+  ${trainerLine}
   <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Talep no:</strong> <code style="font-size:13px;color:#fcd34d;">${escapeHtml(params.requestId)}</code></p>
   <p style="margin:12px 0 0;font-size:14px;color:#cbd5e1;">${msg}</p>
 </div>`;
@@ -252,6 +265,7 @@ ${extra}
       `Talep: ${params.requestId}`,
       `Üye: ${params.memberName} <${params.memberEmail}>`,
       `Tür: ${kind}`,
+      params.preferredTrainerSummary ? `Üye tercihi: ${params.preferredTrainerSummary}` : '',
       params.messagePreview ?? '',
     ].join('\n');
     await this.send({ to: params.to, subject, html, text });

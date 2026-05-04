@@ -254,6 +254,15 @@ export default {
       'Bir saat seçtiniz ancak bu hizmet için kullanılabilir seans hakkınız görünmüyor; rezervasyon tamamlanamaz. Paket tanımlandığında tekrar deneyebilir veya kulüp ile iletişime geçebilirsiniz.',
     noRightsOpenRequest: 'Paket talebi',
     noRightsAlertClose: 'Tamam',
+    requestPickTrainerLabelPt: 'Tercih edilen eğitmen',
+    requestPickTrainerLabelMassage: 'Tercih edilen terapist',
+    requestPickTrainerHint:
+      'Talebiniz resepsiyon ve satışa gider; tercih bilgi amaçlıdır, kesin atama kulüp onayına bağlıdır.',
+    requestPickTrainerPlaceholder: 'Listeden seçin (isteğe bağlı)',
+    requestPickTrainerNone: 'Tercih belirtmek istemiyorum',
+    requestPickTrainerSheetTitle: 'Ekip listesi',
+    requestNoTrainersForPicker:
+      'Bu hizmet için listelenen ekip üyesi yok; mesajınızı yazarak talebinizi iletebilirsiniz.',
     requestSend: 'Talebi gönder',
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',

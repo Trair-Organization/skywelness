@@ -121,11 +121,32 @@ export class BookingService {
     }
     const sessionTypeEnum =
       dto.sessionType === 'personal_training' ? SessionType.PERSONAL_TRAINING : SessionType.MASSAGE;
+    const sessionKey = dto.sessionType === 'personal_training' ? 'personal_training' : 'massage';
+
+    let preferredTrainerId: string | null = null;
+    let preferredTrainerSummary: string | null = null;
+    if (dto.preferredTrainerId) {
+      const tr = await this.trainersRepo.findOne({
+        where: { id: dto.preferredTrainerId, tenantId: user.tenantId },
+        relations: { user: true },
+      });
+      if (!tr) {
+        throw new BadRequestException('Trainer not found');
+      }
+      if (!Array.isArray(tr.offersSessionTypes) || !tr.offersSessionTypes.includes(sessionKey)) {
+        throw new BadRequestException('Trainer does not offer this session type');
+      }
+      preferredTrainerId = tr.id;
+      preferredTrainerSummary =
+        `${tr.user.firstName ?? ''} ${tr.user.lastName ?? ''}`.trim() || null;
+    }
+
     const row = this.packageRequestsRepo.create({
       userId: user.id,
       tenantId: user.tenantId,
       sessionType: sessionTypeEnum,
       message: dto.message?.trim() ? dto.message.trim() : null,
+      preferredTrainerId,
       status: 'pending',
     });
     await this.packageRequestsRepo.save(row);
@@ -182,6 +203,7 @@ export class BookingService {
         clubName,
         sessionType: sessionTypeEnum,
         messagePreview: msgPreview,
+        preferredTrainerSummary,
       })
       .catch((cause: unknown) => {
         const msg = cause instanceof Error ? cause.message : String(cause);
@@ -203,6 +225,7 @@ export class BookingService {
           sessionType: sessionTypeEnum,
           messagePreview: msgPreview,
           requestId: row.id,
+          preferredTrainerSummary,
         })
         .catch((cause: unknown) => {
           const msg = cause instanceof Error ? cause.message : String(cause);

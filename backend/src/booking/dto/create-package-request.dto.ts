@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 const REQ_SESSION = ['personal_training', 'massage'] as const;
 
@@ -10,4 +10,8 @@ export class CreatePackageRequestDto {
   @IsString()
   @MaxLength(2000)
   message?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  preferredTrainerId?: string;
 }
