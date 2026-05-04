@@ -1,0 +1,259 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
+import { SessionType } from '../database/enums';
+import { emailShell, escapeHtml, formatDateRange } from './mail-templates';
+
+type SessionTypeKey = 'personal_training' | 'massage';
+
+function pickResendMessageId(data: unknown): string {
+  if (data && typeof data === 'object' && 'id' in data) {
+    const id = (data as Record<string, unknown>).id;
+    if (typeof id === 'string') {
+      return id;
+    }
+  }
+  return 'ok';
+}
+
+@Injectable()
+export class MailService {
+  private readonly logger = new Logger(MailService.name);
+  private readonly resend: Resend | null;
+  private readonly fromAddress: string;
+  private readonly replyTo: string | undefined;
+  private readonly locale: string;
+  private readonly timeZone: string;
+
+  constructor(private readonly config: ConfigService) {
+    const key = config.get<string>('RESEND_API_KEY')?.trim();
+    this.resend = key ? new Resend(key) : null;
+    this.fromAddress =
+      config.get<string>('MAIL_FROM')?.trim() || 'Sky Wellness <onboarding@resend.dev>';
+    const rt = config.get<string>('MAIL_REPLY_TO')?.trim();
+    this.replyTo = rt || undefined;
+    this.locale = config.get<string>('MAIL_LOCALE')?.trim() || 'tr-TR';
+    this.timeZone = config.get<string>('MAIL_TIMEZONE')?.trim() || 'Europe/Istanbul';
+    if (!this.resend) {
+      this.logger.warn('RESEND_API_KEY is not set; transactional emails are disabled.');
+    }
+  }
+
+  isConfigured(): boolean {
+    return this.resend !== null;
+  }
+
+  private async send(params: {
+    to: string[];
+    subject: string;
+    html: string;
+    text: string;
+  }): Promise<void> {
+    if (!this.resend) {
+      return;
+    }
+    const recipients = params.to.filter(Boolean);
+    if (recipients.length === 0) {
+      return;
+    }
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: this.fromAddress,
+        to: recipients,
+        subject: params.subject,
+        html: params.html,
+        text: params.text,
+        ...(this.replyTo ? { replyTo: this.replyTo } : {}),
+      });
+      if (error) {
+        this.logger.error(`Resend API error: ${JSON.stringify(error)}`);
+        return;
+      }
+      this.logger.log(`Email queued: ${pickResendMessageId(data)} → ${recipients.join(', ')}`);
+    } catch (cause: unknown) {
+      const msg = cause instanceof Error ? cause.message : String(cause);
+      this.logger.error(`Failed to send email via Resend: ${msg}`);
+    }
+  }
+
+  private sessionTypeKey(st: SessionType): SessionTypeKey {
+    return st === SessionType.MASSAGE ? 'massage' : 'personal_training';
+  }
+
+  private sessionTypeLabel(type: SessionType): string {
+    return this.sessionTypeKey(type) === 'massage' ? 'Masaj' : 'Özel ders';
+  }
+
+  async sendReservationConfirmed(params: {
+    to: string;
+    memberFirstName: string;
+    clubName: string;
+    trainerName: string;
+    sessionType: SessionType;
+    startTime: Date;
+    endTime: Date;
+    packageTypeName: string;
+    remainingSessions: number;
+  }): Promise<void> {
+    const { dateLine, timeLine } = formatDateRange(
+      params.startTime,
+      params.endTime,
+      this.locale,
+      this.timeZone,
+    );
+    const kind = this.sessionTypeLabel(params.sessionType);
+    const subject = `${params.clubName} — Rezervasyonunuz onaylandı`;
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.memberFirstName)},</p>
+<p style="margin:0 0 16px;">Seans rezervasyonunuz oluşturuldu.</p>
+<div style="margin:20px 0;padding:16px 18px;background:rgba(15,23,42,0.6);border-radius:12px;border:1px solid rgba(148,163,184,0.2);">
+  <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${escapeHtml(kind)}</p>
+  <p style="margin:0 0 4px;font-weight:700;color:#f8fafc;">${escapeHtml(params.trainerName)}</p>
+  <p style="margin:8px 0 0;color:#cbd5e1;">${escapeHtml(dateLine)}</p>
+  <p style="margin:4px 0 0;color:#fcd34d;font-weight:700;">${escapeHtml(timeLine)}</p>
+  <p style="margin:12px 0 0;font-size:14px;color:#94a3b8;">Paket: ${escapeHtml(params.packageTypeName)}</p>
+  <p style="margin:6px 0 0;font-size:14px;color:#94a3b8;">Kalan seans: <strong style="color:#e2e8f0;">${params.remainingSessions}</strong></p>
+</div>
+<p style="margin:0;font-size:13px;color:#94a3b8;">İptal ve kurallar için uygulamanızı veya kulübünüzü kullanın.</p>`;
+    const html = emailShell({
+      title: 'Rezervasyon onaylandı',
+      previewText: `${kind} ${dateLine}`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.memberFirstName},`,
+      ``,
+      `Rezervasyonunuz onaylandı.`,
+      `${kind} — ${params.trainerName}`,
+      `${dateLine} ${timeLine}`,
+      `Paket: ${params.packageTypeName}`,
+      `Kalan seans: ${params.remainingSessions}`,
+      ``,
+      params.clubName,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
+  async sendReservationCancelled(params: {
+    to: string;
+    memberFirstName: string;
+    clubName: string;
+    trainerName: string;
+    sessionType: SessionType;
+    startTime: Date;
+    endTime: Date;
+    remainingSessions: number;
+  }): Promise<void> {
+    const { dateLine, timeLine } = formatDateRange(
+      params.startTime,
+      params.endTime,
+      this.locale,
+      this.timeZone,
+    );
+    const kind = this.sessionTypeLabel(params.sessionType);
+    const subject = `${params.clubName} — Rezervasyon iptal edildi`;
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.memberFirstName)},</p>
+<p style="margin:0 0 16px;">Aşağıdaki seans rezervasyonunuz iptal edildi. Paketinize seans hakkı iade edildi.</p>
+<div style="margin:20px 0;padding:16px 18px;background:rgba(15,23,42,0.6);border-radius:12px;border:1px solid rgba(148,163,184,0.2);">
+  <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${escapeHtml(kind)}</p>
+  <p style="margin:0 0 4px;font-weight:700;color:#f8fafc;">${escapeHtml(params.trainerName)}</p>
+  <p style="margin:8px 0 0;color:#cbd5e1;">${escapeHtml(dateLine)}</p>
+  <p style="margin:4px 0 0;color:#fcd34d;font-weight:700;">${escapeHtml(timeLine)}</p>
+  <p style="margin:12px 0 0;font-size:14px;color:#94a3b8;">Güncel kalan seans: <strong style="color:#e2e8f0;">${params.remainingSessions}</strong></p>
+</div>`;
+    const html = emailShell({
+      title: 'Rezervasyon iptal edildi',
+      previewText: `İptal: ${kind} ${dateLine}`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.memberFirstName},`,
+      ``,
+      `Rezervasyon iptal edildi; seans hakkı iade edildi.`,
+      `${kind} — ${params.trainerName}`,
+      `${dateLine} ${timeLine}`,
+      `Kalan seans: ${params.remainingSessions}`,
+      ``,
+      params.clubName,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
+  async sendPackageRequestMemberAck(params: {
+    to: string;
+    memberFirstName: string;
+    clubName: string;
+    sessionType: SessionType;
+    messagePreview: string | null;
+  }): Promise<void> {
+    const kind = this.sessionTypeLabel(params.sessionType);
+    const subject = `${params.clubName} — Paket talebiniz alındı`;
+    const extra = params.messagePreview
+      ? `<p style="margin:12px 0 0;padding:12px 14px;background:rgba(15,23,42,0.5);border-radius:8px;font-size:14px;color:#cbd5e1;">${escapeHtml(params.messagePreview)}</p>`
+      : '';
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.memberFirstName)},</p>
+<p style="margin:0 0 16px;">${escapeHtml(kind)} paket talebiniz kulübe iletildi. Resepsiyon veya satış ekibi onayladığında bilgilendirileceksiniz.</p>
+${extra}
+<p style="margin:16px 0 0;font-size:13px;color:#94a3b8;">Bu e-posta otomatik gönderilmiştir.</p>`;
+    const html = emailShell({
+      title: 'Talebiniz alındı',
+      previewText: `${kind} paket talebi`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.memberFirstName},`,
+      ``,
+      `${kind} paket talebiniz kulübe iletildi.`,
+      params.messagePreview ?? '',
+      ``,
+      params.clubName,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
+  async sendPackageRequestStaffAlert(params: {
+    to: string[];
+    clubName: string;
+    memberName: string;
+    memberEmail: string;
+    sessionType: SessionType;
+    messagePreview: string | null;
+    requestId: string;
+  }): Promise<void> {
+    const kind = this.sessionTypeLabel(params.sessionType);
+    const subject = `[${params.clubName}] Yeni paket talebi — ${kind}`;
+    const msg = params.messagePreview
+      ? escapeHtml(params.messagePreview)
+      : '<span style="color:#64748b;">(mesaj yok)</span>';
+    const inner = `
+<p style="margin:0 0 12px;font-size:14px;color:#94a3b8;">Salon panelinden talebi inceleyin.</p>
+<div style="margin:16px 0;padding:16px 18px;background:rgba(15,23,42,0.6);border-radius:12px;border:1px solid rgba(148,163,184,0.2);">
+  <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Üye:</strong> ${escapeHtml(params.memberName)}</p>
+  <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">E-posta:</strong> ${escapeHtml(params.memberEmail)}</p>
+  <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Tür:</strong> ${escapeHtml(kind)}</p>
+  <p style="margin:0 0 8px;"><strong style="color:#f8fafc;">Talep no:</strong> <code style="font-size:13px;color:#fcd34d;">${escapeHtml(params.requestId)}</code></p>
+  <p style="margin:12px 0 0;font-size:14px;color:#cbd5e1;">${msg}</p>
+</div>`;
+    const html = emailShell({
+      title: 'Yeni paket talebi',
+      previewText: `${params.memberName} — ${kind}`,
+      innerHtml: inner,
+      clubName: params.clubName,
+      footerNote:
+        'Onay veya red işlemini tamamladığınızda üyeye uygulama bildirimi göndermeyi unutmayın.',
+    });
+    const text = [
+      `Yeni paket talebi (${params.clubName})`,
+      `Talep: ${params.requestId}`,
+      `Üye: ${params.memberName} <${params.memberEmail}>`,
+      `Tür: ${kind}`,
+      params.messagePreview ?? '',
+    ].join('\n');
+    await this.send({ to: params.to, subject, html, text });
+  }
+}

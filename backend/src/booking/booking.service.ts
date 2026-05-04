@@ -3,34 +3,73 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, QueryFailedError, Repository } from 'typeorm';
+import { AppNotification } from '../database/entities/notification.entity';
 import { PackageRequest } from '../database/entities/package-request.entity';
 import { Package } from '../database/entities/package.entity';
 import { Reservation } from '../database/entities/reservation.entity';
+import { Tenant } from '../database/entities/tenant.entity';
 import { TimeSlot } from '../database/entities/time-slot.entity';
 import { Trainer } from '../database/entities/trainer.entity';
+import { User } from '../database/entities/user.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
 import {
+  NotificationType,
   PackageStatus,
   ReservationStatus,
   SessionType,
   UserRole,
   WaitingListStatus,
 } from '../database/enums';
-import type { User } from '../database/entities/user.entity';
+import { MailService } from '../mail/mail.service';
+import { formatDateRange } from '../mail/mail-templates';
 import type { CreatePackageRequestDto } from './dto/create-package-request.dto';
 import type { CreateReservationDto } from './dto/create-reservation.dto';
 import type { JoinWaitingListDto } from './dto/join-waiting-list.dto';
 
 const WAITLIST_NOTIFICATION_HOLD_MS = 24 * 60 * 60 * 1000;
 
+/** API shape returned for member reservations (list/detail/cancel/create). */
+export type MemberReservationView = {
+  id: string;
+  tenantId: string;
+  status: ReservationStatus;
+  sessionType: SessionType;
+  startTime: Date;
+  endTime: Date;
+  notes: string | null;
+  version: number;
+  cancelledAt: Date | null;
+  trainer: {
+    id: string;
+    user: { firstName: string; lastName: string };
+  };
+  timeSlot: {
+    id: string;
+    startTime: Date;
+    endTime: Date;
+  };
+  package: {
+    id: string;
+    remainingSessions: number;
+    status: PackageStatus;
+    packageTypeName: string;
+  };
+};
+
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     private readonly dataSource: DataSource,
+    private readonly config: ConfigService,
+    private readonly mail: MailService,
     @InjectRepository(Trainer) private readonly trainersRepo: Repository<Trainer>,
     @InjectRepository(TimeSlot) private readonly slotsRepo: Repository<TimeSlot>,
     @InjectRepository(Reservation)
@@ -38,6 +77,10 @@ export class BookingService {
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(PackageRequest)
     private readonly packageRequestsRepo: Repository<PackageRequest>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
+    @InjectRepository(AppNotification)
+    private readonly notificationsRepo: Repository<AppNotification>,
   ) {}
 
   async listTrainers(tenantId: string, sessionType?: string) {
@@ -86,6 +129,87 @@ export class BookingService {
       status: 'pending',
     });
     await this.packageRequestsRepo.save(row);
+
+    const tenant = await this.tenantsRepo.findOne({
+      where: { id: user.tenantId },
+      select: ['id', 'name'],
+    });
+    const clubName = tenant?.name ?? 'Kulüp';
+    const msgPreview = row.message?.slice(0, 500) ?? null;
+
+    const memberName = `${user.firstName} ${user.lastName}`.trim();
+    const notifBody =
+      sessionTypeEnum === SessionType.MASSAGE
+        ? 'Masaj paketi talebiniz kulübe iletildi.'
+        : 'Özel ders paketi talebiniz kulübe iletildi.';
+    await this.notificationsRepo.save(
+      this.notificationsRepo.create({
+        userId: user.id,
+        type: NotificationType.PACKAGE,
+        title: 'Paket talebi alındı',
+        body: notifBody,
+        data: { packageRequestId: row.id },
+        isRead: false,
+        readAt: null,
+      }),
+    );
+
+    const alertOverride = this.config.get<string>('MAIL_SALON_ALERT_EMAILS')?.trim();
+    if (!alertOverride) {
+      const admins = await this.usersRepo.find({
+        where: { tenantId: user.tenantId, role: UserRole.ADMINISTRATOR },
+        select: ['id'],
+      });
+      for (const a of admins) {
+        await this.notificationsRepo.save(
+          this.notificationsRepo.create({
+            userId: a.id,
+            type: NotificationType.PACKAGE,
+            title: 'Yeni paket talebi',
+            body: `${memberName}: ${notifBody}`,
+            data: { packageRequestId: row.id },
+            isRead: false,
+            readAt: null,
+          }),
+        );
+      }
+    }
+
+    void this.mail
+      .sendPackageRequestMemberAck({
+        to: user.email,
+        memberFirstName: user.firstName,
+        clubName,
+        sessionType: sessionTypeEnum,
+        messagePreview: msgPreview,
+      })
+      .catch((cause: unknown) => {
+        const msg = cause instanceof Error ? cause.message : String(cause);
+        this.logger.error(`Package request member email failed: ${msg}`);
+      });
+
+    const staffEmails = await this.resolveSalonAlertEmails(user.tenantId);
+    if (staffEmails.length === 0) {
+      this.logger.warn(
+        `No salon alert recipients for tenant ${user.tenantId}; package request ${row.id} emails skipped.`,
+      );
+    } else {
+      void this.mail
+        .sendPackageRequestStaffAlert({
+          to: staffEmails,
+          clubName,
+          memberName,
+          memberEmail: user.email,
+          sessionType: sessionTypeEnum,
+          messagePreview: msgPreview,
+          requestId: row.id,
+        })
+        .catch((cause: unknown) => {
+          const msg = cause instanceof Error ? cause.message : String(cause);
+          this.logger.error(`Package request staff email failed: ${msg}`);
+        });
+    }
+
     return { id: row.id, createdAt: row.createdAt };
   }
 
@@ -171,7 +295,7 @@ export class BookingService {
       throw new ForbiddenException('Only members can create reservations');
     }
 
-    return this.dataSource.transaction(async (em) => {
+    const result: MemberReservationView = await this.dataSource.transaction(async (em) => {
       const slot = await em
         .createQueryBuilder(TimeSlot, 's')
         .setLock('pessimistic_write')
@@ -262,6 +386,12 @@ export class BookingService {
       });
       return this.toReservationResponse(full!);
     });
+
+    void this.afterReservationCreated(user, result).catch((cause: unknown) => {
+      const msg = cause instanceof Error ? cause.message : String(cause);
+      this.logger.error(`afterReservationCreated failed: ${msg}`);
+    });
+    return result;
   }
 
   async cancelReservation(user: User, reservationId: string) {
@@ -269,7 +399,7 @@ export class BookingService {
       throw new ForbiddenException('Only members can cancel their reservations');
     }
 
-    return this.dataSource.transaction(async (em) => {
+    const result: MemberReservationView = await this.dataSource.transaction(async (em) => {
       const reservation = await em
         .createQueryBuilder(Reservation, 'r')
         .setLock('pessimistic_write')
@@ -345,6 +475,12 @@ export class BookingService {
       });
       return this.toReservationResponse(full!);
     });
+
+    void this.afterReservationCancelled(user, result).catch((cause: unknown) => {
+      const msg = cause instanceof Error ? cause.message : String(cause);
+      this.logger.error(`afterReservationCancelled failed: ${msg}`);
+    });
+    return result;
   }
 
   async joinWaitingList(user: User, dto: JoinWaitingListDto) {
@@ -449,7 +585,126 @@ export class BookingService {
     }
   }
 
-  private toReservationResponse(r: Reservation) {
+  private getMailFormatting(): { locale: string; timeZone: string } {
+    return {
+      locale: this.config.get<string>('MAIL_LOCALE')?.trim() || 'tr-TR',
+      timeZone: this.config.get<string>('MAIL_TIMEZONE')?.trim() || 'Europe/Istanbul',
+    };
+  }
+
+  private async resolveSalonAlertEmails(tenantId: string): Promise<string[]> {
+    const raw = this.config.get<string>('MAIL_SALON_ALERT_EMAILS')?.trim();
+    if (raw) {
+      return raw
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
+    }
+    const admins = await this.usersRepo.find({
+      where: { tenantId, role: UserRole.ADMINISTRATOR },
+      select: ['email'],
+    });
+    return admins.map((a) => a.email);
+  }
+
+  private async afterReservationCreated(
+    member: User,
+    res: Pick<
+      MemberReservationView,
+      'id' | 'sessionType' | 'startTime' | 'endTime' | 'trainer' | 'package'
+    >,
+  ): Promise<void> {
+    const tenant = await this.tenantsRepo.findOne({
+      where: { id: member.tenantId },
+      select: ['name'],
+    });
+    const clubName = tenant?.name ?? 'Kulüp';
+    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const { locale, timeZone } = this.getMailFormatting();
+    const { dateLine, timeLine } = formatDateRange(
+      new Date(res.startTime),
+      new Date(res.endTime),
+      locale,
+      timeZone,
+    );
+    const bodyLine = `${trainerName} — ${dateLine} ${timeLine}`;
+
+    await this.notificationsRepo.save(
+      this.notificationsRepo.create({
+        userId: member.id,
+        type: NotificationType.RESERVATION,
+        title: 'Rezervasyon onaylandı',
+        body: bodyLine,
+        data: { reservationId: res.id },
+        isRead: false,
+        readAt: null,
+      }),
+    );
+
+    await this.mail.sendReservationConfirmed({
+      to: member.email,
+      memberFirstName: member.firstName,
+      clubName,
+      trainerName,
+      sessionType: res.sessionType,
+      startTime: new Date(res.startTime),
+      endTime: new Date(res.endTime),
+      packageTypeName: res.package.packageTypeName,
+      remainingSessions: res.package.remainingSessions,
+    });
+  }
+
+  private async afterReservationCancelled(
+    member: User,
+    res: {
+      id: string;
+      sessionType: SessionType;
+      startTime: Date;
+      endTime: Date;
+      trainer: { user: { firstName: string; lastName: string } };
+      package: { remainingSessions: number };
+    },
+  ): Promise<void> {
+    const tenant = await this.tenantsRepo.findOne({
+      where: { id: member.tenantId },
+      select: ['name'],
+    });
+    const clubName = tenant?.name ?? 'Kulüp';
+    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const { locale, timeZone } = this.getMailFormatting();
+    const { dateLine, timeLine } = formatDateRange(
+      new Date(res.startTime),
+      new Date(res.endTime),
+      locale,
+      timeZone,
+    );
+    const bodyLine = `İptal: ${trainerName} — ${dateLine} ${timeLine}`;
+
+    await this.notificationsRepo.save(
+      this.notificationsRepo.create({
+        userId: member.id,
+        type: NotificationType.RESERVATION,
+        title: 'Rezervasyon iptal edildi',
+        body: bodyLine,
+        data: { reservationId: res.id },
+        isRead: false,
+        readAt: null,
+      }),
+    );
+
+    await this.mail.sendReservationCancelled({
+      to: member.email,
+      memberFirstName: member.firstName,
+      clubName,
+      trainerName,
+      sessionType: res.sessionType,
+      startTime: new Date(res.startTime),
+      endTime: new Date(res.endTime),
+      remainingSessions: res.package.remainingSessions,
+    });
+  }
+
+  private toReservationResponse(r: Reservation): MemberReservationView {
     return {
       id: r.id,
       tenantId: r.tenantId,
