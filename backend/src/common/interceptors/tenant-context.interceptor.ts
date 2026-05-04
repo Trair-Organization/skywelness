@@ -43,7 +43,11 @@ export class TenantContextInterceptor implements NestInterceptor {
 
       const raw = req.headers['x-tenant-subdomain'];
       if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
-        const header = String(raw).trim();
+        const firstHeaderValue = Array.isArray(raw) ? raw[0] : String(raw);
+        const header = firstHeaderValue.split(',')[0]?.trim().toLowerCase();
+        if (!header) {
+          throw new ForbiddenException('Unknown tenant');
+        }
         const resolved = await this.tenantsService.resolveIdBySubdomain(header);
         if (!resolved) {
           throw new ForbiddenException('Unknown tenant');
