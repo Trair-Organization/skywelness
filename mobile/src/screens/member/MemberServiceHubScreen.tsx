@@ -126,6 +126,30 @@ function jsonToLines(v: unknown): string | null {
   }
 }
 
+function truncateTeaser(s: string, max: number): string {
+  const x = s.trim();
+  if (x.length <= max) {
+    return x;
+  }
+  return `${x.slice(0, Math.max(1, max - 1)).trim()}…`;
+}
+
+function staffSpecializationTeaser(tr: TrainerRow): string | null {
+  const raw = jsonToLines(tr.specializations);
+  if (!raw) {
+    return null;
+  }
+  return truncateTeaser(raw, 72);
+}
+
+function formatRatingDisplay(avg: string): string {
+  const n = Number.parseFloat(avg);
+  if (Number.isNaN(n)) {
+    return avg;
+  }
+  return n.toFixed(1);
+}
+
 type Props = { mode: ServiceHubMode };
 
 export function MemberServiceHubScreen({ mode }: Props) {
@@ -500,36 +524,64 @@ export function MemberServiceHubScreen({ mode }: Props) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hRail}>
             {trainers.map((tr) => {
               const selected = tr.id === selectedTrainerId;
+              const teaser = staffSpecializationTeaser(tr);
+              const fullName = `${tr.user.firstName} ${tr.user.lastName}`;
               return (
-                <View key={tr.id} style={styles.staffCardWrap}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.staffCard,
-                      selected && styles.staffCardOn,
-                      pressed && styles.staffCardPressed,
-                    ]}
-                    onPress={() => setSelectedTrainerId(tr.id)}
-                  >
+                <Pressable
+                  key={tr.id}
+                  accessibilityRole="button"
+                  accessibilityHint={t('serviceHub.openProfileHint')}
+                  accessibilityLabel={`${fullName}, ${t('serviceHub.sessionsShort', { n: tr.totalSessions })}`}
+                  style={({ pressed }) => [
+                    styles.staffCardOuter,
+                    selected && styles.staffCardOuterSelected,
+                    pressed && styles.staffCardOuterPressed,
+                  ]}
+                  onPress={() => {
+                    setSelectedTrainerId(tr.id);
+                    setProfileTrainer(tr);
+                  }}
+                >
+                  <View style={styles.staffPhotoClip}>
                     {tr.photoUrl ? (
-                      <Image source={{ uri: tr.photoUrl }} style={styles.avatar} />
+                      <Image
+                        source={{ uri: tr.photoUrl }}
+                        style={styles.staffHeroPhoto}
+                        resizeMode="cover"
+                      />
                     ) : (
-                      <View style={[styles.avatar, styles.avatarPh]}>
-                        <Text style={styles.avatarTxt}>
+                      <View style={[styles.staffHeroPhoto, styles.staffHeroPhotoPh]}>
+                        <Text style={styles.staffHeroLetter}>
                           {(tr.user.firstName[0] ?? '?').toUpperCase()}
                         </Text>
                       </View>
                     )}
-                    <Text style={styles.staffName} numberOfLines={1}>
-                      {tr.user.firstName} {tr.user.lastName}
+                  </View>
+                  <View style={styles.staffCardInner}>
+                    <Text style={styles.staffNameCard} numberOfLines={1}>
+                      {fullName}
                     </Text>
-                    <Text style={styles.staffMeta} numberOfLines={1}>
-                      ★ {tr.avgRating} · {tr.totalSessions}
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={() => setProfileTrainer(tr)}>
-                    <Text style={styles.profLink}>{t('serviceHub.viewProfile')}</Text>
-                  </Pressable>
-                </View>
+                    <View style={styles.staffStatsRow}>
+                      <View style={styles.ratingPill}>
+                        <Text style={styles.ratingPillTxt}>
+                          ★ {formatRatingDisplay(tr.avgRating)}
+                        </Text>
+                      </View>
+                      <Text style={styles.sessionsTxt}>
+                        {t('serviceHub.sessionsShort', { n: tr.totalSessions })}
+                      </Text>
+                    </View>
+                    {teaser ? (
+                      <Text style={styles.staffTeaserTxt} numberOfLines={2}>
+                        {teaser}
+                      </Text>
+                    ) : (
+                      <Text style={styles.staffFallbackHint} numberOfLines={2}>
+                        {t('serviceHub.openProfileHint')}
+                      </Text>
+                    )}
+                  </View>
+                </Pressable>
               );
             })}
           </ScrollView>
@@ -661,44 +713,85 @@ export function MemberServiceHubScreen({ mode }: Props) {
         </GlassCard>
       </ScrollView>
 
-      <Modal visible={profileTrainer !== null} transparent animationType="fade">
+      <Modal
+        visible={profileTrainer !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProfileTrainer(null)}
+      >
         <Pressable style={styles.modalBackdrop} onPress={() => setProfileTrainer(null)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
             {profileTrainer ? (
               <>
-                <Text style={styles.modalTitle}>
-                  {profileTrainer.user.firstName} {profileTrainer.user.lastName}
-                </Text>
-                {profileTrainer.photoUrl ? (
-                  <Image source={{ uri: profileTrainer.photoUrl }} style={styles.modalPhoto} />
-                ) : null}
-                <Text style={styles.modalBio}>
-                  {profileTrainer.bio?.trim() ? profileTrainer.bio : t('serviceHub.noBio')}
-                </Text>
-                {jsonToLines(profileTrainer.specializations) ? (
-                  <Text style={styles.modalMeta}>
-                    {t('serviceHub.spec')}: {jsonToLines(profileTrainer.specializations)}
+                <View style={styles.modalProfileHeader}>
+                  <Text style={styles.modalProfileTitle} numberOfLines={2}>
+                    {profileTrainer.user.firstName} {profileTrainer.user.lastName}
                   </Text>
-                ) : null}
-                {jsonToLines(profileTrainer.certifications) ? (
-                  <Text style={styles.modalMeta}>
-                    {t('serviceHub.cert')}: {jsonToLines(profileTrainer.certifications)}
-                  </Text>
-                ) : null}
-                <View style={styles.modalActions}>
-                  <Pressable style={styles.btnOutline} onPress={() => setProfileTrainer(null)}>
-                    <Text style={styles.btnOutlineTxt}>{t('serviceHub.profileClose')}</Text>
-                  </Pressable>
                   <Pressable
-                    style={styles.btnPrimary}
-                    onPress={() => {
-                      setSelectedTrainerId(profileTrainer.id);
-                      setProfileTrainer(null);
-                    }}
+                    hitSlop={14}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('serviceHub.profileClose')}
+                    onPress={() => setProfileTrainer(null)}
+                    style={({ pressed }) => [styles.modalCloseRound, pressed && { opacity: 0.75 }]}
                   >
-                    <Text style={styles.btnPrimaryTxt}>{t('serviceHub.profilePick')}</Text>
+                    <Text style={styles.modalCloseRoundTxt}>×</Text>
                   </Pressable>
                 </View>
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  style={styles.modalScroll}
+                  contentContainerStyle={styles.modalScrollContent}
+                >
+                  {profileTrainer.photoUrl ? (
+                    <Image
+                      source={{ uri: profileTrainer.photoUrl }}
+                      style={styles.modalHeroImg}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.modalHeroImg, styles.modalHeroImgPh]}>
+                      <Text style={styles.modalHeroLetter}>
+                        {(profileTrainer.user.firstName[0] ?? '?').toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.modalRatingStrip}>
+                    <Text style={styles.modalRatingMain}>
+                      ★ {formatRatingDisplay(profileTrainer.avgRating)}
+                    </Text>
+                    <Text style={styles.modalSessionsMain}>
+                      {t('serviceHub.sessionsShort', { n: profileTrainer.totalSessions })}
+                    </Text>
+                  </View>
+                  <Text style={styles.modalBio}>
+                    {profileTrainer.bio?.trim() ? profileTrainer.bio : t('serviceHub.noBio')}
+                  </Text>
+                  {jsonToLines(profileTrainer.specializations) ? (
+                    <Text style={styles.modalMeta}>
+                      {t('serviceHub.spec')}: {jsonToLines(profileTrainer.specializations)}
+                    </Text>
+                  ) : null}
+                  {jsonToLines(profileTrainer.certifications) ? (
+                    <Text style={styles.modalMeta}>
+                      {t('serviceHub.cert')}: {jsonToLines(profileTrainer.certifications)}
+                    </Text>
+                  ) : null}
+                  <View style={styles.modalActions}>
+                    <Pressable style={styles.btnOutline} onPress={() => setProfileTrainer(null)}>
+                      <Text style={styles.btnOutlineTxt}>{t('serviceHub.profileClose')}</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.btnPrimary}
+                      onPress={() => {
+                        setSelectedTrainerId(profileTrainer.id);
+                        setProfileTrainer(null);
+                      }}
+                    >
+                      <Text style={styles.btnPrimaryTxt}>{t('serviceHub.profilePick')}</Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
               </>
             ) : null}
           </Pressable>
@@ -866,43 +959,88 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
   },
-  hRail: { marginBottom: 12 },
-  staffCardWrap: { marginRight: 10, width: 132 },
-  profLink: {
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: '700',
-    color: premium.accentBlue,
-    textAlign: 'center',
-  },
-  staffCard: {
-    width: '100%',
-    padding: 10,
+  hRail: { marginBottom: 12, paddingBottom: 4 },
+  staffCardOuter: {
+    width: 176,
+    marginRight: 12,
     borderRadius: premium.radiusMd,
     borderWidth: 1,
     borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    overflow: 'hidden',
   },
-  staffCardOn: {
+  staffCardOuterSelected: {
     borderColor: premium.accentBlue,
-    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderWidth: 2,
+    backgroundColor: 'rgba(56,189,248,0.1)',
   },
-  staffCardPressed: { opacity: 0.88 },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    marginBottom: 8,
-    alignSelf: 'center',
+  staffCardOuterPressed: { opacity: 0.92 },
+  staffPhotoClip: {
+    width: '100%',
+    height: 108,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  avatarPh: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  staffHeroPhoto: {
+    width: '100%',
+    height: 108,
+  },
+  staffHeroPhotoPh: {
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
-  avatarTxt: { fontSize: 22, fontWeight: '800', color: premium.text },
-  staffName: { fontSize: 14, fontWeight: '800', color: premium.text },
-  staffMeta: { fontSize: 11, color: premium.textMuted, marginTop: 4 },
+  staffHeroLetter: {
+    fontSize: 40,
+    fontWeight: '800',
+    color: premium.text,
+  },
+  staffCardInner: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: 6,
+  },
+  staffNameCard: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: premium.text,
+    letterSpacing: -0.2,
+  },
+  staffStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  ratingPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(251,191,36,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.35)',
+  },
+  ratingPillTxt: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#fcd34d',
+  },
+  sessionsTxt: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: premium.textMuted,
+  },
+  staffTeaserTxt: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: premium.textMuted,
+  },
+  staffFallbackHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: premium.accentBlue,
+    fontWeight: '600',
+  },
   weekRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1000,45 +1138,106 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
-    padding: 20,
+    padding: 16,
   },
-  modalCard: {
+  modalSheet: {
     borderRadius: premium.radiusLg,
-    padding: 18,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0b1224',
     borderWidth: 1,
     borderColor: premium.glassBorder,
-    maxHeight: '88%',
+    maxHeight: '90%',
+    overflow: 'hidden',
   },
-  modalTitle: {
-    fontSize: 20,
+  modalProfileHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: premium.glassBorder,
+  },
+  modalProfileTitle: {
+    flex: 1,
+    fontSize: 19,
     fontWeight: '800',
     color: premium.text,
-    marginBottom: 10,
+    lineHeight: 24,
   },
-  modalPhoto: {
+  modalCloseRound: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  modalCloseRoundTxt: {
+    fontSize: 22,
+    fontWeight: '400',
+    color: premium.textMuted,
+    marginTop: -2,
+  },
+  modalScroll: { maxHeight: '100%' },
+  modalScrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  modalHeroImg: {
     width: '100%',
-    height: 160,
+    height: 200,
     borderRadius: premium.radiusMd,
-    marginBottom: 12,
+    marginBottom: 14,
+    marginTop: 4,
     backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  modalHeroImgPh: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalHeroLetter: {
+    fontSize: 56,
+    fontWeight: '800',
+    color: premium.text,
+  },
+  modalRatingStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 14,
+  },
+  modalRatingMain: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fcd34d',
+  },
+  modalSessionsMain: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: premium.textMuted,
   },
   modalBio: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
     color: premium.text,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   modalMeta: {
     fontSize: 13,
+    lineHeight: 19,
     color: premium.textMuted,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   modalActions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 12,
+    marginTop: 18,
     justifyContent: 'flex-end',
+    flexWrap: 'wrap',
   },
   requestModalCard: {
     borderRadius: premium.radiusLg,

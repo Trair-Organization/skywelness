@@ -230,6 +230,8 @@ export default {
     summaryTitle: 'Haklarınız ve paketler',
     addPackageA11y: 'Paket ekleme talebi',
     addPackageA11yMassage: 'Masaj paketi talebi',
+    sessionsShort: '{{n}} seans',
+    openProfileHint: 'Profili ve uzmanlıkları görmek için dokunun.',
     creditsLine: 'Kalan seans hakkı: {{n}}',
     noActivePackage: 'Bu hizmet için aktif paket görünmüyor. Paket talebi gönderebilirsiniz.',
     requestSend: 'Talebi gönder',

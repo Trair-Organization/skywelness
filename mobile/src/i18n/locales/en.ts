@@ -230,6 +230,8 @@ export default {
     summaryTitle: 'Credits & packages',
     addPackageA11y: 'Request a package',
     addPackageA11yMassage: 'Request a massage package',
+    sessionsShort: '{{n}} sessions',
+    openProfileHint: 'Tap to view profile and specialties.',
     creditsLine: 'Sessions remaining: {{n}}',
     noActivePackage: 'No active package for this service. You can send a request below.',
     requestSend: 'Send request',
