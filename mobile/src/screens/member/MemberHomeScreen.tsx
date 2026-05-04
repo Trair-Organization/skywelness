@@ -562,7 +562,29 @@ export function MemberHomeScreen() {
           {selectedEvent ? (
             <Pressable style={styles.modalBackdrop} onPress={() => setSelectedEvent(null)}>
               <Pressable style={styles.modalCard} onPress={() => {}}>
-                <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.modalCloseBtn,
+                      pressed && styles.modalCloseBtnPressed,
+                    ]}
+                    onPress={() => setSelectedEvent(null)}
+                  >
+                    <Text style={styles.modalCloseTxt}>×</Text>
+                  </Pressable>
+                </View>
+                {selectedEvent.imageUrl ? (
+                  <Image
+                    source={{ uri: selectedEvent.imageUrl }}
+                    style={styles.modalImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.modalImage, styles.eventImagePh]}>
+                    <Text style={styles.eventImagePhTxt}>{t('events.noImage')}</Text>
+                  </View>
+                )}
                 <Text style={styles.modalMeta}>
                   {t('events.locationLabel')}: {selectedEvent.location || '-'}
                 </Text>
@@ -1082,11 +1104,44 @@ const styles = StyleSheet.create({
     padding: 16,
     maxHeight: '80%',
   },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 8,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: premium.text,
-    marginBottom: 10,
+    flex: 1,
+  },
+  modalCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  modalCloseBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  modalCloseTxt: {
+    color: premium.text,
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '700',
+  },
+  modalImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: premium.radiusMd,
+    marginBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   modalMeta: {
     fontSize: 13,
