@@ -17,6 +17,9 @@ export default {
     enterSubdomain: 'Enter your club code',
     loadFailed: 'Club not found',
     connected: 'Connected club',
+    directoryHint: 'Pick your club from the list or enter its code manually.',
+    listClubs: 'List clubs',
+    directoryFailed: 'Could not load club list',
   },
   login: {
     section: 'Sign in',

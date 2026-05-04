@@ -10,6 +10,21 @@ export class TenantsService {
     private readonly tenantsRepo: Repository<Tenant>,
   ) {}
 
+  /** Public directory for app “choose your club” (minimal fields, capped). */
+  async listPublicDirectory(limit = 50) {
+    const take = Math.min(100, Math.max(1, limit));
+    const rows = await this.tenantsRepo.find({
+      select: ['id', 'name', 'subdomain'],
+      order: { name: 'ASC' },
+      take,
+    });
+    return rows.map((t) => ({
+      id: t.id,
+      name: t.name,
+      subdomain: t.subdomain,
+    }));
+  }
+
   async findPublicBySubdomain(subdomain: string) {
     const normalized = subdomain.trim().toLowerCase();
     const tenant = await this.tenantsRepo.findOne({

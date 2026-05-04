@@ -17,6 +17,9 @@ export default {
     enterSubdomain: 'Kulüp kodunu girin',
     loadFailed: 'Kulüp bulunamadı',
     connected: 'Bağlı kulüp',
+    directoryHint: 'Listeden kulübünüzü seçebilir veya kodu elle girebilirsiniz.',
+    listClubs: 'Kulüpleri listele',
+    directoryFailed: 'Kulüp listesi alınamadı',
   },
   login: {
     section: 'Giriş',

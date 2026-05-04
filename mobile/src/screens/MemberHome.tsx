@@ -19,6 +19,7 @@ import { clearMemberSession, loadMemberSession, saveMemberSession } from '../aut
 import { persistLanguage } from '../i18n';
 
 type TenantInfo = { id: string; name: string; subdomain: string };
+type TenantListRow = { id: string; name: string; subdomain: string };
 type AuthRes = {
   accessToken: string;
   refreshToken: string;
@@ -122,6 +123,8 @@ export function MemberHome() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<MeUser | null>(null);
   const [loadingTenant, setLoadingTenant] = useState(false);
+  const [tenantDirectory, setTenantDirectory] = useState<TenantListRow[]>([]);
+  const [loadingTenantDir, setLoadingTenantDir] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -210,25 +213,51 @@ export function MemberHome() {
     };
   }, []);
 
-  const loadTenant = useCallback(async () => {
-    const s = subdomain.trim().toLowerCase();
-    if (!s) {
-      Alert.alert(t('tenant.section'), t('tenant.enterSubdomain'));
-      return;
-    }
-    setLoadingTenant(true);
-    setTenant(null);
+  const resolveTenantByCode = useCallback(
+    async (explicitSubdomain?: string) => {
+      const raw = explicitSubdomain !== undefined ? explicitSubdomain : subdomain;
+      const s = raw.trim().toLowerCase();
+      if (!s) {
+        Alert.alert(t('tenant.section'), t('tenant.enterSubdomain'));
+        return;
+      }
+      if (explicitSubdomain !== undefined) {
+        setSubdomain(s);
+      }
+      setLoadingTenant(true);
+      setTenant(null);
+      try {
+        const row = await apiJson<TenantInfo>(`/tenants/by-subdomain/${encodeURIComponent(s)}`, {
+          auth: false,
+        });
+        setTenant(row);
+      } catch (e) {
+        Alert.alert(
+          t('tenant.section'),
+          e instanceof ApiError ? e.message : t('tenant.loadFailed'),
+        );
+      } finally {
+        setLoadingTenant(false);
+      }
+    },
+    [subdomain, t],
+  );
+
+  const loadTenantDirectory = useCallback(async () => {
+    setLoadingTenantDir(true);
     try {
-      const row = await apiJson<TenantInfo>(`/tenants/by-subdomain/${encodeURIComponent(s)}`, {
-        auth: false,
-      });
-      setTenant(row);
+      const rows = await apiJson<TenantListRow[]>('/tenants', { auth: false });
+      setTenantDirectory(rows);
     } catch (e) {
-      Alert.alert(t('tenant.section'), e instanceof ApiError ? e.message : t('tenant.loadFailed'));
+      Alert.alert(
+        t('tenant.section'),
+        e instanceof ApiError ? e.message : t('tenant.directoryFailed'),
+      );
+      setTenantDirectory([]);
     } finally {
-      setLoadingTenant(false);
+      setLoadingTenantDir(false);
     }
-  }, [subdomain, t]);
+  }, [t]);
 
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
@@ -585,6 +614,41 @@ export function MemberHome() {
       {!user ? (
         <View style={styles.surfaceCard}>
           <Text style={styles.cardTitle}>{t('tenant.workspaceTitle')}</Text>
+          <Text style={styles.mutedSmall}>{t('tenant.directoryHint')}</Text>
+          <Pressable
+            {...ripple}
+            style={({ pressed }) => [
+              styles.btnOutline,
+              pressed && styles.btnOutlinePressed,
+              loadingTenantDir && styles.btnDisabled,
+            ]}
+            onPress={() => {
+              loadTenantDirectory().catch(() => {});
+            }}
+            disabled={loadingTenantDir}
+          >
+            {loadingTenantDir ? (
+              <ActivityIndicator color={palette.primary} />
+            ) : (
+              <Text style={styles.btnOutlineText}>{t('tenant.listClubs')}</Text>
+            )}
+          </Pressable>
+          {tenantDirectory.length > 0 ? (
+            <View style={styles.salonList}>
+              {tenantDirectory.map((row) => (
+                <Pressable
+                  key={row.id}
+                  style={({ pressed }) => [styles.salonRow, pressed && styles.salonRowPressed]}
+                  onPress={() => {
+                    resolveTenantByCode(row.subdomain).catch(() => {});
+                  }}
+                >
+                  <Text style={styles.salonRowName}>{row.name}</Text>
+                  <Text style={styles.salonRowCode}>{row.subdomain}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <Text style={styles.fieldLabel}>{t('tenant.subdomainLabel')}</Text>
           <TextInput
             style={styles.input}
@@ -603,7 +667,7 @@ export function MemberHome() {
               loadingTenant && styles.btnDisabled,
             ]}
             onPress={() => {
-              loadTenant().catch(() => {});
+              resolveTenantByCode().catch(() => {});
             }}
             disabled={loadingTenant}
           >
@@ -1230,6 +1294,39 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: palette.muted,
     marginBottom: 12,
+  },
+  mutedSmall: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: palette.muted,
+    marginBottom: 10,
+  },
+  salonList: {
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  salonRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+    backgroundColor: '#f8fafc',
+  },
+  salonRowPressed: {
+    backgroundColor: '#e2e8f0',
+  },
+  salonRowName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: palette.text,
+  },
+  salonRowCode: {
+    fontSize: 12,
+    color: palette.muted,
+    marginTop: 2,
   },
   warnBanner: {
     fontSize: 13,

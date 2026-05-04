@@ -5,6 +5,12 @@ import { TenantsService } from './tenants.service';
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
+  /** Public: list clubs for member onboarding (name + subdomain). */
+  @Get()
+  list() {
+    return this.tenantsService.listPublicDirectory();
+  }
+
   /** Public: mobile/web can verify tenant before login/register. */
   @Get('by-subdomain/:subdomain')
   bySubdomain(@Param('subdomain') subdomain: string) {
