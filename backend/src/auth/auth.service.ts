@@ -255,6 +255,12 @@ export class AuthService {
     return { ok: true as const };
   }
 
+  async deleteAccount(userId: string) {
+    await this.usersRepo.increment({ id: userId }, 'refreshTokenVersion', 1);
+    await this.usersRepo.delete({ id: userId });
+    return { ok: true as const };
+  }
+
   private buildAuthResponse(user: User) {
     const accessPayload: JwtAccessPayload = {
       sub: user.id,

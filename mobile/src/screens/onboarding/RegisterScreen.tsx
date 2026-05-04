@@ -49,6 +49,8 @@ export function RegisterScreen() {
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const successAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -270,6 +272,28 @@ export function RegisterScreen() {
             containerStyle={compact ? styles.inputCompact : undefined}
           />
           {!compact ? <Text style={styles.hint}>{t('register.passwordRules')}</Text> : null}
+          <Pressable
+            style={styles.checkRow}
+            onPress={() => {
+              setAcceptPrivacy((v) => !v);
+            }}
+          >
+            <View style={[styles.checkBox, acceptPrivacy && styles.checkBoxOn]}>
+              {acceptPrivacy ? <Text style={styles.checkMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.checkTxt}>{t('register.acceptPrivacy')}</Text>
+          </Pressable>
+          <Pressable
+            style={styles.checkRow}
+            onPress={() => {
+              setAcceptTerms((v) => !v);
+            }}
+          >
+            <View style={[styles.checkBox, acceptTerms && styles.checkBoxOn]}>
+              {acceptTerms ? <Text style={styles.checkMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.checkTxt}>{t('register.acceptTerms')}</Text>
+          </Pressable>
 
           <Pressable
             style={({ pressed }) => [
@@ -280,10 +304,16 @@ export function RegisterScreen() {
                 usernameStatus === 'checking' ||
                 usernameStatus === 'too_short' ||
                 usernameStatus === 'invalid' ||
-                usernameStatus === 'taken') &&
+                usernameStatus === 'taken' ||
+                !acceptPrivacy ||
+                !acceptTerms) &&
                 styles.submitBtnDisabled,
             ]}
             onPress={() => {
+              if (!acceptPrivacy || !acceptTerms) {
+                Alert.alert(t('register.section'), t('register.acceptRequired'));
+                return;
+              }
               if (!PASSWORD_RULE.test(password)) {
                 Alert.alert(t('register.section'), t('register.passwordRules'));
                 return;
@@ -302,7 +332,9 @@ export function RegisterScreen() {
               usernameStatus === 'checking' ||
               usernameStatus === 'too_short' ||
               usernameStatus === 'invalid' ||
-              usernameStatus === 'taken'
+              usernameStatus === 'taken' ||
+              !acceptPrivacy ||
+              !acceptTerms
             }
           >
             {loadingAuth ? (
@@ -469,6 +501,37 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     marginBottom: 14,
     marginTop: -4,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  checkBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  checkBoxOn: {
+    borderColor: premium.accentGreen,
+    backgroundColor: 'rgba(16,185,129,0.2)',
+  },
+  checkMark: {
+    color: premium.accentGreen,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  checkTxt: {
+    flex: 1,
+    color: premium.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
   },
   submitBtn: {
     borderWidth: 1,

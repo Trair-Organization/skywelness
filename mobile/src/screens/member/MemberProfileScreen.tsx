@@ -12,7 +12,7 @@ const TAB_BAR_PAD = 72;
 export function MemberProfileScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { user, tenant, logout } = useMemberAuth();
+  const { user, tenant, logout, deleteAccount } = useMemberAuth();
 
   if (!user || !tenant) {
     return null;
@@ -22,8 +22,12 @@ export function MemberProfileScreen() {
     Alert.alert(t('home.policiesCta'), t('home.policiesBody'));
   };
 
-  const openContact = () => {
-    Alert.alert(t('home.contactClub'), t('home.contactClubAlert'));
+  const openPrivacy = () => {
+    Alert.alert(t('profile.privacyTitle'), t('profile.privacyBody'));
+  };
+
+  const openTerms = () => {
+    Alert.alert(t('profile.termsTitle'), t('profile.termsBody'));
   };
 
   return (
@@ -81,21 +85,47 @@ export function MemberProfileScreen() {
         </GlassCard>
 
         <GlassCard style={styles.card}>
-          <Text style={styles.cardTitle}>{t('home.helpTitle')}</Text>
-          <Text style={styles.muted}>{t('home.helpBody')}</Text>
+          <Text style={styles.cardTitle}>{t('profile.contractsTitle')}</Text>
+          <Text style={styles.muted}>{t('profile.contractsBody')}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={openPrivacy}
+          >
+            <Text style={styles.btnOutlineTxt}>{t('profile.privacyTitle')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={openTerms}
+          >
+            <Text style={styles.btnOutlineTxt}>{t('profile.termsTitle')}</Text>
+          </Pressable>
           <Pressable
             style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
             onPress={openPolicies}
           >
             <Text style={styles.btnOutlineTxt}>{t('home.policiesCta')}</Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={openContact}
-          >
-            <Text style={styles.btnOutlineTxt}>{t('home.contactClub')}</Text>
-          </Pressable>
         </GlassCard>
+
+        <Pressable
+          style={({ pressed }) => [styles.btnDanger, pressed && styles.btnDangerPressed]}
+          onPress={() => {
+            Alert.alert(t('profile.deleteTitle'), t('profile.deleteConfirmBody'), [
+              { text: t('profile.cancel'), style: 'cancel' },
+              {
+                text: t('profile.deleteAction'),
+                style: 'destructive',
+                onPress: () => {
+                  deleteAccount().catch(() => {
+                    Alert.alert(t('profile.deleteTitle'), t('profile.deleteFailed'));
+                  });
+                },
+              },
+            ]);
+          }}
+        >
+          <Text style={styles.btnDangerTxt}>{t('profile.deleteAction')}</Text>
+        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.btnGhost, pressed && styles.btnGhostPressed]}
@@ -103,7 +133,7 @@ export function MemberProfileScreen() {
             logout().catch(() => {});
           }}
         >
-          <Text style={styles.btnGhostTxt}>{t('session.logout')}</Text>
+          <Text style={styles.btnGhostTxt}>{t('profile.logoutAction')}</Text>
         </Pressable>
       </ScrollView>
     </GradientBackground>
@@ -210,6 +240,23 @@ const styles = StyleSheet.create({
   btnGhostTxt: {
     color: premium.textMuted,
     fontWeight: '700',
+    fontSize: 15,
+  },
+  btnDanger: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.6)',
+    backgroundColor: 'rgba(248,113,113,0.2)',
+    marginTop: 8,
+  },
+  btnDangerPressed: {
+    backgroundColor: 'rgba(248,113,113,0.3)',
+  },
+  btnDangerTxt: {
+    color: '#fff',
+    fontWeight: '800',
     fontSize: 15,
   },
 });

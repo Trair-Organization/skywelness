@@ -45,6 +45,7 @@ export default {
     unknownSessionType: 'Seans',
     heroLessons: 'Kalan özel ders',
     heroMassage: 'Kalan masaj',
+    heroEvents: 'Etkinlikler',
     upcomingEventsTitle: 'Yaklaşan Etkinlikler',
     noUpcomingEvents:
       'Yaklaşan yayınlanmış etkinlik yok. Kulüp yönetimi etkinlik eklediğinde burada görünür.',
@@ -171,6 +172,9 @@ export default {
     successBody: 'Kaydınız Başarılı bir Şekilde Oluşmuştur. Lütfen Giriş Yapınız.',
     legacyServerNotice:
       'Sunucu güncellemesi tamamlanana kadar kullanıcı adı ve telefon bilgisi bu kayıtta kullanılamadı.',
+    acceptPrivacy: 'Gizlilik Sözleşmesini okudum ve kabul ediyorum.',
+    acceptTerms: 'Kullanıcı Sözleşmesini ve kullanım şartlarını kabul ediyorum.',
+    acceptRequired: 'Devam etmek için sözleşmeleri kabul etmelisiniz.',
   },
   forgot: {
     link: 'Şifremi unuttum',
@@ -187,6 +191,21 @@ export default {
   },
   profile: {
     subtitle: 'Hesap, dil ve iletişim',
+    contractsTitle: 'Sözleşmeler',
+    contractsBody: 'Profilinizle ilgili sözleşmeleri buradan inceleyebilirsiniz.',
+    privacyTitle: 'Gizlilik Sözleşmesi',
+    privacyBody:
+      'Kişisel verileriniz sadece hizmet sunumu, güvenlik ve yasal yükümlülükler kapsamında işlenir. Detaylı metin web panelde yayımlanacaktır.',
+    termsTitle: 'Kullanıcı Sözleşmesi',
+    termsBody:
+      'Uygulamayı kullanırken kulüp kuralları, rezervasyon politikaları ve hesap güvenliği hükümlerine uymayı kabul etmiş olursunuz.',
+    deleteTitle: 'Hesabı Sil',
+    deleteAction: 'Hesabımı Sil',
+    deleteConfirmBody:
+      'Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve kayıtlarınız kaldırılır.',
+    deleteFailed: 'Hesap silinemedi. Lütfen daha sonra tekrar deneyin.',
+    cancel: 'Vazgeç',
+    logoutAction: 'Oturumu Kapat',
   },
   reservations: {
     subtitle: 'Yaklaşan ve geçmiş seanslar',

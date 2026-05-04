@@ -500,6 +500,10 @@ export function MemberHomeScreen() {
               <Text style={styles.heroStatLabel}>{t('home.heroMassage')}</Text>
               <Text style={styles.heroStatValue}>{massageCredits}</Text>
             </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t('home.heroEvents')}</Text>
+              <Text style={styles.heroStatValue}>{clubEvents.length}</Text>
+            </View>
           </View>
         </View>
 
@@ -695,15 +699,6 @@ export function MemberHomeScreen() {
               {activePackageCount === 0 ? (
                 <Text style={styles.warn}>{t('booking.noPackages')}</Text>
               ) : null}
-              <Pressable
-                {...ripple}
-                style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
-                onPress={scrollToBooking}
-              >
-                <Text style={styles.btnPrimaryTxt}>
-                  {activePackageCount > 0 ? t('home.ctaBookPt') : t('home.ctaExploreServices')}
-                </Text>
-              </Pressable>
             </>
           )}
         </GlassCard>
@@ -1030,7 +1025,7 @@ const styles = StyleSheet.create({
   },
   heroStats: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginTop: 16,
   },
   heroStat: {

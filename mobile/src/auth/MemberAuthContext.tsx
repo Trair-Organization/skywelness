@@ -41,6 +41,7 @@ type MemberAuthContextValue = {
   ) => Promise<'pending' | 'signed_in' | null>;
   refreshMe: () => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 
 const MemberAuthContext = createContext<MemberAuthContextValue | null>(null);
@@ -410,6 +411,20 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     setPassword('');
   }, [token, tenant]);
 
+  const deleteAccount = useCallback(async () => {
+    if (token && tenant) {
+      await apiJson('/auth/me', {
+        method: 'DELETE',
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+    }
+    await clearMemberSession();
+    setToken(null);
+    setUser(null);
+    setPassword('');
+  }, [token, tenant]);
+
   const value = useMemo<MemberAuthContextValue>(
     () => ({
       authReady,
@@ -433,6 +448,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       registerWithFullName,
       refreshMe,
       logout,
+      deleteAccount,
     }),
     [
       authReady,
@@ -453,6 +469,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       registerWithFullName,
       refreshMe,
       logout,
+      deleteAccount,
     ],
   );
 

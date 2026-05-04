@@ -45,6 +45,7 @@ export default {
     unknownSessionType: 'Session',
     heroLessons: 'Personal training left',
     heroMassage: 'Massage sessions left',
+    heroEvents: 'Events',
     upcomingEventsTitle: 'Upcoming events',
     noUpcomingEvents:
       'No published upcoming events yet. They will appear here when your club adds them.',
@@ -171,6 +172,9 @@ export default {
     successBody: 'Your registration has been created successfully. Please sign in.',
     legacyServerNotice:
       'Server update is not complete yet, so username and phone were skipped for this registration.',
+    acceptPrivacy: 'I have read and accept the Privacy Policy.',
+    acceptTerms: 'I accept the User Agreement and terms of use.',
+    acceptRequired: 'You must accept the agreements to continue.',
   },
   forgot: {
     link: 'Forgot password?',
@@ -187,6 +191,21 @@ export default {
   },
   profile: {
     subtitle: 'Account, language, and contact',
+    contractsTitle: 'Agreements',
+    contractsBody: 'You can review your profile-related agreements here.',
+    privacyTitle: 'Privacy Policy',
+    privacyBody:
+      'Your personal data is processed only for service delivery, security, and legal obligations. Full policy text will be published in the web panel.',
+    termsTitle: 'User Agreement',
+    termsBody:
+      'By using this app, you agree to follow club rules, reservation policies, and account security requirements.',
+    deleteTitle: 'Delete account',
+    deleteAction: 'Delete My Account',
+    deleteConfirmBody:
+      'Are you sure you want to delete your account? This action cannot be undone and your records will be removed.',
+    deleteFailed: 'Account could not be deleted. Please try again later.',
+    cancel: 'Cancel',
+    logoutAction: 'Sign Out',
   },
   reservations: {
     subtitle: 'Upcoming and past sessions',

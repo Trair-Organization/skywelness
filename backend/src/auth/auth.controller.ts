@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
@@ -47,6 +57,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   logout(@CurrentUser() user: User) {
     return this.authService.logout(user.id);
+  }
+
+  @Delete('me')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  deleteMe(@CurrentUser() user: User) {
+    return this.authService.deleteAccount(user.id);
   }
 
   @Get('me')
