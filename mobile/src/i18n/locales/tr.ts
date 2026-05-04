@@ -247,6 +247,11 @@ export default {
       'Geçmiş saat dilimleri rezerve edilemez. İleri bir tarih veya gelecek saat seçin.',
     fullHourAlertTitle: 'Bu saat dolu',
     fullHourAlertBody: 'Bu saatte kontenjan kalmadı. Başka bir saat dilimi seçin.',
+    bookingNeedSlotTitle: 'Önce saat seçin',
+    bookingNeedSlotBody: 'Rezervasyon için yukarıdaki listeden müsait bir saat dilimine dokunun.',
+    noRightsBookingTitle: 'Seans hakkı yok',
+    noRightsBookingBody:
+      'Bir saat seçtiniz ancak bu hizmet için aktif seans hakkınız veya paket görünmüyor. Rezervasyon yapılamaz. Ana ekrandaki + ile paket talebi gönderebilir veya kulüp ile iletişime geçebilirsiniz.',
     requestSend: 'Talebi gönder',
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',

@@ -246,6 +246,11 @@ export default {
     pastHourAlertBody: 'Past time slots cannot be booked. Pick a future day or a later hour.',
     fullHourAlertTitle: 'This slot is full',
     fullHourAlertBody: 'There is no remaining capacity for this hour. Try another time.',
+    bookingNeedSlotTitle: 'Pick a time first',
+    bookingNeedSlotBody: 'Tap an available time slot in the list above to continue.',
+    noRightsBookingTitle: 'No session credit',
+    noRightsBookingBody:
+      'You selected a time, but you have no active package or remaining sessions for this service. You cannot complete the booking. Use + on the main screen to request a package or contact the club.',
     requestSend: 'Send request',
     requestOk: 'Your request was saved. The club will contact you soon.',
     requestFail: 'Could not send the request. Check your connection and try again.',

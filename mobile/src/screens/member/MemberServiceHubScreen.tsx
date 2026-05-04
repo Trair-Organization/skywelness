@@ -663,6 +663,15 @@ export function MemberServiceHubScreen({ mode }: Props) {
     [filteredPackages, selectedPackageId],
   );
 
+  const canConfirmCalendarBooking = useMemo(
+    () =>
+      Boolean(selectedSlotId) &&
+      Boolean(selectedPackageId) &&
+      filteredPackages.length > 0 &&
+      !booking,
+    [selectedSlotId, selectedPackageId, filteredPackages.length, booking],
+  );
+
   const ripple =
     Platform.OS === 'android' ? { android_ripple: { color: 'rgba(255,255,255,0.2)' } } : {};
 
@@ -1270,22 +1279,32 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   ) : null}
                   <Pressable
                     {...ripple}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: booking }}
                     style={({ pressed }) => [
                       styles.btnPrimary,
-                      pressed && styles.btnPrimaryPressed,
-                      (!selectedSlotId ||
-                        !selectedPackageId ||
-                        booking ||
-                        filteredPackages.length === 0) &&
-                        styles.disabled,
+                      pressed && canConfirmCalendarBooking && styles.btnPrimaryPressed,
+                      !canConfirmCalendarBooking && styles.disabled,
                     ]}
-                    disabled={
-                      !selectedSlotId ||
-                      !selectedPackageId ||
-                      booking ||
-                      filteredPackages.length === 0
-                    }
+                    disabled={booking}
                     onPress={() => {
+                      if (booking) {
+                        return;
+                      }
+                      if (!selectedSlotId) {
+                        Alert.alert(
+                          t('serviceHub.bookingNeedSlotTitle'),
+                          t('serviceHub.bookingNeedSlotBody'),
+                        );
+                        return;
+                      }
+                      if (!canConfirmCalendarBooking) {
+                        Alert.alert(
+                          t('serviceHub.noRightsBookingTitle'),
+                          t('serviceHub.noRightsBookingBody'),
+                        );
+                        return;
+                      }
                       confirmBook().catch(() => {});
                     }}
                   >
