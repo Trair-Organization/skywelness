@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
+import { PremiumInput } from '../../components/premium/PremiumInput';
 import { persistLanguage } from '../../i18n';
 import { premium } from '../../theme/premiumTheme';
 
@@ -12,7 +14,24 @@ const TAB_BAR_PAD = 72;
 export function MemberProfileScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { user, tenant, logout, deleteAccount } = useMemberAuth();
+  const { user, tenant, logout, deleteAccount, updateProfile } = useMemberAuth();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+    setFirstName(user.firstName ?? '');
+    setLastName(user.lastName ?? '');
+    setEmail(user.email ?? '');
+    setUsername(user.username ?? '');
+    setPhone(user.phone ?? '');
+  }, [user]);
 
   if (!user || !tenant) {
     return null;
@@ -44,16 +63,55 @@ export function MemberProfileScreen() {
         <Text style={styles.screenSub}>{t('profile.subtitle')}</Text>
 
         <GlassCard style={styles.card}>
-          <Text style={styles.cardTitle}>{t('session.title')}</Text>
-          <Text style={styles.cardLineMuted}>{t('home.sessionHint')}</Text>
-          <Text style={styles.cardLine}>
-            {user.firstName} {user.lastName}
-          </Text>
-          <Text style={styles.cardLine}>{user.email}</Text>
+          <Text style={styles.cardTitle}>{t('profile.editTitle')}</Text>
+          <Text style={styles.cardLineMuted}>{t('profile.editBody')}</Text>
+          <PremiumInput
+            label={t('register.firstName')}
+            value={firstName}
+            onChangeText={setFirstName}
+          />
+          <PremiumInput
+            label={t('register.lastName')}
+            value={lastName}
+            onChangeText={setLastName}
+          />
+          <PremiumInput label={t('login.emailLabel')} value={email} onChangeText={setEmail} />
+          <PremiumInput
+            label={t('register.usernameLabel')}
+            value={username}
+            onChangeText={setUsername}
+          />
+          <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
           <Text style={styles.cardLine}>{t('session.role', { role: user.role })}</Text>
           <Text style={styles.cardLineMuted}>
             {tenant.name} · {tenant.subdomain}
           </Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.btnPrimary,
+              pressed && styles.btnPrimaryPressed,
+              saving && styles.btnDisabled,
+            ]}
+            disabled={saving}
+            onPress={() => {
+              if (!firstName.trim() || !lastName.trim() || !email.trim() || !username.trim()) {
+                Alert.alert(t('profile.updateTitle'), t('profile.updateValidation'));
+                return;
+              }
+              setSaving(true);
+              updateProfile({ firstName, lastName, email, username, phone })
+                .then((ok) => {
+                  if (ok) {
+                    Alert.alert(t('profile.updateTitle'), t('profile.updateOk'));
+                  }
+                })
+                .finally(() => setSaving(false));
+            }}
+          >
+            <Text style={styles.btnPrimaryTxt}>
+              {saving ? t('profile.saving') : t('profile.save')}
+            </Text>
+          </Pressable>
         </GlassCard>
 
         <GlassCard style={styles.card}>
@@ -258,5 +316,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
     fontSize: 15,
+  },
+  btnPrimary: {
+    backgroundColor: 'rgba(56,189,248,0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.5)',
+    borderRadius: premium.radiusSm,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  btnPrimaryPressed: {
+    backgroundColor: 'rgba(56,189,248,0.5)',
+  },
+  btnPrimaryTxt: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  btnDisabled: {
+    opacity: 0.6,
   },
 });

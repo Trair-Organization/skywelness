@@ -16,6 +16,7 @@ import { User } from '../database/entities/user.entity';
 import { RESERVED_SUBDOMAINS } from '../common/tenant/subdomain.constants';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterDto } from './dto/register.dto';
+import type { UpdateMeDto } from './dto/update-me.dto';
 import type { JwtAccessPayload, JwtRefreshPayload } from './jwt-payload';
 
 const BCRYPT_ROUNDS = 12;
@@ -259,6 +260,50 @@ export class AuthService {
     await this.usersRepo.increment({ id: userId }, 'refreshTokenVersion', 1);
     await this.usersRepo.delete({ id: userId });
     return { ok: true as const };
+  }
+
+  async updateMe(currentUser: User, dto: UpdateMeDto) {
+    const user = await this.usersRepo.findOne({
+      where: { id: currentUser.id, tenantId: currentUser.tenantId },
+    });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    if (dto.firstName !== undefined) {
+      user.firstName = dto.firstName.trim();
+    }
+    if (dto.lastName !== undefined) {
+      user.lastName = dto.lastName.trim();
+    }
+    if (dto.phone !== undefined) {
+      user.phone = dto.phone === null ? null : dto.phone.trim() || null;
+    }
+    if (dto.email !== undefined) {
+      const normalized = dto.email.trim().toLowerCase();
+      if (normalized !== user.email) {
+        const existing = await this.usersRepo.findOne({
+          where: { tenantId: user.tenantId, email: normalized },
+        });
+        if (existing && existing.id !== user.id) {
+          throw new ConflictException('Email already registered for this tenant');
+        }
+        user.email = normalized;
+      }
+    }
+    if (dto.username !== undefined) {
+      const normalized = this.normalizeUsername(dto.username);
+      if (normalized !== user.username) {
+        const existing = await this.usersRepo.findOne({
+          where: { tenantId: user.tenantId, username: normalized },
+        });
+        if (existing && existing.id !== user.id) {
+          throw new ConflictException('Username already taken for this tenant');
+        }
+        user.username = normalized;
+      }
+    }
+    const saved = await this.usersRepo.save(user);
+    return this.sanitizeUser(saved);
   }
 
   private buildAuthResponse(user: User) {

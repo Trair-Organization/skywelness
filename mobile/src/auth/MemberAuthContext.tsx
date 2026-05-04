@@ -42,6 +42,13 @@ type MemberAuthContextValue = {
   refreshMe: () => Promise<boolean>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  updateProfile: (input: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    username: string;
+    phone: string;
+  }) => Promise<boolean>;
 };
 
 const MemberAuthContext = createContext<MemberAuthContextValue | null>(null);
@@ -425,6 +432,59 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     setPassword('');
   }, [token, tenant]);
 
+  const updateProfile = useCallback(
+    async (input: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      username: string;
+      phone: string;
+    }) => {
+      if (!token || !tenant) {
+        return false;
+      }
+      try {
+        const me = await apiJson<MeUser>('/auth/me', {
+          method: 'PATCH',
+          token,
+          tenantSubdomain: tenant.subdomain,
+          body: JSON.stringify({
+            firstName: input.firstName.trim(),
+            lastName: input.lastName.trim(),
+            email: input.email.trim(),
+            username: normalizeUsername(input.username),
+            phone: input.phone.trim() || null,
+          }),
+        });
+        setUser(me);
+        const stored = await loadMemberSession();
+        if (stored?.refreshToken) {
+          await saveMemberSession({
+            accessToken: token,
+            refreshToken: stored.refreshToken,
+            tenantSubdomain: tenant.subdomain,
+            tenant,
+            user: me,
+          });
+        }
+        return true;
+      } catch (e) {
+        const isNetworkFailure =
+          e instanceof TypeError && e.message.toLowerCase().includes('network request failed');
+        Alert.alert(
+          t('profile.updateTitle'),
+          e instanceof ApiError
+            ? localizeApiMessage(t, e.message, 'profile.updateFailed')
+            : isNetworkFailure
+              ? t('tenant.networkFailed')
+              : t('profile.updateFailed'),
+        );
+        return false;
+      }
+    },
+    [token, tenant, t],
+  );
+
   const value = useMemo<MemberAuthContextValue>(
     () => ({
       authReady,
@@ -449,6 +509,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       refreshMe,
       logout,
       deleteAccount,
+      updateProfile,
     }),
     [
       authReady,
@@ -470,6 +531,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       refreshMe,
       logout,
       deleteAccount,
+      updateProfile,
     ],
   );
 
