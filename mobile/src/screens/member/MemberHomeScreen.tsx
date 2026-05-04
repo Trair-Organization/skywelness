@@ -360,6 +360,11 @@ export function MemberHomeScreen() {
     [packages],
   );
 
+  const joinedEventsCount = useMemo(
+    () => clubEvents.filter((e) => e.isJoined).length,
+    [clubEvents],
+  );
+
   const loadClubEvents = useCallback(async () => {
     if (!token || !tenant) {
       return;
@@ -523,32 +528,8 @@ export function MemberHomeScreen() {
             </View>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{t('home.heroEvents')}</Text>
-              <Text style={styles.heroStatValue}>{clubEvents.length}</Text>
+              <Text style={styles.heroStatValue}>{joinedEventsCount}</Text>
             </View>
-          </View>
-        </View>
-
-        <View style={styles.stripRow}>
-          <View style={styles.chip}>
-            <Text style={styles.chipTxt}>
-              {t('home.packagesChip', { count: activePackageCount })}
-            </Text>
-          </View>
-          <Pressable
-            style={styles.chip}
-            onPress={() => {
-              loadReservations().catch(() => {});
-              navigation.navigate('Reservations');
-            }}
-          >
-            <Text style={styles.chipTxt}>
-              {nextReservation
-                ? `${t('home.reservationsChip')} · ${fmt(nextReservation.startTime)}`
-                : t('home.reservationsChip')}
-            </Text>
-          </Pressable>
-          <View style={[styles.chip, styles.chipMuted]}>
-            <Text style={styles.chipTxt}>{t('home.announcementChip')}</Text>
           </View>
         </View>
 
@@ -1041,7 +1022,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     color: premium.text,
-    marginTop: 8,
+    marginTop: 12,
     marginBottom: 10,
   },
   eventsLoader: {
@@ -1239,29 +1220,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: premium.text,
     marginBottom: 10,
-  },
-  stripRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 14,
-    marginTop: 4,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.28)',
-  },
-  chipMuted: {
-    opacity: 0.85,
-  },
-  chipTxt: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: premium.textMuted,
   },
   servicesHeading: {
     fontSize: 16,

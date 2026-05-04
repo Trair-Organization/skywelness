@@ -45,7 +45,7 @@ export default {
     unknownSessionType: 'Session',
     heroLessons: 'Personal training left',
     heroMassage: 'Massage sessions left',
-    heroEvents: 'Events',
+    heroEvents: 'Joined events',
     upcomingEventsTitle: 'Upcoming events',
     noUpcomingEvents:
       'No published upcoming events yet. They will appear here when your club adds them.',

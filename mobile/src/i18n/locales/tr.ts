@@ -45,7 +45,7 @@ export default {
     unknownSessionType: 'Seans',
     heroLessons: 'Kalan özel ders',
     heroMassage: 'Kalan masaj',
-    heroEvents: 'Etkinlikler',
+    heroEvents: 'Aktif Etkinlikler',
     upcomingEventsTitle: 'Yaklaşan Etkinlikler',
     noUpcomingEvents:
       'Yaklaşan yayınlanmış etkinlik yok. Kulüp yönetimi etkinlik eklediğinde burada görünür.',
