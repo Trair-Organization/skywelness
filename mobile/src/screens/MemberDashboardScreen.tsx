@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -42,7 +42,11 @@ type ReservationRow = {
   endTime: string;
   trainer: { user: { firstName: string; lastName: string } };
   timeSlot: { id: string; startTime: string; endTime: string };
-  package: { remainingSessions: number; status: string };
+  package: {
+    remainingSessions: number;
+    status: string;
+    packageType?: { id: string; name: string; sessionType: string };
+  };
 };
 
 type MyPackageRow = {
@@ -76,6 +80,15 @@ function pickDefaultPackageId(rows: MyPackageRow[]): string | null {
   return usable?.id ?? rows[0]?.id ?? null;
 }
 
+function nextUpcomingReservation(rows: ReservationRow[]): ReservationRow | null {
+  const now = Date.now() - 60_000;
+  const upcoming = rows
+    .filter((r) => new Date(r.startTime).getTime() > now)
+    .filter((r) => r.status === 'confirmed' || r.status === 'pending')
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  return upcoming[0] ?? null;
+}
+
 const logoDark = require('../../assets/branding/wellness-club-logo-header-dark.png');
 
 export function MemberDashboardScreen() {
@@ -98,6 +111,11 @@ export function MemberDashboardScreen() {
   const [booking, setBooking] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const bookingSectionY = useRef(0);
+  const [hubPlaceholder, setHubPlaceholder] = useState<'massage' | 'events' | 'cafe' | null>(null);
+  const [trainersShowAll, setTrainersShowAll] = useState(false);
+
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
       return;
@@ -119,12 +137,6 @@ export function MemberDashboardScreen() {
       setLoadingPackages(false);
     }
   }, [token, tenant, t]);
-
-  useEffect(() => {
-    if (token && tenant) {
-      loadPackages().catch(() => {});
-    }
-  }, [token, tenant, loadPackages]);
 
   const loadReservations = useCallback(async () => {
     if (!token || !tenant) {
@@ -168,6 +180,14 @@ export function MemberDashboardScreen() {
       setLoadingTrainers(false);
     }
   }, [token, tenant, t]);
+
+  useEffect(() => {
+    if (token && tenant) {
+      loadPackages().catch(() => {});
+      loadReservations().catch(() => {});
+      loadTrainers().catch(() => {});
+    }
+  }, [token, tenant, loadPackages, loadReservations, loadTrainers]);
 
   const loadAvailability = useCallback(async () => {
     if (!token || !tenant) {
@@ -278,6 +298,48 @@ export function MemberDashboardScreen() {
     [token, tenant, loadReservations, loadAvailability, loadPackages, t],
   );
 
+  const nextReservation = useMemo(() => nextUpcomingReservation(reservations), [reservations]);
+
+  const activePackageCount = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return packages.filter(
+      (p) =>
+        p.status === 'active' &&
+        p.remainingSessions > 0 &&
+        typeof p.expiresAt === 'string' &&
+        p.expiresAt >= today,
+    ).length;
+  }, [packages]);
+
+  const scrollToBooking = useCallback(() => {
+    setHubPlaceholder(null);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, bookingSectionY.current - 12),
+        animated: true,
+      });
+    });
+  }, []);
+
+  const openContactClub = useCallback(() => {
+    Alert.alert(t('home.contactClub'), t('home.contactClubAlert'));
+  }, [t]);
+
+  const openPolicies = useCallback(() => {
+    Alert.alert(t('home.policiesCta'), t('home.policiesBody'));
+  }, [t]);
+
+  const selectTrainerAndScroll = useCallback((trainerId: string) => {
+    setSelectedTrainerId(trainerId);
+    setHubPlaceholder(null);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, bookingSectionY.current - 12),
+        animated: true,
+      });
+    });
+  }, []);
+
   const ripple =
     Platform.OS === 'android' ? { android_ripple: { color: 'rgba(255,255,255,0.2)' } } : {};
 
@@ -288,6 +350,7 @@ export function MemberDashboardScreen() {
   return (
     <GradientBackground>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 28 },
@@ -305,7 +368,7 @@ export function MemberDashboardScreen() {
             />
             <View style={styles.heroTextCol}>
               <Text style={styles.heroBrand}>{t('appTitle')}</Text>
-              <Text style={styles.heroTag}>{t('home.tagline')}</Text>
+              <Text style={styles.heroTag}>{t('home.hubTagline')}</Text>
             </View>
           </View>
           <View style={styles.langRow}>
@@ -337,8 +400,182 @@ export function MemberDashboardScreen() {
           </View>
         </View>
 
-        <GlassCard>
+        <GlassCard style={styles.sectionCard}>
+          <Text style={styles.todayClub}>{t('home.clubToday', { club: tenant.name })}</Text>
+          <Text style={styles.todayGreet}>{t('home.greeting', { name: user.firstName })}</Text>
+          {nextReservation ? (
+            <>
+              <Text style={styles.todayLabel}>{t('home.nextSessionLabel')}</Text>
+              <Text style={styles.todayMeta}>
+                {t('home.nextSessionMeta', {
+                  time: fmt(nextReservation.startTime),
+                  trainer: `${nextReservation.trainer.user.firstName} ${nextReservation.trainer.user.lastName}`,
+                  type: nextReservation.package?.packageType?.name ?? t('home.unknownSessionType'),
+                })}
+              </Text>
+              <Pressable
+                {...ripple}
+                style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
+                onPress={scrollToBooking}
+              >
+                <Text style={styles.btnPrimaryTxt}>{t('home.ctaBookPt')}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.todayMeta}>{t('home.noUpcomingSession')}</Text>
+              {activePackageCount === 0 ? (
+                <Text style={styles.warn}>{t('booking.noPackages')}</Text>
+              ) : null}
+              <Pressable
+                {...ripple}
+                style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
+                onPress={scrollToBooking}
+              >
+                <Text style={styles.btnPrimaryTxt}>
+                  {activePackageCount > 0 ? t('home.ctaBookPt') : t('home.ctaExploreServices')}
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </GlassCard>
+
+        <View style={styles.stripRow}>
+          <View style={styles.chip}>
+            <Text style={styles.chipTxt}>
+              {t('home.packagesChip', { count: activePackageCount })}
+            </Text>
+          </View>
+          <Pressable
+            style={styles.chip}
+            onPress={() => {
+              loadReservations().catch(() => {});
+            }}
+          >
+            <Text style={styles.chipTxt}>
+              {nextReservation
+                ? `${t('home.reservationsChip')} · ${fmt(nextReservation.startTime)}`
+                : t('home.reservationsChip')}
+            </Text>
+          </Pressable>
+          <View style={[styles.chip, styles.chipMuted]}>
+            <Text style={styles.chipTxt}>{t('home.announcementChip')}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.servicesHeading}>{t('home.servicesTitle')}</Text>
+        <View style={styles.grid}>
+          <Pressable
+            style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
+            onPress={() => {
+              setHubPlaceholder(null);
+              scrollToBooking();
+            }}
+          >
+            <Text style={styles.svcTitle}>{t('home.servicePtTitle')}</Text>
+            <Text style={styles.svcSub}>{t('home.servicePtSubtitle')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
+            onPress={() => setHubPlaceholder('massage')}
+          >
+            <Text style={styles.svcTitle}>{t('home.serviceMassageTitle')}</Text>
+            <Text style={styles.svcSub}>{t('home.serviceMassageSubtitle')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
+            onPress={() => setHubPlaceholder('events')}
+          >
+            <Text style={styles.svcTitle}>{t('home.serviceEventsTitle')}</Text>
+            <Text style={styles.svcSub}>{t('home.serviceEventsSubtitle')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
+            onPress={() => setHubPlaceholder('cafe')}
+          >
+            <Text style={styles.svcTitle}>{t('home.serviceCafeTitle')}</Text>
+            <Text style={styles.svcSub}>{t('home.serviceCafeSubtitle')}</Text>
+          </Pressable>
+        </View>
+
+        {hubPlaceholder ? (
+          <GlassCard style={styles.sectionCard}>
+            <Text style={styles.cardTitle}>
+              {t('home.placeholderIntro', {
+                service:
+                  hubPlaceholder === 'massage'
+                    ? t('home.serviceMassageTitle')
+                    : hubPlaceholder === 'events'
+                      ? t('home.serviceEventsTitle')
+                      : t('home.serviceCafeTitle'),
+              })}
+            </Text>
+            <Text style={styles.muted}>{t('home.placeholderBody')}</Text>
+            <Pressable
+              {...ripple}
+              style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+              onPress={openContactClub}
+            >
+              <Text style={styles.btnOutlineTxt}>{t('home.contactClub')}</Text>
+            </Pressable>
+          </GlassCard>
+        ) : null}
+
+        <GlassCard style={styles.sectionCard}>
+          <Text style={styles.cardTitle}>{t('home.trainersTitle')}</Text>
+          <Text style={styles.muted}>{t('home.trainersSubtitle')}</Text>
+          {loadingTrainers && trainers.length === 0 ? (
+            <ActivityIndicator color={premium.accentBlue} style={styles.spinnerPad} />
+          ) : null}
+          {!loadingTrainers && trainers.length === 0 ? (
+            <Text style={styles.muted}>{t('home.trainersEmpty')}</Text>
+          ) : null}
+          {(trainersShowAll ? trainers : trainers.slice(0, 3)).map((tr) => (
+            <Pressable
+              key={tr.id}
+              style={({ pressed }) => [styles.trainerRow, pressed && styles.trainerRowPressed]}
+              onPress={() => selectTrainerAndScroll(tr.id)}
+            >
+              <Text style={styles.trainerName}>
+                {tr.user.firstName} {tr.user.lastName}
+              </Text>
+              <Text style={styles.trainerCta}>{t('home.ctaBookPt')}</Text>
+            </Pressable>
+          ))}
+          {trainers.length > 3 ? (
+            <Pressable
+              style={({ pressed }) => [styles.btnGhost, pressed && styles.btnGhostPressed]}
+              onPress={() => setTrainersShowAll((v) => !v)}
+            >
+              <Text style={styles.btnGhostTxt}>
+                {trainersShowAll ? t('home.seeLess') : t('home.seeAll')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </GlassCard>
+
+        <GlassCard style={styles.sectionCard}>
+          <Text style={styles.cardTitle}>{t('home.helpTitle')}</Text>
+          <Text style={styles.muted}>{t('home.helpBody')}</Text>
+          <Pressable
+            {...ripple}
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={openPolicies}
+          >
+            <Text style={styles.btnOutlineTxt}>{t('home.policiesCta')}</Text>
+          </Pressable>
+          <Pressable
+            {...ripple}
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={openContactClub}
+          >
+            <Text style={styles.btnOutlineTxt}>{t('home.contactClub')}</Text>
+          </Pressable>
+        </GlassCard>
+
+        <GlassCard style={styles.sectionCard}>
           <Text style={styles.cardTitle}>{t('session.title')}</Text>
+          <Text style={styles.cardLineMuted}>{t('home.sessionHint')}</Text>
           <Text style={styles.cardLine}>
             {user.firstName} {user.lastName}
           </Text>
@@ -357,180 +594,188 @@ export function MemberDashboardScreen() {
           </Pressable>
         </GlassCard>
 
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.cardTitle}>{t('booking.section')}</Text>
-          <Text style={styles.muted}>{t('booking.packageHint')}</Text>
+        <View
+          onLayout={(e) => {
+            bookingSectionY.current = e.nativeEvent.layout.y;
+          }}
+        >
+          <GlassCard style={styles.sectionCard}>
+            <Text style={styles.cardTitle}>{t('home.bookingHubTitle')}</Text>
+            <Text style={styles.muted}>{t('booking.packageHint')}</Text>
 
-          <Pressable
-            {...ripple}
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={() => {
-              loadPackages().catch(() => {});
-            }}
-            disabled={loadingPackages}
-          >
-            {loadingPackages ? (
-              <ActivityIndicator color={premium.accentBlue} />
+            <Pressable
+              {...ripple}
+              style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+              onPress={() => {
+                loadPackages().catch(() => {});
+              }}
+              disabled={loadingPackages}
+            >
+              {loadingPackages ? (
+                <ActivityIndicator color={premium.accentBlue} />
+              ) : (
+                <Text style={styles.btnOutlineTxt}>{t('booking.loadPackages')}</Text>
+              )}
+            </Pressable>
+
+            {packages.length === 0 ? (
+              <Text style={styles.warn}>{t('booking.noPackages')}</Text>
             ) : (
-              <Text style={styles.btnOutlineTxt}>{t('booking.loadPackages')}</Text>
+              <>
+                <Text style={styles.subLabel}>{t('booking.pickPackage')}</Text>
+                {packages.map((p) => {
+                  const selected = p.id === selectedPackageId;
+                  return (
+                    <Pressable
+                      key={p.id}
+                      style={[styles.pick, selected && styles.pickOn]}
+                      onPress={() => setSelectedPackageId(p.id)}
+                    >
+                      <Text style={styles.pickTxt}>
+                        {p.packageType.name} · {p.remainingSessions} · {p.status}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </>
             )}
-          </Pressable>
 
-          {packages.length === 0 ? (
-            <Text style={styles.warn}>{t('booking.noPackages')}</Text>
-          ) : (
-            <>
-              <Text style={styles.subLabel}>{t('booking.pickPackage')}</Text>
-              {packages.map((p) => {
-                const selected = p.id === selectedPackageId;
-                return (
-                  <Pressable
-                    key={p.id}
-                    style={[styles.pick, selected && styles.pickOn]}
-                    onPress={() => setSelectedPackageId(p.id)}
-                  >
-                    <Text style={styles.pickTxt}>
-                      {p.packageType.name} · {p.remainingSessions} · {p.status}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </>
-          )}
+            <Pressable
+              {...ripple}
+              style={({ pressed }) => [
+                styles.btnPrimary,
+                pressed && styles.btnPrimaryPressed,
+                loadingTrainers && styles.disabled,
+              ]}
+              onPress={() => {
+                loadTrainers().catch(() => {});
+              }}
+              disabled={loadingTrainers}
+            >
+              {loadingTrainers ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnPrimaryTxt}>{t('booking.listTrainers')}</Text>
+              )}
+            </Pressable>
 
-          <Pressable
-            {...ripple}
-            style={({ pressed }) => [
-              styles.btnPrimary,
-              pressed && styles.btnPrimaryPressed,
-              loadingTrainers && styles.disabled,
-            ]}
-            onPress={() => {
-              loadTrainers().catch(() => {});
-            }}
-            disabled={loadingTrainers}
-          >
-            {loadingTrainers ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnPrimaryTxt}>{t('booking.listTrainers')}</Text>
-            )}
-          </Pressable>
+            {trainers.map((tr) => {
+              const selected = tr.id === selectedTrainerId;
+              return (
+                <Pressable
+                  key={tr.id}
+                  style={[styles.pick, selected && styles.pickOn]}
+                  onPress={() => setSelectedTrainerId(tr.id)}
+                >
+                  <Text style={styles.pickTxt}>
+                    {tr.user.firstName} {tr.user.lastName}
+                  </Text>
+                </Pressable>
+              );
+            })}
 
-          {trainers.map((tr) => {
-            const selected = tr.id === selectedTrainerId;
-            return (
-              <Pressable
-                key={tr.id}
-                style={[styles.pick, selected && styles.pickOn]}
-                onPress={() => setSelectedTrainerId(tr.id)}
-              >
-                <Text style={styles.pickTxt}>
-                  {tr.user.firstName} {tr.user.lastName}
-                </Text>
-              </Pressable>
-            );
-          })}
+            <Pressable
+              {...ripple}
+              style={({ pressed }) => [
+                styles.btnPrimary,
+                pressed && styles.btnPrimaryPressed,
+                (!selectedTrainerId || loadingSlots) && styles.disabled,
+              ]}
+              onPress={() => {
+                loadAvailability().catch(() => {});
+              }}
+              disabled={!selectedTrainerId || loadingSlots}
+            >
+              {loadingSlots ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnPrimaryTxt}>{t('booking.loadAvailability')}</Text>
+              )}
+            </Pressable>
 
-          <Pressable
-            {...ripple}
-            style={({ pressed }) => [
-              styles.btnPrimary,
-              pressed && styles.btnPrimaryPressed,
-              (!selectedTrainerId || loadingSlots) && styles.disabled,
-            ]}
-            onPress={() => {
-              loadAvailability().catch(() => {});
-            }}
-            disabled={!selectedTrainerId || loadingSlots}
-          >
-            {loadingSlots ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnPrimaryTxt}>{t('booking.loadAvailability')}</Text>
-            )}
-          </Pressable>
+            <Text style={styles.subLabel}>{t('booking.slotsTitle')}</Text>
+            {slots.length === 0 ? (
+              <Text style={styles.muted}>{t('booking.emptySlots')}</Text>
+            ) : null}
+            {slots.map((s) => {
+              const selected = s.id === selectedSlotId;
+              return (
+                <Pressable
+                  key={s.id}
+                  style={[styles.pick, selected && styles.pickOn]}
+                  onPress={() => setSelectedSlotId(s.id)}
+                >
+                  <Text style={styles.pickTxt}>
+                    {fmt(s.startTime)} — {fmt(s.endTime)} · {s.remainingCapacity}
+                  </Text>
+                </Pressable>
+              );
+            })}
 
-          <Text style={styles.subLabel}>{t('booking.slotsTitle')}</Text>
-          {slots.length === 0 ? <Text style={styles.muted}>{t('booking.emptySlots')}</Text> : null}
-          {slots.map((s) => {
-            const selected = s.id === selectedSlotId;
-            return (
-              <Pressable
-                key={s.id}
-                style={[styles.pick, selected && styles.pickOn]}
-                onPress={() => setSelectedSlotId(s.id)}
-              >
-                <Text style={styles.pickTxt}>
-                  {fmt(s.startTime)} — {fmt(s.endTime)} · {s.remainingCapacity}
-                </Text>
-              </Pressable>
-            );
-          })}
+            <Pressable
+              {...ripple}
+              style={({ pressed }) => [
+                styles.btnPrimary,
+                pressed && styles.btnPrimaryPressed,
+                (!selectedSlotId || booking) && styles.disabled,
+              ]}
+              onPress={() => {
+                bookSlot().catch(() => {});
+              }}
+              disabled={!selectedSlotId || booking}
+            >
+              {booking ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnPrimaryTxt}>{t('booking.book')}</Text>
+              )}
+            </Pressable>
 
-          <Pressable
-            {...ripple}
-            style={({ pressed }) => [
-              styles.btnPrimary,
-              pressed && styles.btnPrimaryPressed,
-              (!selectedSlotId || booking) && styles.disabled,
-            ]}
-            onPress={() => {
-              bookSlot().catch(() => {});
-            }}
-            disabled={!selectedSlotId || booking}
-          >
-            {booking ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnPrimaryTxt}>{t('booking.book')}</Text>
-            )}
-          </Pressable>
+            <Text style={styles.subLabel}>{t('booking.reservations')}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+              onPress={() => {
+                loadReservations().catch(() => {});
+              }}
+              disabled={loadingRes}
+            >
+              {loadingRes ? (
+                <ActivityIndicator color={premium.accentGreen} />
+              ) : (
+                <Text style={styles.btnOutlineTxt}>{t('booking.refreshRes')}</Text>
+              )}
+            </Pressable>
 
-          <Text style={styles.subLabel}>{t('booking.reservations')}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={() => {
-              loadReservations().catch(() => {});
-            }}
-            disabled={loadingRes}
-          >
-            {loadingRes ? (
-              <ActivityIndicator color={premium.accentGreen} />
-            ) : (
-              <Text style={styles.btnOutlineTxt}>{t('booking.refreshRes')}</Text>
-            )}
-          </Pressable>
-
-          {reservations.map((r) => {
-            const canCancel =
-              (r.status === 'confirmed' || r.status === 'pending') &&
-              new Date(r.startTime) > new Date();
-            return (
-              <View key={r.id} style={styles.resRow}>
-                <Text style={styles.resTxt}>
-                  {fmt(r.startTime)} · {r.trainer.user.firstName} {r.trainer.user.lastName} ·{' '}
-                  {r.status}
-                </Text>
-                {canCancel ? (
-                  <Pressable
-                    style={styles.btnDanger}
-                    disabled={cancellingId === r.id}
-                    onPress={() => {
-                      cancelReservation(r.id).catch(() => {});
-                    }}
-                  >
-                    {cancellingId === r.id ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.btnDangerTxt}>{t('booking.cancel')}</Text>
-                    )}
-                  </Pressable>
-                ) : null}
-              </View>
-            );
-          })}
-        </GlassCard>
+            {reservations.map((r) => {
+              const canCancel =
+                (r.status === 'confirmed' || r.status === 'pending') &&
+                new Date(r.startTime) > new Date();
+              return (
+                <View key={r.id} style={styles.resRow}>
+                  <Text style={styles.resTxt}>
+                    {fmt(r.startTime)} · {r.trainer.user.firstName} {r.trainer.user.lastName} ·{' '}
+                    {r.status}
+                  </Text>
+                  {canCancel ? (
+                    <Pressable
+                      style={styles.btnDanger}
+                      disabled={cancellingId === r.id}
+                      onPress={() => {
+                        cancelReservation(r.id).catch(() => {});
+                      }}
+                    >
+                      {cancellingId === r.id ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.btnDangerTxt}>{t('booking.cancel')}</Text>
+                      )}
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })}
+          </GlassCard>
+        </View>
       </ScrollView>
     </GradientBackground>
   );
@@ -613,6 +858,124 @@ const styles = StyleSheet.create({
   sectionCard: {
     marginTop: 12,
     marginBottom: 8,
+  },
+  todayClub: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: premium.accentGreen,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  todayGreet: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: premium.text,
+    marginBottom: 12,
+  },
+  todayLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  todayMeta: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: premium.text,
+    marginBottom: 14,
+  },
+  stripRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+    marginTop: 4,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  chipMuted: {
+    opacity: 0.85,
+  },
+  chipTxt: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.textMuted,
+  },
+  servicesHeading: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 8,
+  },
+  svcCard: {
+    width: '48%',
+    minHeight: 96,
+    padding: 14,
+    borderRadius: premium.radiusMd,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  svcCardPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  svcTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 6,
+  },
+  svcSub: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: premium.textMuted,
+  },
+  trainerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    marginBottom: 8,
+  },
+  trainerRowPressed: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  trainerName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: premium.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  trainerCta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.accentBlue,
+  },
+  spinnerPad: {
+    marginVertical: 12,
   },
   cardTitle: {
     fontSize: 18,
