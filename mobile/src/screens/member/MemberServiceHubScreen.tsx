@@ -942,19 +942,21 @@ export function MemberServiceHubScreen({ mode }: Props) {
           setShowDatePicker(false);
         }}
       >
-        <Pressable
-          style={styles.calendarModalBackdrop}
-          onPress={() => {
-            setCalendarTrainer(null);
-            setSelectedSlotId(null);
-            setShowDatePicker(false);
-          }}
-        >
-          <View style={styles.calendarSheet} onStartShouldSetResponder={() => true}>
+        <View style={styles.calendarModalBackdrop}>
+          <Pressable
+            style={styles.calendarModalDismissLayer}
+            onPress={() => {
+              setCalendarTrainer(null);
+              setSelectedSlotId(null);
+              setShowDatePicker(false);
+            }}
+          />
+          <View style={styles.calendarSheet}>
             {calendarTrainer ? (
               <>
                 <ScrollView
-                  keyboardShouldPersistTaps="always"
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
                   showsVerticalScrollIndicator={false}
                   style={{ maxHeight: windowHeight * 0.58 }}
                   contentContainerStyle={styles.calendarScrollContent}
@@ -1185,7 +1187,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
               </>
             ) : null}
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       {showDatePicker && Platform.OS === 'android' ? (
@@ -1504,6 +1506,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
+  },
+  /** Tap outside the sheet to dismiss; must not wrap the sheet or scroll/touches break. */
+  calendarModalDismissLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
   calendarSheet: {
     width: '100%',
