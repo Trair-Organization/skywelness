@@ -505,6 +505,60 @@ export function MemberHomeScreen() {
               <Text style={styles.heroStatValue}>{clubEvents.length}</Text>
             </View>
           </View>
+          <View style={styles.heroSessionBlock}>
+            <Text style={styles.todayGreet}>{t('home.greeting', { name: user.firstName })}</Text>
+            {nextReservation ? (
+              <>
+                <Text style={styles.todayLabel}>{t('home.nextSessionLabel')}</Text>
+                <Text style={styles.todayMeta}>
+                  {t('home.nextSessionMeta', {
+                    time: fmt(nextReservation.startTime),
+                    trainer: `${nextReservation.trainer.user.firstName} ${nextReservation.trainer.user.lastName}`,
+                    type:
+                      nextReservation.package?.packageType?.name ?? t('home.unknownSessionType'),
+                  })}
+                </Text>
+                <Pressable
+                  {...ripple}
+                  style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
+                  onPress={scrollToBooking}
+                >
+                  <Text style={styles.btnPrimaryTxt}>{t('home.ctaBookPt')}</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={styles.todayMeta}>{t('home.noUpcomingSession')}</Text>
+                {activePackageCount === 0 ? (
+                  <Text style={styles.warn}>{t('booking.noPackages')}</Text>
+                ) : null}
+              </>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.stripRow}>
+          <View style={styles.chip}>
+            <Text style={styles.chipTxt}>
+              {t('home.packagesChip', { count: activePackageCount })}
+            </Text>
+          </View>
+          <Pressable
+            style={styles.chip}
+            onPress={() => {
+              loadReservations().catch(() => {});
+              navigation.navigate('Reservations');
+            }}
+          >
+            <Text style={styles.chipTxt}>
+              {nextReservation
+                ? `${t('home.reservationsChip')} · ${fmt(nextReservation.startTime)}`
+                : t('home.reservationsChip')}
+            </Text>
+          </Pressable>
+          <View style={[styles.chip, styles.chipMuted]}>
+            <Text style={styles.chipTxt}>{t('home.announcementChip')}</Text>
+          </View>
         </View>
 
         <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
@@ -671,61 +725,6 @@ export function MemberHomeScreen() {
             </Pressable>
           ) : null}
         </Modal>
-
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.todayClub}>{t('home.clubToday', { club: tenant.name })}</Text>
-          <Text style={styles.todayGreet}>{t('home.greeting', { name: user.firstName })}</Text>
-          {nextReservation ? (
-            <>
-              <Text style={styles.todayLabel}>{t('home.nextSessionLabel')}</Text>
-              <Text style={styles.todayMeta}>
-                {t('home.nextSessionMeta', {
-                  time: fmt(nextReservation.startTime),
-                  trainer: `${nextReservation.trainer.user.firstName} ${nextReservation.trainer.user.lastName}`,
-                  type: nextReservation.package?.packageType?.name ?? t('home.unknownSessionType'),
-                })}
-              </Text>
-              <Pressable
-                {...ripple}
-                style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
-                onPress={scrollToBooking}
-              >
-                <Text style={styles.btnPrimaryTxt}>{t('home.ctaBookPt')}</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Text style={styles.todayMeta}>{t('home.noUpcomingSession')}</Text>
-              {activePackageCount === 0 ? (
-                <Text style={styles.warn}>{t('booking.noPackages')}</Text>
-              ) : null}
-            </>
-          )}
-        </GlassCard>
-
-        <View style={styles.stripRow}>
-          <View style={styles.chip}>
-            <Text style={styles.chipTxt}>
-              {t('home.packagesChip', { count: activePackageCount })}
-            </Text>
-          </View>
-          <Pressable
-            style={styles.chip}
-            onPress={() => {
-              loadReservations().catch(() => {});
-              navigation.navigate('Reservations');
-            }}
-          >
-            <Text style={styles.chipTxt}>
-              {nextReservation
-                ? `${t('home.reservationsChip')} · ${fmt(nextReservation.startTime)}`
-                : t('home.reservationsChip')}
-            </Text>
-          </Pressable>
-          <View style={[styles.chip, styles.chipMuted]}>
-            <Text style={styles.chipTxt}>{t('home.announcementChip')}</Text>
-          </View>
-        </View>
 
         <Text style={styles.servicesHeading}>{t('home.servicesTitle')}</Text>
         <View style={styles.grid}>
@@ -1028,6 +1027,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
   },
+  heroSessionBlock: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: premium.glassBorder,
+    paddingTop: 12,
+  },
   heroStat: {
     flex: 1,
     paddingVertical: 10,
@@ -1233,19 +1238,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
   },
-  todayClub: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: premium.accentGreen,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
   todayGreet: {
     fontSize: 17,
     fontWeight: '700',
     color: premium.text,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   todayLabel: {
     fontSize: 12,
@@ -1259,7 +1256,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: premium.text,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   stripRow: {
     flexDirection: 'row',
