@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -77,18 +78,32 @@ const TAB_BAR_PAD = 72;
 const CLUB_OPEN_HOUR = 6;
 const CLUB_LAST_START_HOUR = 21;
 
-function addDays(d: Date, n: number): Date {
+/** Calendar strip shows this many consecutive days, never before local today. */
+const CALENDAR_VISIBLE_DAYS = 6;
+
+function startOfLocalDay(d: Date): Date {
   const x = new Date(d);
-  x.setDate(x.getDate() + n);
+  x.setHours(0, 0, 0, 0);
   return x;
 }
 
-function startOfWeekMonday(d: Date): Date {
+/** Whole days from local today’s midnight to `target`’s date (can be negative). */
+function daysFromTodayStart(target: Date): number {
+  const t0 = startOfLocalDay(new Date()).getTime();
+  const d0 = startOfLocalDay(target).getTime();
+  return Math.round((d0 - t0) / (24 * 60 * 60 * 1000));
+}
+
+/** True if the start of the hour bucket (local) is already in the past. */
+function isBucketStartInPast(day: Date, bucketHour: number): boolean {
+  const t = new Date(day);
+  t.setHours(bucketHour, 0, 0, 0);
+  return t.getTime() < Date.now();
+}
+
+function addDays(d: Date, n: number): Date {
   const x = new Date(d);
-  const dow = x.getDay();
-  const diff = dow === 0 ? -6 : 1 - dow;
-  x.setDate(x.getDate() + diff);
-  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() + n);
   return x;
 }
 
@@ -166,35 +181,6 @@ function sameLocalCalendarDay(a: Date, b: Date): boolean {
   );
 }
 
-/** Index 0 = Monday … 6 = Sunday within `weekStartMonday` week; prefers today when it falls in that week. */
-function dayIndexInWeek(weekStartMonday: Date): number {
-  const now = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(weekStartMonday, i);
-    if (sameLocalCalendarDay(d, now)) {
-      return i;
-    }
-  }
-  return 0;
-}
-
-function weekOffsetForPickedDate(d: Date): number {
-  const pickedMonday = startOfWeekMonday(d);
-  const thisMonday = startOfWeekMonday(new Date());
-  const diffMs = pickedMonday.getTime() - thisMonday.getTime();
-  return Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
-}
-
-function dayIndexForPickedDate(d: Date): number {
-  const mon = startOfWeekMonday(d);
-  for (let i = 0; i < 7; i++) {
-    if (sameLocalCalendarDay(addDays(mon, i), d)) {
-      return i;
-    }
-  }
-  return 0;
-}
-
 /** Slot whose local start time falls on `day` and starts in hour `bucketHour` (e.g. 6 → 06:00–07:00). */
 function findSlotInBucket(
   rows: SlotRow[],
@@ -265,10 +251,14 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [reservations, setReservations] = useState<HubReservation[]>([]);
   const [loadingBoot, setLoadingBoot] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [weekOffset, setWeekOffset] = useState(0);
+  /**
+   * Slides the visible 6-day window forward in steps of `CALENDAR_VISIBLE_DAYS` from local today
+   * (page 0 = today … today+5).
+   */
+  const [sixDayPage, setSixDayPage] = useState(0);
   /** When set, full weekly calendar modal is open for this trainer. */
   const [calendarTrainer, setCalendarTrainer] = useState<TrainerRow | null>(null);
-  /** 0–6: Mon–Sun within the currently displayed `rangeStart` week. */
+  /** 0–5: day index within the current 6-day strip. */
   const [calendarDayIndex, setCalendarDayIndex] = useState(0);
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -299,12 +289,15 @@ export function MemberServiceHubScreen({ mode }: Props) {
     );
   }, [packages, mode]);
 
-  const rangeStart = useMemo(() => {
-    const base = addDays(new Date(), weekOffset * 7);
-    return startOfWeekMonday(base);
-  }, [weekOffset]);
+  const visibleDayDates = useMemo(() => {
+    const todayStart = startOfLocalDay(new Date());
+    const windowStart = addDays(todayStart, sixDayPage * CALENDAR_VISIBLE_DAYS);
+    return Array.from({ length: CALENDAR_VISIBLE_DAYS }, (_, i) => addDays(windowStart, i));
+  }, [sixDayPage]);
 
-  const rangeEnd = useMemo(() => addDays(rangeStart, 7), [rangeStart]);
+  const rangeStart = visibleDayDates[0] ?? startOfLocalDay(new Date());
+
+  const rangeEnd = useMemo(() => addDays(rangeStart, CALENDAR_VISIBLE_DAYS), [rangeStart]);
 
   const loadAll = useCallback(async () => {
     if (!token || !tenant) {
@@ -419,7 +412,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
 
   useEffect(() => {
     setSelectedSlotId(null);
-  }, [weekOffset]);
+  }, [sixDayPage]);
 
   useEffect(() => {
     if (!calendarTrainer) {
@@ -429,8 +422,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
       suppressCalendarDaySyncRef.current = false;
       return;
     }
-    setCalendarDayIndex(dayIndexInWeek(rangeStart));
-  }, [calendarTrainer, weekOffset, rangeStart]);
+    setCalendarDayIndex(0);
+  }, [calendarTrainer, sixDayPage]);
 
   const upcomingRes = useMemo(() => {
     const now = Date.now();
@@ -582,24 +575,27 @@ export function MemberServiceHubScreen({ mode }: Props) {
   );
 
   const applyPickedDate = useCallback((d: Date) => {
+    const delta = Math.max(0, daysFromTodayStart(d));
     suppressCalendarDaySyncRef.current = true;
-    setWeekOffset(weekOffsetForPickedDate(d));
-    setCalendarDayIndex(dayIndexForPickedDate(d));
+    setSixDayPage(Math.floor(delta / CALENDAR_VISIBLE_DAYS));
+    setCalendarDayIndex(delta % CALENDAR_VISIBLE_DAYS);
     setSelectedSlotId(null);
   }, []);
 
   const jumpToToday = useCallback(() => {
     suppressCalendarDaySyncRef.current = true;
-    setWeekOffset(0);
-    setCalendarDayIndex(dayIndexForPickedDate(new Date()));
+    setSixDayPage(0);
+    setCalendarDayIndex(0);
     setSelectedSlotId(null);
   }, []);
 
   const openDatePicker = useCallback(() => {
-    const base = addDays(rangeStart, calendarDayIndex);
-    setIosPickerValue(base);
+    const base = visibleDayDates[calendarDayIndex] ?? visibleDayDates[0];
+    if (base) {
+      setIosPickerValue(base);
+    }
     setShowDatePicker(true);
-  }, [rangeStart, calendarDayIndex]);
+  }, [visibleDayDates, calendarDayIndex]);
 
   const onAndroidDateChange = useCallback(
     (event: DateTimePickerEvent, date?: Date) => {
@@ -611,12 +607,14 @@ export function MemberServiceHubScreen({ mode }: Props) {
     [applyPickedDate],
   );
 
-  const weekLabel = `${rangeStart.toLocaleDateString()} — ${addDays(rangeEnd, -1).toLocaleDateString()}`;
-
-  const weekDayDates = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i)),
-    [rangeStart],
-  );
+  const weekLabel = (() => {
+    const a = visibleDayDates[0];
+    const b = visibleDayDates[CALENDAR_VISIBLE_DAYS - 1];
+    if (!a || !b) {
+      return '';
+    }
+    return `${a.toLocaleDateString()} — ${b.toLocaleDateString()}`;
+  })();
 
   const hourBuckets = useMemo(
     () =>
@@ -918,6 +916,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
                       style={styles.btnPrimary}
                       onPress={() => {
                         setSelectedSlotId(null);
+                        suppressCalendarDaySyncRef.current = true;
+                        setSixDayPage(0);
+                        setCalendarDayIndex(0);
                         setCalendarTrainer(profileTrainer);
                         setProfileTrainer(null);
                       }}
@@ -989,11 +990,26 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   </View>
                   <Text style={styles.calendarHint}>{t('serviceHub.calendarWeeklyHint')}</Text>
                   <View style={styles.weekRow}>
-                    <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w - 1)}>
-                      <Text style={styles.weekBtnTxt}>{t('serviceHub.weekPrev')}</Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.weekBtn,
+                        sixDayPage === 0 && styles.weekBtnDisabled,
+                        pressed && sixDayPage > 0 && styles.weekBtnPressed,
+                      ]}
+                      disabled={sixDayPage === 0}
+                      onPress={() => setSixDayPage((p) => Math.max(0, p - 1))}
+                    >
+                      <Text
+                        style={[styles.weekBtnTxt, sixDayPage === 0 && styles.weekBtnTxtDisabled]}
+                      >
+                        {t('serviceHub.weekPrev')}
+                      </Text>
                     </Pressable>
                     <Text style={styles.weekRange}>{weekLabel}</Text>
-                    <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w + 1)}>
+                    <Pressable
+                      style={({ pressed }) => [styles.weekBtn, pressed && styles.weekBtnPressed]}
+                      onPress={() => setSixDayPage((p) => p + 1)}
+                    >
                       <Text style={styles.weekBtnTxt}>{t('serviceHub.weekNext')}</Text>
                     </Pressable>
                   </View>
@@ -1021,7 +1037,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   </View>
                   <Text style={styles.calendarPickDayLabel}>{t('serviceHub.calendarPickDay')}</Text>
                   <View style={styles.dayChipRow}>
-                    {weekDayDates.map((dayDate, i) => {
+                    {visibleDayDates.map((dayDate, i) => {
                       const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
                       const labelShort = dayDate.toLocaleDateString(loc, { weekday: 'short' });
                       const num = dayDate.getDate();
@@ -1050,7 +1066,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                     })}
                   </View>
                   {(() => {
-                    const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
+                    const selectedDayDate = visibleDayDates[calendarDayIndex] ?? visibleDayDates[0];
                     const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
                     const longDay = selectedDayDate.toLocaleDateString(loc, {
                       weekday: 'long',
@@ -1064,7 +1080,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   ) : (
                     <View style={styles.hourList}>
                       {hourBuckets.map((h) => {
-                        const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
+                        const selectedDayDate =
+                          visibleDayDates[calendarDayIndex] ?? visibleDayDates[0];
                         const slot = findSlotInBucket(
                           slots,
                           calendarTrainer.id,
@@ -1072,42 +1089,65 @@ export function MemberServiceHubScreen({ mode }: Props) {
                           h,
                         );
                         const full = slot ? slot.remainingCapacity < 1 : false;
+                        const past = isBucketStartInPast(selectedDayDate, h);
                         const sel = slot ? slot.id === selectedSlotId : false;
-                        return (
-                          <Pressable
-                            key={`hour-${h}`}
-                            accessibilityRole="button"
-                            accessibilityState={{ disabled: !slot || full, selected: sel }}
-                            disabled={!slot || full}
-                            onPress={() => {
-                              if (slot && !full) {
-                                setSelectedSlotId(slot.id);
-                              }
-                            }}
-                            style={({ pressed }) => [
-                              styles.hourCard,
-                              sel && styles.hourCardOn,
-                              full && styles.hourCardFull,
-                              (!slot || full) && styles.hourCardMuted,
-                              pressed && slot && !full && styles.hourCardPressed,
-                            ]}
-                          >
+                        const canBook = Boolean(slot && !full && !past);
+                        const cardStyle = [
+                          styles.hourCard,
+                          sel && styles.hourCardOn,
+                          !slot && styles.hourCardEmpty,
+                          past && styles.hourCardPast,
+                          Boolean(slot && full) && styles.hourCardFull,
+                          !canBook && !sel && Boolean(slot) && styles.hourCardMuted,
+                        ];
+                        const inner = (
+                          <>
                             <Text style={styles.hourCardBucket}>{formatHourBucketLabel(h)}</Text>
-                            {slot ? (
+                            {past ? (
+                              <Text style={styles.hourCardDash}>{t('serviceHub.slotPast')}</Text>
+                            ) : slot ? (
                               <>
                                 <Text style={styles.hourCardSpan} numberOfLines={1}>
                                   {formatSlotTimeSpan(slot, i18n.language)}
                                 </Text>
-                                <Text style={styles.hourCardSpots}>
-                                  {t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
+                                <Text
+                                  style={[styles.hourCardSpots, full && styles.hourCardSpotsFull]}
+                                >
+                                  {full
+                                    ? t('serviceHub.slotFull')
+                                    : t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
                                 </Text>
                               </>
                             ) : (
-                              <Text style={styles.hourCardDash}>
-                                {t('serviceHub.calendarNoSlot')}
-                              </Text>
+                              <>
+                                <Text style={styles.hourCardEmptyBadge}>
+                                  {t('serviceHub.noSlotBadge')}
+                                </Text>
+                                <Text style={styles.hourCardDash}>
+                                  {t('serviceHub.calendarNoSlotDetail')}
+                                </Text>
+                              </>
                             )}
-                          </Pressable>
+                          </>
+                        );
+                        if (canBook && slot) {
+                          return (
+                            <TouchableOpacity
+                              key={`hour-${h}`}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: sel }}
+                              activeOpacity={0.82}
+                              onPress={() => setSelectedSlotId(slot.id)}
+                              style={cardStyle}
+                            >
+                              {inner}
+                            </TouchableOpacity>
+                          );
+                        }
+                        return (
+                          <View key={`hour-${h}`} accessibilityRole="text" style={cardStyle}>
+                            {inner}
+                          </View>
                         );
                       })}
                     </View>
@@ -1208,7 +1248,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
         onRequestClose={() => setShowDatePicker(false)}
       >
         <Pressable style={styles.datePickerBackdrop} onPress={() => setShowDatePicker(false)}>
-          <View style={styles.datePickerSheet} onStartShouldSetResponder={() => true}>
+          <View style={styles.datePickerSheet}>
             <DateTimePicker
               value={iosPickerValue}
               mode="date"
@@ -1495,6 +1535,14 @@ const styles = StyleSheet.create({
     borderColor: premium.glassBorder,
   },
   weekBtnTxt: { color: premium.accentGreen, fontWeight: '700', fontSize: 12 },
+  weekBtnDisabled: {
+    opacity: 0.35,
+    borderColor: 'rgba(148,163,184,0.25)',
+  },
+  weekBtnPressed: { opacity: 0.88 },
+  weekBtnTxtDisabled: {
+    color: premium.textMuted,
+  },
   weekRange: {
     flex: 1,
     textAlign: 'center',
@@ -1509,7 +1557,8 @@ const styles = StyleSheet.create({
   },
   /** Tap outside the sheet to dismiss; must not wrap the sheet or scroll/touches break. */
   calendarModalDismissLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
+    zIndex: 0,
   },
   calendarSheet: {
     width: '100%',
@@ -1662,16 +1711,17 @@ const styles = StyleSheet.create({
   },
   dayChipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    flexWrap: 'nowrap',
+    gap: 6,
     paddingVertical: 4,
     paddingBottom: 12,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   dayChip: {
-    minWidth: 48,
+    flex: 1,
+    minWidth: 0,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 4,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: premium.glassBorder,
@@ -1720,13 +1770,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56,189,248,0.18)',
   },
   hourCardFull: {
-    opacity: 0.5,
+    opacity: 0.65,
   },
   hourCardMuted: {
-    opacity: 0.4,
+    opacity: 0.55,
   },
-  hourCardPressed: {
-    opacity: 0.88,
+  hourCardPast: {
+    borderColor: 'rgba(148,163,184,0.35)',
+    backgroundColor: 'rgba(15,23,42,0.85)',
+  },
+  hourCardEmpty: {
+    borderStyle: 'dashed',
+    borderColor: 'rgba(148,163,184,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  hourCardEmptyBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: premium.textMuted,
+    marginBottom: 4,
+  },
+  hourCardSpotsFull: {
+    color: '#f87171',
   },
   hourCardBucket: {
     fontSize: 11,
