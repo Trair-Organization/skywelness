@@ -10,14 +10,16 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiJson, ApiError } from '../api/client';
-import { useMemberAuth } from '../auth/MemberAuthContext';
-import { GradientBackground } from '../components/premium/GradientBackground';
-import { GlassCard } from '../components/premium/GlassCard';
-import { persistLanguage } from '../i18n';
-import { premium } from '../theme/premiumTheme';
+import { apiJson, ApiError } from '../../api/client';
+import { useMemberAuth } from '../../auth/MemberAuthContext';
+import { GradientBackground } from '../../components/premium/GradientBackground';
+import { GlassCard } from '../../components/premium/GlassCard';
+import { premium } from '../../theme/premiumTheme';
+import type { MemberTabParamList } from '../../navigation/memberTabTypes';
 
 type TrainerRow = {
   id: string;
@@ -89,12 +91,15 @@ function nextUpcomingReservation(rows: ReservationRow[]): ReservationRow | null 
   return upcoming[0] ?? null;
 }
 
-const logoDark = require('../../assets/branding/wellness-club-logo-header-dark.png');
+const logoDark = require('../../../assets/branding/wellness-club-logo-header-dark.png');
 
-export function MemberDashboardScreen() {
-  const { t, i18n } = useTranslation();
+const TAB_BAR_PAD = 72;
+
+export function MemberHomeScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { token, tenant, user, logout } = useMemberAuth();
+  const navigation = useNavigation<BottomTabNavigationProp<MemberTabParamList>>();
+  const { token, tenant, user } = useMemberAuth();
 
   const [packages, setPackages] = useState<MyPackageRow[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -107,9 +112,7 @@ export function MemberDashboardScreen() {
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [loadingTrainers, setLoadingTrainers] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [loadingRes, setLoadingRes] = useState(false);
   const [booking, setBooking] = useState(false);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
   const bookingSectionY = useRef(0);
@@ -142,7 +145,6 @@ export function MemberDashboardScreen() {
     if (!token || !tenant) {
       return;
     }
-    setLoadingRes(true);
     try {
       const rows = await apiJson<ReservationRow[]>('/reservations?limit=20', {
         token,
@@ -154,8 +156,6 @@ export function MemberDashboardScreen() {
         t('alerts.reservations'),
         e instanceof ApiError ? e.message : t('alerts.reservationsErr'),
       );
-    } finally {
-      setLoadingRes(false);
     }
   }, [token, tenant, t]);
 
@@ -270,34 +270,6 @@ export function MemberDashboardScreen() {
     t,
   ]);
 
-  const cancelReservation = useCallback(
-    async (id: string) => {
-      if (!token || !tenant) {
-        return;
-      }
-      setCancellingId(id);
-      try {
-        await apiJson(`/reservations/${id}/cancel`, {
-          method: 'POST',
-          token,
-          tenantSubdomain: tenant.subdomain,
-        });
-        Alert.alert(t('booking.section'), t('booking.cancelled'));
-        await loadReservations();
-        await loadAvailability();
-        await loadPackages();
-      } catch (e) {
-        Alert.alert(
-          t('booking.section'),
-          e instanceof ApiError ? e.message : t('booking.cancelFailed'),
-        );
-      } finally {
-        setCancellingId(null);
-      }
-    },
-    [token, tenant, loadReservations, loadAvailability, loadPackages, t],
-  );
-
   const nextReservation = useMemo(() => nextUpcomingReservation(reservations), [reservations]);
 
   const activePackageCount = useMemo(() => {
@@ -325,10 +297,6 @@ export function MemberDashboardScreen() {
     Alert.alert(t('home.contactClub'), t('home.contactClubAlert'));
   }, [t]);
 
-  const openPolicies = useCallback(() => {
-    Alert.alert(t('home.policiesCta'), t('home.policiesBody'));
-  }, [t]);
-
   const selectTrainerAndScroll = useCallback((trainerId: string) => {
     setSelectedTrainerId(trainerId);
     setHubPlaceholder(null);
@@ -353,7 +321,7 @@ export function MemberDashboardScreen() {
         ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 28 },
+          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + TAB_BAR_PAD },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -369,33 +337,6 @@ export function MemberDashboardScreen() {
             <View style={styles.heroTextCol}>
               <Text style={styles.heroBrand}>{t('appTitle')}</Text>
               <Text style={styles.heroTag}>{t('home.hubTagline')}</Text>
-            </View>
-          </View>
-          <View style={styles.langRow}>
-            <Text style={styles.langLabel}>{t('lang.label')}</Text>
-            <View style={styles.langSeg}>
-              <Pressable
-                accessibilityRole="button"
-                style={[styles.langBtn, i18n.language === 'tr' && styles.langBtnOn]}
-                onPress={() => {
-                  persistLanguage('tr').catch(() => {});
-                }}
-              >
-                <Text style={[styles.langTxt, i18n.language === 'tr' && styles.langTxtOn]}>
-                  {t('lang.tr')}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={[styles.langBtn, i18n.language === 'en' && styles.langBtnOn]}
-                onPress={() => {
-                  persistLanguage('en').catch(() => {});
-                }}
-              >
-                <Text style={[styles.langTxt, i18n.language === 'en' && styles.langTxtOn]}>
-                  {t('lang.en')}
-                </Text>
-              </Pressable>
             </View>
           </View>
         </View>
@@ -450,6 +391,7 @@ export function MemberDashboardScreen() {
             style={styles.chip}
             onPress={() => {
               loadReservations().catch(() => {});
+              navigation.navigate('Reservations');
             }}
           >
             <Text style={styles.chipTxt}>
@@ -552,46 +494,6 @@ export function MemberDashboardScreen() {
               </Text>
             </Pressable>
           ) : null}
-        </GlassCard>
-
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.cardTitle}>{t('home.helpTitle')}</Text>
-          <Text style={styles.muted}>{t('home.helpBody')}</Text>
-          <Pressable
-            {...ripple}
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={openPolicies}
-          >
-            <Text style={styles.btnOutlineTxt}>{t('home.policiesCta')}</Text>
-          </Pressable>
-          <Pressable
-            {...ripple}
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={openContactClub}
-          >
-            <Text style={styles.btnOutlineTxt}>{t('home.contactClub')}</Text>
-          </Pressable>
-        </GlassCard>
-
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.cardTitle}>{t('session.title')}</Text>
-          <Text style={styles.cardLineMuted}>{t('home.sessionHint')}</Text>
-          <Text style={styles.cardLine}>
-            {user.firstName} {user.lastName}
-          </Text>
-          <Text style={styles.cardLine}>{user.email}</Text>
-          <Text style={styles.cardLine}>{t('session.role', { role: user.role })}</Text>
-          <Text style={styles.cardLineMuted}>
-            {tenant.name} · {tenant.subdomain}
-          </Text>
-          <Pressable
-            style={({ pressed }) => [styles.btnGhost, pressed && styles.btnGhostPressed]}
-            onPress={() => {
-              logout().catch(() => {});
-            }}
-          >
-            <Text style={styles.btnGhostTxt}>{t('session.logout')}</Text>
-          </Pressable>
         </GlassCard>
 
         <View
@@ -731,49 +633,13 @@ export function MemberDashboardScreen() {
               )}
             </Pressable>
 
-            <Text style={styles.subLabel}>{t('booking.reservations')}</Text>
             <Pressable
+              {...ripple}
               style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-              onPress={() => {
-                loadReservations().catch(() => {});
-              }}
-              disabled={loadingRes}
+              onPress={() => navigation.navigate('Reservations')}
             >
-              {loadingRes ? (
-                <ActivityIndicator color={premium.accentGreen} />
-              ) : (
-                <Text style={styles.btnOutlineTxt}>{t('booking.refreshRes')}</Text>
-              )}
+              <Text style={styles.btnOutlineTxt}>{t('tabs.openReservations')}</Text>
             </Pressable>
-
-            {reservations.map((r) => {
-              const canCancel =
-                (r.status === 'confirmed' || r.status === 'pending') &&
-                new Date(r.startTime) > new Date();
-              return (
-                <View key={r.id} style={styles.resRow}>
-                  <Text style={styles.resTxt}>
-                    {fmt(r.startTime)} · {r.trainer.user.firstName} {r.trainer.user.lastName} ·{' '}
-                    {r.status}
-                  </Text>
-                  {canCancel ? (
-                    <Pressable
-                      style={styles.btnDanger}
-                      disabled={cancellingId === r.id}
-                      onPress={() => {
-                        cancelReservation(r.id).catch(() => {});
-                      }}
-                    >
-                      {cancellingId === r.id ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text style={styles.btnDangerTxt}>{t('booking.cancel')}</Text>
-                      )}
-                    </Pressable>
-                  ) : null}
-                </View>
-              );
-            })}
           </GlassCard>
         </View>
       </ScrollView>

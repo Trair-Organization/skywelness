@@ -151,6 +151,29 @@ export default {
     title: 'Şifre sıfırlama',
     body: 'Bu özellik henüz uygulamada yok. Şimdilik kulüp yönetiminizle iletişime geçin; yakında e-posta ile sıfırlama ekleyeceğiz.',
   },
+  tabs: {
+    home: 'Ana sayfa',
+    reservations: 'Rezervasyonlarım',
+    notifications: 'Bildirimler',
+    messages: 'Mesajlar',
+    profile: 'Profil',
+    openReservations: 'Rezervasyonlarım sekmesi',
+  },
+  profile: {
+    subtitle: 'Hesap, dil ve iletişim',
+  },
+  reservations: {
+    subtitle: 'Yaklaşan ve geçmiş seanslar',
+    empty: 'Henüz rezervasyon görünmüyor. Ana sayfadan seans planlayabilirsiniz.',
+  },
+  notifications: {
+    title: 'Bildirimler',
+    body: 'Kulüp duyuruları ve hatırlatmalar yakında bu ekranda görünecek.',
+  },
+  messages: {
+    title: 'Mesajlar',
+    body: 'Resepsiyon ve antrenör mesajları yakında bu ekranda görünecek.',
+  },
   session: {
     title: 'Oturum',
     role: 'Rol: {{role}}',

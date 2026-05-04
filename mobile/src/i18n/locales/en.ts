@@ -151,6 +151,29 @@ export default {
     title: 'Reset password',
     body: 'Password reset is not in the app yet. Please contact your club for now; email-based reset is planned next.',
   },
+  tabs: {
+    home: 'Home',
+    reservations: 'My bookings',
+    notifications: 'Notifications',
+    messages: 'Messages',
+    profile: 'Profile',
+    openReservations: 'Open my bookings tab',
+  },
+  profile: {
+    subtitle: 'Account, language, and contact',
+  },
+  reservations: {
+    subtitle: 'Upcoming and past sessions',
+    empty: 'No reservations yet. Plan a session from the home tab.',
+  },
+  notifications: {
+    title: 'Notifications',
+    body: 'Club announcements and reminders will appear here soon.',
+  },
+  messages: {
+    title: 'Messages',
+    body: 'Reception and trainer messaging will appear here soon.',
+  },
   session: {
     title: 'Session',
     role: 'Role: {{role}}',

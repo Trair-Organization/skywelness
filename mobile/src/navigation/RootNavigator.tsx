@@ -6,7 +6,7 @@ import { useMemberAuth } from '../auth/MemberAuthContext';
 import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
 import { LoginScreen } from '../screens/onboarding/LoginScreen';
 import { RegisterScreen } from '../screens/onboarding/RegisterScreen';
-import { MemberDashboardScreen } from '../screens/MemberDashboardScreen';
+import { MemberTabNavigator } from './MemberTabNavigator';
 import { MemberPendingApprovalScreen } from '../screens/MemberPendingApprovalScreen';
 import type { RootStackParamList } from './types';
 
@@ -56,7 +56,7 @@ export function RootNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="PendingApproval" component={MemberPendingApprovalScreen} />
-        <Stack.Screen name="Main" component={MemberDashboardScreen} />
+        <Stack.Screen name="Main" component={MemberTabNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );
