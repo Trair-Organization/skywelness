@@ -34,9 +34,10 @@ type MemberAuthContextValue = {
   login: () => Promise<void>;
   registerWithFullName: (
     fullName: string,
+    usernameVal: string,
     emailVal: string,
+    phoneVal: string,
     passwordVal: string,
-    confirmPassword: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -49,6 +50,25 @@ const SKYLAND_FALLBACK: TenantListRow = {
 };
 function normalizeSubdomain(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function normalizeUsername(value: string): string {
+  return value.trim().toLocaleLowerCase('tr-TR');
+}
+
+function hasLegacyRegisterValidation(body: unknown): boolean {
+  if (!body || typeof body !== 'object' || !('message' in body)) {
+    return false;
+  }
+  const message = (body as { message?: unknown }).message;
+  if (!Array.isArray(message)) {
+    return false;
+  }
+  const joined = message.join(' ').toLowerCase();
+  return (
+    joined.includes('property username should not exist') ||
+    joined.includes('property phone should not exist')
+  );
 }
 
 export function MemberAuthProvider({ children }: { children: ReactNode }) {
@@ -131,9 +151,15 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         setTenant(row);
         return true;
       } catch (e) {
+        const isNetworkFailure =
+          e instanceof TypeError && e.message.toLowerCase().includes('network request failed');
         Alert.alert(
           t('tenant.section'),
-          e instanceof ApiError ? e.message : t('tenant.loadFailed'),
+          e instanceof ApiError
+            ? e.message
+            : isNetworkFailure
+              ? t('tenant.networkFailed')
+              : t('tenant.loadFailed'),
         );
         return false;
       } finally {
@@ -151,14 +177,14 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         (r) => normalizeSubdomain(r.subdomain) === SKYLAND_FALLBACK.subdomain,
       );
       setTenantDirectory(hasSkyland ? rows : [SKYLAND_FALLBACK, ...rows]);
-    } catch (e) {
+    } catch {
       // Backend geçici olarak erişilemezse (örn. local API kapalı), kullanıcıyı
       // bloklamamak için fallback kulüp listesiyle devam ediyoruz.
       setTenantDirectory([SKYLAND_FALLBACK]);
     } finally {
       setLoadingTenantDir(false);
     }
-  }, [t]);
+  }, []);
 
   const clearClubSelection = useCallback(() => {
     setTenant(null);
@@ -213,13 +239,15 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const registerWithFullName = useCallback(
-    async (fullName: string, emailVal: string, passwordVal: string, confirmPassword: string) => {
+    async (
+      fullName: string,
+      usernameVal: string,
+      emailVal: string,
+      phoneVal: string,
+      passwordVal: string,
+    ) => {
       if (!tenant) {
         Alert.alert(t('register.section'), t('login.needTenant'));
-        return;
-      }
-      if (passwordVal !== confirmPassword) {
-        Alert.alert(t('register.section'), t('register.confirmMismatch'));
         return;
       }
       const { first, last } = splitFullName(fullName);
@@ -227,24 +255,57 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         Alert.alert(t('register.section'), t('register.fullNameRequired'));
         return;
       }
+      const username = normalizeUsername(usernameVal);
+      if (!username) {
+        Alert.alert(t('register.section'), t('register.usernameRequired'));
+        return;
+      }
       setEmail(emailVal);
       setPassword(passwordVal);
       setLoadingAuth(true);
       try {
-        const res = await apiJson<AuthRes | { pendingApproval: true; message?: string }>(
-          '/auth/register',
-          {
-            method: 'POST',
-            auth: false,
-            body: JSON.stringify({
-              email: emailVal.trim(),
-              password: passwordVal,
-              firstName: first,
-              lastName: last,
-              tenantSubdomain: tenant.subdomain,
-            }),
-          },
-        );
+        const registerPayload = {
+          email: emailVal.trim(),
+          username,
+          phone: phoneVal.trim() || undefined,
+          password: passwordVal,
+          firstName: first,
+          lastName: last,
+          tenantSubdomain: tenant.subdomain,
+        };
+        let res: AuthRes | { pendingApproval: true; message?: string };
+        try {
+          res = await apiJson<AuthRes | { pendingApproval: true; message?: string }>(
+            '/auth/register',
+            {
+              method: 'POST',
+              auth: false,
+              body: JSON.stringify(registerPayload),
+            },
+          );
+        } catch (e) {
+          // Eski backend şemasında username/phone alanları reject edildiğinde
+          // kullanıcıyı bloklamamak için legacy payload ile tekrar deniyoruz.
+          if (e instanceof ApiError && hasLegacyRegisterValidation(e.body)) {
+            res = await apiJson<AuthRes | { pendingApproval: true; message?: string }>(
+              '/auth/register',
+              {
+                method: 'POST',
+                auth: false,
+                body: JSON.stringify({
+                  email: emailVal.trim(),
+                  password: passwordVal,
+                  firstName: first,
+                  lastName: last,
+                  tenantSubdomain: tenant.subdomain,
+                }),
+              },
+            );
+            Alert.alert(t('register.section'), t('register.legacyServerNotice'));
+          } else {
+            throw e;
+          }
+        }
         if ('pendingApproval' in res && res.pendingApproval) {
           Alert.alert(t('register.pendingTitle'), res.message ?? t('register.pendingBody'));
           return;

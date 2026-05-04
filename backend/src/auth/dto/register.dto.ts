@@ -1,11 +1,25 @@
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
-const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[^\s]{8,}$/;
 
 export class RegisterDto {
   @IsEmail()
   @MaxLength(320)
   email!: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(40)
+  @Matches(/^[a-z0-9çğıöşü_.-]+$/, {
+    message:
+      'Username can include lowercase letters (including Turkish), numbers, dot, underscore, and hyphen only',
+  })
+  username!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
 
   @IsString()
   @MinLength(8)

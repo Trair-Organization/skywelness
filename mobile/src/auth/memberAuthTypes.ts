@@ -8,8 +8,10 @@ export type AuthRes = {
     id: string;
     tenantId?: string;
     email: string;
+    username?: string;
     firstName: string;
     lastName: string;
+    phone?: string | null;
     role: string;
   };
 };

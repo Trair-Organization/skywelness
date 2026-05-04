@@ -1,4 +1,5 @@
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
-import { GlowButton } from '../../components/premium/GlowButton';
 import { PremiumInput } from '../../components/premium/PremiumInput';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
@@ -19,13 +19,29 @@ export function LoginScreen() {
   const navigation = useNavigation<Nav>();
   const { tenant, email, setEmail, password, setPassword, loadingAuth, login, clearClubSelection } =
     useMemberAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const title = tenant
+    ? t('login.welcomeClub', { club: tenant.name })
+    : t('onboarding.welcomeBack');
 
   return (
     <GradientBackground>
       <View
         style={[styles.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       >
-        <Text style={styles.title}>{t('onboarding.welcomeBack')}</Text>
+        <Pressable
+          style={styles.backBtn}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+              return;
+            }
+            navigation.navigate('ClubConnect');
+          }}
+        >
+          <Text style={styles.backTxt}>{t('common.back')}</Text>
+        </Pressable>
+        <Text style={styles.title}>{title}</Text>
         {tenant ? (
           <Text style={styles.clubLine}>
             {tenant.name} · {tenant.subdomain}
@@ -33,6 +49,19 @@ export function LoginScreen() {
         ) : (
           <Text style={styles.warn}>{t('login.needTenant')}</Text>
         )}
+        <View style={styles.authSeg}>
+          <Pressable style={[styles.authBtn, styles.authBtnOn]}>
+            <Text style={[styles.authTxt, styles.authTxtOn]}>{t('auth.tabLogin')}</Text>
+          </Pressable>
+          <Pressable
+            style={styles.authBtn}
+            onPress={() => {
+              navigation.navigate('Register');
+            }}
+          >
+            <Text style={styles.authTxt}>{t('auth.tabRegister')}</Text>
+          </Pressable>
+        </View>
 
         <GlassCard style={styles.card}>
           <PremiumInput
@@ -47,8 +76,20 @@ export function LoginScreen() {
             label={t('login.passwordLabel')}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             placeholder={t('login.passwordPh')}
+            rightSlot={
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setShowPassword((prev) => !prev);
+                }}
+              >
+                <Text style={styles.eyeTxt}>
+                  {showPassword ? t('common.hide') : t('common.show')}
+                </Text>
+              </Pressable>
+            }
           />
           <Pressable
             accessibilityRole="button"
@@ -60,14 +101,19 @@ export function LoginScreen() {
             <Text style={styles.forgotTxt}>{t('forgot.link')}</Text>
           </Pressable>
 
-          <GlowButton
-            label={t('onboarding.signIn')}
+          <Pressable
+            style={({ pressed }) => [
+              styles.submitBtn,
+              pressed && styles.submitBtnPressed,
+              (!tenant || loadingAuth) && styles.submitBtnDisabled,
+            ]}
             onPress={() => {
               login().catch(() => {});
             }}
-            loading={loadingAuth}
             disabled={!tenant || loadingAuth}
-          />
+          >
+            <Text style={styles.submitTxt}>{t('login.submit')}</Text>
+          </Pressable>
 
           <Pressable
             style={styles.linkRow}
@@ -109,6 +155,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: 8,
   },
+  backBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    marginBottom: 6,
+  },
+  backTxt: {
+    color: premium.textMuted,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   clubLine: {
     fontSize: 14,
     color: premium.textMuted,
@@ -122,6 +179,32 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 8,
   },
+  authSeg: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    marginBottom: 14,
+  },
+  authBtn: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authBtnOn: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  authTxt: {
+    color: premium.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  authTxtOn: {
+    color: premium.text,
+  },
   forgot: {
     alignSelf: 'flex-start',
     marginBottom: 8,
@@ -132,12 +215,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  eyeTxt: {
+    color: premium.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  submitBtn: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  submitBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  submitBtnDisabled: {
+    opacity: 0.5,
+  },
+  submitTxt: {
+    color: premium.accentBlue,
+    fontSize: 18,
+    fontWeight: '700',
+  },
   linkRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 18,
-    paddingVertical: 8,
+    marginTop: 16,
+    paddingVertical: 6,
   },
   muted: {
     color: premium.textMuted,

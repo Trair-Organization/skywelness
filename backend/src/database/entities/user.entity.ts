@@ -13,6 +13,7 @@ import { Tenant } from './tenant.entity';
 
 @Entity({ name: 'user' })
 @Index(['tenantId', 'email'], { unique: true })
+@Index(['tenantId', 'username'], { unique: true })
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -26,6 +27,9 @@ export class User {
 
   @Column({ type: 'varchar', length: 320 })
   email!: string;
+
+  @Column({ type: 'varchar', length: 40 })
+  username!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'password_hash' })
   passwordHash!: string;

@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from '../config';
+import { getApiBaseUrls } from '../config';
 
 export class ApiError extends Error {
   status: number;
@@ -31,30 +31,47 @@ export async function apiJson<T>(
   } = {},
 ): Promise<T> {
   const { auth: attachAuth = true, token = null, tenantSubdomain = null, ...rest } = init;
-  const base = getApiBaseUrl();
-  const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
-  const headers = new Headers(rest.headers);
-  if (!headers.has('Content-Type') && rest.body) {
-    headers.set('Content-Type', 'application/json');
-  }
-  if (tenantSubdomain) {
-    headers.set('X-Tenant-Subdomain', tenantSubdomain);
-  }
-  if (attachAuth && token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-  const res = await fetch(url, { ...rest, headers });
-  const text = await res.text();
-  let body: unknown = null;
-  if (text) {
+  const bases = path.startsWith('http') ? [''] : getApiBaseUrls();
+  let lastError: unknown = null;
+
+  for (const base of bases) {
+    const url = path.startsWith('http')
+      ? path
+      : `${base}${path.startsWith('/') ? path : `/${path}`}`;
+    const headers = new Headers(rest.headers);
+    if (!headers.has('Content-Type') && rest.body) {
+      headers.set('Content-Type', 'application/json');
+    }
+    if (tenantSubdomain) {
+      headers.set('X-Tenant-Subdomain', tenantSubdomain);
+    }
+    if (attachAuth && token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
     try {
-      body = JSON.parse(text) as unknown;
-    } catch {
-      body = { message: text };
+      const res = await fetch(url, { ...rest, headers });
+      const text = await res.text();
+      let body: unknown = null;
+      if (text) {
+        try {
+          body = JSON.parse(text) as unknown;
+        } catch {
+          body = { message: text };
+        }
+      }
+      if (!res.ok) {
+        throw new ApiError(parseMessage(body), res.status, body);
+      }
+      return body as T;
+    } catch (e) {
+      lastError = e;
+      // HTTP cevabı geldiyse fallback denemeden hatayı yukarı ver.
+      if (e instanceof ApiError) {
+        throw e;
+      }
+      // Network seviyesinde hata ise bir sonraki base URL'i dene.
+      continue;
     }
   }
-  if (!res.ok) {
-    throw new ApiError(parseMessage(body), res.status, body);
-  }
-  return body as T;
+  throw lastError instanceof Error ? lastError : new Error('Network request failed');
 }

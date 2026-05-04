@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
@@ -21,6 +21,14 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Get('username-availability')
+  usernameAvailability(
+    @Query('tenantSubdomain') tenantSubdomain?: string,
+    @Query('username') username?: string,
+  ) {
+    return this.authService.checkUsernameAvailability(tenantSubdomain ?? '', username ?? '');
   }
 
   @Post('refresh')

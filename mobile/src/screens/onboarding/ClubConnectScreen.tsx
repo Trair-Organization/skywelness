@@ -1,6 +1,7 @@
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,7 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
-import { GlowButton } from '../../components/premium/GlowButton';
 import { PremiumInput } from '../../components/premium/PremiumInput';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
@@ -40,6 +40,14 @@ export function ClubConnectScreen() {
     loadTenantDirectory,
   } = useMemberAuth();
   const [listOpen, setListOpen] = useState(false);
+  const [clubQuery, setClubQuery] = useState('');
+  const filteredDirectory = tenantDirectory.filter((row) => {
+    const q = clubQuery.trim().toLowerCase();
+    if (!q) {
+      return true;
+    }
+    return row.name.toLowerCase().includes(q) || row.subdomain.toLowerCase().includes(q);
+  });
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
     if (typeof fn !== 'function') {
       return;
@@ -57,6 +65,7 @@ export function ClubConnectScreen() {
       navigation.navigate('Login');
     }
   };
+  const listButtonLabel = tenant?.name ?? t('tenant.searchPlaceholder');
 
   return (
     <GradientBackground>
@@ -109,48 +118,72 @@ export function ClubConnectScreen() {
 
         <GlassCard style={styles.card}>
           <Text style={styles.cardHint}>{t('tenant.directoryHint')}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
-            onPress={() => {
-              const next = !listOpen;
-              setListOpen(next);
-              if (next) {
-                runSafe(loadTenantDirectory);
-              }
-            }}
-            disabled={loadingTenantDir}
-          >
-            {loadingTenantDir ? (
-              <ActivityIndicator color={premium.accentBlue} />
-            ) : (
-              <Text style={styles.outlineTxt}>
-                {listOpen ? t('tenant.hideClubs') : t('tenant.listClubs')}
-              </Text>
-            )}
-          </Pressable>
+          <Text style={styles.listTitle}>{t('tenant.listClubs')}</Text>
+          <View style={styles.dropdownArea}>
+            <Pressable
+              style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
+              onPress={() => {
+                const next = !listOpen;
+                setListOpen(next);
+                if (next) {
+                  runSafe(loadTenantDirectory);
+                } else {
+                  setClubQuery('');
+                }
+              }}
+              disabled={loadingTenantDir}
+            >
+              {loadingTenantDir ? (
+                <ActivityIndicator color={premium.accentBlue} />
+              ) : (
+                <View style={styles.listBtnContent}>
+                  <Text style={styles.listBtnText}>{listButtonLabel}</Text>
+                  <Text style={styles.listBtnIcon}>{listOpen ? '▴' : '▾'}</Text>
+                </View>
+              )}
+            </Pressable>
 
-          {listOpen && tenantDirectory.length > 0 ? (
-            <View style={styles.list}>
-              {tenantDirectory.map((row) => (
-                <Pressable
-                  key={row.id}
-                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                  onPress={() => {
-                    runSafe(async () => {
-                      const ok = await resolveTenantByCode(row.subdomain);
-                      if (ok) {
-                        setListOpen(false);
-                        navigation.navigate('Login');
-                      }
-                    });
-                  }}
-                >
-                  <Text style={styles.rowName}>{row.name}</Text>
-                  <Text style={styles.rowCode}>{row.subdomain}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
+            {listOpen ? (
+              <View style={styles.listOverlay}>
+                <View style={styles.list}>
+                  <PremiumInput
+                    label={t('tenant.searchLabel')}
+                    value={clubQuery}
+                    onChangeText={setClubQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholder={t('tenant.searchPlaceholder')}
+                    containerStyle={styles.searchWrap}
+                    inputWrapStyle={styles.searchInputWrap}
+                    style={styles.searchInput}
+                  />
+                  {filteredDirectory.length === 0 ? (
+                    <Text style={styles.emptySearch}>{t('tenant.searchEmpty')}</Text>
+                  ) : null}
+                  {filteredDirectory.map((row) => (
+                    <Pressable
+                      key={row.id}
+                      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                      onPress={() => {
+                        runSafe(async () => {
+                          const ok = await resolveTenantByCode(row.subdomain);
+                          if (ok) {
+                            setListOpen(false);
+                            setClubQuery('');
+                            Keyboard.dismiss();
+                            navigation.navigate('Login');
+                          }
+                        });
+                      }}
+                    >
+                      <Text style={styles.rowName}>{row.name}</Text>
+                      <Text style={styles.rowCode}>{row.subdomain}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </View>
 
           <PremiumInput
             label={t('tenant.subdomainLabel')}
@@ -164,7 +197,7 @@ export function ClubConnectScreen() {
           <Pressable
             style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
             onPress={() => {
-              runSafe(resolveTenantByCode);
+              runSafe(handleContinue);
             }}
             disabled={loadingTenant}
           >
@@ -186,17 +219,6 @@ export function ClubConnectScreen() {
               </View>
             </View>
           ) : null}
-
-          <View style={styles.continueWrap}>
-            <GlowButton
-              label={t('onboarding.continue')}
-              onPress={() => {
-                runSafe(handleContinue);
-              }}
-              loading={loadingTenant}
-              disabled={loadingTenant || (!tenant && !subdomain.trim())}
-            />
-          </View>
         </GlassCard>
       </ScrollView>
     </GradientBackground>
@@ -280,12 +302,23 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     marginBottom: 14,
   },
+  listTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: premium.textMuted,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
   outlineBtn: {
     borderWidth: 1,
     borderColor: premium.glassBorder,
     borderRadius: premium.radiusSm,
-    paddingVertical: 14,
+    minHeight: 58,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
@@ -295,14 +328,62 @@ const styles = StyleSheet.create({
   outlineTxt: {
     color: premium.accentBlue,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 18,
+  },
+  dropdownArea: {
+    position: 'relative',
+    zIndex: 20,
+  },
+  listBtnContent: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  listBtnText: {
+    color: premium.textMuted,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  listBtnIcon: {
+    color: premium.textMuted,
+    fontSize: 26,
+    fontWeight: '800',
+    lineHeight: 26,
+  },
+  listOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 62,
+    zIndex: 30,
   },
   list: {
     borderRadius: premium.radiusSm,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     overflow: 'hidden',
-    marginBottom: 12,
+    maxHeight: 240,
+    backgroundColor: 'rgba(4,13,24,0.98)',
+    paddingTop: 8,
+  },
+  searchWrap: {
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
+  searchInputWrap: {
+    minHeight: 44,
+  },
+  searchInput: {
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  emptySearch: {
+    color: premium.textMuted,
+    fontSize: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   row: {
     paddingVertical: 12,
@@ -353,8 +434,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: premium.text,
     marginTop: 2,
-  },
-  continueWrap: {
-    marginTop: 8,
   },
 });

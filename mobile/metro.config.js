@@ -21,6 +21,19 @@ const config = {
       path.resolve(projectRoot, 'node_modules'),
       path.resolve(monorepoRoot, 'node_modules'),
     ],
+    // React sürüm mismatch'ini engellemek için mobile local kopyayı zorla.
+    extraNodeModules: {
+      react: path.resolve(projectRoot, 'node_modules/react'),
+      'react-test-renderer': path.resolve(projectRoot, 'node_modules/react-test-renderer'),
+    },
+  },
+  transformer: {
+    // In npm workspaces, metro-runtime can be hoisted to monorepo root.
+    // Force Metro to use the hoisted asyncRequire path instead of mobile/node_modules.
+    asyncRequireModulePath: path.resolve(
+      monorepoRoot,
+      'node_modules/metro-runtime/src/modules/asyncRequire',
+    ),
   },
 };
 

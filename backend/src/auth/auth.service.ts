@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 import { Tenant } from '../database/entities/tenant.entity';
 import { User } from '../database/entities/user.entity';
@@ -31,6 +31,84 @@ export class AuthService {
     return dto.tenantSubdomain.trim().toLowerCase();
   }
 
+  private normalizeUsername(value: string): string {
+    return value.trim().toLocaleLowerCase('tr-TR');
+  }
+
+  private trimUsername(value: string): string {
+    return value.replace(/[^a-z0-9çğıöşü_.-]/g, '').slice(0, 40);
+  }
+
+  async checkUsernameAvailability(tenantSubdomain: string, rawUsername: string) {
+    const subdomain = tenantSubdomain.trim().toLowerCase();
+    const username = this.normalizeUsername(rawUsername);
+
+    if (username.length < 3) {
+      return {
+        available: false as const,
+        reason: 'too_short' as const,
+        suggestions: [] as string[],
+      };
+    }
+
+    const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant not found for subdomain: ${subdomain}`);
+    }
+
+    const existing = await this.usersRepo.findOne({
+      where: { tenantId: tenant.id, username },
+    });
+
+    if (!existing) {
+      return {
+        available: true as const,
+        reason: 'available' as const,
+        suggestions: [] as string[],
+      };
+    }
+
+    const suggestions = await this.buildUsernameSuggestions(tenant.id, username);
+    return {
+      available: false as const,
+      reason: 'taken' as const,
+      suggestions,
+    };
+  }
+
+  private async buildUsernameSuggestions(tenantId: string, username: string): Promise<string[]> {
+    const base = this.trimUsername(username) || 'member';
+    const compact = base.replace(/[._-]+/g, '') || 'member';
+    const year = new Date().getFullYear();
+
+    const rawCandidates = [
+      `${base}01`,
+      `${base}fit`,
+      `${base}${year}`,
+      `${compact}01`,
+      `${compact}fit`,
+      `${compact}${year}`,
+      `${base}_wc`,
+      `${base}_club`,
+      `${compact}99`,
+    ];
+
+    const candidates = Array.from(
+      new Set(rawCandidates.map((v) => this.trimUsername(v)).filter((v) => v.length >= 3)),
+    ).slice(0, 12);
+
+    if (candidates.length === 0) {
+      return [];
+    }
+
+    const existingRows = await this.usersRepo.find({
+      where: { tenantId, username: In(candidates) },
+      select: ['username'],
+    });
+    const taken = new Set(existingRows.map((row) => row.username));
+    return candidates.filter((item) => !taken.has(item)).slice(0, 3);
+  }
+
   async register(dto: RegisterDto) {
     const subdomain = this.tenantSubdomain(dto);
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
@@ -44,15 +122,23 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('Email already registered for this tenant');
     }
+    const username = this.normalizeUsername(dto.username);
+    const existingUsername = await this.usersRepo.findOne({
+      where: { tenantId: tenant.id, username },
+    });
+    if (existingUsername) {
+      throw new ConflictException('Username already taken for this tenant');
+    }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email: dto.email.toLowerCase(),
+      username,
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      phone: null,
+      phone: dto.phone?.trim() || null,
       role: UserRole.MEMBER,
       accountStatus: MemberAccountStatus.PENDING_APPROVAL,
       emergencyContact: null,
@@ -202,8 +288,10 @@ export class AuthService {
       id: user.id,
       tenantId: user.tenantId,
       email: user.email,
+      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       role: user.role,
       accountStatus: user.accountStatus,
     };
