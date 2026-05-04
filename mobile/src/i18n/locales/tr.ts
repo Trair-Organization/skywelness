@@ -229,12 +229,9 @@ export default {
   serviceHub: {
     summaryTitle: 'Haklarınız ve paketler',
     addPackageA11y: 'Paket ekleme talebi',
+    addPackageA11yMassage: 'Masaj paketi talebi',
     creditsLine: 'Kalan seans hakkı: {{n}}',
     noActivePackage: 'Bu hizmet için aktif paket görünmüyor. Paket talebi gönderebilirsiniz.',
-    requestTitle: 'Paket ekleme talebi',
-    requestHint:
-      'Resepsiyon veya satış ekibinin size dönmesi için isteğinizi yazın. Talepler kulüp tarafından işlenir.',
-    requestPlaceholder: 'Örn: 8 seanslık özel ders paketi, süre, iletişim tercihi…',
     requestSend: 'Talebi gönder',
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',
@@ -245,7 +242,6 @@ export default {
     spotsLeft: '{{n}} kontenjan',
     selectPackage: 'Paket seçin',
     confirmBook: 'Rezervasyonu oluştur',
-    pickStaffFirst: 'Önce ekip kartından bir kişi seçin.',
     upcoming: 'Yaklaşan seanslar',
     past: 'Geçmiş seanslar',
     noUpcoming: 'Bu hizmet için yaklaşan seans yok.',
@@ -262,12 +258,22 @@ export default {
       screenSub: 'Antrenör profilleri, haftalık müsaitlik ve rezervasyon.',
       staffTitle: 'Antrenörler',
       staffEmpty: 'Kayıtlı antrenör görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
+      pickStaffFirst: 'Önce antrenör kartından birini seçin.',
+      requestTitle: 'Paket ekleme talebi',
+      requestHint:
+        'Resepsiyon veya satış ekibinin size dönmesi için isteğinizi yazın. Talepler kulüp tarafından işlenir.',
+      requestPlaceholder: 'Örn: 8 seanslık özel ders paketi, süre, iletişim tercihi…',
     },
     massage: {
       screenTitle: 'Masaj',
-      screenSub: 'Masör ve masöz profilleri, haftalık müsaitlik ve rezervasyon.',
-      staffTitle: 'Masör & masözler',
-      staffEmpty: 'Kayıtlı ekip görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
+      screenSub: 'Masöz profilleri, haftalık müsaitlik ve rezervasyon.',
+      staffTitle: 'Masözler',
+      staffEmpty: 'Kayıtlı masöz görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
+      pickStaffFirst: 'Önce masöz kartından birini seçin.',
+      requestTitle: 'Masaj paketi talebi',
+      requestHint:
+        'Masaj paketi veya seans talebinizi yazın; resepsiyon veya satış ekibi size döner.',
+      requestPlaceholder: 'Örn: 6 seanslık masaj paketi, süre, iletişim tercihi…',
     },
   },
   eventsTab: {

@@ -151,7 +151,6 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [packageRequestOpen, setPackageRequestOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const isPt = mode === 'personal_training';
   const prefix = mode === 'personal_training' ? 'serviceHub.pt' : 'serviceHub.massage';
 
   const credits = useMemo(() => sumRemainingForType(packages, mode), [packages, mode]);
@@ -394,16 +393,16 @@ export function MemberServiceHubScreen({ mode }: Props) {
       });
       setRequestNote('');
       setPackageRequestOpen(false);
-      Alert.alert(t('serviceHub.requestTitle'), t('serviceHub.requestOk'));
+      Alert.alert(t(`${prefix}.requestTitle`), t('serviceHub.requestOk'));
     } catch (e) {
       Alert.alert(
-        t('serviceHub.requestTitle'),
+        t(`${prefix}.requestTitle`),
         e instanceof ApiError ? e.message : t('serviceHub.requestFail'),
       );
     } finally {
       setRequestSending(false);
     }
-  }, [token, tenant, requestNote, mode, t]);
+  }, [token, tenant, requestNote, mode, t, prefix]);
 
   const cancelReservation = useCallback(
     async (id: string) => {
@@ -461,38 +460,28 @@ export function MemberServiceHubScreen({ mode }: Props) {
           />
         }
       >
-        {isPt ? null : (
-          <>
-            <Text style={styles.screenTitle}>{t(`${prefix}.screenTitle`)}</Text>
-            <Text style={styles.screenSub}>{t(`${prefix}.screenSub`)}</Text>
-          </>
-        )}
-
         {loadingBoot ? <ActivityIndicator color={premium.accentBlue} style={styles.mb} /> : null}
 
         <GlassCard style={styles.card}>
-          {isPt ? (
-            <View style={styles.creditsRow}>
-              <Text style={styles.creditsLine} accessibilityRole="text">
-                {t('serviceHub.creditsLine', { n: credits })}
-              </Text>
-              <Pressable
-                accessibilityLabel={t('serviceHub.addPackageA11y')}
-                style={({ pressed }) => [
-                  styles.addPackageBtn,
-                  pressed && styles.addPackageBtnPressed,
-                ]}
-                onPress={() => setPackageRequestOpen(true)}
-              >
-                <Text style={styles.addPackageIcon}>+</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.cardTitle}>{t('serviceHub.summaryTitle')}</Text>
-              <Text style={styles.heroCredits}>{t('serviceHub.creditsLine', { n: credits })}</Text>
-            </>
-          )}
+          <View style={styles.creditsRow}>
+            <Text style={styles.creditsLine} accessibilityRole="text">
+              {t('serviceHub.creditsLine', { n: credits })}
+            </Text>
+            <Pressable
+              accessibilityLabel={t(
+                mode === 'massage'
+                  ? 'serviceHub.addPackageA11yMassage'
+                  : 'serviceHub.addPackageA11y',
+              )}
+              style={({ pressed }) => [
+                styles.addPackageBtn,
+                pressed && styles.addPackageBtnPressed,
+              ]}
+              onPress={() => setPackageRequestOpen(true)}
+            >
+              <Text style={styles.addPackageIcon}>+</Text>
+            </Pressable>
+          </View>
           {filteredPackages.length === 0 ? (
             <Text style={styles.warn}>{t('serviceHub.noActivePackage')}</Text>
           ) : (
@@ -503,35 +492,6 @@ export function MemberServiceHubScreen({ mode }: Props) {
             ))
           )}
         </GlassCard>
-
-        {!isPt ? (
-          <GlassCard style={styles.card}>
-            <Text style={styles.cardTitle}>{t('serviceHub.requestTitle')}</Text>
-            <Text style={styles.muted}>{t('serviceHub.requestHint')}</Text>
-            <TextInput
-              value={requestNote}
-              onChangeText={setRequestNote}
-              placeholder={t('serviceHub.requestPlaceholder')}
-              placeholderTextColor={premium.textMuted}
-              multiline
-              style={styles.textArea}
-            />
-            <Pressable
-              {...ripple}
-              style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
-              onPress={() => {
-                sendPackageRequest().catch(() => {});
-              }}
-              disabled={requestSending}
-            >
-              {requestSending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.btnPrimaryTxt}>{t('serviceHub.requestSend')}</Text>
-              )}
-            </Pressable>
-          </GlassCard>
-        ) : null}
 
         <Text style={styles.sectionHeading}>{t(`${prefix}.staffTitle`)}</Text>
         {trainers.length === 0 ? (
@@ -646,7 +606,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
               </Pressable>
             </>
           ) : (
-            <Text style={styles.muted}>{t('serviceHub.pickStaffFirst')}</Text>
+            <Text style={styles.muted}>{t(`${prefix}.pickStaffFirst`)}</Text>
           )}
         </GlassCard>
 
@@ -746,7 +706,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
       </Modal>
 
       <Modal
-        visible={packageRequestOpen && isPt}
+        visible={packageRequestOpen}
         transparent
         animationType="fade"
         onRequestClose={() => setPackageRequestOpen(false)}
@@ -754,7 +714,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
         <Pressable style={styles.modalBackdrop} onPress={() => setPackageRequestOpen(false)}>
           <Pressable style={styles.requestModalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.requestModalHeader}>
-              <Text style={styles.requestModalTitle}>{t('serviceHub.requestTitle')}</Text>
+              <Text style={styles.requestModalTitle}>{t(`${prefix}.requestTitle`)}</Text>
               <Pressable
                 hitSlop={12}
                 onPress={() => setPackageRequestOpen(false)}
@@ -764,11 +724,11 @@ export function MemberServiceHubScreen({ mode }: Props) {
               </Pressable>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={styles.muted}>{t('serviceHub.requestHint')}</Text>
+              <Text style={styles.muted}>{t(`${prefix}.requestHint`)}</Text>
               <TextInput
                 value={requestNote}
                 onChangeText={setRequestNote}
-                placeholder={t('serviceHub.requestPlaceholder')}
+                placeholder={t(`${prefix}.requestPlaceholder`)}
                 placeholderTextColor={premium.textMuted}
                 multiline
                 style={styles.textArea}
