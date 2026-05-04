@@ -998,8 +998,9 @@ const styles = StyleSheet.create({
   },
   heroStat: {
     flex: 1,
+    alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: premium.radiusSm,
     borderWidth: 1,
     borderColor: premium.glassBorder,
@@ -1012,11 +1013,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginBottom: 4,
+    textAlign: 'center',
   },
   heroStatValue: {
     fontSize: 22,
     fontWeight: '800',
     color: premium.text,
+    textAlign: 'center',
   },
   eventsSectionTitle: {
     fontSize: 17,
