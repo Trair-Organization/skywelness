@@ -228,6 +228,7 @@ export default {
   },
   serviceHub: {
     summaryTitle: 'Credits & packages',
+    addPackageA11y: 'Request a package',
     creditsLine: 'Sessions remaining: {{n}}',
     noActivePackage: 'No active package for this service. You can send a request below.',
     requestTitle: 'Request a new package',

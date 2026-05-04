@@ -228,6 +228,7 @@ export default {
   },
   serviceHub: {
     summaryTitle: 'Haklarınız ve paketler',
+    addPackageA11y: 'Paket ekleme talebi',
     creditsLine: 'Kalan seans hakkı: {{n}}',
     noActivePackage: 'Bu hizmet için aktif paket görünmüyor. Paket talebi gönderebilirsiniz.',
     requestTitle: 'Paket ekleme talebi',
