@@ -67,6 +67,13 @@ export function DashboardPage() {
         </Link>
       </section>
       <section className="card">
+        <h2>{t('dashboard.events')}</h2>
+        <p className="muted">{t('dashboard.eventsDesc')}</p>
+        <Link className="link" to="/events">
+          {t('dashboard.eventsLink')}
+        </Link>
+      </section>
+      <section className="card">
         <h2>{t('dashboard.apiCheck')}</h2>
         <p className="muted">{t('dashboard.apiCheckDesc')}</p>
         <button type="button" onClick={() => void pingAdmin()}>

@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,6 +59,18 @@ type MyPackageRow = {
   packageType: { id: string; name: string; sessionType: string };
 };
 
+type ClubEventRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  capacity: number;
+  bookedCount: number;
+  isJoined: boolean;
+};
+
 function fmt(iso: string) {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -91,6 +103,40 @@ function nextUpcomingReservation(rows: ReservationRow[]): ReservationRow | null 
   return upcoming[0] ?? null;
 }
 
+function sumActiveRemainingBySessionType(rows: MyPackageRow[], sessionType: string): number {
+  const today = new Date().toISOString().slice(0, 10);
+  return rows
+    .filter(
+      (p) =>
+        p.status === 'active' &&
+        p.remainingSessions > 0 &&
+        p.packageType?.sessionType === sessionType &&
+        typeof p.expiresAt === 'string' &&
+        p.expiresAt >= today,
+    )
+    .reduce((acc, p) => acc + p.remainingSessions, 0);
+}
+
+function localizeEventAction(t: (key: string) => string, message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('full')) {
+    return t('events.errFull');
+  }
+  if (m.includes('already registered')) {
+    return t('events.errAlready');
+  }
+  if (m.includes('already started')) {
+    return t('events.errStarted');
+  }
+  if (m.includes('cancel after')) {
+    return t('events.errStarted');
+  }
+  if (m.includes('registration not found')) {
+    return t('events.errLeave');
+  }
+  return t('events.joinFailed');
+}
+
 const logoDark = require('../../../assets/branding/wellness-club-logo-header-dark.png');
 
 const TAB_BAR_PAD = 72;
@@ -118,6 +164,9 @@ export function MemberHomeScreen() {
   const bookingSectionY = useRef(0);
   const [hubPlaceholder, setHubPlaceholder] = useState<'massage' | 'events' | 'cafe' | null>(null);
   const [trainersShowAll, setTrainersShowAll] = useState(false);
+  const [clubEvents, setClubEvents] = useState<ClubEventRow[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
 
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
@@ -283,6 +332,74 @@ export function MemberHomeScreen() {
     ).length;
   }, [packages]);
 
+  const lessonCredits = useMemo(
+    () => sumActiveRemainingBySessionType(packages, 'personal_training'),
+    [packages],
+  );
+  const massageCredits = useMemo(
+    () => sumActiveRemainingBySessionType(packages, 'massage'),
+    [packages],
+  );
+
+  const loadClubEvents = useCallback(async () => {
+    if (!token || !tenant) {
+      return;
+    }
+    setLoadingEvents(true);
+    try {
+      const rows = await apiJson<ClubEventRow[]>('/events/upcoming?limit=30', {
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      setClubEvents(rows);
+    } catch (e) {
+      Alert.alert(t('events.section'), e instanceof ApiError ? e.message : t('events.loadFailed'));
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, [token, tenant, t]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadClubEvents().catch(() => {});
+    }, [loadClubEvents]),
+  );
+
+  const toggleEventJoin = useCallback(
+    async (row: ClubEventRow) => {
+      if (!token || !tenant) {
+        return;
+      }
+      setJoiningEventId(row.id);
+      try {
+        if (row.isJoined) {
+          await apiJson(`/events/${row.id}/join`, {
+            method: 'DELETE',
+            token,
+            tenantSubdomain: tenant.subdomain,
+          });
+          Alert.alert(t('events.section'), t('events.leftOk'));
+        } else {
+          await apiJson(`/events/${row.id}/join`, {
+            method: 'POST',
+            token,
+            tenantSubdomain: tenant.subdomain,
+          });
+          Alert.alert(t('events.section'), t('events.joinedOk'));
+        }
+        await loadClubEvents();
+      } catch (e) {
+        Alert.alert(
+          t('events.section'),
+          e instanceof ApiError ? localizeEventAction(t, e.message) : t('events.joinFailed'),
+        );
+      } finally {
+        setJoiningEventId(null);
+      }
+    },
+    [token, tenant, loadClubEvents, t],
+  );
+
   const scrollToBooking = useCallback(() => {
     setHubPlaceholder(null);
     requestAnimationFrame(() => {
@@ -339,7 +456,82 @@ export function MemberHomeScreen() {
               <Text style={styles.heroTag}>{t('home.hubTagline')}</Text>
             </View>
           </View>
+          <View style={styles.heroStats}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t('home.heroLessons')}</Text>
+              <Text style={styles.heroStatValue}>{lessonCredits}</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t('home.heroMassage')}</Text>
+              <Text style={styles.heroStatValue}>{massageCredits}</Text>
+            </View>
+          </View>
         </View>
+
+        <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+        {loadingEvents && clubEvents.length === 0 ? (
+          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
+        ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.eventsRail}
+          contentContainerStyle={styles.eventsRailInner}
+        >
+          {clubEvents.map((ev) => {
+            const full = ev.bookedCount >= ev.capacity;
+            const busy = joiningEventId === ev.id;
+            return (
+              <View key={ev.id} style={styles.eventCard}>
+                {ev.imageUrl ? (
+                  <Image
+                    source={{ uri: ev.imageUrl }}
+                    style={styles.eventImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.eventImage, styles.eventImagePh]}>
+                    <Text style={styles.eventImagePhTxt}>{t('events.noImage')}</Text>
+                  </View>
+                )}
+                <View style={styles.eventCardBody}>
+                  <Text style={styles.eventTitle} numberOfLines={2}>
+                    {ev.title}
+                  </Text>
+                  <Text style={styles.eventWhen}>{fmt(ev.startsAt)}</Text>
+                  <Text style={styles.eventCapacity}>
+                    {t('events.capacity', { booked: ev.bookedCount, capacity: ev.capacity })}
+                  </Text>
+                  <Pressable
+                    {...ripple}
+                    style={({ pressed }) => [
+                      ev.isJoined ? styles.btnGhost : styles.btnPrimary,
+                      pressed && (ev.isJoined ? styles.btnGhostPressed : styles.btnPrimaryPressed),
+                      (busy || (!ev.isJoined && full)) && styles.disabled,
+                    ]}
+                    disabled={busy || (!ev.isJoined && full)}
+                    onPress={() => toggleEventJoin(ev).catch(() => {})}
+                  >
+                    {busy ? (
+                      <ActivityIndicator color={ev.isJoined ? premium.textMuted : '#fff'} />
+                    ) : (
+                      <Text style={ev.isJoined ? styles.btnGhostTxt : styles.btnPrimaryTxt}>
+                        {ev.isJoined
+                          ? t('events.leave')
+                          : full
+                            ? t('events.full')
+                            : t('events.join')}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+        {!loadingEvents && clubEvents.length === 0 ? (
+          <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
+        ) : null}
 
         <GlassCard style={styles.sectionCard}>
           <Text style={styles.todayClub}>{t('home.clubToday', { club: tenant.name })}</Text>
@@ -684,6 +876,99 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: premium.textMuted,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  heroStat: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  heroStatLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: premium.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  heroStatValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: premium.text,
+  },
+  eventsSectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: premium.text,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  eventsLoader: {
+    marginBottom: 12,
+  },
+  eventsRail: {
+    marginBottom: 8,
+    marginHorizontal: -4,
+  },
+  eventsRailInner: {
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+    flexDirection: 'row',
+  },
+  eventCard: {
+    width: 260,
+    marginRight: 12,
+    borderRadius: premium.radiusMd,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    overflow: 'hidden',
+  },
+  eventImage: {
+    width: '100%',
+    height: 120,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  eventImagePh: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventImagePhTxt: {
+    color: premium.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  eventCardBody: {
+    padding: 12,
+    gap: 8,
+  },
+  eventTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: premium.text,
+    minHeight: 40,
+  },
+  eventWhen: {
+    fontSize: 12,
+    color: premium.textMuted,
+  },
+  eventCapacity: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.accentGreen,
+  },
+  eventsEmpty: {
+    fontSize: 13,
+    color: premium.textMuted,
+    marginBottom: 12,
   },
   langRow: {
     flexDirection: 'row',

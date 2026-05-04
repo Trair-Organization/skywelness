@@ -4,6 +4,7 @@ import i18n from './i18n';
 import { AuthProvider } from './auth/AuthContext';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
+import { EventsPage } from './pages/EventsPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import './admin.css';
@@ -15,6 +16,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
+        <Route path="/events" element={<EventsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

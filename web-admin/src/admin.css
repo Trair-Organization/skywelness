@@ -72,13 +72,24 @@ h2 {
   color: var(--muted);
 }
 
-.form input {
+.form input,
+.form textarea {
   padding: 0.65rem 0.75rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   font-size: 1rem;
+}
+
+.form label.inlineCheck {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form label.inlineCheck input {
+  width: auto;
 }
 
 .form button,

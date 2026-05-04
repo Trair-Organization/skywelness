@@ -7,6 +7,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BookingModule } from './booking/booking.module';
+import { EventsModule } from './events/events.module';
 import { AppController } from './app.controller';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { TenantsModule } from './tenants/tenants.module';
@@ -38,6 +39,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     TenantsModule,
     AdminModule,
     BookingModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor }],
