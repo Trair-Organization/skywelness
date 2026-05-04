@@ -1,11 +1,19 @@
 import { RESERVED_SUBDOMAINS } from './subdomain.constants';
 
+function isIpv4(host: string): boolean {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host);
+}
+
 export function extractTenantSubdomain(hostValue: string | undefined | null): string | null {
   if (!hostValue) {
     return null;
   }
-  const host = hostValue.trim().toLowerCase().split(':')[0];
+  const firstHost = hostValue.split(',')[0]?.trim().toLowerCase() ?? '';
+  const host = firstHost.split(':')[0];
   if (!host) {
+    return null;
+  }
+  if (host === 'localhost' || isIpv4(host)) {
     return null;
   }
 
