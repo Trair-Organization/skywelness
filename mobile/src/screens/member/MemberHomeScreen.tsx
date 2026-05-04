@@ -156,8 +156,6 @@ function localizeEventAction(t: (key: string) => string, message: string): strin
   return t('events.joinFailed');
 }
 
-const logoDark = require('../../../assets/branding/wellness-club-logo-header-dark.png');
-
 const TAB_BAR_PAD = 72;
 
 export function MemberHomeScreen() {
@@ -473,15 +471,8 @@ export function MemberHomeScreen() {
       >
         <View style={styles.hero}>
           <View style={styles.heroRow}>
-            <Image
-              accessibilityIgnoresInvertColors
-              accessibilityLabel={tenant.name}
-              source={logoDark}
-              style={styles.heroLogo}
-            />
             <View style={styles.heroTextCol}>
               <Text style={styles.heroBrand}>{tenant.name}</Text>
-              <Text style={styles.heroTag}>{t('home.hubTagline')}</Text>
             </View>
             <Pressable
               {...ripple}
@@ -490,20 +481,6 @@ export function MemberHomeScreen() {
             >
               <Text style={styles.notifyIcon}>🔔</Text>
             </Pressable>
-          </View>
-          <View style={styles.heroStats}>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{t('home.heroLessons')}</Text>
-              <Text style={styles.heroStatValue}>{lessonCredits}</Text>
-            </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{t('home.heroMassage')}</Text>
-              <Text style={styles.heroStatValue}>{massageCredits}</Text>
-            </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{t('home.heroEvents')}</Text>
-              <Text style={styles.heroStatValue}>{clubEvents.length}</Text>
-            </View>
           </View>
           <View style={styles.heroSessionBlock}>
             <Text style={styles.todayGreet}>{t('home.greeting', { name: user.firstName })}</Text>
@@ -534,6 +511,20 @@ export function MemberHomeScreen() {
                 ) : null}
               </>
             )}
+          </View>
+          <View style={styles.heroStats}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t('home.heroLessons')}</Text>
+              <Text style={styles.heroStatValue}>{lessonCredits}</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t('home.heroMassage')}</Text>
+              <Text style={styles.heroStatValue}>{massageCredits}</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t('home.heroEvents')}</Text>
+              <Text style={styles.heroStatValue}>{clubEvents.length}</Text>
+            </View>
           </View>
         </View>
 
@@ -989,22 +980,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
-  heroLogo: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-  },
   heroTextCol: { flex: 1, minWidth: 0 },
   heroBrand: {
     fontSize: 22,
     fontWeight: '800',
     color: premium.text,
     letterSpacing: -0.3,
-  },
-  heroTag: {
-    marginTop: 4,
-    fontSize: 13,
-    color: premium.textMuted,
   },
   notifyBtn: {
     width: 38,
@@ -1025,13 +1006,14 @@ const styles = StyleSheet.create({
   heroStats: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 16,
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: premium.glassBorder,
   },
   heroSessionBlock: {
     marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: premium.glassBorder,
-    paddingTop: 12,
+    paddingTop: 0,
   },
   heroStat: {
     flex: 1,
