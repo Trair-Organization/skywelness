@@ -199,6 +199,8 @@ export default {
     updateValidation: 'Ad, soyad, e-posta ve kullanıcı adı zorunludur.',
     updateOk: 'Profil bilgileriniz güncellendi.',
     updateFailed: 'Profil güncellenemedi.',
+    emailExists: 'Bu e-posta bu kulüpte zaten kayıtlı. Farklı bir e-posta adresi deneyin.',
+    usernameTaken: 'Bu kullanıcı adı kullanımda. Lütfen farklı bir kullanıcı adı girin.',
     contractsTitle: 'Sözleşmeler',
     contractsBody: 'Profilinizle ilgili sözleşmeleri buradan inceleyebilirsiniz.',
     privacyTitle: 'Gizlilik Sözleşmesi',

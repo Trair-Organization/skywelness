@@ -199,6 +199,8 @@ export default {
     updateValidation: 'First name, last name, email, and username are required.',
     updateOk: 'Your profile has been updated.',
     updateFailed: 'Profile could not be updated.',
+    emailExists: 'This email is already registered in this club. Please use another email.',
+    usernameTaken: 'This username is already in use. Please choose a different username.',
     contractsTitle: 'Agreements',
     contractsBody: 'You can review your profile-related agreements here.',
     privacyTitle: 'Privacy Policy',

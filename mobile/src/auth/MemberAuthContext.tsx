@@ -469,15 +469,22 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         }
         return true;
       } catch (e) {
+        let message = t('profile.updateFailed');
+        if (e instanceof ApiError) {
+          const m = e.message.toLowerCase();
+          if (m.includes('email already registered for this tenant')) {
+            message = t('profile.emailExists');
+          } else if (m.includes('username already taken for this tenant')) {
+            message = t('profile.usernameTaken');
+          } else {
+            message = localizeApiMessage(t, e.message, 'profile.updateFailed');
+          }
+        }
         const isNetworkFailure =
           e instanceof TypeError && e.message.toLowerCase().includes('network request failed');
         Alert.alert(
           t('profile.updateTitle'),
-          e instanceof ApiError
-            ? localizeApiMessage(t, e.message, 'profile.updateFailed')
-            : isNetworkFailure
-              ? t('tenant.networkFailed')
-              : t('profile.updateFailed'),
+          isNetworkFailure ? t('tenant.networkFailed') : message,
         );
         return false;
       }
