@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+mobile/ios/Pods
+mobile/android/app/build
+mobile/android/build
+package-lock.json
+**/package-lock.json

@@ -1,0 +1,41 @@
+{
+  "name": "rezidans-fitness",
+  "private": true,
+  "description": "Rezidans Fitness App — multi-tenant SaaS monorepo",
+  "workspaces": [
+    "backend",
+    "mobile",
+    "web-admin",
+    "shared"
+  ],
+  "scripts": {
+    "postinstall": "npm run build -w @rezidans-fitness/shared",
+    "build": "npm run build -w @rezidans-fitness/shared && npm run build -w backend && npm run build -w web-admin",
+    "build:shared": "npm run build -w @rezidans-fitness/shared",
+    "dev": "npm run dev:app",
+    "dev:backend": "npm run start:dev -w backend",
+    "dev:web": "npm run dev -w web-admin",
+    "dev:mobile": "npm run start -w mobile",
+    "dev:mobile-ios": "concurrently -n metro,ios -c yellow,cyan \"npm run start -w mobile\" \"node scripts/wait-for-metro.mjs && npm run ios -w mobile -- --no-packager\"",
+    "lint": "npm run lint -w @rezidans-fitness/shared -w backend -w web-admin -w mobile --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md}\"",
+    "prepare": "husky",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "db:seed": "npm run db:seed -w backend",
+    "setup:local": "npm run docker:up && node scripts/wait-for-pg.mjs && npm run migration:run -w backend && npm run db:seed",
+    "dev:app": "concurrently -k -n backend,web -c blue,green \"npm run start:dev -w backend\" \"npm run dev -w web-admin\""
+  },
+  "devDependencies": {
+    "@react-native/metro-config": "0.85.2",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

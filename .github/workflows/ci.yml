@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rezidans
+          POSTGRES_PASSWORD: rezidans_dev_pass
+          POSTGRES_DB: rezidans_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rezidans -d rezidans_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://rezidans:rezidans_dev_pass@127.0.0.1:5432/rezidans_dev
+      JWT_ACCESS_SECRET: ci-test-jwt-secret-minimum-32-chars-long!!
+      JWT_REFRESH_SECRET: ci-test-refresh-secret-32-chars-min!!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run build -w @rezidans-fitness/shared
+      - run: npm run lint -w backend
+      - run: npm run build -w backend
+      - run: npm run migration:run -w backend
+      - name: Install PostgreSQL client (psql)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Seed dev fixtures (tenant + booking e2e users)
+        run: PGPASSWORD=rezidans_dev_pass psql -h 127.0.0.1 -U rezidans -d rezidans_dev -f backend/scripts/seed-dev.sql
+      - run: npm run test -w backend
+      - run: npm run test:e2e -w backend
+
+  web-admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run build -w @rezidans-fitness/shared
+      - run: npm run lint -w web-admin
+      - run: npm run build -w web-admin
+
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run lint -w mobile
+
+  shared:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run lint -w @rezidans-fitness/shared
+      - run: npm run build -w @rezidans-fitness/shared
