@@ -234,6 +234,18 @@ export default {
     openProfileHint: 'Tap to view profile and specialties.',
     creditsLine: 'Sessions remaining: {{n}}',
     noActivePackage: 'No active package for this service. You can send a request below.',
+    packageRequestBannerZeroTitle: 'No sessions remaining',
+    packageRequestBannerZeroBodyPt:
+      'No usable personal-training package is linked to your account. Send a request below; once the club assigns a package you can book slots.',
+    packageRequestBannerZeroBodyMassage:
+      'No usable massage package is linked to your account. Send a request below; once the club assigns a package you can book slots.',
+    emptyHourAlertTitle: 'This hour cannot be selected',
+    emptyHourAlertBody:
+      'The club has not published a slot for this hour yet (“NOT OFFERED”). Published slots look different and show the session time range.',
+    pastHourAlertTitle: 'This hour has passed',
+    pastHourAlertBody: 'Past time slots cannot be booked. Pick a future day or a later hour.',
+    fullHourAlertTitle: 'This slot is full',
+    fullHourAlertBody: 'There is no remaining capacity for this hour. Try another time.',
     requestSend: 'Send request',
     requestOk: 'Your request was saved. The club will contact you soon.',
     requestFail: 'Could not send the request. Check your connection and try again.',

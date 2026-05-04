@@ -234,6 +234,19 @@ export default {
     openProfileHint: 'Profili ve uzmanlıkları görmek için dokunun.',
     creditsLine: 'Kalan seans hakkı: {{n}}',
     noActivePackage: 'Bu hizmet için aktif paket görünmüyor. Paket talebi gönderebilirsiniz.',
+    packageRequestBannerZeroTitle: 'Kalan seans hakkınız yok',
+    packageRequestBannerZeroBodyPt:
+      'Özel ders için kullanılabilir paket görünmüyor. Aşağıya talebinizi yazarak kulübe iletin; paket tanımlandığında rezervasyon yapabilirsiniz.',
+    packageRequestBannerZeroBodyMassage:
+      'Masaj için kullanılabilir paket görünmüyor. Aşağıya talebinizi yazarak kulübe iletin; paket tanımlandığında rezervasyon yapabilirsiniz.',
+    emptyHourAlertTitle: 'Bu saat seçilemez',
+    emptyHourAlertBody:
+      'Bu saat dilimi için kulüp henüz müsait slot yayınlamadı (AÇILMADI). Yayınlanan saatler düz çizgili değil ve seçildiğinde süre bilgisi görünür.',
+    pastHourAlertTitle: 'Bu saat geçti',
+    pastHourAlertBody:
+      'Geçmiş saat dilimleri rezerve edilemez. İleri bir tarih veya gelecek saat seçin.',
+    fullHourAlertTitle: 'Bu saat dolu',
+    fullHourAlertBody: 'Bu saatte kontenjan kalmadı. Başka bir saat dilimi seçin.',
     requestSend: 'Talebi gönder',
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',

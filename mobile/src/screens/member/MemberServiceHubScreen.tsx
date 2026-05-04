@@ -705,7 +705,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
                 styles.addPackageBtn,
                 pressed && styles.addPackageBtnPressed,
               ]}
-              onPress={() => setPackageRequestOpen(true)}
+              onPress={() => {
+                setPackageRequestOpen(true);
+              }}
             >
               <Text style={styles.addPackageIcon}>+</Text>
             </Pressable>
@@ -1183,10 +1185,41 @@ export function MemberServiceHubScreen({ mode }: Props) {
                             </Pressable>
                           );
                         }
+                        const onBlockedHourPress = () => {
+                          if (!slot) {
+                            Alert.alert(
+                              t('serviceHub.emptyHourAlertTitle'),
+                              t('serviceHub.emptyHourAlertBody'),
+                            );
+                          } else if (past) {
+                            Alert.alert(
+                              t('serviceHub.pastHourAlertTitle'),
+                              t('serviceHub.pastHourAlertBody'),
+                            );
+                          } else if (full) {
+                            Alert.alert(
+                              t('serviceHub.fullHourAlertTitle'),
+                              t('serviceHub.fullHourAlertBody'),
+                            );
+                          }
+                        };
                         return (
-                          <View key={`hour-${h}`} accessibilityRole="text" style={cardStyle}>
+                          <Pressable
+                            key={`hour-${h}`}
+                            accessibilityRole="button"
+                            hitSlop={4}
+                            delayPressIn={0}
+                            {...(Platform.OS === 'android'
+                              ? { android_ripple: { color: 'rgba(255,255,255,0.12)' } }
+                              : {})}
+                            style={({ pressed }) => [
+                              ...cardStyle,
+                              pressed ? styles.hourCardPressed : null,
+                            ]}
+                            onPress={onBlockedHourPress}
+                          >
                             {inner}
-                          </View>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -1329,7 +1362,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
         onRequestClose={() => setPackageRequestOpen(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setPackageRequestOpen(false)}>
-          <Pressable style={styles.requestModalCard} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.requestModalCard}>
             <View style={styles.requestModalHeader}>
               <Text style={styles.requestModalTitle}>{t(`${prefix}.requestTitle`)}</Text>
               <Pressable
@@ -1340,7 +1373,21 @@ export function MemberServiceHubScreen({ mode }: Props) {
                 <Text style={styles.requestModalCloseTxt}>×</Text>
               </Pressable>
             </View>
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {credits <= 0 ? (
+              <View style={styles.requestZeroCreditsBanner}>
+                <Text style={styles.requestZeroCreditsBannerTitle}>
+                  {t('serviceHub.packageRequestBannerZeroTitle')}
+                </Text>
+                <Text style={styles.requestZeroCreditsBannerBody}>
+                  {t(
+                    mode === 'massage'
+                      ? 'serviceHub.packageRequestBannerZeroBodyMassage'
+                      : 'serviceHub.packageRequestBannerZeroBodyPt',
+                  )}
+                </Text>
+              </View>
+            ) : null}
+            <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
               <Text style={styles.muted}>{t(`${prefix}.requestHint`)}</Text>
               <TextInput
                 value={requestNote}
@@ -1365,7 +1412,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                 )}
               </Pressable>
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </GradientBackground>
@@ -2094,6 +2141,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     marginBottom: 12,
+  },
+  requestZeroCreditsBanner: {
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.45)',
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    padding: 12,
+    marginBottom: 12,
+  },
+  requestZeroCreditsBannerTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fcd34d',
+    marginBottom: 6,
+  },
+  requestZeroCreditsBannerBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: premium.text,
   },
   requestModalTitle: {
     flex: 1,
