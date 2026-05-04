@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   Modal,
   Platform,
@@ -238,6 +237,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [weekOffset, setWeekOffset] = useState(0);
   /** When set, full weekly calendar modal is open for this trainer. */
   const [calendarTrainer, setCalendarTrainer] = useState<TrainerRow | null>(null);
+  /** 0–6: Mon–Sun within the currently displayed `rangeStart` week. */
+  const [calendarDayIndex, setCalendarDayIndex] = useState(0);
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -385,6 +386,13 @@ export function MemberServiceHubScreen({ mode }: Props) {
   useEffect(() => {
     setSelectedSlotId(null);
   }, [weekOffset]);
+
+  useEffect(() => {
+    if (!calendarTrainer) {
+      return;
+    }
+    setCalendarDayIndex(dayIndexInWeek(rangeStart));
+  }, [calendarTrainer, weekOffset, rangeStart]);
 
   const upcomingRes = useMemo(() => {
     const now = Date.now();
@@ -557,11 +565,6 @@ export function MemberServiceHubScreen({ mode }: Props) {
       ),
     [],
   );
-
-  const calendarColumnWidth = useMemo(() => {
-    const w = Dimensions.get('window').width;
-    return Math.min(96, Math.max(76, (w - 40) / 3.8));
-  }, []);
 
   return (
     <GradientBackground>
@@ -870,13 +873,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
             setSelectedSlotId(null);
           }}
         >
-          <Pressable style={styles.calendarSheet} onPress={() => {}}>
+          <View style={styles.calendarSheet} onStartShouldSetResponder={() => true}>
             {calendarTrainer ? (
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-              >
+              <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
                 <View style={styles.calendarModalHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.calendarModalTitle} numberOfLines={1}>
@@ -909,75 +908,93 @@ export function MemberServiceHubScreen({ mode }: Props) {
                     <Text style={styles.weekBtnTxt}>{t('serviceHub.weekNext')}</Text>
                   </Pressable>
                 </View>
+                <Text style={styles.calendarPickDayLabel}>{t('serviceHub.calendarPickDay')}</Text>
+                <View style={styles.dayChipRow}>
+                  {weekDayDates.map((dayDate, i) => {
+                    const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
+                    const labelShort = dayDate.toLocaleDateString(loc, { weekday: 'short' });
+                    const num = dayDate.getDate();
+                    const sel = i === calendarDayIndex;
+                    return (
+                      <Pressable
+                        key={`day-chip-${i}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: sel }}
+                        onPress={() => {
+                          setCalendarDayIndex(i);
+                          setSelectedSlotId(null);
+                        }}
+                        style={({ pressed }) => [
+                          styles.dayChip,
+                          sel && styles.dayChipOn,
+                          pressed && styles.dayChipPressed,
+                        ]}
+                      >
+                        <Text style={[styles.dayChipWeek, sel && styles.dayChipWeekOn]}>
+                          {labelShort}
+                        </Text>
+                        <Text style={[styles.dayChipNum, sel && styles.dayChipNumOn]}>{num}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {(() => {
+                  const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
+                  const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
+                  const longDay = selectedDayDate.toLocaleDateString(loc, {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  });
+                  return <Text style={styles.calendarSelectedDayLine}>{longDay}</Text>;
+                })()}
                 {loadingSlots ? (
                   <ActivityIndicator color={premium.accentBlue} style={styles.mb} />
                 ) : (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={true}
-                    contentContainerStyle={styles.calendarGridRow}
-                  >
-                    {weekDayDates.map((dayDate, colIdx) => {
-                      const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
-                      const dayTitle = dayDate.toLocaleDateString(loc, { weekday: 'short' });
-                      const dayMonth = dayDate.toLocaleDateString(loc, {
-                        day: 'numeric',
-                        month: 'short',
-                      });
+                  <View style={styles.hourList}>
+                    {hourBuckets.map((h) => {
+                      const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
+                      const slot = findSlotInBucket(slots, calendarTrainer.id, selectedDayDate, h);
+                      const full = slot ? slot.remainingCapacity < 1 : false;
+                      const sel = slot ? slot.id === selectedSlotId : false;
                       return (
-                        <View
-                          key={`day-${colIdx}`}
-                          style={[styles.calendarColumn, { width: calendarColumnWidth }]}
+                        <Pressable
+                          key={`hour-${h}`}
+                          accessibilityRole="button"
+                          accessibilityState={{ disabled: !slot || full, selected: sel }}
+                          disabled={!slot || full}
+                          onPress={() => {
+                            if (slot && !full) {
+                              setSelectedSlotId(slot.id);
+                            }
+                          }}
+                          style={({ pressed }) => [
+                            styles.hourCard,
+                            sel && styles.hourCardOn,
+                            full && styles.hourCardFull,
+                            (!slot || full) && styles.hourCardMuted,
+                            pressed && slot && !full && styles.hourCardPressed,
+                          ]}
                         >
-                          <Text style={styles.calColTitle}>{dayTitle}</Text>
-                          <Text style={styles.calColDate}>{dayMonth}</Text>
-                          <ScrollView
-                            style={styles.calColScroll}
-                            nestedScrollEnabled
-                            showsVerticalScrollIndicator={false}
-                          >
-                            {hourBuckets.map((h) => {
-                              const slot = findSlotInBucket(slots, calendarTrainer.id, dayDate, h);
-                              const full = slot ? slot.remainingCapacity < 1 : false;
-                              const sel = slot ? slot.id === selectedSlotId : false;
-                              return (
-                                <Pressable
-                                  key={`${colIdx}-${h}`}
-                                  disabled={!slot || full}
-                                  onPress={() => slot && setSelectedSlotId(slot.id)}
-                                  style={({ pressed }) => [
-                                    styles.hourCard,
-                                    sel && styles.hourCardOn,
-                                    full && styles.hourCardFull,
-                                    (!slot || full) && styles.hourCardMuted,
-                                    pressed && slot && !full && styles.hourCardPressed,
-                                  ]}
-                                >
-                                  <Text style={styles.hourCardBucket}>
-                                    {formatHourBucketLabel(h)}
-                                  </Text>
-                                  {slot ? (
-                                    <>
-                                      <Text style={styles.hourCardSpan} numberOfLines={1}>
-                                        {formatSlotTimeSpan(slot, i18n.language)}
-                                      </Text>
-                                      <Text style={styles.hourCardSpots}>
-                                        {t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
-                                      </Text>
-                                    </>
-                                  ) : (
-                                    <Text style={styles.hourCardDash}>
-                                      {t('serviceHub.calendarNoSlot')}
-                                    </Text>
-                                  )}
-                                </Pressable>
-                              );
-                            })}
-                          </ScrollView>
-                        </View>
+                          <Text style={styles.hourCardBucket}>{formatHourBucketLabel(h)}</Text>
+                          {slot ? (
+                            <>
+                              <Text style={styles.hourCardSpan} numberOfLines={1}>
+                                {formatSlotTimeSpan(slot, i18n.language)}
+                              </Text>
+                              <Text style={styles.hourCardSpots}>
+                                {t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
+                              </Text>
+                            </>
+                          ) : (
+                            <Text style={styles.hourCardDash}>
+                              {t('serviceHub.calendarNoSlot')}
+                            </Text>
+                          )}
+                        </Pressable>
                       );
                     })}
-                  </ScrollView>
+                  </View>
                 )}
                 {!loadingSlots && slots.length === 0 ? (
                   <Text style={styles.muted}>{t('serviceHub.emptySlots')}</Text>
@@ -1018,7 +1035,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                 </Pressable>
               </ScrollView>
             ) : null}
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
@@ -1318,29 +1335,58 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 8,
   },
-  calendarGridRow: {
-    flexDirection: 'row',
-    paddingBottom: 4,
-    paddingTop: 4,
-    alignItems: 'flex-start',
-  },
-  calendarColumn: {
-    marginRight: 8,
-  },
-  calColTitle: {
+  calendarPickDayLabel: {
     fontSize: 12,
+    fontWeight: '700',
+    color: premium.textMuted,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  dayChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 4,
+    paddingBottom: 12,
+    justifyContent: 'flex-start',
+  },
+  dayChip: {
+    minWidth: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+  },
+  dayChipOn: {
+    borderColor: premium.accentBlue,
+    backgroundColor: 'rgba(56,189,248,0.2)',
+  },
+  dayChipPressed: { opacity: 0.85 },
+  dayChipWeek: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: premium.textMuted,
+    marginBottom: 2,
+  },
+  dayChipWeekOn: { color: premium.text },
+  dayChipNum: {
+    fontSize: 18,
     fontWeight: '800',
     color: premium.text,
-    textAlign: 'center',
   },
-  calColDate: {
-    fontSize: 11,
-    color: premium.textMuted,
-    textAlign: 'center',
-    marginBottom: 6,
+  dayChipNumOn: { color: '#7dd3fc' },
+  calendarSelectedDayLine: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: premium.text,
+    marginBottom: 12,
   },
-  calColScroll: {
-    maxHeight: 340,
+  hourList: {
+    marginBottom: 4,
   },
   hourCard: {
     paddingVertical: 8,

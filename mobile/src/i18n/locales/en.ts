@@ -239,8 +239,9 @@ export default {
     requestFail: 'Could not send the request. Check your connection and try again.',
     calendarTitle: 'Calendar & availability',
     calendarWeeklyTitle: 'Weekly availability',
+    calendarPickDay: 'Day',
     calendarWeeklyHint:
-      'Club schedule (06:00–22:00). A dash means no slot published; tap an open slot to book.',
+      'Choose a day for this week, then select a time slot (06:00–22:00). Pick a package and confirm to book.',
     calendarNoSlot: '—',
     weekPrev: 'Prev',
     weekNext: 'Next',

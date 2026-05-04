@@ -239,8 +239,9 @@ export default {
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',
     calendarTitle: 'Takvim ve müsaitlik',
     calendarWeeklyTitle: 'Haftalık müsaitlik',
+    calendarPickDay: 'Gün',
     calendarWeeklyHint:
-      'Kulüp yayını (06:00–22:00). Boş kartta bu saat için slot tanımlı değildir; dolu kartta kontenjanı görürsünüz.',
+      'Hafta için önce gün seçin. Aşağıda sadece o güne ait 06:00–22:00 arası saat dilimleri listelenir; müsait karta dokunup paket ile onaylayın.',
     calendarNoSlot: '—',
     weekPrev: 'Önceki',
     weekNext: 'Sonraki',
