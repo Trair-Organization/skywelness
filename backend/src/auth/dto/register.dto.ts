@@ -40,8 +40,9 @@ export class RegisterDto {
   @MaxLength(120)
   lastName!: string;
 
+  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(100)
-  tenantSubdomain!: string;
+  tenantSubdomain?: string;
 }

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -12,6 +13,7 @@ import { In, Repository } from 'typeorm';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 import { Tenant } from '../database/entities/tenant.entity';
 import { User } from '../database/entities/user.entity';
+import { RESERVED_SUBDOMAINS } from '../common/tenant/subdomain.constants';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterDto } from './dto/register.dto';
 import type { JwtAccessPayload, JwtRefreshPayload } from './jwt-payload';
@@ -27,8 +29,22 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  private tenantSubdomain(dto: { tenantSubdomain: string }): string {
-    return dto.tenantSubdomain.trim().toLowerCase();
+  private resolveTenantSubdomain(
+    inputSubdomain: string | undefined,
+    requestSubdomain: string | null | undefined,
+  ): string {
+    const fromBody = inputSubdomain?.trim().toLowerCase();
+    if (fromBody) {
+      if (RESERVED_SUBDOMAINS.has(fromBody)) {
+        throw new BadRequestException('Reserved subdomain is not a tenant');
+      }
+      return fromBody;
+    }
+    const fromHost = requestSubdomain?.trim().toLowerCase();
+    if (fromHost) {
+      return fromHost;
+    }
+    throw new BadRequestException('Tenant subdomain is required');
   }
 
   private normalizeUsername(value: string): string {
@@ -39,8 +55,12 @@ export class AuthService {
     return value.replace(/[^a-z0-9çğıöşü_.-]/g, '').slice(0, 40);
   }
 
-  async checkUsernameAvailability(tenantSubdomain: string, rawUsername: string) {
-    const subdomain = tenantSubdomain.trim().toLowerCase();
+  async checkUsernameAvailability(
+    tenantSubdomain: string,
+    rawUsername: string,
+    requestSubdomain?: string | null,
+  ) {
+    const subdomain = this.resolveTenantSubdomain(tenantSubdomain, requestSubdomain);
     const username = this.normalizeUsername(rawUsername);
 
     if (username.length < 3) {
@@ -109,8 +129,8 @@ export class AuthService {
     return candidates.filter((item) => !taken.has(item)).slice(0, 3);
   }
 
-  async register(dto: RegisterDto) {
-    const subdomain = this.tenantSubdomain(dto);
+  async register(dto: RegisterDto, requestSubdomain?: string | null) {
+    const subdomain = this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain);
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
     if (!tenant) {
       throw new NotFoundException(`Tenant not found for subdomain: ${subdomain}`);
@@ -152,8 +172,8 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async login(dto: LoginDto) {
-    const subdomain = this.tenantSubdomain(dto);
+  async login(dto: LoginDto, requestSubdomain?: string | null) {
+    const subdomain = this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain);
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
     if (!tenant) {
       throw new UnauthorizedException('Invalid credentials');

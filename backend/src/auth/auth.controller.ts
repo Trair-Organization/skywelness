@@ -14,21 +14,26 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  register(@Body() dto: RegisterDto, @Req() req: Request) {
+    return this.authService.register(dto, req.requestSubdomain ?? null);
   }
 
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: Request) {
+    return this.authService.login(dto, req.requestSubdomain ?? null);
   }
 
   @Get('username-availability')
   usernameAvailability(
+    @Req() req: Request,
     @Query('tenantSubdomain') tenantSubdomain?: string,
     @Query('username') username?: string,
   ) {
-    return this.authService.checkUsernameAvailability(tenantSubdomain ?? '', username ?? '');
+    return this.authService.checkUsernameAvailability(
+      tenantSubdomain ?? '',
+      username ?? '',
+      req.requestSubdomain ?? null,
+    );
   }
 
   @Post('refresh')

@@ -30,6 +30,17 @@ export class TenantContextInterceptor implements NestInterceptor {
     if (req.user) {
       req.tenantContext = { tenantId: req.user.tenantId };
 
+      const hostSubdomain = req.requestSubdomain;
+      if (hostSubdomain) {
+        const resolvedFromHost = await this.tenantsService.resolveIdBySubdomain(hostSubdomain);
+        if (!resolvedFromHost) {
+          throw new ForbiddenException('Unknown tenant');
+        }
+        if (resolvedFromHost !== req.user.tenantId) {
+          throw new ForbiddenException('Tenant host does not match your session');
+        }
+      }
+
       const raw = req.headers['x-tenant-subdomain'];
       if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
         const header = String(raw).trim();
