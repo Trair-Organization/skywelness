@@ -63,6 +63,7 @@ export class BookingService {
       avgRating: t.avgRating,
       totalSessions: t.totalSessions,
       offersSessionTypes: t.offersSessionTypes,
+      memberSince: t.createdAt.toISOString(),
       user: {
         id: t.user.id,
         firstName: t.user.firstName,

@@ -32,6 +32,8 @@ type TrainerRow = {
   photoUrl: string | null;
   avgRating: string;
   totalSessions: number;
+  /** Trainer profile row creation — used for “with us since” in the app. */
+  memberSince?: string;
   user: { id: string; firstName: string; lastName: string };
 };
 
@@ -150,10 +152,29 @@ function formatRatingDisplay(avg: string): string {
   return n.toFixed(1);
 }
 
+function formatMemberSince(iso: string | undefined, locale: string): string | null {
+  if (!iso) {
+    return null;
+  }
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+      return null;
+    }
+    return d.toLocaleDateString(locale === 'tr' ? 'tr-TR' : undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return null;
+  }
+}
+
 type Props = { mode: ServiceHubMode };
 
 export function MemberServiceHubScreen({ mode }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { token, tenant } = useMemberAuth();
 
@@ -764,18 +785,54 @@ export function MemberServiceHubScreen({ mode }: Props) {
                       {t('serviceHub.sessionsShort', { n: profileTrainer.totalSessions })}
                     </Text>
                   </View>
+                  {(() => {
+                    const sinceLabel = formatMemberSince(profileTrainer.memberSince, i18n.language);
+                    return sinceLabel ? (
+                      <Text style={styles.modalMemberSince}>
+                        {t('serviceHub.memberSince', { date: sinceLabel })}
+                      </Text>
+                    ) : null;
+                  })()}
+                  <Text style={styles.modalDisclaimer}>{t('serviceHub.ratingDisclaimer')}</Text>
+
+                  <Text style={styles.modalSectionTitle}>{t('serviceHub.modalAbout')}</Text>
                   <Text style={styles.modalBio}>
                     {profileTrainer.bio?.trim() ? profileTrainer.bio : t('serviceHub.noBio')}
                   </Text>
-                  {jsonToLines(profileTrainer.specializations) ? (
-                    <Text style={styles.modalMeta}>
-                      {t('serviceHub.spec')}: {jsonToLines(profileTrainer.specializations)}
-                    </Text>
-                  ) : null}
+
+                  {(() => {
+                    const specLine = jsonToLines(profileTrainer.specializations);
+                    const specItems = specLine
+                      ? specLine
+                          .split(',')
+                          .map((x) => x.trim())
+                          .filter(Boolean)
+                      : [];
+                    return specItems.length > 0 ? (
+                      <View style={styles.modalSectionBlock}>
+                        <Text style={styles.modalSectionTitle}>
+                          {t('serviceHub.modalSpecialties')}
+                        </Text>
+                        <View style={styles.modalChipsRow}>
+                          {specItems.map((label, idx) => (
+                            <View key={`${label}-${idx}`} style={styles.modalChip}>
+                              <Text style={styles.modalChipTxt} numberOfLines={2}>
+                                {label}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null;
+                  })()}
+
                   {jsonToLines(profileTrainer.certifications) ? (
-                    <Text style={styles.modalMeta}>
-                      {t('serviceHub.cert')}: {jsonToLines(profileTrainer.certifications)}
-                    </Text>
+                    <View style={styles.modalSectionBlock}>
+                      <Text style={styles.modalSectionTitle}>{t('serviceHub.modalCerts')}</Text>
+                      <Text style={styles.modalMeta}>
+                        {jsonToLines(profileTrainer.certifications)}
+                      </Text>
+                    </View>
                   ) : null}
                   <View style={styles.modalActions}>
                     <Pressable style={styles.btnOutline} onPress={() => setProfileTrainer(null)}>
@@ -1219,6 +1276,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: premium.textMuted,
+  },
+  modalMemberSince: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: premium.textMuted,
+    marginBottom: 8,
+  },
+  modalDisclaimer: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: 'rgba(148,163,184,0.85)',
+    marginBottom: 16,
+  },
+  modalSectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: premium.textMuted,
+    marginBottom: 8,
+  },
+  modalSectionBlock: {
+    marginBottom: 14,
+  },
+  modalChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modalChip: {
+    maxWidth: '100%',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: premium.radiusSm,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  modalChipTxt: {
+    fontSize: 13,
+    color: premium.text,
+    fontWeight: '600',
   },
   modalBio: {
     fontSize: 15,
