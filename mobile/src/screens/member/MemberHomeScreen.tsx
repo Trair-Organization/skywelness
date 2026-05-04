@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -63,6 +64,8 @@ type ClubEventRow = {
   id: string;
   title: string;
   description: string | null;
+  coachName: string | null;
+  location: string | null;
   imageUrl: string | null;
   startsAt: string;
   endsAt: string | null;
@@ -77,6 +80,22 @@ function fmt(iso: string) {
       dateStyle: 'short',
       timeStyle: 'short',
     });
+  } catch {
+    return iso;
+  }
+}
+
+function fmtDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString();
+  } catch {
+    return iso;
+  }
+}
+
+function fmtTime(iso: string) {
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch {
     return iso;
   }
@@ -167,6 +186,7 @@ export function MemberHomeScreen() {
   const [clubEvents, setClubEvents] = useState<ClubEventRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ClubEventRow | null>(null);
 
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
@@ -475,56 +495,57 @@ export function MemberHomeScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          pagingEnabled
+          snapToAlignment="start"
+          decelerationRate="fast"
           style={styles.eventsRail}
           contentContainerStyle={styles.eventsRailInner}
         >
           {clubEvents.map((ev) => {
-            const full = ev.bookedCount >= ev.capacity;
-            const busy = joiningEventId === ev.id;
             return (
               <View key={ev.id} style={styles.eventCard}>
-                {ev.imageUrl ? (
-                  <Image
-                    source={{ uri: ev.imageUrl }}
-                    style={styles.eventImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.eventImage, styles.eventImagePh]}>
-                    <Text style={styles.eventImagePhTxt}>{t('events.noImage')}</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.eventTapArea,
+                    pressed && styles.eventTapAreaPressed,
+                  ]}
+                  onPress={() => setSelectedEvent(ev)}
+                >
+                  {ev.imageUrl ? (
+                    <Image
+                      source={{ uri: ev.imageUrl }}
+                      style={styles.eventImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.eventImage, styles.eventImagePh]}>
+                      <Text style={styles.eventImagePhTxt}>{t('events.noImage')}</Text>
+                    </View>
+                  )}
+                  <View style={styles.eventCardBody}>
+                    <Text style={styles.eventTitle} numberOfLines={1}>
+                      {ev.title}
+                    </Text>
+                    <Text style={styles.eventMetaLine} numberOfLines={1}>
+                      {t('events.locationLabel')}: {ev.location || '-'}
+                    </Text>
+                    <Text style={styles.eventMetaLine} numberOfLines={1}>
+                      {t('events.dateLabel')}: {fmtDate(ev.startsAt)}
+                    </Text>
+                    <Text style={styles.eventMetaLine} numberOfLines={1}>
+                      {t('events.startLabel')}: {fmtTime(ev.startsAt)}
+                    </Text>
+                    <Text style={styles.eventMetaLine} numberOfLines={1}>
+                      {t('events.endLabel')}: {ev.endsAt ? fmtTime(ev.endsAt) : '-'}
+                    </Text>
+                    <Text style={styles.eventMetaLine} numberOfLines={1}>
+                      {t('events.coachLabel')}: {ev.coachName || '-'}
+                    </Text>
+                    <Text style={styles.eventCapacity}>
+                      {t('events.capacity', { booked: ev.bookedCount, capacity: ev.capacity })}
+                    </Text>
                   </View>
-                )}
-                <View style={styles.eventCardBody}>
-                  <Text style={styles.eventTitle} numberOfLines={2}>
-                    {ev.title}
-                  </Text>
-                  <Text style={styles.eventWhen}>{fmt(ev.startsAt)}</Text>
-                  <Text style={styles.eventCapacity}>
-                    {t('events.capacity', { booked: ev.bookedCount, capacity: ev.capacity })}
-                  </Text>
-                  <Pressable
-                    {...ripple}
-                    style={({ pressed }) => [
-                      ev.isJoined ? styles.btnGhost : styles.btnPrimary,
-                      pressed && (ev.isJoined ? styles.btnGhostPressed : styles.btnPrimaryPressed),
-                      (busy || (!ev.isJoined && full)) && styles.disabled,
-                    ]}
-                    disabled={busy || (!ev.isJoined && full)}
-                    onPress={() => toggleEventJoin(ev).catch(() => {})}
-                  >
-                    {busy ? (
-                      <ActivityIndicator color={ev.isJoined ? premium.textMuted : '#fff'} />
-                    ) : (
-                      <Text style={ev.isJoined ? styles.btnGhostTxt : styles.btnPrimaryTxt}>
-                        {ev.isJoined
-                          ? t('events.leave')
-                          : full
-                            ? t('events.full')
-                            : t('events.join')}
-                      </Text>
-                    )}
-                  </Pressable>
-                </View>
+                </Pressable>
               </View>
             );
           })}
@@ -532,6 +553,82 @@ export function MemberHomeScreen() {
         {!loadingEvents && clubEvents.length === 0 ? (
           <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
         ) : null}
+        <Modal
+          visible={!!selectedEvent}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setSelectedEvent(null)}
+        >
+          {selectedEvent ? (
+            <Pressable style={styles.modalBackdrop} onPress={() => setSelectedEvent(null)}>
+              <Pressable style={styles.modalCard} onPress={() => {}}>
+                <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
+                <Text style={styles.modalMeta}>
+                  {t('events.locationLabel')}: {selectedEvent.location || '-'}
+                </Text>
+                <Text style={styles.modalMeta}>
+                  {t('events.dateLabel')}: {fmtDate(selectedEvent.startsAt)}
+                </Text>
+                <Text style={styles.modalMeta}>
+                  {t('events.startLabel')}: {fmtTime(selectedEvent.startsAt)}
+                </Text>
+                <Text style={styles.modalMeta}>
+                  {t('events.endLabel')}:{' '}
+                  {selectedEvent.endsAt ? fmtTime(selectedEvent.endsAt) : '-'}
+                </Text>
+                <Text style={styles.modalMeta}>
+                  {t('events.coachLabel')}: {selectedEvent.coachName || '-'}
+                </Text>
+                <Text style={styles.modalMeta}>
+                  {t('events.capacity', {
+                    booked: selectedEvent.bookedCount,
+                    capacity: selectedEvent.capacity,
+                  })}
+                </Text>
+                {selectedEvent.description ? (
+                  <Text style={styles.modalDescription}>{selectedEvent.description}</Text>
+                ) : null}
+                <Pressable
+                  {...ripple}
+                  style={({ pressed }) => [
+                    selectedEvent.isJoined ? styles.btnGhost : styles.btnPrimary,
+                    pressed &&
+                      (selectedEvent.isJoined ? styles.btnGhostPressed : styles.btnPrimaryPressed),
+                    (joiningEventId === selectedEvent.id ||
+                      (!selectedEvent.isJoined &&
+                        selectedEvent.bookedCount >= selectedEvent.capacity)) &&
+                      styles.disabled,
+                  ]}
+                  disabled={
+                    joiningEventId === selectedEvent.id ||
+                    (!selectedEvent.isJoined && selectedEvent.bookedCount >= selectedEvent.capacity)
+                  }
+                  onPress={() => {
+                    toggleEventJoin(selectedEvent)
+                      .then(() => setSelectedEvent(null))
+                      .catch(() => {});
+                  }}
+                >
+                  {joiningEventId === selectedEvent.id ? (
+                    <ActivityIndicator
+                      color={selectedEvent.isJoined ? premium.textMuted : '#fff'}
+                    />
+                  ) : (
+                    <Text
+                      style={selectedEvent.isJoined ? styles.btnGhostTxt : styles.btnPrimaryTxt}
+                    >
+                      {selectedEvent.isJoined
+                        ? t('events.leave')
+                        : selectedEvent.bookedCount >= selectedEvent.capacity
+                          ? t('events.full')
+                          : t('events.join')}
+                    </Text>
+                  )}
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          ) : null}
+        </Modal>
 
         <GlassCard style={styles.sectionCard}>
           <Text style={styles.todayClub}>{t('home.clubToday', { club: tenant.name })}</Text>
@@ -924,17 +1021,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   eventCard: {
-    width: 260,
-    marginRight: 12,
+    width: 130,
+    marginRight: 8,
     borderRadius: premium.radiusMd,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(0,0,0,0.28)',
     overflow: 'hidden',
   },
+  eventTapArea: {
+    flex: 1,
+  },
+  eventTapAreaPressed: {
+    opacity: 0.85,
+  },
   eventImage: {
     width: '100%',
-    height: 120,
+    height: 60,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   eventImagePh: {
@@ -947,23 +1050,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   eventCardBody: {
-    padding: 12,
-    gap: 8,
+    padding: 8,
+    gap: 4,
   },
   eventTitle: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '800',
     color: premium.text,
-    minHeight: 40,
+    minHeight: 14,
   },
-  eventWhen: {
-    fontSize: 12,
+  eventMetaLine: {
+    fontSize: 10,
     color: premium.textMuted,
   },
   eventCapacity: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
     color: premium.accentGreen,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5,10,18,0.7)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  modalCard: {
+    borderRadius: premium.radiusLg,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: '#0b1220',
+    padding: 16,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 10,
+  },
+  modalMeta: {
+    fontSize: 13,
+    color: premium.text,
+    marginBottom: 6,
+  },
+  modalDescription: {
+    fontSize: 13,
+    color: premium.textMuted,
+    lineHeight: 19,
+    marginTop: 6,
+    marginBottom: 12,
   },
   eventsEmpty: {
     fontSize: 13,

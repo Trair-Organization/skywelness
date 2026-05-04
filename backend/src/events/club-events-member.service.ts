@@ -14,6 +14,8 @@ export type ClubEventPublicRow = {
   id: string;
   title: string;
   description: string | null;
+  coachName: string | null;
+  location: string | null;
   imageUrl: string | null;
   startsAt: string;
   endsAt: string | null;
@@ -67,6 +69,8 @@ export class ClubEventsMemberService {
       id: e.id,
       title: e.title,
       description: e.description,
+      coachName: e.coachName,
+      location: e.location,
       imageUrl: e.imageUrl,
       startsAt: e.startsAt.toISOString(),
       endsAt: e.endsAt ? e.endsAt.toISOString() : null,

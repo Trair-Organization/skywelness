@@ -9,6 +9,8 @@ type ClubEventAdmin = {
   id: string;
   title: string;
   description: string | null;
+  coachName: string | null;
+  location: string | null;
   imageUrl: string | null;
   startsAt: string;
   endsAt: string | null;
@@ -17,8 +19,8 @@ type ClubEventAdmin = {
   createdAt: string;
 };
 
-function toIsoFromDatetimeLocal(value: string): string {
-  const d = new Date(value);
+function toIsoFromDateAndTime(date: string, time: string): string {
+  const d = new Date(`${date}T${time}:00`);
   if (Number.isNaN(d.getTime())) {
     throw new Error('invalid date');
   }
@@ -47,9 +49,12 @@ export function EventsPage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [coachName, setCoachName] = useState('');
+  const [location, setLocation] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [startsAt, setStartsAt] = useState('');
-  const [endsAt, setEndsAt] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [capacity, setCapacity] = useState('30');
   const [published, setPublished] = useState(true);
 
@@ -76,29 +81,41 @@ export function EventsPage() {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!title.trim() || !startsAt) {
+    if (
+      !title.trim() ||
+      !coachName.trim() ||
+      !location.trim() ||
+      !eventDate ||
+      !startTime ||
+      !endTime
+    ) {
       setError(t('eventsPage.validation'));
       return;
     }
     setSaving(true);
     try {
+      const startsAt = toIsoFromDateAndTime(eventDate, startTime);
+      const endsAt = toIsoFromDateAndTime(eventDate, endTime);
       const body: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || undefined,
+        coachName: coachName.trim(),
+        location: location.trim(),
         imageUrl: imageUrl.trim() || undefined,
-        startsAt: toIsoFromDatetimeLocal(startsAt),
+        startsAt,
+        endsAt,
         capacity: Number.parseInt(capacity, 10) || 30,
         published,
       };
-      if (endsAt.trim()) {
-        body.endsAt = toIsoFromDatetimeLocal(endsAt.trim());
-      }
       await apiJson('/admin/events', { method: 'POST', body: JSON.stringify(body) });
       setTitle('');
       setDescription('');
+      setCoachName('');
+      setLocation('');
       setImageUrl('');
-      setStartsAt('');
-      setEndsAt('');
+      setEventDate('');
+      setStartTime('');
+      setEndTime('');
       setCapacity('30');
       setPublished(true);
       await load();
@@ -181,6 +198,24 @@ export function EventsPage() {
             />
           </label>
           <label>
+            {t('eventsPage.fieldCoach')}
+            <input
+              value={coachName}
+              onChange={(e) => setCoachName(e.target.value)}
+              required
+              maxLength={200}
+            />
+          </label>
+          <label>
+            {t('eventsPage.fieldLocation')}
+            <input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              required
+              maxLength={300}
+            />
+          </label>
+          <label>
             {t('eventsPage.fieldImageUrl')}
             <input
               value={imageUrl}
@@ -189,20 +224,30 @@ export function EventsPage() {
             />
           </label>
           <label>
-            {t('eventsPage.fieldStarts')}
+            {t('eventsPage.fieldDate')}
             <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
               required
             />
           </label>
           <label>
-            {t('eventsPage.fieldEnds')}
+            {t('eventsPage.fieldStartTime')}
             <input
-              type="datetime-local"
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            {t('eventsPage.fieldEndTime')}
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              required
             />
           </label>
           <label>
@@ -241,7 +286,10 @@ export function EventsPage() {
             <thead>
               <tr>
                 <th>{t('eventsPage.colTitle')}</th>
+                <th>{t('eventsPage.colCoach')}</th>
+                <th>{t('eventsPage.colLocation')}</th>
                 <th>{t('eventsPage.colStarts')}</th>
+                <th>{t('eventsPage.colEnds')}</th>
                 <th>{t('eventsPage.colCap')}</th>
                 <th>{t('eventsPage.colPub')}</th>
                 <th>{t('eventsPage.colActions')}</th>
@@ -251,7 +299,10 @@ export function EventsPage() {
               {rows.map((r) => (
                 <tr key={r.id}>
                   <td>{r.title}</td>
+                  <td>{r.coachName ?? '-'}</td>
+                  <td>{r.location ?? '-'}</td>
                   <td>{fmtLocal(r.startsAt)}</td>
+                  <td>{r.endsAt ? fmtLocal(r.endsAt) : '-'}</td>
                   <td>{r.capacity}</td>
                   <td>{r.published ? t('eventsPage.yes') : t('eventsPage.no')}</td>
                   <td>

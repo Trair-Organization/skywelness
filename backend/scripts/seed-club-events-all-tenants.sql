@@ -14,6 +14,8 @@ INSERT INTO club_event (
   tenant_id,
   title,
   description,
+  coach_name,
+  location,
   image_url,
   starts_at,
   ends_at,
@@ -25,6 +27,8 @@ SELECT
   t.id,
   v.title,
   v.body || E'\n__skywelness_seed_v1__',
+  v.coach_name,
+  v.location,
   NULLIF(btrim(COALESCE(v.image_url, '')), ''),
   (NOW() AT TIME ZONE 'utc') + ((v.day_offset)::integer * interval '1 day'),
   (NOW() AT TIME ZONE 'utc') + ((v.day_offset)::integer * interval '1 day')
@@ -38,6 +42,8 @@ CROSS JOIN (
       'Sabah yoga',
       'Tüm seviyeler için açılış seansı.',
       'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&q=80',
+      'Ayşe Demir',
+      'Stüdyo 1',
       3,
       75,
       28
@@ -46,6 +52,8 @@ CROSS JOIN (
       'HIIT & core',
       'Yüksek tempolu grup antrenmanı.',
       'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80',
+      'Emre Kaya',
+      'Fonksiyonel Alan',
       6,
       50,
       20
@@ -54,6 +62,8 @@ CROSS JOIN (
       'Beslenme atölyesi',
       'Uzman diyetisyen ile soru–cevap.',
       NULL::text,
+      'Dyt. Melis Arı',
+      'Seminer Salonu',
       10,
       60,
       40
@@ -62,10 +72,12 @@ CROSS JOIN (
       'Akşam pilates',
       'Mat ile orta seviye.',
       'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&q=80',
+      'Ece Yılmaz',
+      'Stüdyo 2',
       14,
       60,
       16
     )
-) AS v(title, body, image_url, day_offset, dur_mins, cap);
+) AS v(title, body, image_url, coach_name, location, day_offset, dur_mins, cap);
 
 COMMIT;

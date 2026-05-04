@@ -25,6 +25,18 @@ export class UpdateClubEventDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  coachName?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  location?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(2000)
   imageUrl?: string | null;
 

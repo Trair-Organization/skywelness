@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClubEvent } from '../database/entities/club-event.entity';
@@ -23,10 +23,15 @@ export class AdminEventsService {
   async create(tenantId: string, dto: CreateClubEventDto) {
     const startsAt = new Date(dto.startsAt);
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+    if (endsAt && endsAt <= startsAt) {
+      throw new BadRequestException('Event end time must be later than start time');
+    }
     const row = this.eventsRepo.create({
       tenantId,
       title: dto.title.trim(),
       description: dto.description?.trim() || null,
+      coachName: dto.coachName.trim(),
+      location: dto.location.trim(),
       imageUrl: dto.imageUrl?.trim() || null,
       startsAt,
       endsAt,
@@ -47,6 +52,12 @@ export class AdminEventsService {
     if (dto.description !== undefined) {
       row.description = dto.description === null ? null : dto.description.trim() || null;
     }
+    if (dto.coachName !== undefined) {
+      row.coachName = dto.coachName === null ? null : dto.coachName.trim() || null;
+    }
+    if (dto.location !== undefined) {
+      row.location = dto.location === null ? null : dto.location.trim() || null;
+    }
     if (dto.imageUrl !== undefined) {
       row.imageUrl = dto.imageUrl === null ? null : dto.imageUrl.trim() || null;
     }
@@ -55,6 +66,9 @@ export class AdminEventsService {
     }
     if (dto.endsAt !== undefined) {
       row.endsAt = dto.endsAt === null ? null : new Date(dto.endsAt);
+    }
+    if (row.endsAt && row.endsAt <= row.startsAt) {
+      throw new BadRequestException('Event end time must be later than start time');
     }
     if (dto.capacity !== undefined) {
       row.capacity = dto.capacity;

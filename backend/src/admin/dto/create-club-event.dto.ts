@@ -22,6 +22,16 @@ export class CreateClubEventDto {
   @MaxLength(8000)
   description?: string;
 
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  coachName!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  location!: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(2000)
@@ -30,9 +40,8 @@ export class CreateClubEventDto {
   @IsISO8601()
   startsAt!: string;
 
-  @IsOptional()
   @IsISO8601()
-  endsAt?: string;
+  endsAt!: string;
 
   @IsOptional()
   @Type(() => Number)

@@ -31,6 +31,12 @@ export class ClubEvent {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
+  @Column({ type: 'varchar', length: 200, nullable: true, name: 'coach_name' })
+  coachName!: string | null;
+
+  @Column({ type: 'varchar', length: 300, nullable: true, name: 'location' })
+  location!: string | null;
+
   @Column({ type: 'varchar', length: 2000, nullable: true, name: 'image_url' })
   imageUrl!: string | null;
 
