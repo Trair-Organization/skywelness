@@ -318,18 +318,25 @@ export function MemberHome() {
     }
     setLoadingAuth(true);
     try {
-      const res = await apiJson<AuthRes>('/auth/register', {
-        method: 'POST',
-        auth: false,
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-          firstName: fn,
-          lastName: ln,
-          tenantSubdomain: tenant.subdomain,
-        }),
-      });
-      await completeSignIn(res, tenant);
+      const res = await apiJson<AuthRes | { pendingApproval: true; message?: string }>(
+        '/auth/register',
+        {
+          method: 'POST',
+          auth: false,
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+            firstName: fn,
+            lastName: ln,
+            tenantSubdomain: tenant.subdomain,
+          }),
+        },
+      );
+      if ('pendingApproval' in res && res.pendingApproval) {
+        Alert.alert(t('register.pendingTitle'), res.message ?? t('register.pendingBody'));
+        return;
+      }
+      await completeSignIn(res as AuthRes, tenant);
     } catch (e) {
       Alert.alert(t('register.section'), e instanceof ApiError ? e.message : t('register.failed'));
     } finally {

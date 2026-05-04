@@ -41,6 +41,9 @@ export default {
     nameRequired: 'First and last name are required',
     passwordRules:
       'Password must be at least 8 characters and include uppercase, lowercase, and a number.',
+    pendingTitle: 'Registration received',
+    pendingBody:
+      'Your account was sent for club administrator approval. You can sign in after approval.',
   },
   forgot: {
     link: 'Forgot password?',

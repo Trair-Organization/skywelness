@@ -5,6 +5,7 @@ export type AuthUser = {
   firstName: string;
   lastName: string;
   role: string;
+  accountStatus?: string;
 };
 
 export type LoginResponse = {

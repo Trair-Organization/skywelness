@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserRole } from '../enums';
+import { MemberAccountStatus, UserRole } from '../enums';
 import { Tenant } from './tenant.entity';
 
 @Entity({ name: 'user' })
@@ -41,6 +41,14 @@ export class User {
 
   @Column({ type: 'varchar', length: 32 })
   role!: UserRole;
+
+  @Column({
+    type: 'varchar',
+    length: 32,
+    name: 'account_status',
+    default: MemberAccountStatus.ACTIVE,
+  })
+  accountStatus!: MemberAccountStatus;
 
   @Column({ type: 'jsonb', nullable: true, name: 'emergency_contact' })
   emergencyContact!: Record<string, unknown> | null;

@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
-import { UserRole } from '../database/enums';
+import { MemberAccountStatus, UserRole } from '../database/enums';
 import { Tenant } from '../database/entities/tenant.entity';
 import { User } from '../database/entities/user.entity';
 import type { LoginDto } from './dto/login.dto';
@@ -54,6 +54,7 @@ export class AuthService {
       lastName: dto.lastName,
       phone: null,
       role: UserRole.MEMBER,
+      accountStatus: MemberAccountStatus.PENDING_APPROVAL,
       emergencyContact: null,
       notificationPreferences: null,
       lastLogin: null,
@@ -62,7 +63,11 @@ export class AuthService {
     });
     await this.usersRepo.save(user);
 
-    return this.buildAuthResponse(user);
+    return {
+      pendingApproval: true as const,
+      message:
+        'Registration received. A club administrator must approve your account before you can sign in.',
+    };
   }
 
   async login(dto: LoginDto) {
@@ -96,6 +101,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.assertMemberAccountAllowed(user);
+
     await this.usersRepo.update(
       { id: user.id },
       { failedLoginAttempts: 0, lockedUntil: null, lastLogin: new Date() },
@@ -125,7 +132,25 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token revoked');
     }
 
+    this.assertMemberAccountAllowed(user);
+
     return this.buildAuthResponse(user);
+  }
+
+  private assertMemberAccountAllowed(user: User) {
+    if (user.role !== UserRole.MEMBER) {
+      return;
+    }
+    if (user.accountStatus === MemberAccountStatus.PENDING_APPROVAL) {
+      throw new UnauthorizedException(
+        'Your membership is awaiting approval from your club. You will be able to sign in once approved.',
+      );
+    }
+    if (user.accountStatus === MemberAccountStatus.REJECTED) {
+      throw new UnauthorizedException(
+        'Your membership was not accepted. Please contact your club if you believe this is a mistake.',
+      );
+    }
   }
 
   async logout(userId: string) {
@@ -180,6 +205,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      accountStatus: user.accountStatus,
     };
   }
 }

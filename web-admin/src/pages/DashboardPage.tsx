@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiJson, ApiError } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { setAdminLanguage } from '../i18n';
@@ -59,6 +59,13 @@ export function DashboardPage() {
           </button>
         </div>
       </header>
+      <section className="card">
+        <h2>{t('dashboard.members')}</h2>
+        <p className="muted">{t('dashboard.membersDesc')}</p>
+        <Link className="link" to="/members/pending">
+          {t('dashboard.pendingMembersLink')}
+        </Link>
+      </section>
       <section className="card">
         <h2>{t('dashboard.apiCheck')}</h2>
         <p className="muted">{t('dashboard.apiCheckDesc')}</p>

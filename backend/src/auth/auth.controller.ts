@@ -13,6 +13,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @HttpCode(201)
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }

@@ -41,6 +41,9 @@ export default {
     nameRequired: 'Ad ve soyad gerekli',
     passwordRules:
       'Şifre en az 8 karakter olmalı; en az bir büyük harf, bir küçük harf ve bir rakam içermelidir.',
+    pendingTitle: 'Kayıt alındı',
+    pendingBody:
+      'Hesabınız kulüp yöneticisi onayına gönderildi. Onaylandıktan sonra giriş yapabilirsiniz.',
   },
   forgot: {
     link: 'Şifremi unuttum',

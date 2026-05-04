@@ -4,6 +4,13 @@ export enum UserRole {
   ADMINISTRATOR = 'administrator',
 }
 
+/** Member self-registration lifecycle (trainers/admins default to active). */
+export enum MemberAccountStatus {
+  ACTIVE = 'active',
+  PENDING_APPROVAL = 'pending_approval',
+  REJECTED = 'rejected',
+}
+
 export enum SessionType {
   PERSONAL_TRAINING = 'personal_training',
   MASSAGE = 'massage',
