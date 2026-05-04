@@ -44,7 +44,7 @@ export default {
     sessionHint: 'Your account',
     unknownSessionType: 'Session',
     heroLessons: 'Personal training left',
-    heroMassage: 'Massage sessions left',
+    heroMassage: 'Remaining massage count',
     heroEvents: 'Joined events',
     upcomingEventsTitle: 'Upcoming events',
     noUpcomingEvents:

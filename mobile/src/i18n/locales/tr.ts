@@ -44,7 +44,7 @@ export default {
     sessionHint: 'Hesabınız',
     unknownSessionType: 'Seans',
     heroLessons: 'Kalan özel ders',
-    heroMassage: 'Kalan masaj',
+    heroMassage: 'Kalan masaj sayısı',
     heroEvents: 'Aktif Etkinlikler',
     upcomingEventsTitle: 'Yaklaşan Etkinlikler',
     noUpcomingEvents:
