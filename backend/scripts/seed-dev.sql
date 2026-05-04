@@ -212,3 +212,114 @@ ON CONFLICT (id) DO UPDATE SET
   end_time = (NOW() AT TIME ZONE 'utc') + INTERVAL '7 days' + INTERVAL '60 minutes',
   booked_count = 0,
   trainer_id = EXCLUDED.trainer_id;
+
+-- Sample club events (mobile: Yaklaşan etkinlikler). Re-run seed to refresh dates into the future.
+INSERT INTO club_event (
+  id,
+  tenant_id,
+  title,
+  description,
+  image_url,
+  starts_at,
+  ends_at,
+  capacity,
+  published
+)
+VALUES
+  (
+    'f1ced001-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'Sabah yoga',
+    'Tüm seviyeler için açılış seansı.',
+    'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&q=80',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '3 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '3 days' + INTERVAL '75 minutes',
+    28,
+    true
+  ),
+  (
+    'f1ced002-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'HIIT & core',
+    'Yüksek tempolu grup antrenmanı.',
+    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '6 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '6 days' + INTERVAL '50 minutes',
+    20,
+    true
+  ),
+  (
+    'f1ced003-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'Beslenme atölyesi',
+    'Uzman diyetisyen ile soru–cevap.',
+    NULL,
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '10 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '10 days' + INTERVAL '60 minutes',
+    40,
+    true
+  ),
+  (
+    'f1ced004-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
+    'Akşam pilates',
+    'Mat ile orta seviye.',
+    'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&q=80',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '14 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '14 days' + INTERVAL '60 minutes',
+    16,
+    true
+  ),
+  (
+    'f1ced011-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'Skyland sabah spin',
+    'Kontenjan sınırlı — erken gelin.',
+    'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&q=80',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '4 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '4 days' + INTERVAL '45 minutes',
+    18,
+    true
+  ),
+  (
+    'f1ced012-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'Mindfulness & nefes',
+    'Stres yönetimi odaklı kısa workshop.',
+    'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&q=80',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '8 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '8 days' + INTERVAL '50 minutes',
+    25,
+    true
+  ),
+  (
+    'f1ced013-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'Açık hava stretching',
+    'Teras katında; hava durumuna bağlı.',
+    NULL,
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '11 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '11 days' + INTERVAL '40 minutes',
+    30,
+    true
+  ),
+  (
+    'f1ced014-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'Detoks smoothie günü',
+    'Bar’da özel menü ve kısa bilgilendirme.',
+    'https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=800&q=80',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '16 days',
+    (NOW() AT TIME ZONE 'utc') + INTERVAL '16 days' + INTERVAL '120 minutes',
+    50,
+    true
+  )
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  image_url = EXCLUDED.image_url,
+  starts_at = EXCLUDED.starts_at,
+  ends_at = EXCLUDED.ends_at,
+  capacity = EXCLUDED.capacity,
+  published = EXCLUDED.published,
+  updated_at = NOW();
