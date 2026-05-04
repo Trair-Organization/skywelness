@@ -447,12 +447,12 @@ export function MemberHomeScreen() {
           <View style={styles.heroRow}>
             <Image
               accessibilityIgnoresInvertColors
-              accessibilityLabel={t('appTitle')}
+              accessibilityLabel={tenant.name}
               source={logoDark}
               style={styles.heroLogo}
             />
             <View style={styles.heroTextCol}>
-              <Text style={styles.heroBrand}>{t('appTitle')}</Text>
+              <Text style={styles.heroBrand}>{tenant.name}</Text>
               <Text style={styles.heroTag}>{t('home.hubTagline')}</Text>
             </View>
           </View>
