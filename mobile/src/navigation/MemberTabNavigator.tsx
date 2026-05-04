@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text } from 'react-native';
 import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
-import { MemberMessagesScreen } from '../screens/member/MemberMessagesScreen';
+import { MemberEventsScreen } from '../screens/member/MemberEventsScreen';
 import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
@@ -65,11 +65,11 @@ export function MemberTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Messages"
-        component={MemberMessagesScreen}
+        name="Events"
+        component={MemberEventsScreen}
         options={{
-          tabBarLabel: t('tabs.messages'),
-          tabBarIcon: ({ focused }) => tabIcon('✉', focused),
+          tabBarLabel: t('tabs.events'),
+          tabBarIcon: ({ focused }) => tabIcon('◎', focused),
         }}
       />
       <Tab.Screen

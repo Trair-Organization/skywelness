@@ -176,7 +176,7 @@ export default {
     home: 'Home',
     reservations: 'My bookings',
     notifications: 'Notifications',
-    messages: 'Messages',
+    events: 'Events',
     profile: 'Profile',
     openReservations: 'Open my bookings tab',
   },
@@ -191,9 +191,9 @@ export default {
     title: 'Notifications',
     body: 'Club announcements and reminders will appear here soon.',
   },
-  messages: {
-    title: 'Messages',
-    body: 'Reception and trainer messaging will appear here soon.',
+  eventsTab: {
+    title: 'Club events',
+    body: 'See upcoming events on the home screen, join or leave from there. Contact reception for the full schedule.',
   },
   session: {
     title: 'Session',

@@ -176,7 +176,7 @@ export default {
     home: 'Ana sayfa',
     reservations: 'Rezervasyonlarım',
     notifications: 'Bildirimler',
-    messages: 'Mesajlar',
+    events: 'Etkinlikler',
     profile: 'Profil',
     openReservations: 'Rezervasyonlarım sekmesi',
   },
@@ -191,9 +191,9 @@ export default {
     title: 'Bildirimler',
     body: 'Kulüp duyuruları ve hatırlatmalar yakında bu ekranda görünecek.',
   },
-  messages: {
-    title: 'Mesajlar',
-    body: 'Resepsiyon ve antrenör mesajları yakında bu ekranda görünecek.',
+  eventsTab: {
+    title: 'Kulüp etkinlikleri',
+    body: 'Yaklaşan etkinlikleri ana sayfadaki “Yaklaşan etkinlikler” bölümünden görebilir, katılabilir veya ayrılabilirsiniz. Tüm program için resepsiyon ile iletişime geçin.',
   },
   session: {
     title: 'Oturum',

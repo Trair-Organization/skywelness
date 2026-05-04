@@ -7,7 +7,7 @@ import { premium } from '../../theme/premiumTheme';
 
 const TAB_BAR_PAD = 72;
 
-export function MemberMessagesScreen() {
+export function MemberEventsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -20,10 +20,10 @@ export function MemberMessagesScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.screenTitle}>{t('tabs.messages')}</Text>
+        <Text style={styles.screenTitle}>{t('tabs.events')}</Text>
         <GlassCard>
-          <Text style={styles.cardTitle}>{t('messages.title')}</Text>
-          <Text style={styles.muted}>{t('messages.body')}</Text>
+          <Text style={styles.cardTitle}>{t('eventsTab.title')}</Text>
+          <Text style={styles.muted}>{t('eventsTab.body')}</Text>
         </GlassCard>
       </ScrollView>
     </GradientBackground>

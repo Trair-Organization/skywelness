@@ -2,6 +2,6 @@ export type MemberTabParamList = {
   Home: undefined;
   Reservations: undefined;
   Notifications: undefined;
-  Messages: undefined;
+  Events: undefined;
   Profile: undefined;
 };
