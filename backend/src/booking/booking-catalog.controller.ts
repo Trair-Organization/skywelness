@@ -3,13 +3,14 @@ import { UserRole } from '../database/enums';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { MemberApprovalGuard } from '../common/guards/member-approval.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { User } from '../database/entities/user.entity';
 import { BookingService } from './booking.service';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
 
 @Controller()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
 @Roles(UserRole.MEMBER, UserRole.TRAINER, UserRole.ADMINISTRATOR)
 export class BookingCatalogController {
   constructor(private readonly bookingService: BookingService) {}

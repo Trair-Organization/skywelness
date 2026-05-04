@@ -17,6 +17,8 @@ const config = {
     port: 8082,
   },
   resolver: {
+    // Prevent Metro from walking up parent folders and picking hoisted React copies.
+    disableHierarchicalLookup: true,
     nodeModulesPaths: [
       path.resolve(projectRoot, 'node_modules'),
       path.resolve(monorepoRoot, 'node_modules'),
@@ -24,7 +26,10 @@ const config = {
     // React sürüm mismatch'ini engellemek için mobile local kopyayı zorla.
     extraNodeModules: {
       react: path.resolve(projectRoot, 'node_modules/react'),
+      'react/jsx-runtime': path.resolve(projectRoot, 'node_modules/react/jsx-runtime'),
+      'react/jsx-dev-runtime': path.resolve(projectRoot, 'node_modules/react/jsx-dev-runtime'),
       'react-test-renderer': path.resolve(projectRoot, 'node_modules/react-test-renderer'),
+      scheduler: path.resolve(projectRoot, 'node_modules/scheduler'),
     },
   },
   transformer: {

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -47,6 +48,8 @@ export function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const successAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!tenant) {
@@ -106,6 +109,18 @@ export function RegisterScreen() {
       clearTimeout(timer);
     };
   }, [tenant, username]);
+
+  useEffect(() => {
+    if (!showSuccessModal) {
+      successAnim.setValue(0);
+      return;
+    }
+    Animated.timing(successAnim, {
+      toValue: 1,
+      duration: 240,
+      useNativeDriver: true,
+    }).start();
+  }, [showSuccessModal, successAnim]);
 
   return (
     <GradientBackground>
@@ -273,7 +288,13 @@ export function RegisterScreen() {
                 Alert.alert(t('register.section'), t('register.passwordRules'));
                 return;
               }
-              registerWithFullName(fullName, username, email, phone, password).catch(() => {});
+              registerWithFullName(fullName, username, email, phone, password)
+                .then((result) => {
+                  if (result === 'pending') {
+                    setShowSuccessModal(true);
+                  }
+                })
+                .catch(() => {});
             }}
             disabled={
               !tenant ||
@@ -292,6 +313,38 @@ export function RegisterScreen() {
           </Pressable>
         </GlassCard>
       </View>
+      {showSuccessModal ? (
+        <View style={styles.modalBackdrop}>
+          <Animated.View
+            style={[
+              styles.modalCard,
+              {
+                opacity: successAnim,
+                transform: [
+                  {
+                    scale: successAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.94, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.modalTitle}>{t('register.successTitle')}</Text>
+            <Text style={styles.modalBody}>{t('register.successBody')}</Text>
+            <Pressable
+              style={styles.modalBtn}
+              onPress={() => {
+                setShowSuccessModal(false);
+                navigation.navigate('Login');
+              }}
+            >
+              <Text style={styles.modalBtnTxt}>{t('onboarding.signIn')}</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      ) : null}
     </GradientBackground>
   );
 }
@@ -441,6 +494,47 @@ const styles = StyleSheet.create({
   eyeTxt: {
     color: premium.textMuted,
     fontSize: 13,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: premium.radius,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(5, 16, 28, 0.96)',
+    padding: 18,
+  },
+  modalTitle: {
+    color: premium.accentGreen,
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  modalBody: {
+    color: premium.text,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  modalBtn: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  modalBtnTxt: {
+    color: premium.accentBlue,
+    fontSize: 17,
     fontWeight: '700',
   },
 });

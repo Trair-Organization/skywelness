@@ -6,7 +6,6 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
 import type { JwtAccessPayload } from './jwt-payload';
 import { User } from '../database/entities/user.entity';
-import { MemberAccountStatus, UserRole } from '../database/enums';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -28,14 +27,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
     if (!user) {
       throw new UnauthorizedException();
-    }
-    if (user.role === UserRole.MEMBER) {
-      if (user.accountStatus === MemberAccountStatus.PENDING_APPROVAL) {
-        throw new UnauthorizedException('Membership is not approved yet');
-      }
-      if (user.accountStatus === MemberAccountStatus.REJECTED) {
-        throw new UnauthorizedException('Membership was not accepted');
-      }
     }
     return user;
   }

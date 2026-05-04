@@ -3,12 +3,13 @@ import { UserRole } from '../database/enums';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { MemberApprovalGuard } from '../common/guards/member-approval.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { User } from '../database/entities/user.entity';
 import { BookingService } from './booking.service';
 
 @Controller('my-packages')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
 @Roles(UserRole.MEMBER)
 export class MemberPackagesController {
   constructor(private readonly bookingService: BookingService) {}

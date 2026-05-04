@@ -149,11 +149,7 @@ export class AuthService {
     });
     await this.usersRepo.save(user);
 
-    return {
-      pendingApproval: true as const,
-      message:
-        'Registration received. A club administrator must approve your account before you can sign in.',
-    };
+    return this.buildAuthResponse(user);
   }
 
   async login(dto: LoginDto) {
@@ -226,11 +222,6 @@ export class AuthService {
   private assertMemberAccountAllowed(user: User) {
     if (user.role !== UserRole.MEMBER) {
       return;
-    }
-    if (user.accountStatus === MemberAccountStatus.PENDING_APPROVAL) {
-      throw new UnauthorizedException(
-        'Your membership is awaiting approval from your club. You will be able to sign in once approved.',
-      );
     }
     if (user.accountStatus === MemberAccountStatus.REJECTED) {
       throw new UnauthorizedException(

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
 import { LoginScreen } from '../screens/onboarding/LoginScreen';
 import { RegisterScreen } from '../screens/onboarding/RegisterScreen';
 import { MemberDashboardScreen } from '../screens/MemberDashboardScreen';
+import { MemberPendingApprovalScreen } from '../screens/MemberPendingApprovalScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -15,16 +16,23 @@ export function RootNavigator() {
   const { authReady, user, token, tenant } = useMemberAuth();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [navReady, setNavReady] = useState(false);
+  const lastTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!authReady || !navReady || !navigationRef.isReady()) {
       return;
     }
+    let target: keyof RootStackParamList = 'ClubConnect';
     if (user && token && tenant) {
-      navigationRef.reset({ index: 0, routes: [{ name: 'Main' }] });
-    } else {
-      navigationRef.reset({ index: 0, routes: [{ name: 'ClubConnect' }] });
+      const isMember = user.role === 'member';
+      const pending = user.accountStatus === 'pending_approval';
+      target = isMember && pending ? 'PendingApproval' : 'Main';
     }
+    if (lastTargetRef.current === target) {
+      return;
+    }
+    lastTargetRef.current = target;
+    navigationRef.reset({ index: 0, routes: [{ name: target }] });
   }, [authReady, navReady, user, token, tenant, navigationRef]);
 
   if (!authReady) {
@@ -47,6 +55,7 @@ export function RootNavigator() {
         <Stack.Screen name="ClubConnect" component={ClubConnectScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="PendingApproval" component={MemberPendingApprovalScreen} />
         <Stack.Screen name="Main" component={MemberDashboardScreen} />
       </Stack.Navigator>
     </NavigationContainer>

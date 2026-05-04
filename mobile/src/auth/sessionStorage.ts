@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { MeUser, TenantInfo } from './memberAuthTypes';
 
 const K = {
   access: 'wellness_club_access_token',
@@ -20,8 +21,8 @@ export async function saveMemberSession(input: {
   accessToken: string;
   refreshToken: string;
   tenantSubdomain: string;
-  tenant: { id: string; name: string; subdomain: string };
-  user: { id: string; email: string; firstName: string; lastName: string; role: string };
+  tenant: TenantInfo;
+  user: MeUser;
 }): Promise<void> {
   await Promise.all([
     AsyncStorage.setItem(K.access, input.accessToken),

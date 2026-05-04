@@ -41,7 +41,18 @@ export default {
     passwordPh: 'Şifreniz',
     submit: 'Giriş yap',
     needTenant: 'Önce kulübü doğrulayın',
+    invalidCredentials: 'E-posta veya şifre hatalı.',
+    pendingApproval: 'Üyeliğiniz kulüp onayı bekliyor. Onaylandıktan sonra giriş yapabilirsiniz.',
+    rejected: 'Üyeliğiniz kulüp tarafından reddedildi. Destek için kulübünüzle iletişime geçin.',
     failed: 'Giriş başarısız',
+  },
+  membership: {
+    pendingTitle: 'Salon onayı bekleniyor',
+    pendingBody:
+      'Üyeliğinizin aktif olması için salon onayı beklenmektedir. Onaylandığında otomatik olarak devam edeceksiniz.',
+    rejectedTitle: 'Üyelik reddedildi',
+    rejectedBody:
+      'Üyeliğiniz kulüp tarafından reddedildi. Yanlış olduğunu düşünüyorsanız kulübünüzle iletişime geçin.',
   },
   onboarding: {
     clubHeadline: 'Wellness Club’a hoş geldiniz',
@@ -79,6 +90,8 @@ export default {
       'Kullanıcı adı sadece küçük harf (Türkçe karakterler dahil), rakam, nokta, alt çizgi ve tire içerebilir.',
     usernameTaken: 'Bu kullanıcı adı zaten kullanılıyor.',
     usernameSuggestions: 'Kullanabileceğiniz adlar:',
+    emailExists:
+      'Bu e-posta bu kulüpte zaten kayıtlı. Giriş ekranından e-posta ve şifrenizle devam edin.',
     nameRequired: 'Ad ve soyad gerekli',
     fullNameRequired: 'Lütfen adınızı ve soyadınızı girin',
     confirmMismatch: 'Şifreler eşleşmiyor',
@@ -87,6 +100,8 @@ export default {
     pendingTitle: 'Kayıt alındı',
     pendingBody:
       'Hesabınız kulüp yöneticisi onayına gönderildi. Onaylandıktan sonra giriş yapabilirsiniz.',
+    successTitle: 'Kayıt Alındı',
+    successBody: 'Kaydınız Başarılı bir Şekilde Oluşmuştur. Lütfen Giriş Yapınız.',
     legacyServerNotice:
       'Sunucu güncellemesi tamamlanana kadar kullanıcı adı ve telefon bilgisi bu kayıtta kullanılamadı.',
   },

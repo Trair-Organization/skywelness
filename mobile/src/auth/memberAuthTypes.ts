@@ -13,6 +13,7 @@ export type AuthRes = {
     lastName: string;
     phone?: string | null;
     role: string;
+    accountStatus?: string;
   };
 };
 export type MeUser = AuthRes['user'];

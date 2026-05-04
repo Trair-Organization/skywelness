@@ -41,7 +41,18 @@ export default {
     passwordPh: 'Your password',
     submit: 'Sign in',
     needTenant: 'Verify your club first',
+    invalidCredentials: 'Email or password is incorrect.',
+    pendingApproval: 'Your membership is awaiting club approval. You can sign in after approval.',
+    rejected: 'Your membership was rejected by the club. Please contact your club for support.',
     failed: 'Sign-in failed',
+  },
+  membership: {
+    pendingTitle: 'Awaiting club approval',
+    pendingBody:
+      'Your membership must be approved by the club before it becomes active. We will continue automatically once approved.',
+    rejectedTitle: 'Membership rejected',
+    rejectedBody:
+      'Your membership was rejected by the club. Please contact your club if you believe this is a mistake.',
   },
   onboarding: {
     clubHeadline: 'Welcome to Wellness Club',
@@ -79,6 +90,8 @@ export default {
       'Username can contain lowercase letters (including Turkish), numbers, dot, underscore, and hyphen only.',
     usernameTaken: 'This username is already taken.',
     usernameSuggestions: 'You can use one of these:',
+    emailExists:
+      'This email is already registered for this club. Please continue from the sign-in screen.',
     nameRequired: 'First and last name are required',
     fullNameRequired: 'Please enter your full name',
     confirmMismatch: 'Passwords do not match',
@@ -87,6 +100,8 @@ export default {
     pendingTitle: 'Registration received',
     pendingBody:
       'Your account was sent for club administrator approval. You can sign in after approval.',
+    successTitle: 'Registration Received',
+    successBody: 'Your registration has been created successfully. Please sign in.',
     legacyServerNotice:
       'Server update is not complete yet, so username and phone were skipped for this registration.',
   },

@@ -38,7 +38,8 @@ type MemberAuthContextValue = {
     emailVal: string,
     phoneVal: string,
     passwordVal: string,
-  ) => Promise<void>;
+  ) => Promise<'pending' | 'signed_in' | null>;
+  refreshMe: () => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
@@ -69,6 +70,36 @@ function hasLegacyRegisterValidation(body: unknown): boolean {
     joined.includes('property username should not exist') ||
     joined.includes('property phone should not exist')
   );
+}
+
+function localizeApiMessage(
+  t: (key: string) => string,
+  message: string,
+  fallbackKey: string,
+): string {
+  const m = message.toLowerCase();
+  if (m.includes('email already registered for this tenant')) {
+    return t('register.emailExists');
+  }
+  if (m.includes('username already taken for this tenant')) {
+    return t('register.usernameTaken');
+  }
+  if (m.includes('invalid credentials')) {
+    return t('login.invalidCredentials');
+  }
+  if (m.includes('awaiting approval')) {
+    return t('login.pendingApproval');
+  }
+  if (m.includes('not approved yet') || m.includes('membership is not approved')) {
+    return t('login.pendingApproval');
+  }
+  if (m.includes('was not accepted') || m.includes('membership was not accepted')) {
+    return t('login.rejected');
+  }
+  if (m.includes('tenant not found for subdomain')) {
+    return t('tenant.loadFailed');
+  }
+  return t(fallbackKey);
 }
 
 export function MemberAuthProvider({ children }: { children: ReactNode }) {
@@ -156,7 +187,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         Alert.alert(
           t('tenant.section'),
           e instanceof ApiError
-            ? e.message
+            ? localizeApiMessage(t, e.message, 'tenant.loadFailed')
             : isNetworkFailure
               ? t('tenant.networkFailed')
               : t('tenant.loadFailed'),
@@ -203,6 +234,32 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const refreshMe = useCallback(async () => {
+    if (!token || !tenant) {
+      return false;
+    }
+    try {
+      const me = await apiJson<MeUser>('/auth/me', {
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      setUser(me);
+      const stored = await loadMemberSession();
+      if (stored?.refreshToken) {
+        await saveMemberSession({
+          accessToken: token,
+          refreshToken: stored.refreshToken,
+          tenantSubdomain: tenant.subdomain,
+          tenant,
+          user: me,
+        });
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }, [token, tenant]);
+
   const login = useCallback(async () => {
     if (!tenant) {
       Alert.alert(t('login.section'), t('login.needTenant'));
@@ -221,7 +278,12 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       });
       await completeSignIn(res, tenant);
     } catch (e) {
-      Alert.alert(t('login.section'), e instanceof ApiError ? e.message : t('login.failed'));
+      Alert.alert(
+        t('login.section'),
+        e instanceof ApiError
+          ? localizeApiMessage(t, e.message, 'login.failed')
+          : t('login.failed'),
+      );
     } finally {
       setLoadingAuth(false);
     }
@@ -248,17 +310,17 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     ) => {
       if (!tenant) {
         Alert.alert(t('register.section'), t('login.needTenant'));
-        return;
+        return null;
       }
       const { first, last } = splitFullName(fullName);
       if (!first) {
         Alert.alert(t('register.section'), t('register.fullNameRequired'));
-        return;
+        return null;
       }
       const username = normalizeUsername(usernameVal);
       if (!username) {
         Alert.alert(t('register.section'), t('register.usernameRequired'));
-        return;
+        return null;
       }
       setEmail(emailVal);
       setPassword(passwordVal);
@@ -307,15 +369,22 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
           }
         }
         if ('pendingApproval' in res && res.pendingApproval) {
-          Alert.alert(t('register.pendingTitle'), res.message ?? t('register.pendingBody'));
-          return;
+          return 'pending';
         }
-        await completeSignIn(res as AuthRes, tenant);
+        const auth = res as AuthRes;
+        if (!auth.accessToken) {
+          return 'pending';
+        }
+        await completeSignIn(auth, tenant);
+        return 'signed_in';
       } catch (e) {
         Alert.alert(
           t('register.section'),
-          e instanceof ApiError ? e.message : t('register.failed'),
+          e instanceof ApiError
+            ? localizeApiMessage(t, e.message, 'register.failed')
+            : t('register.failed'),
         );
+        return null;
       } finally {
         setLoadingAuth(false);
       }
@@ -362,6 +431,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       clearClubSelection,
       login,
       registerWithFullName,
+      refreshMe,
       logout,
     }),
     [
@@ -381,6 +451,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       clearClubSelection,
       login,
       registerWithFullName,
+      refreshMe,
       logout,
     ],
   );
