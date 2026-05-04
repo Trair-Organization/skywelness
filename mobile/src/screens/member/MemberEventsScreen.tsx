@@ -107,18 +107,10 @@ export function MemberEventsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.screenTitle}>{t('tabs.events')}</Text>
-        <Pressable
-          style={styles.refreshBtn}
-          onPress={() => load().catch(() => {})}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={premium.accentBlue} />
-          ) : (
-            <Text style={styles.refreshTxt}>{t('eventsTab.refresh')}</Text>
-          )}
-        </Pressable>
+        <Text style={styles.screenTitle}>{t('home.upcomingEventsTitle')}</Text>
+        {loading ? (
+          <ActivityIndicator color={premium.accentBlue} style={styles.loadingTop} />
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {rows.length === 0 && !loading ? (
           <GlassCard>
@@ -189,18 +181,8 @@ const styles = StyleSheet.create({
     color: premium.text,
     marginBottom: 16,
   },
-  refreshBtn: {
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.24)',
-    borderRadius: premium.radiusSm,
-    paddingVertical: 10,
-    alignItems: 'center',
+  loadingTop: {
     marginBottom: 10,
-  },
-  refreshTxt: {
-    color: premium.accentBlue,
-    fontWeight: '700',
   },
   error: {
     color: '#fda4af',
