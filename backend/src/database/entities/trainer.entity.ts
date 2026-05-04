@@ -53,6 +53,13 @@ export class Trainer {
   @Column({ type: 'int', default: 0, name: 'total_sessions' })
   totalSessions!: number;
 
+  /** Which bookable service types this staff member offers (member UI filters by this). */
+  @Column('text', {
+    array: true,
+    name: 'offers_session_types',
+  })
+  offersSessionTypes!: string[];
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

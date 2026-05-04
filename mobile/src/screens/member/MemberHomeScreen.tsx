@@ -704,7 +704,7 @@ export function MemberHomeScreen() {
             style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
             onPress={() => {
               setHubPlaceholder(null);
-              scrollToBooking();
+              navigation.navigate('SpecialLessons');
             }}
           >
             <Text style={styles.svcTitle}>{t('home.servicePtTitle')}</Text>
@@ -712,7 +712,10 @@ export function MemberHomeScreen() {
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
-            onPress={() => setHubPlaceholder('massage')}
+            onPress={() => {
+              setHubPlaceholder(null);
+              navigation.navigate('Massage');
+            }}
           >
             <Text style={styles.svcTitle}>{t('home.serviceMassageTitle')}</Text>
             <Text style={styles.svcSub}>{t('home.serviceMassageSubtitle')}</Text>

@@ -6,14 +6,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, QueryFailedError, Repository } from 'typeorm';
+import { PackageRequest } from '../database/entities/package-request.entity';
 import { Package } from '../database/entities/package.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { TimeSlot } from '../database/entities/time-slot.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
-import { PackageStatus, ReservationStatus, UserRole, WaitingListStatus } from '../database/enums';
+import {
+  PackageStatus,
+  ReservationStatus,
+  SessionType,
+  UserRole,
+  WaitingListStatus,
+} from '../database/enums';
 import type { User } from '../database/entities/user.entity';
+import type { CreatePackageRequestDto } from './dto/create-package-request.dto';
 import type { CreateReservationDto } from './dto/create-reservation.dto';
 import type { JoinWaitingListDto } from './dto/join-waiting-list.dto';
 
@@ -28,28 +36,56 @@ export class BookingService {
     @InjectRepository(Reservation)
     private readonly reservationsRepo: Repository<Reservation>,
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
+    @InjectRepository(PackageRequest)
+    private readonly packageRequestsRepo: Repository<PackageRequest>,
   ) {}
 
-  async listTrainers(tenantId: string) {
+  async listTrainers(tenantId: string, sessionType?: string) {
     const rows = await this.trainersRepo.find({
       where: { tenantId },
       relations: { user: true },
       order: { createdAt: 'ASC' },
     });
-    return rows.map((t) => ({
+    const filtered =
+      sessionType && (sessionType === 'personal_training' || sessionType === 'massage')
+        ? rows.filter(
+            (t) =>
+              Array.isArray(t.offersSessionTypes) && t.offersSessionTypes.includes(sessionType),
+          )
+        : rows;
+    return filtered.map((t) => ({
       id: t.id,
       tenantId: t.tenantId,
       bio: t.bio,
+      certifications: t.certifications,
       specializations: t.specializations,
       photoUrl: t.photoUrl,
       avgRating: t.avgRating,
       totalSessions: t.totalSessions,
+      offersSessionTypes: t.offersSessionTypes,
       user: {
         id: t.user.id,
         firstName: t.user.firstName,
         lastName: t.user.lastName,
       },
     }));
+  }
+
+  async createPackageRequest(user: User, dto: CreatePackageRequestDto) {
+    if (user.role !== UserRole.MEMBER) {
+      throw new ForbiddenException('Only members can request packages');
+    }
+    const sessionTypeEnum =
+      dto.sessionType === 'personal_training' ? SessionType.PERSONAL_TRAINING : SessionType.MASSAGE;
+    const row = this.packageRequestsRepo.create({
+      userId: user.id,
+      tenantId: user.tenantId,
+      sessionType: sessionTypeEnum,
+      message: dto.message?.trim() ? dto.message.trim() : null,
+      status: 'pending',
+    });
+    await this.packageRequestsRepo.save(row);
+    return { id: row.id, createdAt: row.createdAt };
   }
 
   async listAvailability(tenantId: string, trainerId: string, fromIso: string, toIso: string) {
@@ -84,12 +120,19 @@ export class BookingService {
     }));
   }
 
-  async listMyReservations(user: User, limit = 50) {
+  async listMyReservations(user: User, limit = 50, sessionType?: SessionType) {
     if (user.role !== UserRole.MEMBER) {
       throw new ForbiddenException('Only members can list personal reservations');
     }
+    const where: FindOptionsWhere<Reservation> = {
+      userId: user.id,
+      tenantId: user.tenantId,
+    };
+    if (sessionType) {
+      where.sessionType = sessionType;
+    }
     const rows = await this.reservationsRepo.find({
-      where: { userId: user.id, tenantId: user.tenantId },
+      where,
       order: { startTime: 'DESC' },
       take: Math.min(Math.max(limit, 1), 100),
       relations: { trainer: { user: true }, timeSlot: true, package: { packageType: true } },

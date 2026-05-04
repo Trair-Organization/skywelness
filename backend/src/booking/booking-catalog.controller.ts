@@ -8,6 +8,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { User } from '../database/entities/user.entity';
 import { BookingService } from './booking.service';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
+import { TrainersQueryDto } from './dto/trainers-query.dto';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
@@ -16,8 +17,8 @@ export class BookingCatalogController {
   constructor(private readonly bookingService: BookingService) {}
 
   @Get('trainers')
-  listTrainers(@CurrentUser() user: User) {
-    return this.bookingService.listTrainers(user.tenantId);
+  listTrainers(@CurrentUser() user: User, @Query() query: TrainersQueryDto) {
+    return this.bookingService.listTrainers(user.tenantId, query.sessionType);
   }
 
   @Get('availability')

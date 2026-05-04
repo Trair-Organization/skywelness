@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text } from 'react-native';
 import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
 import { MemberEventsScreen } from '../screens/member/MemberEventsScreen';
-import { MemberSpecialLessonsScreen } from '../screens/member/MemberNotificationsScreen';
+import {
+  MemberMassageScreen,
+  MemberSpecialLessonsScreen,
+} from '../screens/member/MemberServiceHubScreen';
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
 import type { MemberTabParamList } from './memberTabTypes';
@@ -62,6 +65,14 @@ export function MemberTabNavigator() {
         options={{
           tabBarLabel: t('tabs.specialLessons'),
           tabBarIcon: ({ focused }) => tabIcon('◆', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Massage"
+        component={MemberMassageScreen}
+        options={{
+          tabBarLabel: t('tabs.massage'),
+          tabBarIcon: ({ focused }) => tabIcon('◇', focused),
         }}
       />
       <Tab.Screen

@@ -17,6 +17,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { User } from '../database/entities/user.entity';
 import { BookingService } from './booking.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
+import { ReservationsQueryDto } from './dto/reservations-query.dto';
 
 @Controller('reservations')
 @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
@@ -25,9 +26,9 @@ export class ReservationsController {
 
   @Get()
   @Roles(UserRole.MEMBER)
-  listMine(@CurrentUser() user: User, @Query('limit') limit?: string) {
-    const n = limit ? Number.parseInt(limit, 10) : 50;
-    return this.bookingService.listMyReservations(user, Number.isFinite(n) ? n : 50);
+  listMine(@CurrentUser() user: User, @Query() query: ReservationsQueryDto) {
+    const limit = query.limit ?? 50;
+    return this.bookingService.listMyReservations(user, limit, query.sessionType);
   }
 
   @Post()
