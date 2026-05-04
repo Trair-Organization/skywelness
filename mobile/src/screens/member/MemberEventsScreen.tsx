@@ -1,5 +1,13 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -119,6 +127,13 @@ export function MemberEventsScreen() {
         ) : null}
         {rows.map((r) => (
           <GlassCard key={r.id} style={styles.card}>
+            {r.imageUrl ? (
+              <Image source={{ uri: r.imageUrl }} style={styles.cardImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.cardImage, styles.cardImagePh]}>
+                <Text style={styles.cardImagePhTxt}>{t('events.noImage')}</Text>
+              </View>
+            )}
             <View style={styles.rowTop}>
               <Text style={styles.cardTitle}>{r.title}</Text>
               {r.isJoined ? <Text style={styles.joinedBadge}>{t('eventsTab.joined')}</Text> : null}
@@ -194,6 +209,22 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 10,
+  },
+  cardImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: premium.radiusMd,
+    marginBottom: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  cardImagePh: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardImagePhTxt: {
+    color: premium.textMuted,
+    fontWeight: '700',
+    fontSize: 13,
   },
   rowTop: {
     flexDirection: 'row',
