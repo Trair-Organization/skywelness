@@ -238,6 +238,10 @@ export default {
     requestOk: 'Your request was saved. The club will contact you soon.',
     requestFail: 'Could not send the request. Check your connection and try again.',
     calendarTitle: 'Calendar & availability',
+    calendarWeeklyTitle: 'Weekly availability',
+    calendarWeeklyHint:
+      'Club schedule (06:00–22:00). A dash means no slot published; tap an open slot to book.',
+    calendarNoSlot: '—',
     weekPrev: 'Prev',
     weekNext: 'Next',
     emptySlots: 'No published slots in this week.',
@@ -262,7 +266,7 @@ export default {
     slotGone: 'That time may be full or no longer available. Refresh and pick another slot.',
     pt: {
       screenTitle: 'Personal training',
-      screenSub: 'Trainer profiles, weekly availability, and booking.',
+      screenSub: 'Open a trainer profile and tap Load calendar for weekly slots and booking.',
       staffTitle: 'Trainers',
       staffEmpty: 'No trainers yet. They will appear when your club adds them.',
       pickStaffFirst: 'Select a trainer card first.',
@@ -272,7 +276,7 @@ export default {
     },
     massage: {
       screenTitle: 'Massage',
-      screenSub: 'Therapist profiles, weekly availability, and booking.',
+      screenSub: 'Open a profile and tap Load calendar for weekly slots and booking.',
       staffTitle: 'Massage therapists',
       staffEmpty: 'No massage therapists listed yet. They will appear when your club adds them.',
       pickStaffFirst: 'Select a therapist card first.',

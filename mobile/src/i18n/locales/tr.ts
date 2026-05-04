@@ -238,6 +238,10 @@ export default {
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',
     calendarTitle: 'Takvim ve müsaitlik',
+    calendarWeeklyTitle: 'Haftalık müsaitlik',
+    calendarWeeklyHint:
+      'Kulüp yayını (06:00–22:00). Boş kartta bu saat için slot tanımlı değildir; dolu kartta kontenjanı görürsünüz.',
+    calendarNoSlot: '—',
     weekPrev: 'Önceki',
     weekNext: 'Sonraki',
     emptySlots: 'Bu hafta için yayınlanmış boş slot bulunmuyor.',
@@ -262,7 +266,8 @@ export default {
     slotGone: 'Bu saat dolmuş veya iptal edilmiş olabilir. Listeyi yenileyip başka bir slot seçin.',
     pt: {
       screenTitle: 'Özel dersler',
-      screenSub: 'Antrenör profilleri, haftalık müsaitlik ve rezervasyon.',
+      screenSub:
+        'Antrenör kartından profile girip Takvimi yükle ile haftalık müsaitlik ve rezervasyon.',
       staffTitle: 'Antrenörler',
       staffEmpty: 'Kayıtlı antrenör görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
       pickStaffFirst: 'Önce antrenör kartından birini seçin.',
@@ -273,7 +278,8 @@ export default {
     },
     massage: {
       screenTitle: 'Masaj',
-      screenSub: 'Masöz profilleri, haftalık müsaitlik ve rezervasyon.',
+      screenSub:
+        'Masöz kartından profile girip Takvimi yükle ile haftalık müsaitlik ve rezervasyon.',
       staffTitle: 'Masözler',
       staffEmpty: 'Kayıtlı masöz görünmüyor. Kulüp yönetimi eklediğinde burada listelenir.',
       pickStaffFirst: 'Önce masöz kartından birini seçin.',

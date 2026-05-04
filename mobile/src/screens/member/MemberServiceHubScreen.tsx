@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   Modal,
   Platform,
@@ -70,6 +71,10 @@ type HubReservation = {
 };
 
 const TAB_BAR_PAD = 72;
+
+/** Published slots are shown in 1-hour buckets from club opening through last start hour. */
+const CLUB_OPEN_HOUR = 6;
+const CLUB_LAST_START_HOUR = 21;
 
 function addDays(d: Date, n: number): Date {
   const x = new Date(d);
@@ -152,6 +157,53 @@ function formatRatingDisplay(avg: string): string {
   return n.toFixed(1);
 }
 
+function sameLocalCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/** Slot whose local start time falls on `day` and starts in hour `bucketHour` (e.g. 6 → 06:00–07:00). */
+function findSlotInBucket(
+  rows: SlotRow[],
+  trainerId: string,
+  day: Date,
+  bucketHour: number,
+): SlotRow | null {
+  for (const s of rows) {
+    if (s.trainerId !== trainerId) {
+      continue;
+    }
+    const st = new Date(s.startTime);
+    if (!sameLocalCalendarDay(st, day)) {
+      continue;
+    }
+    if (st.getHours() === bucketHour) {
+      return s;
+    }
+  }
+  return null;
+}
+
+function formatHourBucketLabel(startHour: number): string {
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  return `${pad(startHour)}:00–${pad(startHour + 1)}:00`;
+}
+
+function formatSlotTimeSpan(slot: SlotRow, locale: string): string {
+  try {
+    const loc = locale.startsWith('tr') ? 'tr-TR' : undefined;
+    const o: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+    const a = new Date(slot.startTime).toLocaleTimeString(loc, o);
+    const b = new Date(slot.endTime).toLocaleTimeString(loc, o);
+    return `${a} – ${b}`;
+  } catch {
+    return fmt(slot.startTime);
+  }
+}
+
 function formatMemberSince(iso: string | undefined, locale: string): string | null {
   if (!iso) {
     return null;
@@ -184,7 +236,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [loadingBoot, setLoadingBoot] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
+  /** When set, full weekly calendar modal is open for this trainer. */
+  const [calendarTrainer, setCalendarTrainer] = useState<TrainerRow | null>(null);
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -283,15 +336,15 @@ export function MemberServiceHubScreen({ mode }: Props) {
     setRefreshing(true);
     try {
       await loadAll();
-      if (selectedTrainerId) {
-        await loadSlotsForTrainer(selectedTrainerId, rangeStart, rangeEnd);
+      if (calendarTrainer) {
+        await loadSlotsForTrainer(calendarTrainer.id, rangeStart, rangeEnd);
       }
     } catch (e) {
       Alert.alert(t('alerts.generic'), e instanceof ApiError ? e.message : String(e));
     } finally {
       setRefreshing(false);
     }
-  }, [token, tenant, loadAll, selectedTrainerId, rangeStart, rangeEnd, loadSlotsForTrainer, t]);
+  }, [token, tenant, loadAll, calendarTrainer, rangeStart, rangeEnd, loadSlotsForTrainer, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -323,11 +376,15 @@ export function MemberServiceHubScreen({ mode }: Props) {
   );
 
   useEffect(() => {
-    if (!selectedTrainerId || !token || !tenant) {
+    if (!calendarTrainer || !token || !tenant) {
       return;
     }
-    loadSlotsForTrainer(selectedTrainerId, rangeStart, rangeEnd).catch(() => {});
-  }, [selectedTrainerId, rangeStart, rangeEnd, loadSlotsForTrainer, token, tenant]);
+    loadSlotsForTrainer(calendarTrainer.id, rangeStart, rangeEnd).catch(() => {});
+  }, [calendarTrainer, rangeStart, rangeEnd, loadSlotsForTrainer, token, tenant]);
+
+  useEffect(() => {
+    setSelectedSlotId(null);
+  }, [weekOffset]);
 
   const upcomingRes = useMemo(() => {
     const now = Date.now();
@@ -354,7 +411,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
   );
 
   const confirmBook = useCallback(async () => {
-    if (!token || !tenant || !selectedSlotId || !selectedSlot) {
+    if (!token || !tenant || !calendarTrainer || !selectedSlotId || !selectedSlot) {
       Alert.alert(t('booking.section'), t('booking.pickSlotFirst'));
       return;
     }
@@ -380,7 +437,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
       const live = refreshed.find((s) => s.id === selectedSlotId);
       if (!live || live.remainingCapacity < 1) {
         Alert.alert(t('booking.section'), t('serviceHub.slotGone'));
-        await loadSlotsForTrainer(selectedTrainerId!, rangeStart, rangeEnd);
+        await loadSlotsForTrainer(calendarTrainer.id, rangeStart, rangeEnd);
         setBooking(false);
         return;
       }
@@ -396,8 +453,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
       Alert.alert(t('booking.section'), t('booking.created'));
       setSelectedSlotId(null);
       await loadAll();
-      if (selectedTrainerId) {
-        await loadSlotsForTrainer(selectedTrainerId, rangeStart, rangeEnd);
+      if (calendarTrainer) {
+        await loadSlotsForTrainer(calendarTrainer.id, rangeStart, rangeEnd);
       }
     } catch (e) {
       Alert.alert(
@@ -413,7 +470,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
     selectedSlotId,
     selectedSlot,
     selectedPackageId,
-    selectedTrainerId,
+    calendarTrainer,
     loadAll,
     loadSlotsForTrainer,
     rangeStart,
@@ -463,8 +520,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
         });
         Alert.alert(t('booking.section'), t('booking.cancelled'));
         await loadAll();
-        if (selectedTrainerId) {
-          await loadSlotsForTrainer(selectedTrainerId, rangeStart, rangeEnd);
+        if (calendarTrainer) {
+          await loadSlotsForTrainer(calendarTrainer.id, rangeStart, rangeEnd);
         }
       } catch (e) {
         Alert.alert(
@@ -475,7 +532,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
         setCancellingId(null);
       }
     },
-    [token, tenant, loadAll, selectedTrainerId, loadSlotsForTrainer, rangeStart, rangeEnd, t],
+    [token, tenant, loadAll, calendarTrainer, loadSlotsForTrainer, rangeStart, rangeEnd, t],
   );
 
   const ripple =
@@ -486,6 +543,25 @@ export function MemberServiceHubScreen({ mode }: Props) {
   }
 
   const weekLabel = `${rangeStart.toLocaleDateString()} — ${addDays(rangeEnd, -1).toLocaleDateString()}`;
+
+  const weekDayDates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i)),
+    [rangeStart],
+  );
+
+  const hourBuckets = useMemo(
+    () =>
+      Array.from(
+        { length: CLUB_LAST_START_HOUR - CLUB_OPEN_HOUR + 1 },
+        (_, i) => CLUB_OPEN_HOUR + i,
+      ),
+    [],
+  );
+
+  const calendarColumnWidth = useMemo(() => {
+    const w = Dimensions.get('window').width;
+    return Math.min(96, Math.max(76, (w - 40) / 3.8));
+  }, []);
 
   return (
     <GradientBackground>
@@ -544,7 +620,6 @@ export function MemberServiceHubScreen({ mode }: Props) {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hRail}>
             {trainers.map((tr) => {
-              const selected = tr.id === selectedTrainerId;
               const teaser = staffSpecializationTeaser(tr);
               const fullName = `${tr.user.firstName} ${tr.user.lastName}`;
               return (
@@ -555,11 +630,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   accessibilityLabel={`${fullName}, ${t('serviceHub.sessionsShort', { n: tr.totalSessions })}`}
                   style={({ pressed }) => [
                     styles.staffCardOuter,
-                    selected && styles.staffCardOuterSelected,
                     pressed && styles.staffCardOuterPressed,
                   ]}
                   onPress={() => {
-                    setSelectedTrainerId(tr.id);
                     setProfileTrainer(tr);
                   }}
                 >
@@ -607,81 +680,6 @@ export function MemberServiceHubScreen({ mode }: Props) {
             })}
           </ScrollView>
         )}
-
-        <GlassCard style={styles.card}>
-          <Text style={styles.cardTitle}>{t('serviceHub.calendarTitle')}</Text>
-          {selectedTrainerId ? (
-            <>
-              <View style={styles.weekRow}>
-                <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w - 1)}>
-                  <Text style={styles.weekBtnTxt}>{t('serviceHub.weekPrev')}</Text>
-                </Pressable>
-                <Text style={styles.weekRange}>{weekLabel}</Text>
-                <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w + 1)}>
-                  <Text style={styles.weekBtnTxt}>{t('serviceHub.weekNext')}</Text>
-                </Pressable>
-              </View>
-              {loadingSlots ? (
-                <ActivityIndicator color={premium.accentBlue} style={styles.mb} />
-              ) : slots.length === 0 ? (
-                <Text style={styles.muted}>{t('serviceHub.emptySlots')}</Text>
-              ) : (
-                slots.map((s) => {
-                  const sel = s.id === selectedSlotId;
-                  const full = s.remainingCapacity < 1;
-                  return (
-                    <Pressable
-                      key={s.id}
-                      style={[styles.slotRow, sel && styles.slotRowOn, full && styles.slotDisabled]}
-                      disabled={full}
-                      onPress={() => setSelectedSlotId(s.id)}
-                    >
-                      <Text style={styles.slotTxt}>
-                        {fmt(s.startTime)} — {fmt(s.endTime)} ·{' '}
-                        {t('serviceHub.spotsLeft', { n: s.remainingCapacity })}
-                      </Text>
-                    </Pressable>
-                  );
-                })
-              )}
-              <Text style={styles.subLabel}>{t('serviceHub.selectPackage')}</Text>
-              {filteredPackages.map((p) => {
-                const sel = p.id === selectedPackageId;
-                return (
-                  <Pressable
-                    key={p.id}
-                    style={[styles.pick, sel && styles.pickOn]}
-                    onPress={() => setSelectedPackageId(p.id)}
-                  >
-                    <Text style={styles.pickTxt}>
-                      {p.packageType.name} · {p.remainingSessions}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              <Pressable
-                {...ripple}
-                style={({ pressed }) => [
-                  styles.btnPrimary,
-                  pressed && styles.btnPrimaryPressed,
-                  (!selectedSlotId || booking || filteredPackages.length === 0) && styles.disabled,
-                ]}
-                disabled={!selectedSlotId || booking || filteredPackages.length === 0}
-                onPress={() => {
-                  confirmBook().catch(() => {});
-                }}
-              >
-                {booking ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.btnPrimaryTxt}>{t('serviceHub.confirmBook')}</Text>
-                )}
-              </Pressable>
-            </>
-          ) : (
-            <Text style={styles.muted}>{t(`${prefix}.pickStaffFirst`)}</Text>
-          )}
-        </GlassCard>
 
         <Text style={styles.sectionHeading}>{t('serviceHub.upcoming')}</Text>
         <GlassCard style={styles.card}>
@@ -841,7 +839,8 @@ export function MemberServiceHubScreen({ mode }: Props) {
                     <Pressable
                       style={styles.btnPrimary}
                       onPress={() => {
-                        setSelectedTrainerId(profileTrainer.id);
+                        setSelectedSlotId(null);
+                        setCalendarTrainer(profileTrainer);
                         setProfileTrainer(null);
                       }}
                     >
@@ -850,6 +849,174 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   </View>
                 </ScrollView>
               </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={calendarTrainer !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setCalendarTrainer(null);
+          setSelectedSlotId(null);
+        }}
+      >
+        <Pressable
+          style={styles.calendarModalBackdrop}
+          onPress={() => {
+            setCalendarTrainer(null);
+            setSelectedSlotId(null);
+          }}
+        >
+          <Pressable style={styles.calendarSheet} onPress={() => {}}>
+            {calendarTrainer ? (
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+              >
+                <View style={styles.calendarModalHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.calendarModalTitle} numberOfLines={1}>
+                      {calendarTrainer.user.firstName} {calendarTrainer.user.lastName}
+                    </Text>
+                    <Text style={styles.calendarModalSub}>
+                      {t('serviceHub.calendarWeeklyTitle')}
+                    </Text>
+                  </View>
+                  <Pressable
+                    hitSlop={14}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('serviceHub.profileClose')}
+                    onPress={() => {
+                      setCalendarTrainer(null);
+                      setSelectedSlotId(null);
+                    }}
+                    style={({ pressed }) => [styles.modalCloseRound, pressed && { opacity: 0.75 }]}
+                  >
+                    <Text style={styles.modalCloseRoundTxt}>×</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.calendarHint}>{t('serviceHub.calendarWeeklyHint')}</Text>
+                <View style={styles.weekRow}>
+                  <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w - 1)}>
+                    <Text style={styles.weekBtnTxt}>{t('serviceHub.weekPrev')}</Text>
+                  </Pressable>
+                  <Text style={styles.weekRange}>{weekLabel}</Text>
+                  <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w + 1)}>
+                    <Text style={styles.weekBtnTxt}>{t('serviceHub.weekNext')}</Text>
+                  </Pressable>
+                </View>
+                {loadingSlots ? (
+                  <ActivityIndicator color={premium.accentBlue} style={styles.mb} />
+                ) : (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={true}
+                    contentContainerStyle={styles.calendarGridRow}
+                  >
+                    {weekDayDates.map((dayDate, colIdx) => {
+                      const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
+                      const dayTitle = dayDate.toLocaleDateString(loc, { weekday: 'short' });
+                      const dayMonth = dayDate.toLocaleDateString(loc, {
+                        day: 'numeric',
+                        month: 'short',
+                      });
+                      return (
+                        <View
+                          key={`day-${colIdx}`}
+                          style={[styles.calendarColumn, { width: calendarColumnWidth }]}
+                        >
+                          <Text style={styles.calColTitle}>{dayTitle}</Text>
+                          <Text style={styles.calColDate}>{dayMonth}</Text>
+                          <ScrollView
+                            style={styles.calColScroll}
+                            nestedScrollEnabled
+                            showsVerticalScrollIndicator={false}
+                          >
+                            {hourBuckets.map((h) => {
+                              const slot = findSlotInBucket(slots, calendarTrainer.id, dayDate, h);
+                              const full = slot ? slot.remainingCapacity < 1 : false;
+                              const sel = slot ? slot.id === selectedSlotId : false;
+                              return (
+                                <Pressable
+                                  key={`${colIdx}-${h}`}
+                                  disabled={!slot || full}
+                                  onPress={() => slot && setSelectedSlotId(slot.id)}
+                                  style={({ pressed }) => [
+                                    styles.hourCard,
+                                    sel && styles.hourCardOn,
+                                    full && styles.hourCardFull,
+                                    (!slot || full) && styles.hourCardMuted,
+                                    pressed && slot && !full && styles.hourCardPressed,
+                                  ]}
+                                >
+                                  <Text style={styles.hourCardBucket}>
+                                    {formatHourBucketLabel(h)}
+                                  </Text>
+                                  {slot ? (
+                                    <>
+                                      <Text style={styles.hourCardSpan} numberOfLines={1}>
+                                        {formatSlotTimeSpan(slot, i18n.language)}
+                                      </Text>
+                                      <Text style={styles.hourCardSpots}>
+                                        {t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
+                                      </Text>
+                                    </>
+                                  ) : (
+                                    <Text style={styles.hourCardDash}>
+                                      {t('serviceHub.calendarNoSlot')}
+                                    </Text>
+                                  )}
+                                </Pressable>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+                {!loadingSlots && slots.length === 0 ? (
+                  <Text style={styles.muted}>{t('serviceHub.emptySlots')}</Text>
+                ) : null}
+                <Text style={styles.subLabel}>{t('serviceHub.selectPackage')}</Text>
+                {filteredPackages.map((p) => {
+                  const sel = p.id === selectedPackageId;
+                  return (
+                    <Pressable
+                      key={p.id}
+                      style={[styles.pick, sel && styles.pickOn]}
+                      onPress={() => setSelectedPackageId(p.id)}
+                    >
+                      <Text style={styles.pickTxt}>
+                        {p.packageType.name} · {p.remainingSessions}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+                <Pressable
+                  {...ripple}
+                  style={({ pressed }) => [
+                    styles.btnPrimary,
+                    pressed && styles.btnPrimaryPressed,
+                    (!selectedSlotId || booking || filteredPackages.length === 0) &&
+                      styles.disabled,
+                  ]}
+                  disabled={!selectedSlotId || booking || filteredPackages.length === 0}
+                  onPress={() => {
+                    confirmBook().catch(() => {});
+                  }}
+                >
+                  {booking ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.btnPrimaryTxt}>{t('serviceHub.confirmBook')}</Text>
+                  )}
+                </Pressable>
+              </ScrollView>
             ) : null}
           </Pressable>
         </Pressable>
@@ -1026,11 +1193,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.32)',
     overflow: 'hidden',
   },
-  staffCardOuterSelected: {
-    borderColor: premium.accentBlue,
-    borderWidth: 2,
-    backgroundColor: 'rgba(56,189,248,0.1)',
-  },
   staffCardOuterPressed: { opacity: 0.92 },
   staffPhotoClip: {
     width: '100%',
@@ -1118,6 +1280,111 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: premium.text,
     marginHorizontal: 6,
+  },
+  calendarModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  calendarSheet: {
+    width: '100%',
+    maxHeight: '92%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 24,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  calendarModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  calendarModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: premium.text,
+  },
+  calendarModalSub: {
+    fontSize: 13,
+    color: premium.textMuted,
+    marginTop: 2,
+  },
+  calendarHint: {
+    fontSize: 12,
+    color: premium.textMuted,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  calendarGridRow: {
+    flexDirection: 'row',
+    paddingBottom: 4,
+    paddingTop: 4,
+    alignItems: 'flex-start',
+  },
+  calendarColumn: {
+    marginRight: 8,
+  },
+  calColTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: premium.text,
+    textAlign: 'center',
+  },
+  calColDate: {
+    fontSize: 11,
+    color: premium.textMuted,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  calColScroll: {
+    maxHeight: 340,
+  },
+  hourCard: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    marginBottom: 6,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    minHeight: 72,
+  },
+  hourCardOn: {
+    borderColor: premium.accentBlue,
+    backgroundColor: 'rgba(56,189,248,0.18)',
+  },
+  hourCardFull: {
+    opacity: 0.5,
+  },
+  hourCardMuted: {
+    opacity: 0.4,
+  },
+  hourCardPressed: {
+    opacity: 0.88,
+  },
+  hourCardBucket: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: premium.accentGreen,
+    marginBottom: 4,
+  },
+  hourCardSpan: {
+    fontSize: 11,
+    color: premium.text,
+    marginBottom: 2,
+  },
+  hourCardSpots: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fcd34d',
+  },
+  hourCardDash: {
+    fontSize: 13,
+    color: premium.textMuted,
+    marginTop: 4,
   },
   slotRow: {
     paddingVertical: 10,
