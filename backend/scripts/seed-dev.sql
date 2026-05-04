@@ -197,19 +197,20 @@ ON CONFLICT (id) DO UPDATE SET
   expires_at = '2035-12-31',
   updated_at = NOW();
 
+-- Skyland demo PT slot: 5 Mayıs 06:00–07:00 Europe/Istanbul (= 03:00–04:00 UTC)
 INSERT INTO time_slot (id, trainer_id, availability_id, start_time, end_time, capacity, booked_count)
 VALUES (
   '00000000-0000-4000-8000-000000000052',
   '00000000-0000-4000-8000-000000000015',
   NULL,
-  (NOW() AT TIME ZONE 'utc') + INTERVAL '7 days',
-  (NOW() AT TIME ZONE 'utc') + INTERVAL '7 days' + INTERVAL '60 minutes',
+  TIMESTAMPTZ '2026-05-05T03:00:00Z',
+  TIMESTAMPTZ '2026-05-05T04:00:00Z',
   1,
   0
 )
 ON CONFLICT (id) DO UPDATE SET
-  start_time = (NOW() AT TIME ZONE 'utc') + INTERVAL '7 days',
-  end_time = (NOW() AT TIME ZONE 'utc') + INTERVAL '7 days' + INTERVAL '60 minutes',
+  start_time = EXCLUDED.start_time,
+  end_time = EXCLUDED.end_time,
   booked_count = 0,
   trainer_id = EXCLUDED.trainer_id;
 
