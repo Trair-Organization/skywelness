@@ -187,6 +187,7 @@ export function MemberHomeScreen() {
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ClubEventRow | null>(null);
+  const [eventNotice, setEventNotice] = useState<string | null>(null);
 
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
@@ -385,6 +386,14 @@ export function MemberHomeScreen() {
     }, [loadClubEvents]),
   );
 
+  useEffect(() => {
+    if (!eventNotice) {
+      return;
+    }
+    const timer = setTimeout(() => setEventNotice(null), 2600);
+    return () => clearTimeout(timer);
+  }, [eventNotice]);
+
   const toggleEventJoin = useCallback(
     async (row: ClubEventRow) => {
       if (!token || !tenant) {
@@ -398,19 +407,18 @@ export function MemberHomeScreen() {
             token,
             tenantSubdomain: tenant.subdomain,
           });
-          Alert.alert(t('events.section'), t('events.leftOk'));
+          setEventNotice(t('events.leftOk'));
         } else {
           await apiJson(`/events/${row.id}/join`, {
             method: 'POST',
             token,
             tenantSubdomain: tenant.subdomain,
           });
-          Alert.alert(t('events.section'), t('events.joinedOk'));
+          setEventNotice(t('events.joinedOk'));
         }
         await loadClubEvents();
       } catch (e) {
-        Alert.alert(
-          t('events.section'),
+        setEventNotice(
           e instanceof ApiError ? localizeEventAction(t, e.message) : t('events.joinFailed'),
         );
       } finally {
@@ -489,6 +497,7 @@ export function MemberHomeScreen() {
         </View>
 
         <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+        {eventNotice ? <Text style={styles.eventsNotice}>{eventNotice}</Text> : null}
         {loadingEvents && clubEvents.length === 0 ? (
           <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
         ) : null}
@@ -1032,6 +1041,12 @@ const styles = StyleSheet.create({
   },
   eventsLoader: {
     marginBottom: 12,
+  },
+  eventsNotice: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.accentGreen,
+    marginBottom: 8,
   },
   eventsRail: {
     marginBottom: 8,
