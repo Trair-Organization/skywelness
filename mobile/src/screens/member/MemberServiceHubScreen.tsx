@@ -1302,6 +1302,21 @@ export function MemberServiceHubScreen({ mode }: Props) {
                         Alert.alert(
                           t('serviceHub.noRightsBookingTitle'),
                           t('serviceHub.noRightsBookingBody'),
+                          [
+                            {
+                              text: t('serviceHub.noRightsAlertClose'),
+                              style: 'cancel',
+                            },
+                            {
+                              text: t('serviceHub.noRightsOpenRequest'),
+                              onPress: () => {
+                                setShowDatePicker(false);
+                                setCalendarTrainer(null);
+                                setSelectedSlotId(null);
+                                setPackageRequestOpen(true);
+                              },
+                            },
+                          ],
                         );
                         return;
                       }

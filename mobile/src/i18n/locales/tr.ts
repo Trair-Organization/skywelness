@@ -251,7 +251,9 @@ export default {
     bookingNeedSlotBody: 'Rezervasyon için yukarıdaki listeden müsait bir saat dilimine dokunun.',
     noRightsBookingTitle: 'Seans hakkı yok',
     noRightsBookingBody:
-      'Bir saat seçtiniz ancak bu hizmet için aktif seans hakkınız veya paket görünmüyor. Rezervasyon yapılamaz. Ana ekrandaki + ile paket talebi gönderebilir veya kulüp ile iletişime geçebilirsiniz.',
+      'Bir saat seçtiniz ancak bu hizmet için kullanılabilir seans hakkınız görünmüyor; rezervasyon tamamlanamaz. Paket tanımlandığında tekrar deneyebilir veya kulüp ile iletişime geçebilirsiniz.',
+    noRightsOpenRequest: 'Paket talebi',
+    noRightsAlertClose: 'Tamam',
     requestSend: 'Talebi gönder',
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',

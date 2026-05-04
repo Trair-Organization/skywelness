@@ -250,7 +250,9 @@ export default {
     bookingNeedSlotBody: 'Tap an available time slot in the list above to continue.',
     noRightsBookingTitle: 'No session credit',
     noRightsBookingBody:
-      'You selected a time, but you have no active package or remaining sessions for this service. You cannot complete the booking. Use + on the main screen to request a package or contact the club.',
+      'You picked a time, but no remaining sessions are available for this service. You cannot complete the booking yet. Contact the club if needed.',
+    noRightsOpenRequest: 'Request a package',
+    noRightsAlertClose: 'OK',
     requestSend: 'Send request',
     requestOk: 'Your request was saved. The club will contact you soon.',
     requestFail: 'Could not send the request. Check your connection and try again.',
