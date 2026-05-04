@@ -1,15 +1,16 @@
 /**
- * Wellness Club — member flow (tenant + login + booking)
+ * Wellness Club — member flow (navigation + auth + booking)
  */
 
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { MemberAuthProvider } from './src/auth/MemberAuthContext';
 import { loadStoredLanguage } from './src/i18n';
-import { MemberHome } from './src/screens/MemberHome';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
 function App() {
-  const scheme = useColorScheme();
   const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
@@ -18,27 +19,33 @@ function App() {
 
   if (!i18nReady) {
     return (
-      <SafeAreaProvider>
-        <View style={styles.boot}>
-          <ActivityIndicator size="large" />
-        </View>
-      </SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
+          <View style={styles.boot}>
+            <ActivityIndicator size="large" color="#38bdf8" />
+          </View>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
-      <MemberHome />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.flex}>
+      <SafeAreaProvider>
+        <MemberAuthProvider>
+          <StatusBar barStyle="light-content" />
+          <RootNavigator />
+        </MemberAuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   boot: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#050810',
   },
 });
 

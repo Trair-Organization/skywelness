@@ -21,6 +21,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - BVLinearGradient (2.8.3):
+    - React-Core
   - FBLazyVector (0.85.2)
   - hermes-engine (250829098.0.10):
     - hermes-engine/Pre-built (= 250829098.0.10)
@@ -1838,10 +1840,80 @@ PODS:
     - React-utils (= 0.85.2)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.85.2)
+  - RNGestureHandler (2.31.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - RNScreens (4.24.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNScreens/common (= 4.24.0)
+    - Yoga
+  - RNScreens/common (4.24.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - Yoga (0.0.0)
 
 DEPENDENCIES:
   - "AsyncStorage (from `../../node_modules/@react-native-async-storage/async-storage`)"
+  - BVLinearGradient (from `../../node_modules/react-native-linear-gradient`)
   - FBLazyVector (from `../../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - RCTDeprecation (from `../../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -1881,7 +1953,7 @@ DEPENDENCIES:
   - React-logger (from `../../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
-  - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-safe-area-context (from `../../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../../node_modules/react-native/ReactCommon/oscompat`)
@@ -1916,11 +1988,15 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - RNGestureHandler (from `../../node_modules/react-native-gesture-handler`)
+  - RNScreens (from `../../node_modules/react-native-screens`)
   - Yoga (from `../../node_modules/react-native/ReactCommon/yoga`)
 
 EXTERNAL SOURCES:
   AsyncStorage:
     :path: "../../node_modules/@react-native-async-storage/async-storage"
+  BVLinearGradient:
+    :path: "../../node_modules/react-native-linear-gradient"
   FBLazyVector:
     :path: "../../node_modules/react-native/Libraries/FBLazyVector"
   hermes-engine:
@@ -1999,7 +2075,7 @@ EXTERNAL SOURCES:
   React-microtasksnativemodule:
     :path: "../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-safe-area-context:
-    :path: "../node_modules/react-native-safe-area-context"
+    :path: "../../node_modules/react-native-safe-area-context"
   React-NativeModulesApple:
     :path: "../../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -2068,11 +2144,16 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  RNGestureHandler:
+    :path: "../../node_modules/react-native-gesture-handler"
+  RNScreens:
+    :path: "../../node_modules/react-native-screens"
   Yoga:
     :path: "../../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
   AsyncStorage: 857a13f3c66a30d6b02efa09babba3d457e8e8ca
+  BVLinearGradient: cb006ba232a1f3e4f341bb62c42d1098c284da70
   FBLazyVector: 26fd21c75314e101f280d401e97f27d54f3f7064
   hermes-engine: af96ca45d831d4b257a62c2d636d7fe1aa06edcf
   RCTDeprecation: c7a2768f905d76ca6d2cfefb26e4349eacbdfca3
@@ -2146,6 +2227,8 @@ SPEC CHECKSUMS:
   ReactCodegen: 75cd4d6498ab93ae4eed4d384b78383987e7558e
   ReactCommon: a804bb8d1dcf3ecdec3a77eb8bba19b7863bbbdb
   ReactNativeDependencies: c8819edd547b18593b9357cc6e03665b1e9b1f5c
+  RNGestureHandler: 2ff61eac036eaf89f6818bf4ed9c39771a17d134
+  RNScreens: 01b065ded2dfe7987bcce770ff3a196be417ff41
   Yoga: 04bb4bfeb02c0000b940c1e6e89e856cd8de5a71
 
 PODFILE CHECKSUM: 3c27266a8c68d1d5b79d13c2311b6a01ebcc1e54
