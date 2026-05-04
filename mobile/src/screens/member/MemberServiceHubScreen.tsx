@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   Modal,
   Platform,
@@ -13,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -164,6 +166,35 @@ function sameLocalCalendarDay(a: Date, b: Date): boolean {
   );
 }
 
+/** Index 0 = Monday … 6 = Sunday within `weekStartMonday` week; prefers today when it falls in that week. */
+function dayIndexInWeek(weekStartMonday: Date): number {
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(weekStartMonday, i);
+    if (sameLocalCalendarDay(d, now)) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+function weekOffsetForPickedDate(d: Date): number {
+  const pickedMonday = startOfWeekMonday(d);
+  const thisMonday = startOfWeekMonday(new Date());
+  const diffMs = pickedMonday.getTime() - thisMonday.getTime();
+  return Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+}
+
+function dayIndexForPickedDate(d: Date): number {
+  const mon = startOfWeekMonday(d);
+  for (let i = 0; i < 7; i++) {
+    if (sameLocalCalendarDay(addDays(mon, i), d)) {
+      return i;
+    }
+  }
+  return 0;
+}
+
 /** Slot whose local start time falls on `day` and starts in hour `bucketHour` (e.g. 6 → 06:00–07:00). */
 function findSlotInBucket(
   rows: SlotRow[],
@@ -249,6 +280,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [requestSending, setRequestSending] = useState(false);
   const [packageRequestOpen, setPackageRequestOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [iosPickerValue, setIosPickerValue] = useState(() => new Date());
+  const suppressCalendarDaySyncRef = useRef(false);
 
   const prefix = mode === 'personal_training' ? 'serviceHub.pt' : 'serviceHub.massage';
 
@@ -389,6 +423,10 @@ export function MemberServiceHubScreen({ mode }: Props) {
 
   useEffect(() => {
     if (!calendarTrainer) {
+      return;
+    }
+    if (suppressCalendarDaySyncRef.current) {
+      suppressCalendarDaySyncRef.current = false;
       return;
     }
     setCalendarDayIndex(dayIndexInWeek(rangeStart));
@@ -543,12 +581,35 @@ export function MemberServiceHubScreen({ mode }: Props) {
     [token, tenant, loadAll, calendarTrainer, loadSlotsForTrainer, rangeStart, rangeEnd, t],
   );
 
-  const ripple =
-    Platform.OS === 'android' ? { android_ripple: { color: 'rgba(255,255,255,0.2)' } } : {};
+  const applyPickedDate = useCallback((d: Date) => {
+    suppressCalendarDaySyncRef.current = true;
+    setWeekOffset(weekOffsetForPickedDate(d));
+    setCalendarDayIndex(dayIndexForPickedDate(d));
+    setSelectedSlotId(null);
+  }, []);
 
-  if (!token || !tenant) {
-    return null;
-  }
+  const jumpToToday = useCallback(() => {
+    suppressCalendarDaySyncRef.current = true;
+    setWeekOffset(0);
+    setCalendarDayIndex(dayIndexForPickedDate(new Date()));
+    setSelectedSlotId(null);
+  }, []);
+
+  const openDatePicker = useCallback(() => {
+    const base = addDays(rangeStart, calendarDayIndex);
+    setIosPickerValue(base);
+    setShowDatePicker(true);
+  }, [rangeStart, calendarDayIndex]);
+
+  const onAndroidDateChange = useCallback(
+    (event: DateTimePickerEvent, date?: Date) => {
+      setShowDatePicker(false);
+      if (event.type === 'set' && date) {
+        applyPickedDate(date);
+      }
+    },
+    [applyPickedDate],
+  );
 
   const weekLabel = `${rangeStart.toLocaleDateString()} — ${addDays(rangeEnd, -1).toLocaleDateString()}`;
 
@@ -565,6 +626,20 @@ export function MemberServiceHubScreen({ mode }: Props) {
       ),
     [],
   );
+
+  const windowHeight = Dimensions.get('window').height;
+
+  const selectedPackageForFooter = useMemo(
+    () => filteredPackages.find((p) => p.id === selectedPackageId) ?? null,
+    [filteredPackages, selectedPackageId],
+  );
+
+  const ripple =
+    Platform.OS === 'android' ? { android_ripple: { color: 'rgba(255,255,255,0.2)' } } : {};
+
+  if (!token || !tenant) {
+    return null;
+  }
 
   return (
     <GradientBackground>
@@ -864,6 +939,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
         onRequestClose={() => {
           setCalendarTrainer(null);
           setSelectedSlotId(null);
+          setShowDatePicker(false);
         }}
       >
         <Pressable
@@ -871,170 +947,296 @@ export function MemberServiceHubScreen({ mode }: Props) {
           onPress={() => {
             setCalendarTrainer(null);
             setSelectedSlotId(null);
+            setShowDatePicker(false);
           }}
         >
           <View style={styles.calendarSheet} onStartShouldSetResponder={() => true}>
             {calendarTrainer ? (
-              <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
-                <View style={styles.calendarModalHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.calendarModalTitle} numberOfLines={1}>
-                      {calendarTrainer.user.firstName} {calendarTrainer.user.lastName}
-                    </Text>
-                    <Text style={styles.calendarModalSub}>
-                      {t('serviceHub.calendarWeeklyTitle')}
-                    </Text>
+              <>
+                <ScrollView
+                  keyboardShouldPersistTaps="always"
+                  showsVerticalScrollIndicator={false}
+                  style={{ maxHeight: windowHeight * 0.58 }}
+                  contentContainerStyle={styles.calendarScrollContent}
+                >
+                  <View style={styles.calendarModalHeader}>
+                    <View style={styles.calendarHeaderTitleBlock}>
+                      <Text style={styles.calendarModalTitle} numberOfLines={1}>
+                        {calendarTrainer.user.firstName} {calendarTrainer.user.lastName}
+                      </Text>
+                      <Text style={styles.calendarModalSub}>
+                        {t('serviceHub.calendarWeeklyTitle')}
+                      </Text>
+                    </View>
+                    <Pressable
+                      hitSlop={14}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('serviceHub.profileClose')}
+                      onPress={() => {
+                        setCalendarTrainer(null);
+                        setSelectedSlotId(null);
+                        setShowDatePicker(false);
+                      }}
+                      style={({ pressed }) => [
+                        styles.modalCloseRound,
+                        pressed && { opacity: 0.75 },
+                      ]}
+                    >
+                      <Text style={styles.modalCloseRoundTxt}>×</Text>
+                    </Pressable>
                   </View>
-                  <Pressable
-                    hitSlop={14}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('serviceHub.profileClose')}
-                    onPress={() => {
-                      setCalendarTrainer(null);
-                      setSelectedSlotId(null);
-                    }}
-                    style={({ pressed }) => [styles.modalCloseRound, pressed && { opacity: 0.75 }]}
-                  >
-                    <Text style={styles.modalCloseRoundTxt}>×</Text>
-                  </Pressable>
-                </View>
-                <Text style={styles.calendarHint}>{t('serviceHub.calendarWeeklyHint')}</Text>
-                <View style={styles.weekRow}>
-                  <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w - 1)}>
-                    <Text style={styles.weekBtnTxt}>{t('serviceHub.weekPrev')}</Text>
-                  </Pressable>
-                  <Text style={styles.weekRange}>{weekLabel}</Text>
-                  <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w + 1)}>
-                    <Text style={styles.weekBtnTxt}>{t('serviceHub.weekNext')}</Text>
-                  </Pressable>
-                </View>
-                <Text style={styles.calendarPickDayLabel}>{t('serviceHub.calendarPickDay')}</Text>
-                <View style={styles.dayChipRow}>
-                  {weekDayDates.map((dayDate, i) => {
-                    const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
-                    const labelShort = dayDate.toLocaleDateString(loc, { weekday: 'short' });
-                    const num = dayDate.getDate();
-                    const sel = i === calendarDayIndex;
-                    return (
-                      <Pressable
-                        key={`day-chip-${i}`}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: sel }}
-                        onPress={() => {
-                          setCalendarDayIndex(i);
-                          setSelectedSlotId(null);
-                        }}
-                        style={({ pressed }) => [
-                          styles.dayChip,
-                          sel && styles.dayChipOn,
-                          pressed && styles.dayChipPressed,
-                        ]}
-                      >
-                        <Text style={[styles.dayChipWeek, sel && styles.dayChipWeekOn]}>
-                          {labelShort}
-                        </Text>
-                        <Text style={[styles.dayChipNum, sel && styles.dayChipNumOn]}>{num}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                {(() => {
-                  const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
-                  const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
-                  const longDay = selectedDayDate.toLocaleDateString(loc, {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  });
-                  return <Text style={styles.calendarSelectedDayLine}>{longDay}</Text>;
-                })()}
-                {loadingSlots ? (
-                  <ActivityIndicator color={premium.accentBlue} style={styles.mb} />
-                ) : (
-                  <View style={styles.hourList}>
-                    {hourBuckets.map((h) => {
-                      const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
-                      const slot = findSlotInBucket(slots, calendarTrainer.id, selectedDayDate, h);
-                      const full = slot ? slot.remainingCapacity < 1 : false;
-                      const sel = slot ? slot.id === selectedSlotId : false;
+                  <Text style={styles.calendarHint}>{t('serviceHub.calendarWeeklyHint')}</Text>
+                  <View style={styles.weekRow}>
+                    <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w - 1)}>
+                      <Text style={styles.weekBtnTxt}>{t('serviceHub.weekPrev')}</Text>
+                    </Pressable>
+                    <Text style={styles.weekRange}>{weekLabel}</Text>
+                    <Pressable style={styles.weekBtn} onPress={() => setWeekOffset((w) => w + 1)}>
+                      <Text style={styles.weekBtnTxt}>{t('serviceHub.weekNext')}</Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.quickActionsRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.todayShortcutBtn,
+                        pressed && styles.todayShortcutBtnPressed,
+                      ]}
+                      onPress={jumpToToday}
+                    >
+                      <Text style={styles.todayShortcutTxt}>{t('serviceHub.todayShortcut')}</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.pickDateBtn,
+                        pressed && styles.pickDateBtnPressed,
+                      ]}
+                      onPress={openDatePicker}
+                    >
+                      <Text style={styles.pickDateTxt}>{t('serviceHub.pickDate')}</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.calendarPickDayLabel}>{t('serviceHub.calendarPickDay')}</Text>
+                  <View style={styles.dayChipRow}>
+                    {weekDayDates.map((dayDate, i) => {
+                      const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
+                      const labelShort = dayDate.toLocaleDateString(loc, { weekday: 'short' });
+                      const num = dayDate.getDate();
+                      const sel = i === calendarDayIndex;
                       return (
                         <Pressable
-                          key={`hour-${h}`}
+                          key={`day-chip-${i}`}
                           accessibilityRole="button"
-                          accessibilityState={{ disabled: !slot || full, selected: sel }}
-                          disabled={!slot || full}
+                          accessibilityState={{ selected: sel }}
                           onPress={() => {
-                            if (slot && !full) {
-                              setSelectedSlotId(slot.id);
-                            }
+                            setCalendarDayIndex(i);
+                            setSelectedSlotId(null);
                           }}
                           style={({ pressed }) => [
-                            styles.hourCard,
-                            sel && styles.hourCardOn,
-                            full && styles.hourCardFull,
-                            (!slot || full) && styles.hourCardMuted,
-                            pressed && slot && !full && styles.hourCardPressed,
+                            styles.dayChip,
+                            sel && styles.dayChipOn,
+                            pressed && styles.dayChipPressed,
                           ]}
                         >
-                          <Text style={styles.hourCardBucket}>{formatHourBucketLabel(h)}</Text>
-                          {slot ? (
-                            <>
-                              <Text style={styles.hourCardSpan} numberOfLines={1}>
-                                {formatSlotTimeSpan(slot, i18n.language)}
-                              </Text>
-                              <Text style={styles.hourCardSpots}>
-                                {t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
-                              </Text>
-                            </>
-                          ) : (
-                            <Text style={styles.hourCardDash}>
-                              {t('serviceHub.calendarNoSlot')}
-                            </Text>
-                          )}
+                          <Text style={[styles.dayChipWeek, sel && styles.dayChipWeekOn]}>
+                            {labelShort}
+                          </Text>
+                          <Text style={[styles.dayChipNum, sel && styles.dayChipNumOn]}>{num}</Text>
                         </Pressable>
                       );
                     })}
                   </View>
-                )}
-                {!loadingSlots && slots.length === 0 ? (
-                  <Text style={styles.muted}>{t('serviceHub.emptySlots')}</Text>
-                ) : null}
-                <Text style={styles.subLabel}>{t('serviceHub.selectPackage')}</Text>
-                {filteredPackages.map((p) => {
-                  const sel = p.id === selectedPackageId;
-                  return (
-                    <Pressable
-                      key={p.id}
-                      style={[styles.pick, sel && styles.pickOn]}
-                      onPress={() => setSelectedPackageId(p.id)}
-                    >
-                      <Text style={styles.pickTxt}>
-                        {p.packageType.name} · {p.remainingSessions}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-                <Pressable
-                  {...ripple}
-                  style={({ pressed }) => [
-                    styles.btnPrimary,
-                    pressed && styles.btnPrimaryPressed,
-                    (!selectedSlotId || booking || filteredPackages.length === 0) &&
-                      styles.disabled,
-                  ]}
-                  disabled={!selectedSlotId || booking || filteredPackages.length === 0}
-                  onPress={() => {
-                    confirmBook().catch(() => {});
-                  }}
-                >
-                  {booking ? (
-                    <ActivityIndicator color="#fff" />
+                  {(() => {
+                    const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
+                    const loc = i18n.language.startsWith('tr') ? 'tr-TR' : undefined;
+                    const longDay = selectedDayDate.toLocaleDateString(loc, {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    });
+                    return <Text style={styles.calendarSelectedDayLine}>{longDay}</Text>;
+                  })()}
+                  {loadingSlots ? (
+                    <ActivityIndicator color={premium.accentBlue} style={styles.mb} />
                   ) : (
-                    <Text style={styles.btnPrimaryTxt}>{t('serviceHub.confirmBook')}</Text>
+                    <View style={styles.hourList}>
+                      {hourBuckets.map((h) => {
+                        const selectedDayDate = weekDayDates[calendarDayIndex] ?? weekDayDates[0];
+                        const slot = findSlotInBucket(
+                          slots,
+                          calendarTrainer.id,
+                          selectedDayDate,
+                          h,
+                        );
+                        const full = slot ? slot.remainingCapacity < 1 : false;
+                        const sel = slot ? slot.id === selectedSlotId : false;
+                        return (
+                          <Pressable
+                            key={`hour-${h}`}
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: !slot || full, selected: sel }}
+                            disabled={!slot || full}
+                            onPress={() => {
+                              if (slot && !full) {
+                                setSelectedSlotId(slot.id);
+                              }
+                            }}
+                            style={({ pressed }) => [
+                              styles.hourCard,
+                              sel && styles.hourCardOn,
+                              full && styles.hourCardFull,
+                              (!slot || full) && styles.hourCardMuted,
+                              pressed && slot && !full && styles.hourCardPressed,
+                            ]}
+                          >
+                            <Text style={styles.hourCardBucket}>{formatHourBucketLabel(h)}</Text>
+                            {slot ? (
+                              <>
+                                <Text style={styles.hourCardSpan} numberOfLines={1}>
+                                  {formatSlotTimeSpan(slot, i18n.language)}
+                                </Text>
+                                <Text style={styles.hourCardSpots}>
+                                  {t('serviceHub.spotsLeft', { n: slot.remainingCapacity })}
+                                </Text>
+                              </>
+                            ) : (
+                              <Text style={styles.hourCardDash}>
+                                {t('serviceHub.calendarNoSlot')}
+                              </Text>
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
                   )}
-                </Pressable>
-              </ScrollView>
+                  {!loadingSlots && slots.length === 0 ? (
+                    <Text style={styles.muted}>{t('serviceHub.emptySlots')}</Text>
+                  ) : null}
+                  <Text style={styles.subLabel}>{t('serviceHub.selectPackage')}</Text>
+                  {filteredPackages.map((p) => {
+                    const sel = p.id === selectedPackageId;
+                    return (
+                      <Pressable
+                        key={p.id}
+                        style={[styles.pick, sel && styles.pickOn]}
+                        onPress={() => setSelectedPackageId(p.id)}
+                      >
+                        <Text style={styles.pickTxt}>
+                          {p.packageType.name} · {p.remainingSessions}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <View
+                  style={[
+                    styles.calendarStickyFooter,
+                    { paddingBottom: Math.max(insets.bottom, 12) },
+                  ]}
+                >
+                  <Text style={styles.footerStatus}>
+                    {selectedSlot
+                      ? t('serviceHub.footerSlotSelected', {
+                          time: formatSlotTimeSpan(selectedSlot, i18n.language),
+                        })
+                      : t('serviceHub.footerPickSlot')}
+                  </Text>
+                  {selectedPackageForFooter ? (
+                    <Text style={styles.footerPackage} numberOfLines={2}>
+                      {t('serviceHub.footerPackageLine', {
+                        name: selectedPackageForFooter.packageType.name,
+                        n: selectedPackageForFooter.remainingSessions,
+                      })}
+                    </Text>
+                  ) : selectedSlot && filteredPackages.length > 0 ? (
+                    <Text style={styles.footerNeedPackage}>
+                      {t('serviceHub.footerNeedPackage')}
+                    </Text>
+                  ) : null}
+                  <Pressable
+                    {...ripple}
+                    style={({ pressed }) => [
+                      styles.btnPrimary,
+                      pressed && styles.btnPrimaryPressed,
+                      (!selectedSlotId ||
+                        !selectedPackageId ||
+                        booking ||
+                        filteredPackages.length === 0) &&
+                        styles.disabled,
+                    ]}
+                    disabled={
+                      !selectedSlotId ||
+                      !selectedPackageId ||
+                      booking ||
+                      filteredPackages.length === 0
+                    }
+                    onPress={() => {
+                      confirmBook().catch(() => {});
+                    }}
+                  >
+                    {booking ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.btnPrimaryTxt}>{t('serviceHub.confirmBook')}</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </>
             ) : null}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {showDatePicker && Platform.OS === 'android' ? (
+        <DateTimePicker
+          value={iosPickerValue}
+          mode="date"
+          display="default"
+          minimumDate={new Date()}
+          maximumDate={addDays(new Date(), 365)}
+          onChange={onAndroidDateChange}
+        />
+      ) : null}
+
+      <Modal
+        visible={showDatePicker && Platform.OS === 'ios'}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <Pressable style={styles.datePickerBackdrop} onPress={() => setShowDatePicker(false)}>
+          <View style={styles.datePickerSheet} onStartShouldSetResponder={() => true}>
+            <DateTimePicker
+              value={iosPickerValue}
+              mode="date"
+              display="spinner"
+              themeVariant="dark"
+              minimumDate={new Date()}
+              maximumDate={addDays(new Date(), 365)}
+              onChange={(_, d) => {
+                if (d) {
+                  setIosPickerValue(d);
+                }
+              }}
+            />
+            <View style={styles.datePickerActions}>
+              <Pressable
+                onPress={() => setShowDatePicker(false)}
+                style={styles.datePickerCancelBtn}
+              >
+                <Text style={styles.datePickerCancelTxt}>{t('booking.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  applyPickedDate(iosPickerValue);
+                  setShowDatePicker(false);
+                }}
+                style={styles.datePickerDoneBtn}
+              >
+                <Text style={styles.datePickerDoneTxt}>{t('serviceHub.datePickerDone')}</Text>
+              </Pressable>
+            </View>
           </View>
         </Pressable>
       </Modal>
@@ -1319,6 +1521,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 6,
   },
+  calendarHeaderTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
   calendarModalTitle: {
     fontSize: 20,
     fontWeight: '800',
@@ -1334,6 +1540,111 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     lineHeight: 18,
     marginBottom: 8,
+  },
+  calendarScrollContent: {
+    paddingBottom: 8,
+    flexGrow: 0,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  todayShortcutBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+  },
+  todayShortcutBtnPressed: { opacity: 0.88 },
+  todayShortcutTxt: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: premium.accentGreen,
+  },
+  pickDateBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(56,189,248,0.1)',
+    alignItems: 'center',
+  },
+  pickDateBtnPressed: { opacity: 0.88 },
+  pickDateTxt: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#7dd3fc',
+  },
+  calendarStickyFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: premium.glassBorder,
+    paddingTop: 12,
+    paddingHorizontal: 4,
+    backgroundColor: '#0f172a',
+  },
+  footerStatus: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: premium.text,
+    marginBottom: 4,
+  },
+  footerPackage: {
+    fontSize: 12,
+    color: premium.textMuted,
+    marginBottom: 8,
+  },
+  footerNeedPackage: {
+    fontSize: 12,
+    color: '#fcd34d',
+    marginBottom: 8,
+  },
+  datePickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  datePickerSheet: {
+    backgroundColor: '#0f172a',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  datePickerCancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  datePickerCancelTxt: {
+    fontSize: 16,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
+  datePickerDoneBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  datePickerDoneTxt: {
+    fontSize: 16,
+    color: '#7dd3fc',
+    fontWeight: '800',
   },
   calendarPickDayLabel: {
     fontSize: 12,

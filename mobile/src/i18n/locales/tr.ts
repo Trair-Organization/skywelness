@@ -243,6 +243,13 @@ export default {
     calendarWeeklyHint:
       'Hafta için önce gün seçin. Aşağıda sadece o güne ait 06:00–22:00 arası saat dilimleri listelenir; müsait karta dokunup paket ile onaylayın.',
     calendarNoSlot: '—',
+    todayShortcut: 'Bugün',
+    pickDate: 'Tarih',
+    datePickerDone: 'Tamam',
+    footerPickSlot: 'Müsait bir saat dilimine dokunun.',
+    footerSlotSelected: 'Seçili saat: {{time}}',
+    footerPackageLine: 'Paket: {{name}} · {{n}} seans kaldı',
+    footerNeedPackage: 'Aşağıdan veya yukarıdan bir paket seçin.',
     weekPrev: 'Önceki',
     weekNext: 'Sonraki',
     emptySlots: 'Bu hafta için yayınlanmış boş slot bulunmuyor.',

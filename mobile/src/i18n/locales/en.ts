@@ -243,6 +243,13 @@ export default {
     calendarWeeklyHint:
       'Choose a day for this week, then select a time slot (06:00–22:00). Pick a package and confirm to book.',
     calendarNoSlot: '—',
+    todayShortcut: 'Today',
+    pickDate: 'Date',
+    datePickerDone: 'Done',
+    footerPickSlot: 'Tap an available time slot above.',
+    footerSlotSelected: 'Selected: {{time}}',
+    footerPackageLine: 'Package: {{name}} · {{n}} sessions left',
+    footerNeedPackage: 'Select a package above.',
     weekPrev: 'Prev',
     weekNext: 'Next',
     emptySlots: 'No published slots in this week.',
