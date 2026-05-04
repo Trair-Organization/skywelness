@@ -483,6 +483,13 @@ export function MemberHomeScreen() {
               <Text style={styles.heroBrand}>{tenant.name}</Text>
               <Text style={styles.heroTag}>{t('home.hubTagline')}</Text>
             </View>
+            <Pressable
+              {...ripple}
+              style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed]}
+              onPress={() => navigation.navigate('SpecialLessons')}
+            >
+              <Text style={styles.notifyIcon}>🔔</Text>
+            </Pressable>
           </View>
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>
@@ -1004,6 +1011,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: premium.textMuted,
+  },
+  notifyBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifyBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  notifyIcon: {
+    fontSize: 17,
   },
   heroStats: {
     flexDirection: 'row',

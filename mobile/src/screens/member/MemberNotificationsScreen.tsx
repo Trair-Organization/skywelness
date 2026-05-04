@@ -7,7 +7,7 @@ import { premium } from '../../theme/premiumTheme';
 
 const TAB_BAR_PAD = 72;
 
-export function MemberNotificationsScreen() {
+export function MemberSpecialLessonsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -20,10 +20,10 @@ export function MemberNotificationsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.screenTitle}>{t('tabs.notifications')}</Text>
+        <Text style={styles.screenTitle}>{t('tabs.specialLessons')}</Text>
         <GlassCard>
-          <Text style={styles.cardTitle}>{t('notifications.title')}</Text>
-          <Text style={styles.muted}>{t('notifications.body')}</Text>
+          <Text style={styles.cardTitle}>{t('specialLessons.title')}</Text>
+          <Text style={styles.muted}>{t('specialLessons.body')}</Text>
         </GlassCard>
       </ScrollView>
     </GradientBackground>

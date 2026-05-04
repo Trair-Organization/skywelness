@@ -180,7 +180,7 @@ export default {
   tabs: {
     home: 'Home',
     reservations: 'My bookings',
-    notifications: 'Notifications',
+    specialLessons: 'Personal Training',
     events: 'Events',
     profile: 'Profile',
     openReservations: 'Open my bookings tab',
@@ -192,13 +192,15 @@ export default {
     subtitle: 'Upcoming and past sessions',
     empty: 'No reservations yet. Plan a session from the home tab.',
   },
-  notifications: {
-    title: 'Notifications',
-    body: 'Club announcements and reminders will appear here soon.',
+  specialLessons: {
+    title: 'Personal training',
+    body: 'Your personal training packages, trainer plans, and upcoming one-on-one sessions will be listed in this area.',
   },
   eventsTab: {
     title: 'Club events',
     body: 'See upcoming events on the home screen, join or leave from there. Contact reception for the full schedule.',
+    refresh: 'Refresh all events',
+    joined: 'Joined',
   },
   session: {
     title: 'Session',

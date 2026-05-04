@@ -180,7 +180,7 @@ export default {
   tabs: {
     home: 'Ana sayfa',
     reservations: 'Rezervasyonlarım',
-    notifications: 'Bildirimler',
+    specialLessons: 'Özel Dersler',
     events: 'Etkinlikler',
     profile: 'Profil',
     openReservations: 'Rezervasyonlarım sekmesi',
@@ -192,13 +192,15 @@ export default {
     subtitle: 'Yaklaşan ve geçmiş seanslar',
     empty: 'Henüz rezervasyon görünmüyor. Ana sayfadan seans planlayabilirsiniz.',
   },
-  notifications: {
-    title: 'Bildirimler',
-    body: 'Kulüp duyuruları ve hatırlatmalar yakında bu ekranda görünecek.',
+  specialLessons: {
+    title: 'Özel dersler',
+    body: 'Özel ders paketleriniz, eğitmen planlarınız ve yaklaşan birebir seanslarınız bu alanda listelenecek.',
   },
   eventsTab: {
     title: 'Kulüp etkinlikleri',
     body: 'Yaklaşan etkinlikleri ana sayfadaki “Yaklaşan etkinlikler” bölümünden görebilir, katılabilir veya ayrılabilirsiniz. Tüm program için resepsiyon ile iletişime geçin.',
+    refresh: 'Bütün etkinlikleri yenile',
+    joined: 'Katıldınız',
   },
   session: {
     title: 'Oturum',
