@@ -10,12 +10,13 @@ VALUES (
 ON CONFLICT (subdomain) DO NOTHING;
 
 -- Booking fixtures (local Docker seed + CI): e2e trainer/member, package, bookable slot ~7 days ahead
-INSERT INTO "user" (id, tenant_id, email, password_hash, first_name, last_name, phone, role, failed_login_attempts)
+INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, failed_login_attempts)
 VALUES
   (
     '00000000-0000-4000-8000-000000000011',
     '00000000-0000-4000-8000-000000000001',
     'trainer@e2e.demo',
+    'e2e.trainer',
     '$2b$12$d2JP1oss8GqTfBx8iPcnR.fT3.ojU/WMeLG2UBPbAamq54y8SOldi',
     'E2E',
     'Trainer',
@@ -27,6 +28,7 @@ VALUES
     '00000000-0000-4000-8000-000000000021',
     '00000000-0000-4000-8000-000000000001',
     'member@e2e.demo',
+    'e2e.member',
     '$2b$12$BNWcbkK.AINB3MoJpxtSb.82.84CkFAO19GDu.dzMPYVrnfBMEa.y',
     'E2E',
     'Member',
@@ -36,11 +38,12 @@ VALUES
   )
 ON CONFLICT (tenant_id, email) DO NOTHING;
 
-INSERT INTO "user" (id, tenant_id, email, password_hash, first_name, last_name, phone, role, failed_login_attempts)
+INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, failed_login_attempts)
 VALUES (
   '00000000-0000-4000-8000-0000000000a1',
   '00000000-0000-4000-8000-000000000001',
   'admin@e2e.demo',
+  'e2e.admin',
   '$2b$12$bveaGLRAIalJTwopjRHex.jRxOyxzl/OnwszfjmU989BpFF6fxaKy',
   'E2E',
   'Admin',
@@ -133,12 +136,13 @@ VALUES (
 )
 ON CONFLICT (subdomain) DO NOTHING;
 
-INSERT INTO "user" (id, tenant_id, email, password_hash, first_name, last_name, phone, role, failed_login_attempts)
+INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, failed_login_attempts)
 VALUES
   (
     '00000000-0000-4000-8000-000000000023',
     '00000000-0000-4000-8000-000000000002',
     'egitmen@skylandwellness.demo',
+    'skyland.trainer',
     '$2b$12$d2JP1oss8GqTfBx8iPcnR.fT3.ojU/WMeLG2UBPbAamq54y8SOldi',
     'Skyland',
     'Eğitmen',
@@ -150,6 +154,7 @@ VALUES
     '00000000-0000-4000-8000-000000000022',
     '00000000-0000-4000-8000-000000000002',
     'uye@skylandwellness.demo',
+    'skyland.member',
     '$2b$12$BNWcbkK.AINB3MoJpxtSb.82.84CkFAO19GDu.dzMPYVrnfBMEa.y',
     'Skyland',
     'Üye',

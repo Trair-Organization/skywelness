@@ -21,7 +21,7 @@
     "migration:run": "npm run build && node ../node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js",
     "migration:revert": "npm run build && node ../node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
     "migration:generate": "npm run build && node ../node_modules/typeorm/cli.js migration:generate src/database/migrations/Migration -d dist/database/data-source.js",
-    "db:seed": "docker compose -f ../docker-compose.yml exec -T postgres psql -U rezidans -d rezidans_dev -f - < scripts/seed-dev.sql"
+    "db:seed": "docker compose -f ../docker-compose.yml exec -T postgres psql -v ON_ERROR_STOP=1 -U rezidans -d rezidans_dev -f - < scripts/seed-dev.sql"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
