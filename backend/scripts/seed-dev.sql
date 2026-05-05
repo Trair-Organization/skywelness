@@ -17,7 +17,7 @@ VALUES
     '00000000-0000-4000-8000-000000000001',
     'trainer@e2e.demo',
     'e2e.trainer',
-    '$2b$12$d2JP1oss8GqTfBx8iPcnR.fT3.ojU/WMeLG2UBPbAamq54y8SOldi',
+    '$2b$12$kDeXceUmdvs.igrf01WlP.9cROiZeq5XgEmx6XeMnWj43TkVssEtO',
     'E2E',
     'Trainer',
     NULL,
@@ -29,14 +29,17 @@ VALUES
     '00000000-0000-4000-8000-000000000001',
     'member@e2e.demo',
     'e2e.member',
-    '$2b$12$BNWcbkK.AINB3MoJpxtSb.82.84CkFAO19GDu.dzMPYVrnfBMEa.y',
+    '$2b$12$Q8ol7G7AivwjbCEJSsukc.vm9bXG8OOJm34pYkJuv7FL.sWO6inqu',
     'E2E',
     'Member',
     NULL,
     'member',
     0
   )
-ON CONFLICT (tenant_id, email) DO NOTHING;
+ON CONFLICT (tenant_id, email) DO UPDATE SET
+  username = EXCLUDED.username,
+  password_hash = EXCLUDED.password_hash,
+  role = EXCLUDED.role;
 
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, failed_login_attempts)
 VALUES (
@@ -44,14 +47,17 @@ VALUES (
   '00000000-0000-4000-8000-000000000001',
   'admin@e2e.demo',
   'e2e.admin',
-  '$2b$12$bveaGLRAIalJTwopjRHex.jRxOyxzl/OnwszfjmU989BpFF6fxaKy',
+  '$2b$12$DyHq9iRdkJtQTIaZXTgB.ORyqqybrRtdf0JwFThyJ1A8Hq.q85nJG',
   'E2E',
   'Admin',
   NULL,
   'administrator',
   0
 )
-ON CONFLICT (tenant_id, email) DO NOTHING;
+ON CONFLICT (tenant_id, email) DO UPDATE SET
+  username = EXCLUDED.username,
+  password_hash = EXCLUDED.password_hash,
+  role = EXCLUDED.role;
 
 INSERT INTO trainer (id, user_id, tenant_id, total_sessions)
 VALUES (
@@ -143,7 +149,7 @@ VALUES
     '00000000-0000-4000-8000-000000000002',
     'egitmen@skylandwellness.demo',
     'skyland.trainer',
-    '$2b$12$d2JP1oss8GqTfBx8iPcnR.fT3.ojU/WMeLG2UBPbAamq54y8SOldi',
+    '$2b$12$kDeXceUmdvs.igrf01WlP.9cROiZeq5XgEmx6XeMnWj43TkVssEtO',
     'Skyland',
     'Eğitmen',
     NULL,
@@ -155,14 +161,17 @@ VALUES
     '00000000-0000-4000-8000-000000000002',
     'uye@skylandwellness.demo',
     'skyland.member',
-    '$2b$12$BNWcbkK.AINB3MoJpxtSb.82.84CkFAO19GDu.dzMPYVrnfBMEa.y',
+    '$2b$12$Q8ol7G7AivwjbCEJSsukc.vm9bXG8OOJm34pYkJuv7FL.sWO6inqu',
     'Skyland',
     'Üye',
     NULL,
     'member',
     0
   )
-ON CONFLICT (tenant_id, email) DO NOTHING;
+ON CONFLICT (tenant_id, email) DO UPDATE SET
+  username = EXCLUDED.username,
+  password_hash = EXCLUDED.password_hash,
+  role = EXCLUDED.role;
 
 INSERT INTO trainer (id, user_id, tenant_id, total_sessions)
 VALUES (

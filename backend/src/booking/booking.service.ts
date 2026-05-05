@@ -603,7 +603,7 @@ export class BookingService {
       const reservation = await em
         .createQueryBuilder(Reservation, 'r')
         .setLock('pessimistic_write')
-        .leftJoinAndSelect('r.timeSlot', 'slot')
+        .innerJoinAndSelect('r.timeSlot', 'slot')
         .where('r.id = :id', { id: reservationId })
         .andWhere('r.userId = :userId', { userId: user.id })
         .andWhere('r.tenantId = :tenantId', { tenantId: user.tenantId })
@@ -681,6 +681,39 @@ export class BookingService {
       this.logger.error(`afterReservationCancelled failed: ${msg}`);
     });
     return result;
+  }
+
+  async listMyNotifications(user: User, limit = 50) {
+    const rows = await this.notificationsRepo.find({
+      where: { userId: user.id },
+      order: { createdAt: 'DESC' },
+      take: Math.min(Math.max(limit, 1), 100),
+    });
+    return rows.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      data: n.data,
+      isRead: n.isRead,
+      readAt: n.readAt,
+      createdAt: n.createdAt,
+    }));
+  }
+
+  async markNotificationRead(user: User, notificationId: string) {
+    const row = await this.notificationsRepo.findOne({
+      where: { id: notificationId, userId: user.id },
+    });
+    if (!row) {
+      throw new NotFoundException('Notification not found');
+    }
+    if (!row.isRead) {
+      row.isRead = true;
+      row.readAt = new Date();
+      await this.notificationsRepo.save(row);
+    }
+    return { ok: true as const, id: row.id, isRead: row.isRead, readAt: row.readAt };
   }
 
   async joinWaitingList(user: User, dto: JoinWaitingListDto) {

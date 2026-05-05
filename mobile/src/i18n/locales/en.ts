@@ -269,7 +269,10 @@ export default {
   forgot: {
     link: 'Forgot password?',
     title: 'Reset password',
-    body: 'Password reset is not in the app yet. Please contact your club for now; email-based reset is planned next.',
+    body: 'Enter your email and we will send a password reset link.',
+    submit: 'Send reset link',
+    sentBody: 'If this email exists in our system, a password reset link has been sent.',
+    sendFailed: 'Could not send password reset request.',
   },
   tabs: {
     home: 'Home',
@@ -277,9 +280,19 @@ export default {
     specialLessons: 'Personal Training',
     massage: 'Massage',
     events: 'Events',
+    notifications: 'Notifications',
     network: 'My Network',
     profile: 'Profile',
     openReservations: 'Open my bookings tab',
+  },
+  notifications: {
+    title: 'Notifications',
+    loading: 'Loading...',
+    refresh: 'Refresh',
+    empty: 'You have no notifications yet.',
+    markRead: 'Mark as read',
+    loadFailed: 'Could not load notifications.',
+    markReadFailed: 'Could not update notification.',
   },
   network: {
     title: 'Trainer-student network',

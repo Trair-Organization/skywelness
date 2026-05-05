@@ -4,6 +4,7 @@ export type RootStackParamList = {
   MemberEntry: undefined;
   CorporateEntry: undefined;
   Login: undefined;
+  ForgotPassword: undefined;
   Register: undefined;
   TrainerRegister: undefined;
   PendingApproval: undefined;

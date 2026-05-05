@@ -269,7 +269,10 @@ export default {
   forgot: {
     link: 'Şifremi unuttum',
     title: 'Şifre sıfırlama',
-    body: 'Bu özellik henüz uygulamada yok. Şimdilik kulüp yönetiminizle iletişime geçin; yakında e-posta ile sıfırlama ekleyeceğiz.',
+    body: 'E-posta adresinizi girin, şifre yenileme bağlantısını gönderelim.',
+    submit: 'Sıfırlama bağlantısı gönder',
+    sentBody: 'Eğer bu e-posta sistemde kayıtlıysa, şifre yenileme bağlantısı gönderildi.',
+    sendFailed: 'Şifre sıfırlama isteği gönderilemedi.',
   },
   tabs: {
     home: 'Ana sayfa',
@@ -277,9 +280,19 @@ export default {
     specialLessons: 'Özel Dersler',
     massage: 'Masaj',
     events: 'Etkinlikler',
+    notifications: 'Bildirimler',
     network: 'Ağım',
     profile: 'Profil',
     openReservations: 'Rezervasyonlarım sekmesi',
+  },
+  notifications: {
+    title: 'Bildirimler',
+    loading: 'Yükleniyor...',
+    refresh: 'Yenile',
+    empty: 'Henüz bildiriminiz yok.',
+    markRead: 'Okundu işaretle',
+    loadFailed: 'Bildirimler yüklenemedi.',
+    markReadFailed: 'Bildirim güncellenemedi.',
   },
   network: {
     title: 'Eğitmen-öğrenci ağı',

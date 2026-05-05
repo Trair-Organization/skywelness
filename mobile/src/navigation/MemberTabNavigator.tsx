@@ -10,6 +10,7 @@ import {
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
 import { MemberTrainerNetworkScreen } from '../screens/member/MemberTrainerNetworkScreen';
+import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -82,6 +83,14 @@ export function MemberTabNavigator() {
         options={{
           tabBarLabel: t('tabs.events'),
           tabBarIcon: ({ focused }) => tabIcon('◎', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={MemberNotificationsScreen}
+        options={{
+          tabBarLabel: t('tabs.notifications'),
+          tabBarIcon: ({ focused }) => tabIcon('✦', focused),
         }}
       />
       <Tab.Screen

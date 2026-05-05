@@ -13,6 +13,11 @@ type ReservationResBody = {
   status: string;
   package: { remainingSessions: number };
 };
+type NotificationRow = {
+  id: string;
+  type: string;
+  isRead: boolean;
+};
 
 describe('Booking (e2e)', () => {
   let app: INestApplication<App>;
@@ -48,6 +53,20 @@ describe('Booking (e2e)', () => {
   });
 
   it('member lists trainers, availability, books and cancels', async () => {
+    const dataSource = app.get(DataSource);
+    await dataSource.query(
+      `DELETE FROM reservation WHERE user_id = $1::uuid AND tenant_id = $2::uuid`,
+      ['00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000001'],
+    );
+    await dataSource.query(
+      `UPDATE time_slot SET booked_count = (
+        SELECT COUNT(*)::int
+        FROM reservation r
+        WHERE r.time_slot_id = time_slot.id
+          AND r.status IN ('pending', 'confirmed')
+      )`,
+    );
+
     const login = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({
@@ -117,6 +136,20 @@ describe('Booking (e2e)', () => {
     const cancelledBody = cancelled.body as ReservationResBody;
     expect(cancelledBody.status).toBe('cancelled');
     expect(cancelledBody.package.remainingSessions).toBe(5);
+
+    const notifications = await request(app.getHttpServer())
+      .get('/api/v1/notifications')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const rows = notifications.body as NotificationRow[];
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const unread = rows.find((x) => !x.isRead);
+    if (unread) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/notifications/${unread.id}/read`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(201);
+    }
   });
 
   it('rejects X-Tenant-Subdomain that does not match the session', async () => {
@@ -151,6 +184,13 @@ describe('Booking (e2e)', () => {
       `DELETE FROM waiting_list WHERE time_slot_id = $1::uuid AND user_id = $2::uuid`,
       ['00000000-0000-4000-8000-000000000043', '00000000-0000-4000-8000-000000000021'],
     );
+    await dataSource.query(
+      `DELETE FROM reservation WHERE time_slot_id = $1::uuid AND user_id = $2::uuid`,
+      ['00000000-0000-4000-8000-000000000043', '00000000-0000-4000-8000-000000000021'],
+    );
+    await dataSource.query(`UPDATE time_slot SET booked_count = capacity WHERE id = $1::uuid`, [
+      '00000000-0000-4000-8000-000000000043',
+    ]);
 
     const login = await request(app.getHttpServer())
       .post('/api/v1/auth/login')

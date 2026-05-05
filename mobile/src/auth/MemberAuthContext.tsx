@@ -28,7 +28,7 @@ type MemberAuthContextValue = {
   setPassword: (v: string) => void;
   token: string | null;
   user: MeUser | null;
-  resolveTenantByCode: (explicitSubdomain?: string) => Promise<boolean>;
+  resolveTenantByCode: (explicitSubdomain?: string, silent?: boolean) => Promise<boolean>;
   loadTenantDirectory: () => Promise<void>;
   clearClubSelection: () => void;
   login: () => Promise<void>;
@@ -174,11 +174,13 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resolveTenantByCode = useCallback(
-    async (explicitSubdomain?: string) => {
+    async (explicitSubdomain?: string, silent = false) => {
       const raw = explicitSubdomain !== undefined ? explicitSubdomain : subdomain;
       const s = raw.trim().toLowerCase();
       if (!s) {
-        Alert.alert(t('tenant.section'), t('tenant.enterSubdomain'));
+        if (!silent) {
+          Alert.alert(t('tenant.section'), t('tenant.enterSubdomain'));
+        }
         return false;
       }
       if (explicitSubdomain !== undefined) {
@@ -195,14 +197,16 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         const isNetworkFailure =
           e instanceof TypeError && e.message.toLowerCase().includes('network request failed');
-        Alert.alert(
-          t('tenant.section'),
-          e instanceof ApiError
-            ? localizeApiMessage(t, e.message, 'tenant.loadFailed')
-            : isNetworkFailure
-              ? t('tenant.networkFailed')
-              : t('tenant.loadFailed'),
-        );
+        if (!silent) {
+          Alert.alert(
+            t('tenant.section'),
+            e instanceof ApiError
+              ? localizeApiMessage(t, e.message, 'tenant.loadFailed')
+              : isNetworkFailure
+                ? t('tenant.networkFailed')
+                : t('tenant.loadFailed'),
+          );
+        }
         return false;
       } finally {
         setLoadingTenant(false);

@@ -270,4 +270,36 @@ ${extra}
     ].join('\n');
     await this.send({ to: params.to, subject, html, text });
   }
+
+  async sendPasswordReset(params: {
+    to: string;
+    firstName: string;
+    clubName: string;
+    resetToken: string;
+  }): Promise<void> {
+    const appUrl = this.config.get<string>('APP_BASE_URL')?.trim() || 'https://skywellness.app';
+    const resetUrl = `${appUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(params.resetToken)}`;
+    const subject = `${params.clubName} — Şifre sıfırlama talebi`;
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.firstName)},</p>
+<p style="margin:0 0 16px;">Şifre sıfırlama talebiniz alındı. 30 dakika içinde aşağıdaki bağlantıyı kullanabilirsiniz.</p>
+<p style="margin:0 0 16px;"><a href="${escapeHtml(resetUrl)}" style="color:#38bdf8;">Şifremi sıfırla</a></p>
+<p style="margin:0;font-size:13px;color:#94a3b8;">Bu işlemi siz yapmadıysanız bu e-postayı görmezden gelebilirsiniz.</p>`;
+    const html = emailShell({
+      title: 'Şifre sıfırlama',
+      previewText: 'Şifrenizi yenilemek için bağlantı',
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.firstName},`,
+      '',
+      'Şifre sıfırlama talebiniz alındı.',
+      'Aşağıdaki bağlantı 30 dakika geçerlidir:',
+      resetUrl,
+      '',
+      `${params.clubName}`,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
 }

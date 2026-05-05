@@ -1,5 +1,5 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -17,12 +17,27 @@ export function LoginScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { tenant, email, setEmail, password, setPassword, loadingAuth, login, clearClubSelection } =
-    useMemberAuth();
+  const {
+    tenant,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loadingAuth,
+    login,
+    clearClubSelection,
+    resolveTenantByCode,
+  } = useMemberAuth();
   const [showPassword, setShowPassword] = useState(false);
   const title = tenant
     ? t('login.welcomeClub', { club: tenant.name })
     : t('onboarding.welcomeBack');
+  useEffect(() => {
+    if (tenant) {
+      return;
+    }
+    resolveTenantByCode('independent-hub', true).catch(() => {});
+  }, [tenant, resolveTenantByCode]);
 
   return (
     <GradientBackground>
@@ -46,9 +61,7 @@ export function LoginScreen() {
           <Text style={styles.clubLine}>
             {tenant.name} · {tenant.subdomain}
           </Text>
-        ) : (
-          <Text style={styles.warn}>{t('login.needTenant')}</Text>
-        )}
+        ) : null}
         <GlassCard style={styles.card}>
           <PremiumInput
             label={t('login.emailLabel')}
@@ -80,7 +93,7 @@ export function LoginScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => {
-              Alert.alert(t('forgot.title'), t('forgot.body'));
+              navigation.navigate('ForgotPassword');
             }}
             style={styles.forgot}
           >
@@ -91,12 +104,12 @@ export function LoginScreen() {
             style={({ pressed }) => [
               styles.submitBtn,
               pressed && styles.submitBtnPressed,
-              (!tenant || loadingAuth) && styles.submitBtnDisabled,
+              loadingAuth && styles.submitBtnDisabled,
             ]}
             onPress={() => {
               login().catch(() => {});
             }}
-            disabled={!tenant || loadingAuth}
+            disabled={loadingAuth}
           >
             <Text style={styles.submitTxt}>{t('login.submit')}</Text>
           </Pressable>
@@ -145,11 +158,6 @@ const styles = StyleSheet.create({
   clubLine: {
     fontSize: 14,
     color: premium.textMuted,
-    marginBottom: 20,
-  },
-  warn: {
-    fontSize: 14,
-    color: premium.danger,
     marginBottom: 20,
   },
   card: {

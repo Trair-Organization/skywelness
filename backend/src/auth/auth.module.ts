@@ -9,6 +9,7 @@ import { TrainerApplication } from '../database/entities/trainer-application.ent
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
+import { MailModule } from '../mail/mail.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
@@ -38,6 +39,7 @@ import { JwtStrategy } from './jwt.strategy';
         };
       },
     }),
+    MailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

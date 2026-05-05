@@ -20,6 +20,7 @@ import { MemberPackagesController } from './member-packages.controller';
 import { ReservationsController } from './reservations.controller';
 import { TrainerNetworkController } from './trainer-network.controller';
 import { PackageRequestsController } from './package-requests.controller';
+import { NotificationsController } from './notifications.controller';
 import { WaitingListController } from './waiting-list.controller';
 
 @Module({
@@ -47,6 +48,7 @@ import { WaitingListController } from './waiting-list.controller';
     MemberPackagesController,
     PackageRequestsController,
     TrainerNetworkController,
+    NotificationsController,
   ],
   providers: [BookingService, RolesGuard],
 })

@@ -75,6 +75,12 @@ export class User {
   @Column({ type: 'int', default: 0, name: 'refresh_token_version' })
   refreshTokenVersion!: number;
 
+  @Column({ type: 'varchar', length: 128, nullable: true, name: 'reset_password_token_hash' })
+  resetPasswordTokenHash!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'reset_password_expires_at' })
+  resetPasswordExpiresAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

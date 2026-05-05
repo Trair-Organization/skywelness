@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'crypto';
 import { In, Repository } from 'typeorm';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
@@ -18,10 +19,13 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { RESERVED_SUBDOMAINS } from '../common/tenant/subdomain.constants';
+import { MailService } from '../mail/mail.service';
+import type { ForgotPasswordDto } from './dto/forgot-password.dto';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterIndependentTrainerDto } from './dto/register-independent-trainer.dto';
 import type { RegisterPartnerDto } from './dto/register-partner.dto';
 import type { RegisterDto } from './dto/register.dto';
+import type { ResetPasswordDto } from './dto/reset-password.dto';
 import type { UpdateMeDto } from './dto/update-me.dto';
 import type { JwtAccessPayload, JwtRefreshPayload } from './jwt-payload';
 
@@ -40,6 +44,7 @@ export class AuthService {
     private readonly trainerApplicationsRepo: Repository<TrainerApplication>,
     @InjectRepository(PartnerApplication)
     private readonly partnerApplicationsRepo: Repository<PartnerApplication>,
+    private readonly mail: MailService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -362,6 +367,64 @@ export class AuthService {
       applicationId: saved.id,
       status: saved.status,
     };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto, requestSubdomain?: string | null) {
+    const email = dto.email.trim().toLowerCase();
+    const resolvedSubdomain = dto.tenantSubdomain?.trim()
+      ? dto.tenantSubdomain.trim().toLowerCase()
+      : requestSubdomain?.trim().toLowerCase();
+    let user: User | null = null;
+    if (resolvedSubdomain) {
+      const tenant = await this.tenantsRepo.findOne({ where: { subdomain: resolvedSubdomain } });
+      if (tenant) {
+        user = await this.usersRepo.findOne({ where: { tenantId: tenant.id, email } });
+      }
+    } else {
+      user = await this.usersRepo.findOne({ where: { email } });
+    }
+
+    if (!user) {
+      return { ok: true as const };
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await this.usersRepo.update(
+      { id: user.id },
+      { resetPasswordTokenHash: tokenHash, resetPasswordExpiresAt: expiresAt },
+    );
+    const tenant = await this.tenantsRepo.findOne({
+      where: { id: user.tenantId },
+      select: ['name'],
+    });
+    void this.mail.sendPasswordReset({
+      to: user.email,
+      firstName: user.firstName,
+      clubName: tenant?.name ?? 'Wellness Club',
+      resetToken: rawToken,
+    });
+    return { ok: true as const };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const tokenHash = createHash('sha256').update(dto.token).digest('hex');
+    const user = await this.usersRepo.findOne({ where: { resetPasswordTokenHash: tokenHash } });
+    if (!user || !user.resetPasswordExpiresAt || user.resetPasswordExpiresAt <= new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+    const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    await this.usersRepo.update(
+      { id: user.id },
+      {
+        passwordHash,
+        resetPasswordTokenHash: null,
+        resetPasswordExpiresAt: null,
+        refreshTokenVersion: (user.refreshTokenVersion ?? 0) + 1,
+      },
+    );
+    return { ok: true as const };
   }
 
   async login(dto: LoginDto, requestSubdomain?: string | null) {

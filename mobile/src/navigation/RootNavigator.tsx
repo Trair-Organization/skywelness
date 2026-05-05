@@ -8,6 +8,7 @@ import { RegistrationTypeScreen } from '../screens/onboarding/RegistrationTypeSc
 import { MemberEntryScreen } from '../screens/onboarding/MemberEntryScreen';
 import { CorporateEntryScreen } from '../screens/onboarding/CorporateEntryScreen';
 import { LoginScreen } from '../screens/onboarding/LoginScreen';
+import { ForgotPasswordScreen } from '../screens/onboarding/ForgotPasswordScreen';
 import { RegisterScreen } from '../screens/onboarding/RegisterScreen';
 import { TrainerRegisterScreen } from '../screens/onboarding/TrainerRegisterScreen';
 import { MemberTabNavigator } from './MemberTabNavigator';
@@ -60,6 +61,7 @@ export function RootNavigator() {
         <Stack.Screen name="MemberEntry" component={MemberEntryScreen} />
         <Stack.Screen name="CorporateEntry" component={CorporateEntryScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="TrainerRegister" component={TrainerRegisterScreen} />
         <Stack.Screen name="PendingApproval" component={MemberPendingApprovalScreen} />
