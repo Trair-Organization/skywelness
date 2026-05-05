@@ -283,6 +283,8 @@ export default {
     footerSlotSelected: 'Seçili saat: {{time}}',
     footerPackageLine: 'Paket: {{name}} · {{n}} seans kaldı',
     footerNeedPackage: 'Aşağıdan veya yukarıdan bir paket seçin.',
+    footerNeedEligiblePackage:
+      'Bu eğitmen için kullanabileceğiniz paket görünmüyor. Paketiniz başka bir eğitmene atanmış olabilir.',
     weekPrev: 'Önceki',
     weekNext: 'Sonraki',
     emptySlots: 'Bu tarih aralığında yayınlanmış müsait slot yok.',

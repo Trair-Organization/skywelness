@@ -54,6 +54,7 @@ type MyPackageRow = {
   remainingSessions: number;
   expiresAt: string;
   status: string;
+  assignedTrainerId?: string | null;
   packageType: { id: string; name: string; sessionType: string };
 };
 
@@ -453,18 +454,18 @@ export function MemberServiceHubScreen({ mode }: Props) {
     setCalendarDayIndex(0);
   }, [calendarTrainer, sixDayPage]);
 
-  /** Ensure a package is selected when the booking modal is open (footer CTA needs it). */
+  /** Ensure an eligible package is selected for the currently opened trainer. */
   useEffect(() => {
-    if (!calendarTrainer || filteredPackages.length === 0) {
+    if (!calendarTrainer || calendarEligiblePackages.length === 0) {
       return;
     }
     setSelectedPackageId((prev) => {
-      if (prev && filteredPackages.some((p) => p.id === prev)) {
+      if (prev && calendarEligiblePackages.some((p) => p.id === prev)) {
         return prev;
       }
-      return filteredPackages[0]?.id ?? null;
+      return calendarEligiblePackages[0]?.id ?? null;
     });
-  }, [calendarTrainer, filteredPackages]);
+  }, [calendarTrainer, calendarEligiblePackages]);
 
   useEffect(() => {
     if (!packageRequestOpen) {
@@ -676,18 +677,27 @@ export function MemberServiceHubScreen({ mode }: Props) {
 
   const windowHeight = Dimensions.get('window').height;
 
+  const calendarEligiblePackages = useMemo(() => {
+    if (!calendarTrainer) {
+      return filteredPackages;
+    }
+    return filteredPackages.filter(
+      (pkg) => !pkg.assignedTrainerId || pkg.assignedTrainerId === calendarTrainer.id,
+    );
+  }, [filteredPackages, calendarTrainer]);
+
   const selectedPackageForFooter = useMemo(
-    () => filteredPackages.find((p) => p.id === selectedPackageId) ?? null,
-    [filteredPackages, selectedPackageId],
+    () => calendarEligiblePackages.find((p) => p.id === selectedPackageId) ?? null,
+    [calendarEligiblePackages, selectedPackageId],
   );
 
   const canConfirmCalendarBooking = useMemo(
     () =>
       Boolean(selectedSlotId) &&
       Boolean(selectedPackageId) &&
-      filteredPackages.length > 0 &&
+      calendarEligiblePackages.length > 0 &&
       !booking,
-    [selectedSlotId, selectedPackageId, filteredPackages.length, booking],
+    [selectedSlotId, selectedPackageId, calendarEligiblePackages.length, booking],
   );
 
   const ripple =
@@ -1255,7 +1265,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                     <Text style={styles.muted}>{t('serviceHub.emptySlots')}</Text>
                   ) : null}
                   <Text style={styles.subLabel}>{t('serviceHub.selectPackage')}</Text>
-                  {filteredPackages.map((p) => {
+                  {calendarEligiblePackages.map((p) => {
                     const sel = p.id === selectedPackageId;
                     return (
                       <Pressable
@@ -1290,7 +1300,13 @@ export function MemberServiceHubScreen({ mode }: Props) {
                         n: selectedPackageForFooter.remainingSessions,
                       })}
                     </Text>
-                  ) : selectedSlot && filteredPackages.length > 0 ? (
+                  ) : selectedSlot &&
+                    calendarEligiblePackages.length === 0 &&
+                    filteredPackages.length > 0 ? (
+                    <Text style={styles.footerNeedPackage}>
+                      {t('serviceHub.footerNeedEligiblePackage')}
+                    </Text>
+                  ) : selectedSlot && calendarEligiblePackages.length > 0 ? (
                     <Text style={styles.footerNeedPackage}>
                       {t('serviceHub.footerNeedPackage')}
                     </Text>

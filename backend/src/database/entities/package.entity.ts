@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { PackageStatus } from '../enums';
 import { PackageType } from './package-type.entity';
+import { Trainer } from './trainer.entity';
 import { User } from './user.entity';
 
 @Entity({ name: 'package' })
@@ -35,6 +36,13 @@ export class Package {
 
   @Column({ type: 'date', name: 'expires_at' })
   expiresAt!: string;
+
+  @Column({ type: 'uuid', nullable: true, name: 'assigned_trainer_id' })
+  assignedTrainerId!: string | null;
+
+  @ManyToOne(() => Trainer, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'assigned_trainer_id' })
+  assignedTrainer!: Trainer | null;
 
   @Column({ type: 'varchar', length: 32 })
   status!: PackageStatus;

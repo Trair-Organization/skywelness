@@ -282,6 +282,8 @@ export default {
     footerSlotSelected: 'Selected: {{time}}',
     footerPackageLine: 'Package: {{name}} · {{n}} sessions left',
     footerNeedPackage: 'Select a package above.',
+    footerNeedEligiblePackage:
+      'No package can be used with this trainer. Your package may be assigned to another trainer.',
     weekPrev: 'Prev',
     weekNext: 'Next',
     emptySlots: 'No published slots for this date range.',

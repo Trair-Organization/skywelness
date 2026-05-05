@@ -305,6 +305,7 @@ export class BookingService {
       remainingSessions: p.remainingSessions,
       expiresAt: p.expiresAt,
       status: p.status,
+      assignedTrainerId: p.assignedTrainerId ?? null,
       packageType: {
         id: p.packageType.id,
         name: p.packageType.name,
@@ -352,6 +353,9 @@ export class BookingService {
       }
       if (pkg.packageType.tenantId !== user.tenantId) {
         throw new ForbiddenException('Package does not belong to your tenant');
+      }
+      if (pkg.assignedTrainerId && pkg.assignedTrainerId !== slot.trainerId) {
+        throw new BadRequestException('This package is locked to another trainer');
       }
       if (pkg.status !== PackageStatus.ACTIVE) {
         throw new BadRequestException('Package is not active');
