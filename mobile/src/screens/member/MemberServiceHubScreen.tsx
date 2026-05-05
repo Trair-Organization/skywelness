@@ -262,6 +262,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
 
   const [packages, setPackages] = useState<MyPackageRow[]>([]);
   const [trainers, setTrainers] = useState<TrainerRow[]>([]);
+  const [allTrainers, setAllTrainers] = useState<TrainerRow[]>([]);
   const [reservations, setReservations] = useState<HubReservation[]>([]);
   const [loadingBoot, setLoadingBoot] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -298,9 +299,9 @@ export function MemberServiceHubScreen({ mode }: Props) {
     if (!packageRequestTrainerId) {
       return null;
     }
-    const tr = trainers.find((row) => row.id === packageRequestTrainerId);
+    const tr = allTrainers.find((row) => row.id === packageRequestTrainerId);
     return tr ? `${tr.user.firstName} ${tr.user.lastName}`.trim() : null;
-  }, [trainers, packageRequestTrainerId]);
+  }, [allTrainers, packageRequestTrainerId]);
 
   const filteredPackages = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -328,9 +329,10 @@ export function MemberServiceHubScreen({ mode }: Props) {
       return;
     }
     const q = new URLSearchParams({ sessionType: mode });
-    const [pkgs, trs, resv] = await Promise.all([
+    const [pkgs, trs, trsAll, resv] = await Promise.all([
       apiJson<MyPackageRow[]>('/my-packages', { token, tenantSubdomain: tenant.subdomain }),
       apiJson<TrainerRow[]>(`/trainers?${q}`, { token, tenantSubdomain: tenant.subdomain }),
+      apiJson<TrainerRow[]>('/trainers', { token, tenantSubdomain: tenant.subdomain }),
       apiJson<HubReservation[]>(`/reservations?limit=50&sessionType=${mode}`, {
         token,
         tenantSubdomain: tenant.subdomain,
@@ -338,6 +340,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
     ]);
     setPackages(pkgs);
     setTrainers(trs);
+    setAllTrainers(trsAll);
     setReservations(resv);
     setSelectedPackageId((prev) => {
       const usable = pkgs.find(
@@ -1456,7 +1459,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
               </View>
             ) : null}
             <ScrollView keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
-              {trainers.length > 0 ? (
+              {allTrainers.length > 0 ? (
                 <View style={styles.requestTrainerBlock}>
                   <Text style={styles.requestTrainerFieldLabel}>
                     {mode === 'massage'
@@ -1487,7 +1490,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   </Pressable>
                 </View>
               ) : (
-                <Text style={styles.muted}>{t('serviceHub.requestNoTrainersForPicker')}</Text>
+                <Text style={styles.muted}>{t('serviceHub.requestNoStaffForPicker')}</Text>
               )}
               <Text style={styles.muted}>{t(`${prefix}.requestHint`)}</Text>
               <TextInput
@@ -1551,7 +1554,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
                   {t('serviceHub.requestPickTrainerNone')}
                 </Text>
               </Pressable>
-              {trainers.map((tr) => {
+              {allTrainers.map((tr) => {
                 const name = `${tr.user.firstName} ${tr.user.lastName}`.trim();
                 const sel = tr.id === packageRequestTrainerId;
                 return (

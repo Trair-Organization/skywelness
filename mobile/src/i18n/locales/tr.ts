@@ -261,8 +261,8 @@ export default {
     requestPickTrainerPlaceholder: 'Listeden seçin (isteğe bağlı)',
     requestPickTrainerNone: 'Tercih belirtmek istemiyorum',
     requestPickTrainerSheetTitle: 'Ekip listesi',
-    requestNoTrainersForPicker:
-      'Bu hizmet için listelenen ekip üyesi yok; mesajınızı yazarak talebinizi iletebilirsiniz.',
+    requestNoStaffForPicker:
+      'Kulüpte listelenen eğitmen yok; mesajınızı yazarak talebinizi iletebilirsiniz.',
     requestSend: 'Talebi gönder',
     requestOk: 'Talebiniz kaydedildi. En kısa sürede sizinle iletişime geçilecektir.',
     requestFail: 'Talep gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',

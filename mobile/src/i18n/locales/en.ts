@@ -260,8 +260,8 @@ export default {
     requestPickTrainerPlaceholder: 'Tap to choose (optional)',
     requestPickTrainerNone: 'No preference',
     requestPickTrainerSheetTitle: 'Choose staff',
-    requestNoTrainersForPicker:
-      'No staff listed for this service yet; you can still send your message below.',
+    requestNoStaffForPicker:
+      'No trainers are listed for this club yet; you can still send your request with a note.',
     requestSend: 'Send request',
     requestOk: 'Your request was saved. The club will contact you soon.',
     requestFail: 'Could not send the request. Check your connection and try again.',
