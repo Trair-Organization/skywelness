@@ -34,6 +34,9 @@ export function TrainerRegisterScreen() {
   const [bio, setBio] = useState('');
   const [specialties, setSpecialties] = useState('');
   const [certifications, setCertifications] = useState('');
+  const [experienceYears, setExperienceYears] = useState('');
+  const [socialLinks, setSocialLinks] = useState('');
+  const [pricingNote, setPricingNote] = useState('');
   const [connectClub, setConnectClub] = useState(false);
   const [clubQuery, setClubQuery] = useState('');
   const [clubListOpen, setClubListOpen] = useState(false);
@@ -81,8 +84,34 @@ export function TrainerRegisterScreen() {
 
   const submit = async () => {
     const { firstName, lastName } = splitName(fullName);
-    if (!firstName || !email.trim() || !phone.trim() || !city.trim() || !bio.trim()) {
+    if (
+      !firstName ||
+      !email.trim() ||
+      !phone.trim() ||
+      !city.trim() ||
+      !bio.trim() ||
+      specialties
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean).length === 0
+    ) {
       Alert.alert(t('register.section'), t('trainerRegister.requiredError'));
+      return;
+    }
+    if (!username.trim()) {
+      Alert.alert(t('register.section'), t('register.usernameRequired'));
+      return;
+    }
+    if (!/^[a-z0-9çğıöşü_.-]{3,}$/.test(username.trim().toLocaleLowerCase('tr-TR'))) {
+      Alert.alert(t('register.section'), t('register.usernameInvalid'));
+      return;
+    }
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[^\s]{8,}$/.test(password)) {
+      Alert.alert(t('register.section'), t('register.passwordRules'));
+      return;
+    }
+    if (bio.trim().length < 20) {
+      Alert.alert(t('register.section'), t('trainerRegister.bioMinLength'));
       return;
     }
     setLoading(true);
@@ -109,6 +138,15 @@ export function TrainerRegisterScreen() {
               .split(',')
               .map((x) => x.trim())
               .filter(Boolean),
+            experienceYears:
+              experienceYears.trim().length > 0
+                ? Number.parseInt(experienceYears.trim(), 10) || 0
+                : undefined,
+            socialLinks: socialLinks
+              .split(',')
+              .map((x) => x.trim())
+              .filter(Boolean),
+            pricingNote: pricingNote.trim() || undefined,
             offersSessionTypes: ['personal_training'],
             preferredClubSubdomain: connectClub ? selectedClubSubdomain || undefined : undefined,
           }),
@@ -149,18 +187,36 @@ export function TrainerRegisterScreen() {
         <Text style={styles.title}>{t('trainerRegister.title')}</Text>
         <Text style={styles.subTitle}>{t('trainerRegister.subtitle')}</Text>
         <GlassCard style={styles.card}>
+          <Text style={styles.sectionTitle}>{t('trainerRegister.identitySection')}</Text>
           <PremiumInput
             label={t('onboarding.fullName')}
             value={fullName}
             onChangeText={setFullName}
+            placeholder={t('onboarding.fullNamePh')}
           />
-          <PremiumInput label={t('login.emailLabel')} value={email} onChangeText={setEmail} />
-          <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
+          <PremiumInput
+            label={t('login.emailLabel')}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <PremiumInput
+            label={t('register.phoneLabel')}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
           <PremiumInput label={t('trainerRegister.city')} value={city} onChangeText={setCity} />
+
+          <Text style={styles.sectionTitle}>{t('trainerRegister.accountSection')}</Text>
           <PremiumInput
             label={t('register.usernameLabel')}
             value={username}
             onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <PremiumInput
             label={t('login.passwordLabel')}
@@ -168,11 +224,14 @@ export function TrainerRegisterScreen() {
             secureTextEntry
             onChangeText={setPassword}
           />
+
+          <Text style={styles.sectionTitle}>{t('trainerRegister.profileSection')}</Text>
           <PremiumInput
             label={t('trainerRegister.bio')}
             value={bio}
             onChangeText={setBio}
             multiline
+            placeholder={t('trainerRegister.bioHint')}
           />
           <PremiumInput
             label={t('trainerRegister.specialties')}
@@ -185,6 +244,27 @@ export function TrainerRegisterScreen() {
             value={certifications}
             onChangeText={setCertifications}
             placeholder={t('trainerRegister.commaHint')}
+          />
+          <PremiumInput
+            label={t('trainerRegister.experienceYears')}
+            value={experienceYears}
+            onChangeText={setExperienceYears}
+            keyboardType="number-pad"
+            placeholder="0"
+          />
+          <PremiumInput
+            label={t('trainerRegister.socialLinks')}
+            value={socialLinks}
+            onChangeText={setSocialLinks}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder={t('trainerRegister.commaHint')}
+          />
+          <PremiumInput
+            label={t('trainerRegister.pricingNote')}
+            value={pricingNote}
+            onChangeText={setPricingNote}
+            placeholder={t('trainerRegister.pricingNoteHint')}
           />
           <Pressable
             style={styles.optionalClubToggle}
@@ -282,6 +362,14 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', color: premium.text },
   subTitle: { marginTop: 6, marginBottom: 12, color: premium.textMuted, fontSize: 14 },
   card: { marginTop: 8 },
+  sectionTitle: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+    letterSpacing: 0.45,
+    textTransform: 'uppercase',
+  },
   optionalClubToggle: {
     marginTop: 6,
     marginBottom: 10,
