@@ -15,6 +15,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterIndependentTrainerDto } from './dto/register-independent-trainer.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -28,6 +29,12 @@ export class AuthController {
   @HttpCode(201)
   register(@Body() dto: RegisterDto, @Req() req: Request) {
     return this.authService.register(dto, req.requestSubdomain ?? null);
+  }
+
+  @Post('register-trainer')
+  @HttpCode(201)
+  registerTrainer(@Body() dto: RegisterIndependentTrainerDto) {
+    return this.authService.registerIndependentTrainer(dto);
   }
 
   @Post('login')

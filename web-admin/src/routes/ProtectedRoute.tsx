@@ -20,7 +20,7 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (user.role !== 'administrator') {
+  if (user.role !== 'administrator' && user.role !== 'platform_admin') {
     return (
       <div className="shell narrow">
         <h1>{t('protected.deniedTitle')}</h1>

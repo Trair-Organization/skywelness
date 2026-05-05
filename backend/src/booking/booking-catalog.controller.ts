@@ -12,7 +12,7 @@ import { TrainersQueryDto } from './dto/trainers-query.dto';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
-@Roles(UserRole.MEMBER, UserRole.TRAINER, UserRole.ADMINISTRATOR)
+@Roles(UserRole.MEMBER, UserRole.TRAINER, UserRole.INDEPENDENT_TRAINER, UserRole.ADMINISTRATOR)
 export class BookingCatalogController {
   constructor(private readonly bookingService: BookingService) {}
 

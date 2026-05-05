@@ -6,6 +6,7 @@ import { useMemberAuth } from '../auth/MemberAuthContext';
 import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
 import { LoginScreen } from '../screens/onboarding/LoginScreen';
 import { RegisterScreen } from '../screens/onboarding/RegisterScreen';
+import { TrainerRegisterScreen } from '../screens/onboarding/TrainerRegisterScreen';
 import { MemberTabNavigator } from './MemberTabNavigator';
 import { MemberPendingApprovalScreen } from '../screens/MemberPendingApprovalScreen';
 import type { RootStackParamList } from './types';
@@ -24,9 +25,8 @@ export function RootNavigator() {
     }
     let target: keyof RootStackParamList = 'ClubConnect';
     if (user && token && tenant) {
-      const isMember = user.role === 'member';
       const pending = user.accountStatus === 'pending_approval';
-      target = isMember && pending ? 'PendingApproval' : 'Main';
+      target = pending ? 'PendingApproval' : 'Main';
     }
     if (lastTargetRef.current === target) {
       return;
@@ -55,6 +55,7 @@ export function RootNavigator() {
         <Stack.Screen name="ClubConnect" component={ClubConnectScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="TrainerRegister" component={TrainerRegisterScreen} />
         <Stack.Screen name="PendingApproval" component={MemberPendingApprovalScreen} />
         <Stack.Screen name="Main" component={MemberTabNavigator} />
       </Stack.Navigator>

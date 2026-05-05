@@ -14,6 +14,10 @@ import { Rating } from './entities/rating.entity';
 import { Reservation } from './entities/reservation.entity';
 import { Tenant } from './entities/tenant.entity';
 import { TimeSlot } from './entities/time-slot.entity';
+import { TrainerApplication } from './entities/trainer-application.entity';
+import { TrainerMemberLink } from './entities/trainer-member-link.entity';
+import { TrainerMemberNote } from './entities/trainer-member-note.entity';
+import { TrainerProfile } from './entities/trainer-profile.entity';
 import { Trainer } from './entities/trainer.entity';
 import { User } from './entities/user.entity';
 import { WaitingListEntry } from './entities/waiting-list.entity';
@@ -25,6 +29,10 @@ export const typeOrmEntities = [
   ClubEventRegistration,
   User,
   Trainer,
+  TrainerProfile,
+  TrainerApplication,
+  TrainerMemberLink,
+  TrainerMemberNote,
   PackageType,
   PackageRequest,
   Package,

@@ -1,7 +1,9 @@
 export enum UserRole {
   MEMBER = 'member',
   TRAINER = 'trainer',
+  INDEPENDENT_TRAINER = 'independent_trainer',
   ADMINISTRATOR = 'administrator',
+  PLATFORM_ADMIN = 'platform_admin',
 }
 
 /** Member self-registration lifecycle (trainers/admins default to active). */

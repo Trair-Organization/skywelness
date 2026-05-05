@@ -8,6 +8,8 @@ import { Reservation } from '../database/entities/reservation.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { TimeSlot } from '../database/entities/time-slot.entity';
 import { Trainer } from '../database/entities/trainer.entity';
+import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
+import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
 import { User } from '../database/entities/user.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
 import { MailModule } from '../mail/mail.module';
@@ -16,6 +18,7 @@ import { BookingCatalogController } from './booking-catalog.controller';
 import { BookingService } from './booking.service';
 import { MemberPackagesController } from './member-packages.controller';
 import { ReservationsController } from './reservations.controller';
+import { TrainerNetworkController } from './trainer-network.controller';
 import { PackageRequestsController } from './package-requests.controller';
 import { WaitingListController } from './waiting-list.controller';
 
@@ -31,6 +34,8 @@ import { WaitingListController } from './waiting-list.controller';
       User,
       Tenant,
       AppNotification,
+      TrainerMemberLink,
+      TrainerMemberNote,
     ]),
     AuthModule,
     MailModule,
@@ -41,6 +46,7 @@ import { WaitingListController } from './waiting-list.controller';
     WaitingListController,
     MemberPackagesController,
     PackageRequestsController,
+    TrainerNetworkController,
   ],
   providers: [BookingService, RolesGuard],
 })

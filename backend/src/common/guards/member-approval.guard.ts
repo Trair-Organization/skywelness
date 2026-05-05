@@ -3,8 +3,8 @@ import { MemberAccountStatus, UserRole } from '../../database/enums';
 import type { User } from '../../database/entities/user.entity';
 
 /**
- * Blocks MEMBER accounts that are not ACTIVE (pending / rejected).
- * Non-member roles pass through.
+ * Blocks MEMBER / INDEPENDENT_TRAINER accounts that are not ACTIVE (pending / rejected).
+ * Other roles pass through.
  */
 @Injectable()
 export class MemberApprovalGuard implements CanActivate {
@@ -14,7 +14,7 @@ export class MemberApprovalGuard implements CanActivate {
     if (!user) {
       throw new ForbiddenException();
     }
-    if (user.role !== UserRole.MEMBER) {
+    if (user.role !== UserRole.MEMBER && user.role !== UserRole.INDEPENDENT_TRAINER) {
       return true;
     }
     if (user.accountStatus === MemberAccountStatus.ACTIVE) {

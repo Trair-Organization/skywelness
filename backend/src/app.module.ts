@@ -10,6 +10,7 @@ import { BookingModule } from './booking/booking.module';
 import { EventsModule } from './events/events.module';
 import { AppController } from './app.controller';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
+import { PlatformAdminModule } from './platform-admin/platform-admin.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { AppService } from './app.service';
 import { typeOrmEntities } from './database/typeorm-entities';
@@ -38,6 +39,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     AuthModule,
     TenantsModule,
     AdminModule,
+    PlatformAdminModule,
     BookingModule,
     EventsModule,
   ],

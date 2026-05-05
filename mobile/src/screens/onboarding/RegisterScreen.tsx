@@ -162,6 +162,14 @@ export function RegisterScreen() {
         </View>
 
         <GlassCard style={[styles.card, compact && styles.cardCompact]}>
+          <Pressable
+            style={styles.trainerCta}
+            onPress={() => {
+              navigation.navigate('TrainerRegister');
+            }}
+          >
+            <Text style={styles.trainerCtaTxt}>{t('trainerRegister.cta')}</Text>
+          </Pressable>
           <PremiumInput
             label={t('onboarding.fullName')}
             value={fullName}
@@ -402,6 +410,16 @@ const styles = StyleSheet.create({
   },
   card: {
     marginTop: 8,
+  },
+  trainerCta: {
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+    paddingVertical: 4,
+  },
+  trainerCtaTxt: {
+    color: premium.accentBlue,
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardCompact: {
     marginTop: 4,

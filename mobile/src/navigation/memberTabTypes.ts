@@ -4,5 +4,6 @@ export type MemberTabParamList = {
   SpecialLessons: undefined;
   Massage: undefined;
   Events: undefined;
+  Network: undefined;
   Profile: undefined;
 };

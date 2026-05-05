@@ -66,6 +66,15 @@ export function DashboardPage() {
           {t('dashboard.pendingMembersLink')}
         </Link>
       </section>
+      {user?.role === 'platform_admin' ? (
+        <section className="card">
+          <h2>{t('dashboard.platformTrainers')}</h2>
+          <p className="muted">{t('dashboard.platformTrainersDesc')}</p>
+          <Link className="link" to="/platform/trainers/pending">
+            {t('dashboard.pendingTrainerApplicationsLink')}
+          </Link>
+        </section>
+      ) : null}
       <section className="card">
         <h2>{t('dashboard.events')}</h2>
         <p className="muted">{t('dashboard.eventsDesc')}</p>

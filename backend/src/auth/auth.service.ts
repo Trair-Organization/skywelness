@@ -11,10 +11,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { In, Repository } from 'typeorm';
 import { MemberAccountStatus, UserRole } from '../database/enums';
+import { TrainerApplication } from '../database/entities/trainer-application.entity';
+import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { Tenant } from '../database/entities/tenant.entity';
+import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { RESERVED_SUBDOMAINS } from '../common/tenant/subdomain.constants';
 import type { LoginDto } from './dto/login.dto';
+import type { RegisterIndependentTrainerDto } from './dto/register-independent-trainer.dto';
 import type { RegisterDto } from './dto/register.dto';
 import type { UpdateMeDto } from './dto/update-me.dto';
 import type { JwtAccessPayload, JwtRefreshPayload } from './jwt-payload';
@@ -26,6 +30,11 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
+    @InjectRepository(Trainer) private readonly trainersRepo: Repository<Trainer>,
+    @InjectRepository(TrainerProfile)
+    private readonly trainerProfilesRepo: Repository<TrainerProfile>,
+    @InjectRepository(TrainerApplication)
+    private readonly trainerApplicationsRepo: Repository<TrainerApplication>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -173,6 +182,126 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
+  private slugifyForSubdomain(value: string): string {
+    const normalized = value
+      .toLocaleLowerCase('tr-TR')
+      .replace(/[^a-z0-9çğıöşü\s-]/g, '')
+      .replace(/[ç]/g, 'c')
+      .replace(/[ğ]/g, 'g')
+      .replace(/[ı]/g, 'i')
+      .replace(/[ö]/g, 'o')
+      .replace(/[ş]/g, 's')
+      .replace(/[ü]/g, 'u')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const base = normalized.slice(0, 20);
+    return base || 'coach';
+  }
+
+  private async reserveTrainerSubdomain(base: string): Promise<string> {
+    const cleanBase = this.slugifyForSubdomain(base);
+    let suffix = 0;
+    while (suffix < 5000) {
+      const candidate = suffix === 0 ? `coach-${cleanBase}` : `coach-${cleanBase}-${suffix}`;
+      if (RESERVED_SUBDOMAINS.has(candidate)) {
+        suffix += 1;
+        continue;
+      }
+      const exists = await this.tenantsRepo.findOne({ where: { subdomain: candidate } });
+      if (!exists) {
+        return candidate;
+      }
+      suffix += 1;
+    }
+    throw new ConflictException('Could not allocate trainer workspace code');
+  }
+
+  async registerIndependentTrainer(dto: RegisterIndependentTrainerDto) {
+    const email = dto.email.trim().toLowerCase();
+    const anyUserWithEmail = await this.usersRepo.findOne({ where: { email } });
+    if (anyUserWithEmail) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const username = this.normalizeUsername(dto.username);
+    const subdomain = await this.reserveTrainerSubdomain(`${dto.firstName}-${dto.lastName}`);
+
+    const tenant = this.tenantsRepo.create({
+      name: `${dto.firstName.trim()} ${dto.lastName.trim()} Coaching`,
+      subdomain,
+      branding: {},
+      settings: { workspaceType: 'independent_trainer' },
+    });
+    await this.tenantsRepo.save(tenant);
+
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const user = this.usersRepo.create({
+      tenantId: tenant.id,
+      email,
+      username,
+      passwordHash,
+      firstName: dto.firstName.trim(),
+      lastName: dto.lastName.trim(),
+      phone: dto.phone.trim(),
+      role: UserRole.INDEPENDENT_TRAINER,
+      accountStatus: MemberAccountStatus.PENDING_APPROVAL,
+      emergencyContact: null,
+      notificationPreferences: null,
+      lastLogin: null,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+    });
+    await this.usersRepo.save(user);
+
+    const offers = Array.from(new Set(dto.offersSessionTypes));
+    const trainer = this.trainersRepo.create({
+      userId: user.id,
+      tenantId: tenant.id,
+      bio: dto.bio.trim(),
+      certifications: dto.certifications?.map((x) => x.trim()).filter(Boolean) ?? null,
+      specializations: dto.specialties.map((x) => x.trim()).filter(Boolean),
+      photoUrl: dto.photoUrl?.trim() || null,
+      avgRating: '0.00',
+      totalSessions: 0,
+      offersSessionTypes: offers,
+    });
+    await this.trainersRepo.save(trainer);
+
+    const profile = this.trainerProfilesRepo.create({
+      userId: user.id,
+      trainerId: trainer.id,
+      tenantId: tenant.id,
+      city: dto.city.trim(),
+      bio: dto.bio.trim(),
+      specialties: dto.specialties.map((x) => x.trim()).filter(Boolean),
+      certifications: dto.certifications?.map((x) => x.trim()).filter(Boolean) ?? null,
+      experienceYears: dto.experienceYears ?? null,
+      socialLinks: dto.socialLinks?.length ? { links: dto.socialLinks } : null,
+      photoUrl: dto.photoUrl?.trim() || null,
+      pricingNote: dto.pricingNote?.trim() || null,
+    });
+    await this.trainerProfilesRepo.save(profile);
+
+    const application = this.trainerApplicationsRepo.create({
+      userId: user.id,
+      trainerId: trainer.id,
+      tenantId: tenant.id,
+      status: 'pending',
+      adminNote: null,
+      reviewedByUserId: null,
+      reviewedAt: null,
+    });
+    await this.trainerApplicationsRepo.save(application);
+
+    return {
+      pendingApproval: true as const,
+      applicationId: application.id,
+      tenantSubdomain: tenant.subdomain,
+      message: 'Trainer application submitted',
+    };
+  }
+
   async login(dto: LoginDto, requestSubdomain?: string | null) {
     const subdomain = this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain);
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
@@ -241,7 +370,11 @@ export class AuthService {
   }
 
   private assertMemberAccountAllowed(user: User) {
-    if (user.role !== UserRole.MEMBER) {
+    if (
+      user.role !== UserRole.MEMBER &&
+      user.role !== UserRole.INDEPENDENT_TRAINER &&
+      user.role !== UserRole.TRAINER
+    ) {
       return;
     }
     if (user.accountStatus === MemberAccountStatus.REJECTED) {

@@ -15,10 +15,13 @@ import { Package } from '../database/entities/package.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { TimeSlot } from '../database/entities/time-slot.entity';
+import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
+import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
 import {
+  MemberAccountStatus,
   NotificationType,
   PackageStatus,
   ReservationStatus,
@@ -81,7 +84,21 @@ export class BookingService {
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     @InjectRepository(AppNotification)
     private readonly notificationsRepo: Repository<AppNotification>,
+    @InjectRepository(TrainerMemberLink)
+    private readonly trainerMemberLinksRepo: Repository<TrainerMemberLink>,
+    @InjectRepository(TrainerMemberNote)
+    private readonly trainerMemberNotesRepo: Repository<TrainerMemberNote>,
   ) {}
+
+  private async resolveTrainerForUser(user: User): Promise<Trainer> {
+    const trainer = await this.trainersRepo.findOne({
+      where: { userId: user.id, tenantId: user.tenantId },
+    });
+    if (!trainer) {
+      throw new NotFoundException('Trainer profile not found');
+    }
+    return trainer;
+  }
 
   async listTrainers(tenantId: string, sessionType?: string) {
     const rows = await this.trainersRepo.find({
@@ -112,6 +129,167 @@ export class BookingService {
         firstName: t.user.firstName,
         lastName: t.user.lastName,
       },
+    }));
+  }
+
+  async connectMemberToTrainer(user: User, trainerId: string) {
+    if (user.role !== UserRole.MEMBER) {
+      throw new ForbiddenException('Only members can connect to trainers');
+    }
+    const trainer = await this.trainersRepo.findOne({
+      where: { id: trainerId, tenantId: user.tenantId },
+      relations: { user: true },
+    });
+    if (!trainer) {
+      throw new NotFoundException('Trainer not found');
+    }
+    if (trainer.user.accountStatus !== MemberAccountStatus.ACTIVE) {
+      throw new BadRequestException('Trainer account is not active');
+    }
+    const existing = await this.trainerMemberLinksRepo.findOne({
+      where: { tenantId: user.tenantId, trainerId, memberUserId: user.id },
+    });
+    if (existing) {
+      if (existing.status === 'archived') {
+        existing.status = 'active';
+        await this.trainerMemberLinksRepo.save(existing);
+      }
+      return { id: existing.id, status: existing.status };
+    }
+    const link = this.trainerMemberLinksRepo.create({
+      tenantId: user.tenantId,
+      trainerId,
+      memberUserId: user.id,
+      status: 'active',
+    });
+    await this.trainerMemberLinksRepo.save(link);
+    return { id: link.id, status: link.status };
+  }
+
+  async listMyConnectedTrainers(user: User) {
+    if (user.role !== UserRole.MEMBER) {
+      throw new ForbiddenException('Only members can list connected trainers');
+    }
+    const rows = await this.trainerMemberLinksRepo.find({
+      where: { tenantId: user.tenantId, memberUserId: user.id, status: 'active' },
+      relations: { trainer: { user: true } },
+      order: { createdAt: 'DESC' },
+    });
+    return rows.map((row) => ({
+      linkId: row.id,
+      trainerId: row.trainerId,
+      createdAt: row.createdAt,
+      trainer: {
+        firstName: row.trainer.user.firstName,
+        lastName: row.trainer.user.lastName,
+        photoUrl: row.trainer.photoUrl,
+        specialties: row.trainer.specializations,
+      },
+    }));
+  }
+
+  async listTrainerStudents(user: User) {
+    if (user.role !== UserRole.TRAINER && user.role !== UserRole.INDEPENDENT_TRAINER) {
+      throw new ForbiddenException('Only trainers can list students');
+    }
+    const trainer = await this.resolveTrainerForUser(user);
+    const rows = await this.trainerMemberLinksRepo.find({
+      where: { tenantId: user.tenantId, trainerId: trainer.id, status: 'active' },
+      relations: { memberUser: true },
+      order: { createdAt: 'DESC' },
+    });
+    return rows.map((row) => ({
+      linkId: row.id,
+      memberUserId: row.memberUserId,
+      createdAt: row.createdAt,
+      member: {
+        firstName: row.memberUser.firstName,
+        lastName: row.memberUser.lastName,
+        email: row.memberUser.email,
+        phone: row.memberUser.phone,
+      },
+    }));
+  }
+
+  async addTrainerStudentNote(user: User, memberUserId: string, note: string) {
+    if (user.role !== UserRole.TRAINER && user.role !== UserRole.INDEPENDENT_TRAINER) {
+      throw new ForbiddenException('Only trainers can add member notes');
+    }
+    const trainer = await this.resolveTrainerForUser(user);
+    const linked = await this.trainerMemberLinksRepo.findOne({
+      where: {
+        tenantId: user.tenantId,
+        trainerId: trainer.id,
+        memberUserId,
+        status: 'active',
+      },
+    });
+    if (!linked) {
+      throw new ForbiddenException('Member is not linked to this trainer');
+    }
+    const row = this.trainerMemberNotesRepo.create({
+      tenantId: user.tenantId,
+      trainerId: trainer.id,
+      memberUserId,
+      createdByUserId: user.id,
+      note: note.trim(),
+    });
+    await this.trainerMemberNotesRepo.save(row);
+    return { id: row.id, createdAt: row.createdAt };
+  }
+
+  async listTrainerMemberNotes(user: User, memberUserId?: string) {
+    if (
+      user.role !== UserRole.MEMBER &&
+      user.role !== UserRole.TRAINER &&
+      user.role !== UserRole.INDEPENDENT_TRAINER
+    ) {
+      throw new ForbiddenException('Role not allowed');
+    }
+
+    if (user.role === UserRole.MEMBER) {
+      const notes = await this.trainerMemberNotesRepo.find({
+        where: { tenantId: user.tenantId, memberUserId: user.id },
+        relations: { trainer: { user: true }, createdByUser: true },
+        order: { createdAt: 'DESC' },
+      });
+      return notes.map((n) => ({
+        id: n.id,
+        createdAt: n.createdAt,
+        note: n.note,
+        trainerId: n.trainerId,
+        trainerName: `${n.trainer.user.firstName} ${n.trainer.user.lastName}`.trim(),
+        createdByUserId: n.createdByUserId,
+      }));
+    }
+
+    const trainer = await this.resolveTrainerForUser(user);
+    if (!memberUserId) {
+      throw new BadRequestException('memberUserId is required');
+    }
+    const linked = await this.trainerMemberLinksRepo.findOne({
+      where: {
+        tenantId: user.tenantId,
+        trainerId: trainer.id,
+        memberUserId,
+        status: 'active',
+      },
+    });
+    if (!linked) {
+      throw new ForbiddenException('Member is not linked to this trainer');
+    }
+    const notes = await this.trainerMemberNotesRepo.find({
+      where: { tenantId: user.tenantId, trainerId: trainer.id, memberUserId },
+      relations: { createdByUser: true, memberUser: true },
+      order: { createdAt: 'DESC' },
+    });
+    return notes.map((n) => ({
+      id: n.id,
+      createdAt: n.createdAt,
+      note: n.note,
+      memberUserId: n.memberUserId,
+      memberName: `${n.memberUser.firstName} ${n.memberUser.lastName}`.trim(),
+      createdByUserId: n.createdByUserId,
     }));
   }
 

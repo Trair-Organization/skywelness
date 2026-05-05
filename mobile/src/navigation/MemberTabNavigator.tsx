@@ -9,6 +9,7 @@ import {
 } from '../screens/member/MemberServiceHubScreen';
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
+import { MemberTrainerNetworkScreen } from '../screens/member/MemberTrainerNetworkScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -81,6 +82,14 @@ export function MemberTabNavigator() {
         options={{
           tabBarLabel: t('tabs.events'),
           tabBarIcon: ({ focused }) => tabIcon('◎', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Network"
+        component={MemberTrainerNetworkScreen}
+        options={{
+          tabBarLabel: t('tabs.network'),
+          tabBarIcon: ({ focused }) => tabIcon('◉', focused),
         }}
       />
       <Tab.Screen

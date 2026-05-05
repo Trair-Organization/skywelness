@@ -124,6 +124,14 @@ export function LoginScreen() {
             <Text style={styles.muted}>{t('onboarding.noAccount')} </Text>
             <Text style={styles.link}>{t('onboarding.signUp')}</Text>
           </Pressable>
+          <Pressable
+            style={styles.trainerLinkRow}
+            onPress={() => {
+              navigation.navigate('TrainerRegister');
+            }}
+          >
+            <Text style={styles.trainerLink}>{t('trainerRegister.cta')}</Text>
+          </Pressable>
         </GlassCard>
 
         <Pressable
@@ -255,6 +263,16 @@ const styles = StyleSheet.create({
   link: {
     color: premium.accentGreen,
     fontSize: 15,
+    fontWeight: '700',
+  },
+  trainerLinkRow: {
+    alignItems: 'center',
+    marginTop: 2,
+    paddingVertical: 8,
+  },
+  trainerLink: {
+    color: premium.accentBlue,
+    fontSize: 14,
     fontWeight: '700',
   },
   changeClub: {
