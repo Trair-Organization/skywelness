@@ -459,16 +459,22 @@ export function MemberServiceHubScreen({ mode }: Props) {
 
   /** Ensure an eligible package is selected for the currently opened trainer. */
   useEffect(() => {
-    if (!calendarTrainer || calendarEligiblePackages.length === 0) {
+    if (!calendarTrainer) {
+      return;
+    }
+    const eligible = filteredPackages.filter(
+      (pkg) => !pkg.assignedTrainerId || pkg.assignedTrainerId === calendarTrainer.id,
+    );
+    if (eligible.length === 0) {
       return;
     }
     setSelectedPackageId((prev) => {
-      if (prev && calendarEligiblePackages.some((p) => p.id === prev)) {
+      if (prev && eligible.some((p) => p.id === prev)) {
         return prev;
       }
-      return calendarEligiblePackages[0]?.id ?? null;
+      return eligible[0]?.id ?? null;
     });
-  }, [calendarTrainer, calendarEligiblePackages]);
+  }, [calendarTrainer, filteredPackages]);
 
   useEffect(() => {
     if (!packageRequestOpen) {

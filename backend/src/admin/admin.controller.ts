@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { UserRole } from '../database/enums';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
 import { AdminMembersService } from './admin-members.service';
+import { AssignPackageTrainerDto } from './dto/assign-package-trainer.dto';
 
 @Controller('admin')
 export class AdminController {
@@ -44,5 +45,32 @@ export class AdminController {
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
     return this.adminMembers.rejectMember(admin.tenantId, userId);
+  }
+
+  @Get('members/:userId/packages')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listMemberPackages(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.adminMembers.listMemberPackages(admin.tenantId, userId);
+  }
+
+  @Post('members/:userId/packages/:packageId/assign-trainer')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  assignPackageTrainer(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Param('packageId', new ParseUUIDPipe({ version: '4' })) packageId: string,
+    @Body() dto: AssignPackageTrainerDto,
+  ) {
+    return this.adminMembers.assignPackageTrainer(
+      admin.tenantId,
+      userId,
+      packageId,
+      dto.trainerId ?? null,
+    );
   }
 }
