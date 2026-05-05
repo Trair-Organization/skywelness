@@ -24,6 +24,7 @@ import type { UpdateMeDto } from './dto/update-me.dto';
 import type { JwtAccessPayload, JwtRefreshPayload } from './jwt-payload';
 
 const BCRYPT_ROUNDS = 12;
+const PUBLIC_DISCOVERY_TENANT_SUBDOMAIN = 'independent-hub';
 
 @Injectable()
 export class AuthService {
@@ -55,6 +56,22 @@ export class AuthService {
       return fromHost;
     }
     throw new BadRequestException('Tenant subdomain is required');
+  }
+
+  private async ensurePublicDiscoveryTenant(): Promise<Tenant> {
+    const existing = await this.tenantsRepo.findOne({
+      where: { subdomain: PUBLIC_DISCOVERY_TENANT_SUBDOMAIN },
+    });
+    if (existing) {
+      return existing;
+    }
+    const created = this.tenantsRepo.create({
+      name: 'Independent Discovery',
+      subdomain: PUBLIC_DISCOVERY_TENANT_SUBDOMAIN,
+      branding: {},
+      settings: { workspaceType: 'public_discovery' },
+    });
+    return this.tenantsRepo.save(created);
   }
 
   private normalizeUsername(value: string): string {
@@ -140,10 +157,16 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto, requestSubdomain?: string | null) {
-    const subdomain = this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain);
-    const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
+    const hasExplicitTenant = Boolean(dto.tenantSubdomain?.trim() || requestSubdomain?.trim());
+    const tenant = hasExplicitTenant
+      ? await this.tenantsRepo.findOne({
+          where: {
+            subdomain: this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain),
+          },
+        })
+      : await this.ensurePublicDiscoveryTenant();
     if (!tenant) {
-      throw new NotFoundException(`Tenant not found for subdomain: ${subdomain}`);
+      throw new NotFoundException('Tenant not found');
     }
 
     const existing = await this.usersRepo.findOne({
@@ -170,7 +193,9 @@ export class AuthService {
       lastName: dto.lastName,
       phone: dto.phone?.trim() || null,
       role: UserRole.MEMBER,
-      accountStatus: MemberAccountStatus.PENDING_APPROVAL,
+      accountStatus: hasExplicitTenant
+        ? MemberAccountStatus.PENDING_APPROVAL
+        : MemberAccountStatus.ACTIVE,
       emergencyContact: null,
       notificationPreferences: null,
       lastLogin: null,
@@ -218,6 +243,15 @@ export class AuthService {
   }
 
   async registerIndependentTrainer(dto: RegisterIndependentTrainerDto) {
+    let preferredClubSubdomain: string | null = null;
+    if (dto.preferredClubSubdomain?.trim()) {
+      const normalized = dto.preferredClubSubdomain.trim().toLowerCase();
+      const clubTenant = await this.tenantsRepo.findOne({ where: { subdomain: normalized } });
+      if (!clubTenant) {
+        throw new NotFoundException('Preferred club not found');
+      }
+      preferredClubSubdomain = normalized;
+    }
     const email = dto.email.trim().toLowerCase();
     const anyUserWithEmail = await this.usersRepo.findOne({ where: { email } });
     if (anyUserWithEmail) {
@@ -289,6 +323,7 @@ export class AuthService {
       tenantId: tenant.id,
       status: 'pending',
       adminNote: null,
+      preferredClubSubdomain,
       reviewedByUserId: null,
       reviewedAt: null,
     });

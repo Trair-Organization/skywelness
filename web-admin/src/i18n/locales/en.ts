@@ -95,6 +95,7 @@ export default {
     colEmail: 'Email',
     colPhone: 'Phone',
     colWorkspace: 'Workspace code',
+    colPreferredClub: 'Requested club',
     colCreatedAt: 'Applied at',
     colActions: 'Actions',
     approve: 'Approve',

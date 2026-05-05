@@ -125,7 +125,22 @@ export default {
   },
   onboarding: {
     clubHeadline: 'Welcome to Wellness Club',
+    ecosystemSlogan: 'Exclusive Fitness & Wellness Ecosystem',
+    valueProposition:
+      'We bring clubs, trainers, and members together in one premium fitness ecosystem.',
     clubSubtitle: 'Connect to your club',
+    clubShowcaseTitle: 'Clubs in the Ecosystem',
+    clubShowcaseSubtitle: 'Choose your premium club and start immediately.',
+    metricClubs: 'Active clubs',
+    metricAvailability: 'Availability',
+    metricExperience: 'Experience',
+    trustCurated: 'Curated premium clubs',
+    trustVerified: 'Verified trainers',
+    trustSecure: 'Secure digital platform',
+    clubCardBadge: 'Premium Club',
+    clubCardFeaturedBadge: 'Featured Club',
+    clubCardCta: 'Connect to club',
+    primaryCta: 'Choose my club',
     continue: 'Continue',
     welcomeBack: 'Welcome back',
     signIn: 'Sign in',
@@ -138,6 +153,23 @@ export default {
     alreadyHave: 'Already have an account?',
     loginCta: 'Log in',
     changeClub: 'Different club',
+  },
+  registration: {
+    typeTitle: 'Registration Type',
+    typeSubtitle: 'Continue with the flow that fits you.',
+    corporateTitle: 'Corporate',
+    corporateSubtitle: 'Club/company account and management flow.',
+    corporateBody:
+      'In corporate flow, we will proceed with a new club application or existing club linking. We will detail this in the next phase.',
+    trainerTitle: 'Independent Trainer',
+    trainerSubtitle: 'Apply as an independent trainer without club selection.',
+    memberTitle: 'User',
+    memberSubtitle: 'Select a club or continue without one.',
+    memberOptionalClub: 'Club selection is optional at this step.',
+    continueWithoutClub: 'Continue without club',
+    noClubYetTitle: 'No-club signup is coming soon',
+    noClubYetBody:
+      'We will enable no-club user registration in the next step. For now, you can continue by selecting a club.',
   },
   register: {
     section: 'Register',
@@ -193,6 +225,9 @@ export default {
     successBody:
       'Your trainer application is pending platform approval. Workspace code: {{subdomain}}',
     submitFailed: 'Trainer application could not be submitted.',
+    optionalClubToggle: 'I want to connect to a club (optional)',
+    optionalClubHint: 'If selected, a connection request will be sent to the club side.',
+    optionalClubPlaceholder: 'Select club (optional)',
   },
   forgot: {
     link: 'Forgot password?',

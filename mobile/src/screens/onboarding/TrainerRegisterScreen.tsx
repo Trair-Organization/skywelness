@@ -1,5 +1,13 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +34,38 @@ export function TrainerRegisterScreen() {
   const [bio, setBio] = useState('');
   const [specialties, setSpecialties] = useState('');
   const [certifications, setCertifications] = useState('');
+  const [connectClub, setConnectClub] = useState(false);
+  const [clubQuery, setClubQuery] = useState('');
+  const [clubListOpen, setClubListOpen] = useState(false);
+  const [selectedClubSubdomain, setSelectedClubSubdomain] = useState('');
+  const [clubsLoading, setClubsLoading] = useState(false);
+  const [clubs, setClubs] = useState<Array<{ id: string; name: string; subdomain: string }>>([]);
   const [loading, setLoading] = useState(false);
+
+  const filteredClubs = useMemo(() => {
+    const q = clubQuery.trim().toLowerCase();
+    if (!q) {
+      return clubs;
+    }
+    return clubs.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.subdomain.toLowerCase().includes(q),
+    );
+  }, [clubQuery, clubs]);
+
+  const loadClubs = async () => {
+    setClubsLoading(true);
+    try {
+      const rows = await apiJson<Array<{ id: string; name: string; subdomain: string }>>(
+        '/tenants',
+        {
+          auth: false,
+        },
+      );
+      setClubs(rows);
+    } finally {
+      setClubsLoading(false);
+    }
+  };
 
   const splitName = (name: string) => {
     const trimmed = name.trim();
@@ -71,6 +110,7 @@ export function TrainerRegisterScreen() {
               .map((x) => x.trim())
               .filter(Boolean),
             offersSessionTypes: ['personal_training'],
+            preferredClubSubdomain: connectClub ? selectedClubSubdomain || undefined : undefined,
           }),
         },
       );
@@ -147,6 +187,73 @@ export function TrainerRegisterScreen() {
             placeholder={t('trainerRegister.commaHint')}
           />
           <Pressable
+            style={styles.optionalClubToggle}
+            onPress={() => {
+              const next = !connectClub;
+              setConnectClub(next);
+              if (next && clubs.length === 0) {
+                loadClubs().catch(() => {});
+              }
+            }}
+          >
+            <Text style={styles.optionalClubToggleTxt}>
+              {t('trainerRegister.optionalClubToggle')}
+            </Text>
+            <Text style={styles.optionalClubToggleMark}>{connectClub ? '✓' : '+'}</Text>
+          </Pressable>
+          {connectClub ? (
+            <View style={styles.clubWrap}>
+              <Text style={styles.clubHint}>{t('trainerRegister.optionalClubHint')}</Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.clubSelectBtn,
+                  pressed && styles.clubSelectBtnPressed,
+                ]}
+                onPress={() => {
+                  const next = !clubListOpen;
+                  setClubListOpen(next);
+                  if (next && clubs.length === 0) {
+                    loadClubs().catch(() => {});
+                  }
+                }}
+              >
+                {clubsLoading ? (
+                  <ActivityIndicator color={premium.accentBlue} />
+                ) : (
+                  <Text style={styles.clubSelectTxt}>
+                    {selectedClubSubdomain || t('trainerRegister.optionalClubPlaceholder')}
+                  </Text>
+                )}
+              </Pressable>
+              {clubListOpen ? (
+                <View style={styles.clubList}>
+                  <PremiumInput
+                    label={t('tenant.searchLabel')}
+                    value={clubQuery}
+                    onChangeText={setClubQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholder={t('tenant.searchPlaceholder')}
+                  />
+                  {filteredClubs.map((club) => (
+                    <Pressable
+                      key={club.id}
+                      style={styles.clubRow}
+                      onPress={() => {
+                        setSelectedClubSubdomain(club.subdomain);
+                        setClubListOpen(false);
+                        setClubQuery('');
+                      }}
+                    >
+                      <Text style={styles.clubRowName}>{club.name}</Text>
+                      <Text style={styles.clubRowCode}>{club.subdomain}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+          <Pressable
             style={({ pressed }) => [
               styles.submitBtn,
               pressed && styles.submitBtnPressed,
@@ -175,6 +282,81 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', color: premium.text },
   subTitle: { marginTop: 6, marginBottom: 12, color: premium.textMuted, fontSize: 14 },
   card: { marginTop: 8 },
+  optionalClubToggle: {
+    marginTop: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    minHeight: 46,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  optionalClubToggleTxt: {
+    color: premium.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  optionalClubToggleMark: {
+    color: premium.accentBlue,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  clubWrap: {
+    marginBottom: 10,
+  },
+  clubHint: {
+    color: premium.textMuted,
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  clubSelectBtn: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 12,
+  },
+  clubSelectBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  clubSelectTxt: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '600',
+    alignSelf: 'flex-start',
+  },
+  clubList: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    padding: 8,
+    maxHeight: 260,
+    backgroundColor: 'rgba(4,13,24,0.98)',
+  },
+  clubRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: premium.glassBorder,
+  },
+  clubRowName: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  clubRowCode: {
+    color: premium.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
   submitBtn: {
     borderWidth: 1,
     borderColor: premium.glassBorder,

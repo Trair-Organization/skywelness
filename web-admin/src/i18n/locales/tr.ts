@@ -97,6 +97,7 @@ export default {
     colEmail: 'E-posta',
     colPhone: 'Telefon',
     colWorkspace: 'Çalışma alanı kodu',
+    colPreferredClub: 'Talep edilen kulüp',
     colCreatedAt: 'Başvuru tarihi',
     colActions: 'İşlem',
     approve: 'Onayla',

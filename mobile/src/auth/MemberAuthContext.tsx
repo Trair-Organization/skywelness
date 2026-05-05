@@ -56,7 +56,9 @@ const SKYLAND_FALLBACK: TenantListRow = {
   id: 'skyland-fallback',
   name: 'Skyland Wellness',
   subdomain: 'skyland-wellness',
+  logoUrl: null,
 };
+const PUBLIC_DISCOVERY_SUBDOMAIN = 'independent-hub';
 function normalizeSubdomain(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
@@ -316,10 +318,6 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       phoneVal: string,
       passwordVal: string,
     ) => {
-      if (!tenant) {
-        Alert.alert(t('register.section'), t('login.needTenant'));
-        return null;
-      }
       const { first, last } = splitFullName(fullName);
       if (!first) {
         Alert.alert(t('register.section'), t('register.fullNameRequired'));
@@ -334,6 +332,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       setPassword(passwordVal);
       setLoadingAuth(true);
       try {
+        const targetSubdomain = tenant?.subdomain ?? PUBLIC_DISCOVERY_SUBDOMAIN;
         const registerPayload = {
           email: emailVal.trim(),
           username,
@@ -341,7 +340,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
           password: passwordVal,
           firstName: first,
           lastName: last,
-          tenantSubdomain: tenant.subdomain,
+          tenantSubdomain: tenant?.subdomain,
         };
         let res: AuthRes | { pendingApproval: true; message?: string };
         try {
@@ -367,7 +366,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
                   password: passwordVal,
                   firstName: first,
                   lastName: last,
-                  tenantSubdomain: tenant.subdomain,
+                  tenantSubdomain: tenant?.subdomain,
                 }),
               },
             );
@@ -383,7 +382,18 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         if (!auth.accessToken) {
           return 'pending';
         }
-        await completeSignIn(auth, tenant);
+        const tenantInfo =
+          tenant ??
+          (await apiJson<TenantInfo>(
+            `/tenants/by-subdomain/${encodeURIComponent(targetSubdomain)}`,
+            {
+              auth: false,
+            },
+          ));
+        if (!tenant) {
+          setTenant(tenantInfo);
+        }
+        await completeSignIn(auth, tenantInfo);
         return 'signed_in';
       } catch (e) {
         Alert.alert(

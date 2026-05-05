@@ -307,8 +307,7 @@ export function RegisterScreen() {
             style={({ pressed }) => [
               styles.submitBtn,
               pressed && styles.submitBtnPressed,
-              (!tenant ||
-                loadingAuth ||
+              (loadingAuth ||
                 usernameStatus === 'checking' ||
                 usernameStatus === 'too_short' ||
                 usernameStatus === 'invalid' ||
@@ -335,7 +334,6 @@ export function RegisterScreen() {
                 .catch(() => {});
             }}
             disabled={
-              !tenant ||
               loadingAuth ||
               usernameStatus === 'checking' ||
               usernameStatus === 'too_short' ||

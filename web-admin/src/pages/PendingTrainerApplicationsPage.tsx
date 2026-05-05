@@ -15,6 +15,7 @@ type PendingTrainerApplicationRow = {
     email: string;
     phone: string | null;
     tenantSubdomain: string;
+    preferredClubSubdomain: string | null;
     offersSessionTypes: string[];
     specialties: unknown[] | null;
   };
@@ -120,6 +121,7 @@ export function PendingTrainerApplicationsPage() {
                 <th>{t('pendingTrainerApplications.colEmail')}</th>
                 <th>{t('pendingTrainerApplications.colPhone')}</th>
                 <th>{t('pendingTrainerApplications.colWorkspace')}</th>
+                <th>{t('pendingTrainerApplications.colPreferredClub')}</th>
                 <th>{t('pendingTrainerApplications.colCreatedAt')}</th>
                 <th>{t('pendingTrainerApplications.colActions')}</th>
               </tr>
@@ -133,6 +135,7 @@ export function PendingTrainerApplicationsPage() {
                   <td>{r.trainer.email}</td>
                   <td>{r.trainer.phone || '-'}</td>
                   <td>{r.trainer.tenantSubdomain}</td>
+                  <td>{r.trainer.preferredClubSubdomain || '-'}</td>
                   <td>{new Date(r.createdAt).toLocaleString()}</td>
                   <td>
                     <button

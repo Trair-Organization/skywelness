@@ -33,6 +33,7 @@ export class PlatformAdminService {
         tenantSubdomain: row.tenant.subdomain,
         offersSessionTypes: row.trainer.offersSessionTypes,
         specialties: row.trainer.specializations,
+        preferredClubSubdomain: row.preferredClubSubdomain,
       },
     }));
   }

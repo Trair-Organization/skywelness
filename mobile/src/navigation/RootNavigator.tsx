@@ -4,6 +4,9 @@ import { NavigationContainer, useNavigationContainerRef } from '@react-navigatio
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useMemberAuth } from '../auth/MemberAuthContext';
 import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
+import { RegistrationTypeScreen } from '../screens/onboarding/RegistrationTypeScreen';
+import { MemberEntryScreen } from '../screens/onboarding/MemberEntryScreen';
+import { CorporateEntryScreen } from '../screens/onboarding/CorporateEntryScreen';
 import { LoginScreen } from '../screens/onboarding/LoginScreen';
 import { RegisterScreen } from '../screens/onboarding/RegisterScreen';
 import { TrainerRegisterScreen } from '../screens/onboarding/TrainerRegisterScreen';
@@ -53,6 +56,9 @@ export function RootNavigator() {
         }}
       >
         <Stack.Screen name="ClubConnect" component={ClubConnectScreen} />
+        <Stack.Screen name="RegistrationType" component={RegistrationTypeScreen} />
+        <Stack.Screen name="MemberEntry" component={MemberEntryScreen} />
+        <Stack.Screen name="CorporateEntry" component={CorporateEntryScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="TrainerRegister" component={TrainerRegisterScreen} />

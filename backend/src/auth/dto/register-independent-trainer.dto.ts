@@ -95,6 +95,15 @@ export class RegisterIndependentTrainerDto {
   @MaxLength(500)
   pricingNote?: string;
 
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  @Matches(/^[a-z0-9-]+$/, {
+    message: 'preferredClubSubdomain must contain lowercase letters, numbers, or hyphen only',
+  })
+  preferredClubSubdomain?: string;
+
   @IsArray()
   @ArrayMaxSize(5)
   @IsIn(trainerSessionTypes, { each: true })

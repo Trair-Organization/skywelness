@@ -1,5 +1,10 @@
-export type TenantInfo = { id: string; name: string; subdomain: string };
-export type TenantListRow = { id: string; name: string; subdomain: string };
+export type TenantInfo = { id: string; name: string; subdomain: string; logoUrl?: string | null };
+export type TenantListRow = {
+  id: string;
+  name: string;
+  subdomain: string;
+  logoUrl?: string | null;
+};
 export type AuthRes = {
   accessToken: string;
   refreshToken: string;

@@ -10,11 +10,26 @@ export class TenantsService {
     private readonly tenantsRepo: Repository<Tenant>,
   ) {}
 
+  private extractLogoUrl(branding: Record<string, unknown> | null | undefined): string | null {
+    if (!branding || typeof branding !== 'object') {
+      return null;
+    }
+    const direct = branding['logoUrl'];
+    if (typeof direct === 'string' && direct.trim()) {
+      return direct.trim();
+    }
+    const fallback = branding['logo'];
+    if (typeof fallback === 'string' && fallback.trim()) {
+      return fallback.trim();
+    }
+    return null;
+  }
+
   /** Public directory for app “choose your club” (minimal fields, capped). */
   async listPublicDirectory(limit = 50) {
     const take = Math.min(100, Math.max(1, limit));
     const rows = await this.tenantsRepo.find({
-      select: ['id', 'name', 'subdomain'],
+      select: ['id', 'name', 'subdomain', 'branding'],
       order: { name: 'ASC' },
       take,
     });
@@ -22,6 +37,7 @@ export class TenantsService {
       id: t.id,
       name: t.name,
       subdomain: t.subdomain,
+      logoUrl: this.extractLogoUrl(t.branding),
     }));
   }
 
@@ -37,6 +53,7 @@ export class TenantsService {
       id: tenant.id,
       name: tenant.name,
       subdomain: tenant.subdomain,
+      logoUrl: this.extractLogoUrl(tenant.branding),
       branding: tenant.branding,
     };
   }

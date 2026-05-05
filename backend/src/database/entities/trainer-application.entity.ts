@@ -43,6 +43,9 @@ export class TrainerApplication {
   @Column({ type: 'text', nullable: true, name: 'admin_note' })
   adminNote!: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'preferred_club_subdomain' })
+  preferredClubSubdomain!: string | null;
+
   @Column({ type: 'uuid', nullable: true, name: 'reviewed_by_user_id' })
   reviewedByUserId!: string | null;
 

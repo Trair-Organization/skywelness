@@ -1,5 +1,8 @@
 export type RootStackParamList = {
   ClubConnect: undefined;
+  RegistrationType: undefined;
+  MemberEntry: undefined;
+  CorporateEntry: undefined;
   Login: undefined;
   Register: undefined;
   TrainerRegister: undefined;
