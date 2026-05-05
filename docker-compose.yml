@@ -5,8 +5,9 @@ services:
       POSTGRES_USER: rezidans
       POSTGRES_PASSWORD: rezidans_dev_pass
       POSTGRES_DB: rezidans_dev
+    # Avoid clashing with a local Postgres on 127.0.0.1:5432 (host bindings win on loopback).
     ports:
-      - '5432:5432'
+      - '55433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql

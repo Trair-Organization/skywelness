@@ -3,6 +3,8 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '..');
+const sharedRoot = path.resolve(monorepoRoot, 'shared');
+const monorepoNodeModules = path.resolve(monorepoRoot, 'node_modules');
 
 /**
  * Metro configuration
@@ -11,34 +13,26 @@ const monorepoRoot = path.resolve(projectRoot, '..');
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 const config = {
-  watchFolders: [monorepoRoot],
+  // Watching full monorepo can exceed watcher limits on macOS (EMFILE).
+  // Only watch workspace packages imported by mobile.
+  watchFolders: [sharedRoot, monorepoNodeModules],
   /** Avoid 8081 — other stacks (e.g. Nest) often use it; wrong server returns JSON 404 for /index.bundle */
   server: {
     port: 8082,
   },
   resolver: {
-    // Prevent Metro from walking up parent folders and picking hoisted React copies.
-    disableHierarchicalLookup: true,
-    nodeModulesPaths: [
-      path.resolve(projectRoot, 'node_modules'),
-      path.resolve(monorepoRoot, 'node_modules'),
-    ],
-    // React sürüm mismatch'ini engellemek için mobile local kopyayı zorla.
+    // Local watchman daemon is unreliable on this machine; force Node watcher.
+    useWatchman: false,
+    // Force a single React instance in monorepo to avoid invalid hook context.
     extraNodeModules: {
-      react: path.resolve(projectRoot, 'node_modules/react'),
-      'react/jsx-runtime': path.resolve(projectRoot, 'node_modules/react/jsx-runtime'),
-      'react/jsx-dev-runtime': path.resolve(projectRoot, 'node_modules/react/jsx-dev-runtime'),
-      'react-test-renderer': path.resolve(projectRoot, 'node_modules/react-test-renderer'),
-      scheduler: path.resolve(projectRoot, 'node_modules/scheduler'),
+      react: path.resolve(monorepoRoot, 'node_modules/react'),
+      'react-native': path.resolve(monorepoRoot, 'node_modules/react-native'),
+      '@babel/runtime': path.resolve(monorepoRoot, 'node_modules/@babel/runtime'),
+      'react-native-gesture-handler': path.resolve(
+        monorepoRoot,
+        'node_modules/react-native-gesture-handler',
+      ),
     },
-  },
-  transformer: {
-    // In npm workspaces, metro-runtime can be hoisted to monorepo root.
-    // Force Metro to use the hoisted asyncRequire path instead of mobile/node_modules.
-    asyncRequireModulePath: path.resolve(
-      monorepoRoot,
-      'node_modules/metro-runtime/src/modules/asyncRequire',
-    ),
   },
 };
 

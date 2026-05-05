@@ -47,12 +47,18 @@ npm run dev:backend
 **Mobil (Metro ayrı terminal):**
 
 ```bash
+# Bir kez (macOS): yerel watchman ikili dosyasını indirir
+npm run dev:mobile:bootstrap
+
+# Metro (Node 22 + yerel watchman ile stabil mod)
 npm run dev:mobile
 # Ardından
 npm run ios -w mobile
 # veya
 npm run android -w mobile
 ```
+
+`dev:mobile` scripti, macOS'ta watcher limit kaynaklı `EMFILE` hatalarını azaltmak için Node 22 tercih eder ve varsa yerel watchman ikilisini (`scripts/.tools/watchman`) kullanır.
 
 Mobil uygulama varsayılan olarak emülatörden API’ye bağlanır (`src/config.ts`). **Fiziksel cihazda** aynı ağdaki makinenizin IP’sini bu dosyada API adresi olarak yazın.
 

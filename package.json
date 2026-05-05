@@ -15,8 +15,9 @@
     "dev": "npm run dev:app",
     "dev:backend": "npm run start:dev -w backend",
     "dev:web": "npm run dev -w web-admin",
-    "dev:mobile": "npm run start -w mobile",
-    "dev:mobile-ios": "concurrently -n metro,ios -c yellow,cyan \"npm run start -w mobile\" \"node scripts/wait-for-metro.mjs && npm run ios -w mobile -- --no-packager\"",
+    "dev:mobile": "bash scripts/dev-mobile-metro.sh",
+    "dev:mobile:bootstrap": "bash scripts/bootstrap-watchman-local.sh",
+    "dev:mobile-ios": "concurrently -n metro,ios -c yellow,cyan \"bash scripts/dev-mobile-metro.sh\" \"node scripts/wait-for-metro.mjs && npm run ios -w mobile -- --no-packager\"",
     "lint": "npm run lint -w @rezidans-fitness/shared -w backend -w web-admin -w mobile --if-present",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md}\"",
@@ -26,6 +27,7 @@
     "docker:logs": "docker compose logs -f",
     "db:seed": "npm run db:seed -w backend",
     "setup:local": "npm run docker:up && node scripts/wait-for-pg.mjs && npm run migration:run -w backend && npm run db:seed",
+    "test:e2e:backend": "bash scripts/e2e-backend.sh",
     "dev:app": "concurrently -k -n backend,web -c blue,green \"npm run start:dev -w backend\" \"npm run dev -w web-admin\""
   },
   "devDependencies": {
@@ -37,5 +39,14 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.29.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   }
 }
