@@ -82,9 +82,12 @@ export function ClubConnectScreen() {
           </View>
         </View>
 
-        <GlassCard style={styles.popularCard}>
+        <View style={styles.popularHeader}>
           <Text style={styles.popularTitle}>Popüler Kulüpler</Text>
           <Text style={styles.popularSubtitle}>{t('onboarding.clubShowcaseSubtitle')}</Text>
+        </View>
+
+        <GlassCard style={styles.popularCard}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -247,31 +250,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   popularCard: {
-    marginTop: 2,
+    marginTop: 0,
     marginBottom: 12,
+    paddingVertical: 14,
+  },
+  popularHeader: {
+    marginTop: 2,
+    marginBottom: 8,
   },
   popularTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: premium.text,
-    marginBottom: 4,
+    marginBottom: 5,
   },
   popularSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: premium.textMuted,
-    marginBottom: 10,
   },
   popularSlider: {
-    gap: 10,
-    paddingRight: 8,
+    gap: 12,
+    paddingRight: 12,
   },
   popularClubCard: {
-    width: 220,
+    width: 270,
+    minHeight: 152,
     borderRadius: premium.radiusSm,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(0,0,0,0.24)',
-    padding: 12,
+    padding: 16,
   },
   popularClubCardFeatured: {
     borderColor: 'rgba(56,189,248,0.45)',
@@ -284,15 +292,15 @@ const styles = StyleSheet.create({
   },
   popularBadge: {
     color: premium.accentBlue,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.7,
   },
   popularLogoBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     alignItems: 'center',
@@ -300,25 +308,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
   popularLogoImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   popularLogoTxt: {
     color: premium.text,
     fontWeight: '800',
-    fontSize: 12,
+    fontSize: 14,
   },
   popularClubName: {
     color: premium.text,
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '700',
-    marginTop: 10,
+    marginTop: 14,
   },
   popularClubCode: {
     color: premium.textMuted,
-    fontSize: 12,
-    marginTop: 3,
+    fontSize: 13,
+    marginTop: 4,
   },
   card: {
     marginTop: 4,

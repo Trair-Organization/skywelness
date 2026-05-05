@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tenant } from '../database/entities/tenant.entity';
+import { PartnerApplication } from '../database/entities/partner-application.entity';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -14,7 +15,14 @@ import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Tenant, Trainer, TrainerProfile, TrainerApplication]),
+    TypeOrmModule.forFeature([
+      User,
+      Tenant,
+      Trainer,
+      TrainerProfile,
+      TrainerApplication,
+      PartnerApplication,
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -1,6 +1,9 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { Request, Response } from 'express';
+import { join } from 'path';
+import { mkdirSync } from 'fs';
+import * as express from 'express';
 import { AppModule } from './app.module';
 import { extractTenantSubdomain } from './common/tenant/subdomain.util';
 
@@ -30,6 +33,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  const uploadDir = join(process.cwd(), 'uploads');
+  mkdirSync(uploadDir, { recursive: true });
+  app.use('/uploads', express.static(uploadDir));
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

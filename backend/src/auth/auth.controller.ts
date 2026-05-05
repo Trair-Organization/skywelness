@@ -4,22 +4,46 @@ import {
   Delete,
   Get,
   HttpCode,
-  Patch,
   Post,
+  Patch,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import { extname, join } from 'path';
+import { randomUUID } from 'crypto';
+import { mkdirSync } from 'fs';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterIndependentTrainerDto } from './dto/register-independent-trainer.dto';
+import { RegisterPartnerDto } from './dto/register-partner.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+
+const uploadOptions: MulterOptions = {
+  storage: diskStorage({
+    destination: (_req, _file, cb) => {
+      const uploadDir = join(process.cwd(), 'uploads');
+      mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = extname(file.originalname || '').toLowerCase() || '.jpg';
+      cb(null, `${Date.now()}-${randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+};
 
 @Controller('auth')
 export class AuthController {
@@ -35,6 +59,22 @@ export class AuthController {
   @HttpCode(201)
   registerTrainer(@Body() dto: RegisterIndependentTrainerDto) {
     return this.authService.registerIndependentTrainer(dto);
+  }
+
+  @Post('register-partner')
+  @HttpCode(201)
+  registerPartner(@Body() dto: RegisterPartnerDto) {
+    return this.authService.registerPartnerApplication(dto);
+  }
+
+  @Post('upload-image')
+  @HttpCode(201)
+  @UseInterceptors(FileInterceptor('file', uploadOptions))
+  uploadImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      return { message: 'No file uploaded' };
+    }
+    return { url: `/uploads/${file.filename}` };
   }
 
   @Post('login')

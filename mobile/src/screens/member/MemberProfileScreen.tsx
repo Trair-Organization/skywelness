@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
+import { getApiBaseUrl } from '../../config';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -20,7 +22,9 @@ export function MemberProfileScreen() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -31,6 +35,7 @@ export function MemberProfileScreen() {
     setEmail(user.email ?? '');
     setUsername(user.username ?? '');
     setPhone(user.phone ?? '');
+    setPhotoUrl(user.photoUrl ?? null);
   }, [user]);
 
   if (!user || !tenant) {
@@ -49,6 +54,45 @@ export function MemberProfileScreen() {
     Alert.alert(t('profile.termsTitle'), t('profile.termsBody'));
   };
 
+  const uploadPhoto = async () => {
+    const pick = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      includeBase64: false,
+    });
+    const asset = pick.assets?.[0];
+    if (!asset?.uri) {
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
+      const form = new FormData();
+      form.append('file', {
+        uri: asset.uri,
+        name: asset.fileName ?? `profile-${Date.now()}.jpg`,
+        type: asset.type ?? 'image/jpeg',
+      } as never);
+      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) {
+        throw new Error('upload_failed');
+      }
+      const body = (await res.json()) as { url?: string };
+      if (!body.url) {
+        throw new Error('upload_failed');
+      }
+      const absolute = body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`;
+      setPhotoUrl(absolute);
+    } catch {
+      Alert.alert(t('profile.updateTitle'), t('profile.photoUploadFailed'));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   return (
     <GradientBackground>
       <ScrollView
@@ -65,6 +109,22 @@ export function MemberProfileScreen() {
         <GlassCard style={styles.card}>
           <Text style={styles.cardTitle}>{t('profile.editTitle')}</Text>
           <Text style={styles.cardLineMuted}>{t('profile.editBody')}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
+            onPress={() => {
+              uploadPhoto().catch(() => {});
+            }}
+            disabled={uploadingPhoto}
+          >
+            <Text style={styles.photoBtnTxt}>
+              {uploadingPhoto
+                ? t('profile.photoUploading')
+                : photoUrl
+                  ? t('profile.photoChange')
+                  : t('profile.photoUpload')}
+            </Text>
+          </Pressable>
+          {photoUrl ? <Text style={styles.photoLine}>{photoUrl}</Text> : null}
           <PremiumInput
             label={t('register.firstName')}
             value={firstName}
@@ -99,7 +159,7 @@ export function MemberProfileScreen() {
                 return;
               }
               setSaving(true);
-              updateProfile({ firstName, lastName, email, username, phone })
+              updateProfile({ firstName, lastName, email, username, phone, photoUrl })
                 .then((ok) => {
                   if (ok) {
                     Alert.alert(t('profile.updateTitle'), t('profile.updateOk'));
@@ -234,6 +294,28 @@ const styles = StyleSheet.create({
   cardLineMuted: {
     fontSize: 13,
     color: premium.textMuted,
+    marginBottom: 10,
+  },
+  photoBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    marginBottom: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  photoBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  photoBtnTxt: {
+    color: premium.accentBlue,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  photoLine: {
+    color: premium.textMuted,
+    fontSize: 11,
     marginBottom: 10,
   },
   muted: {

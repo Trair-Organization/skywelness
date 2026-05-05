@@ -48,6 +48,7 @@ type MemberAuthContextValue = {
     email: string;
     username: string;
     phone: string;
+    photoUrl?: string | null;
   }) => Promise<boolean>;
 };
 
@@ -449,6 +450,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       email: string;
       username: string;
       phone: string;
+      photoUrl?: string | null;
     }) => {
       if (!token || !tenant) {
         return false;
@@ -464,6 +466,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
             email: input.email.trim(),
             username: normalizeUsername(input.username),
             phone: input.phone.trim() || null,
+            photoUrl: input.photoUrl ?? null,
           }),
         });
         setUser(me);

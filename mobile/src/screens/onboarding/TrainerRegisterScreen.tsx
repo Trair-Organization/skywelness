@@ -8,11 +8,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson, ApiError } from '../../api/client';
+import { getApiBaseUrl } from '../../config';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -37,6 +39,8 @@ export function TrainerRegisterScreen() {
   const [experienceYears, setExperienceYears] = useState('');
   const [socialLinks, setSocialLinks] = useState('');
   const [pricingNote, setPricingNote] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [connectClub, setConnectClub] = useState(false);
   const [clubQuery, setClubQuery] = useState('');
   const [clubListOpen, setClubListOpen] = useState(false);
@@ -147,6 +151,7 @@ export function TrainerRegisterScreen() {
               .map((x) => x.trim())
               .filter(Boolean),
             pricingNote: pricingNote.trim() || undefined,
+            photoUrl: photoUrl.trim() || undefined,
             offersSessionTypes: ['personal_training'],
             preferredClubSubdomain: connectClub ? selectedClubSubdomain || undefined : undefined,
           }),
@@ -169,6 +174,45 @@ export function TrainerRegisterScreen() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const uploadPhoto = async () => {
+    const pick = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      includeBase64: false,
+    });
+    const asset = pick.assets?.[0];
+    if (!asset?.uri) {
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
+      const form = new FormData();
+      form.append('file', {
+        uri: asset.uri,
+        name: asset.fileName ?? `trainer-${Date.now()}.jpg`,
+        type: asset.type ?? 'image/jpeg',
+      } as never);
+      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) {
+        throw new Error('upload_failed');
+      }
+      const body = (await res.json()) as { url?: string };
+      if (!body.url) {
+        throw new Error('upload_failed');
+      }
+      const absolute = body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`;
+      setPhotoUrl(absolute);
+    } catch {
+      Alert.alert(t('register.section'), t('trainerRegister.photoUploadFailed'));
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -266,6 +310,22 @@ export function TrainerRegisterScreen() {
             onChangeText={setPricingNote}
             placeholder={t('trainerRegister.pricingNoteHint')}
           />
+          <Pressable
+            style={styles.photoBtn}
+            onPress={() => {
+              uploadPhoto().catch(() => {});
+            }}
+            disabled={uploadingPhoto}
+          >
+            <Text style={styles.photoBtnTxt}>
+              {uploadingPhoto
+                ? t('trainerRegister.photoUploading')
+                : photoUrl
+                  ? t('trainerRegister.photoChange')
+                  : t('trainerRegister.photoUpload')}
+            </Text>
+          </Pressable>
+          {photoUrl ? <Text style={styles.photoLine}>{photoUrl}</Text> : null}
           <Pressable
             style={styles.optionalClubToggle}
             onPress={() => {
@@ -458,4 +518,24 @@ const styles = StyleSheet.create({
   submitBtnPressed: { backgroundColor: 'rgba(255,255,255,0.06)' },
   submitBtnDisabled: { opacity: 0.6 },
   submitTxt: { color: premium.accentBlue, fontSize: 18, fontWeight: '700' },
+  photoBtn: {
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  photoBtnTxt: {
+    color: premium.accentBlue,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  photoLine: {
+    color: premium.textMuted,
+    fontSize: 11,
+    marginBottom: 10,
+  },
 });

@@ -12,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { In, Repository } from 'typeorm';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
+import { PartnerApplication } from '../database/entities/partner-application.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -19,6 +20,7 @@ import { User } from '../database/entities/user.entity';
 import { RESERVED_SUBDOMAINS } from '../common/tenant/subdomain.constants';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterIndependentTrainerDto } from './dto/register-independent-trainer.dto';
+import type { RegisterPartnerDto } from './dto/register-partner.dto';
 import type { RegisterDto } from './dto/register.dto';
 import type { UpdateMeDto } from './dto/update-me.dto';
 import type { JwtAccessPayload, JwtRefreshPayload } from './jwt-payload';
@@ -36,6 +38,8 @@ export class AuthService {
     private readonly trainerProfilesRepo: Repository<TrainerProfile>,
     @InjectRepository(TrainerApplication)
     private readonly trainerApplicationsRepo: Repository<TrainerApplication>,
+    @InjectRepository(PartnerApplication)
+    private readonly partnerApplicationsRepo: Repository<PartnerApplication>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -192,6 +196,7 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone?.trim() || null,
+      photoUrl: dto.photoUrl?.trim() || null,
       role: UserRole.MEMBER,
       accountStatus: hasExplicitTenant
         ? MemberAccountStatus.PENDING_APPROVAL
@@ -278,6 +283,7 @@ export class AuthService {
       firstName: dto.firstName.trim(),
       lastName: dto.lastName.trim(),
       phone: dto.phone.trim(),
+      photoUrl: dto.photoUrl?.trim() || null,
       role: UserRole.INDEPENDENT_TRAINER,
       accountStatus: MemberAccountStatus.PENDING_APPROVAL,
       emergencyContact: null,
@@ -334,6 +340,27 @@ export class AuthService {
       applicationId: application.id,
       tenantSubdomain: tenant.subdomain,
       message: 'Trainer application submitted',
+    };
+  }
+
+  async registerPartnerApplication(dto: RegisterPartnerDto) {
+    const application = this.partnerApplicationsRepo.create({
+      companyName: dto.companyName.trim(),
+      contactName: dto.contactName.trim(),
+      email: dto.email.trim().toLowerCase(),
+      phone: dto.phone.trim(),
+      city: dto.city.trim(),
+      clubCount: dto.clubCount ?? null,
+      website: dto.website?.trim() || null,
+      logoUrl: dto.logoUrl?.trim() || null,
+      notes: dto.notes?.trim() || null,
+      status: 'pending',
+    });
+    const saved = await this.partnerApplicationsRepo.save(application);
+    return {
+      ok: true as const,
+      applicationId: saved.id,
+      status: saved.status,
     };
   }
 
@@ -446,6 +473,9 @@ export class AuthService {
     if (dto.phone !== undefined) {
       user.phone = dto.phone === null ? null : dto.phone.trim() || null;
     }
+    if (dto.photoUrl !== undefined) {
+      user.photoUrl = dto.photoUrl === null ? null : dto.photoUrl.trim() || null;
+    }
     if (dto.email !== undefined) {
       const normalized = dto.email.trim().toLowerCase();
       if (normalized !== user.email) {
@@ -522,6 +552,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      photoUrl: user.photoUrl,
       role: user.role,
       accountStatus: user.accountStatus,
     };

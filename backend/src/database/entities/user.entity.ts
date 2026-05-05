@@ -43,6 +43,9 @@ export class User {
   @Column({ type: 'varchar', length: 40, nullable: true })
   phone!: string | null;
 
+  @Column({ type: 'varchar', length: 2048, nullable: true, name: 'photo_url' })
+  photoUrl!: string | null;
+
   @Column({ type: 'varchar', length: 32 })
   role!: UserRole;
 

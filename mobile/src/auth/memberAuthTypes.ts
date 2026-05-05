@@ -17,6 +17,7 @@ export type AuthRes = {
     firstName: string;
     lastName: string;
     phone?: string | null;
+    photoUrl?: string | null;
     role: string;
     accountStatus?: string;
   };

@@ -49,20 +49,6 @@ export function LoginScreen() {
         ) : (
           <Text style={styles.warn}>{t('login.needTenant')}</Text>
         )}
-        <View style={styles.authSeg}>
-          <Pressable style={[styles.authBtn, styles.authBtnOn]}>
-            <Text style={[styles.authTxt, styles.authTxtOn]}>{t('auth.tabLogin')}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.authBtn}
-            onPress={() => {
-              navigation.navigate('Register');
-            }}
-          >
-            <Text style={styles.authTxt}>{t('auth.tabRegister')}</Text>
-          </Pressable>
-        </View>
-
         <GlassCard style={styles.card}>
           <PremiumInput
             label={t('login.emailLabel')}
@@ -113,24 +99,6 @@ export function LoginScreen() {
             disabled={!tenant || loadingAuth}
           >
             <Text style={styles.submitTxt}>{t('login.submit')}</Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => {
-              navigation.navigate('Register');
-            }}
-          >
-            <Text style={styles.muted}>{t('onboarding.noAccount')} </Text>
-            <Text style={styles.link}>{t('onboarding.signUp')}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.trainerLinkRow}
-            onPress={() => {
-              navigation.navigate('TrainerRegister');
-            }}
-          >
-            <Text style={styles.trainerLink}>{t('trainerRegister.cta')}</Text>
           </Pressable>
         </GlassCard>
 
@@ -187,32 +155,6 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 8,
   },
-  authSeg: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-    marginBottom: 14,
-  },
-  authBtn: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authBtnOn: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  authTxt: {
-    color: premium.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  authTxtOn: {
-    color: premium.text,
-  },
   forgot: {
     alignSelf: 'flex-start',
     marginBottom: 8,
@@ -247,32 +189,6 @@ const styles = StyleSheet.create({
   submitTxt: {
     color: premium.accentBlue,
     fontSize: 18,
-    fontWeight: '700',
-  },
-  linkRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: 16,
-    paddingVertical: 6,
-  },
-  muted: {
-    color: premium.textMuted,
-    fontSize: 15,
-  },
-  link: {
-    color: premium.accentGreen,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  trainerLinkRow: {
-    alignItems: 'center',
-    marginTop: 2,
-    paddingVertical: 8,
-  },
-  trainerLink: {
-    color: premium.accentBlue,
-    fontSize: 14,
     fontWeight: '700',
   },
   changeClub: {
