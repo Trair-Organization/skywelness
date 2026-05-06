@@ -5,13 +5,15 @@ import { ApiError, apiJson } from '../lib/api';
 
 type PendingMember = { id: string };
 type ClubEvent = { id: string; published: boolean };
-type Trainer = { id: string };
+type Trainer = { id: string; isIndependent?: boolean };
 type PendingTrainerApplication = { id: string };
 
 type Metrics = {
   pendingMembers: number;
   activeEvents: number;
-  trainers: number;
+  trainersTotal: number;
+  trainersClub: number;
+  trainersIndependent: number;
   pendingTrainerApplications: number;
 };
 
@@ -22,7 +24,9 @@ export function ClubInsightsPage() {
   const [metrics, setMetrics] = useState<Metrics>({
     pendingMembers: 0,
     activeEvents: 0,
-    trainers: 0,
+    trainersTotal: 0,
+    trainersClub: 0,
+    trainersIndependent: 0,
     pendingTrainerApplications: 0,
   });
 
@@ -50,7 +54,9 @@ export function ClubInsightsPage() {
       setMetrics({
         pendingMembers: pendingMembers.length,
         activeEvents: events.filter((event) => event.published).length,
-        trainers: trainers.length,
+        trainersTotal: trainers.length,
+        trainersClub: trainers.filter((trainer) => !trainer.isIndependent).length,
+        trainersIndependent: trainers.filter((trainer) => trainer.isIndependent).length,
         pendingTrainerApplications,
       });
     } catch (e) {
@@ -96,8 +102,16 @@ export function ClubInsightsPage() {
           <h2>{metrics.activeEvents}</h2>
         </article>
         <article className="metricCard">
-          <p className="muted">{t('clubInsights.trainers')}</p>
-          <h2>{metrics.trainers}</h2>
+          <p className="muted">{t('clubInsights.trainersTotal')}</p>
+          <h2>{metrics.trainersTotal}</h2>
+        </article>
+        <article className="metricCard">
+          <p className="muted">{t('clubInsights.trainersClub')}</p>
+          <h2>{metrics.trainersClub}</h2>
+        </article>
+        <article className="metricCard">
+          <p className="muted">{t('clubInsights.trainersIndependent')}</p>
+          <h2>{metrics.trainersIndependent}</h2>
         </article>
         <article className="metricCard">
           <p className="muted">{t('clubInsights.pendingApplications')}</p>

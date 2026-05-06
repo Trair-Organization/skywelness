@@ -174,7 +174,9 @@ export default {
     loadError: 'Rapor metrikleri alınamadı',
     pendingMembers: 'Bekleyen üye',
     activeEvents: 'Yayındaki etkinlik',
-    trainers: 'Eğitmen sayısı',
+    trainersTotal: 'Toplam eğitmen',
+    trainersClub: 'Kulüp eğitmeni',
+    trainersIndependent: 'Bağımsız eğitmen',
     pendingApplications: 'Bekleyen eğitmen başvurusu',
   },
   trainerDashboard: {

@@ -173,7 +173,9 @@ export default {
     loadError: 'Could not load report metrics',
     pendingMembers: 'Pending members',
     activeEvents: 'Published events',
-    trainers: 'Trainer count',
+    trainersTotal: 'Total trainers',
+    trainersClub: 'Club trainers',
+    trainersIndependent: 'Independent trainers',
     pendingApplications: 'Pending trainer applications',
   },
   trainerDashboard: {
