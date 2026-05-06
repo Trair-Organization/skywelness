@@ -13,19 +13,41 @@ export default {
     feature3: 'Public website that converts visitors into leads and new members.',
     panelsTitle: 'Panels',
     panelsSubtitle: 'Sign in to access the panel that matches your role.',
+    stat1: 'Unified club operations',
+    stat2: 'Trainer and member workflows',
+    stat3: 'Conversion-focused web presence',
+    whyTitle: 'Built for premium fitness brands',
+    whyCard1Title: 'Operational Excellence',
+    whyCard1Body:
+      'Manage approvals, events, and daily operations in one secure workspace built for clubs.',
+    whyCard2Title: 'Trainer Productivity',
+    whyCard2Body:
+      'Help trainers track students and coaching notes with cleaner, measurable workflow steps.',
+    whyCard3Title: 'Revenue Growth',
+    whyCard3Body:
+      'Capture new leads from your corporate website and convert them into paying memberships.',
     pricingLink: 'Pricing →',
     contactLink: 'Contact →',
     clubPanelLink: 'Club panel →',
     trainerPanelLink: 'Trainer panel →',
+    contactBlockTitle: 'Contact Us',
+    contactBlockBody:
+      'Request a demo or commercial offer for your club. Our team will respond quickly.',
   },
   pricing: {
     title: 'Pricing',
     back: 'Back to home',
     starterTitle: 'Starter Plan',
     starterDesc: 'For boutique clubs launching digital workflows with core management features.',
+    starterPoint1: 'Role-based club panel foundation',
+    starterPoint2: 'Member approval and event management',
+    starterPoint3: 'Core operational reporting cards',
     proTitle: 'Pro Plan',
     proDesc:
       'For multi-branch operations that need advanced reporting and trainer performance tools.',
+    proPoint1: 'Advanced trainer workflows and notes',
+    proPoint2: 'Lead capture and digital onboarding',
+    proPoint3: 'Multi-club scale and custom integration support',
   },
   contact: {
     title: 'Contact',
@@ -43,6 +65,52 @@ export default {
     sending: 'Sending…',
     error: 'Could not submit your request',
     success: 'Thanks! Your message has been received.',
+  },
+  footer: {
+    productTitle: 'Wellness Club',
+    productBody:
+      'A digital platform for modern clubs to manage operations, trainers, and member experience end-to-end.',
+    company: 'A product by TrairX Technology O.U',
+    linksTitle: 'Company',
+    pricing: 'Pricing',
+    contact: 'Contact',
+    privacy: 'Privacy Policy',
+    terms: 'Terms of Use',
+    reachTitle: 'Reach us',
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    back: 'Back to home',
+    intro:
+      'This policy explains how personal data is processed while using Wellness Club services.',
+    section1Title: 'Data we collect',
+    section1Body:
+      'We may collect identity, contact, and usage records through forms, authentication, and service activity.',
+    section2Title: 'Processing purposes',
+    section2Body:
+      'Data is processed for service delivery, account security, customer support, and product improvement.',
+    section3Title: 'Data sharing',
+    section3Body:
+      'Personal data is not sold; sharing is limited to legal obligations and contracted infrastructure providers.',
+    section4Title: 'Contact',
+    section4Body: 'For privacy requests please contact info@wellnessclub.com.',
+  },
+  terms: {
+    title: 'Terms of Use',
+    back: 'Back to home',
+    intro: 'These terms define the legal framework for using Wellness Club products and services.',
+    section1Title: 'Service scope',
+    section1Body:
+      'Wellness Club provides SaaS modules for club operations, trainer workflows, and digital lead management.',
+    section2Title: 'User responsibilities',
+    section2Body:
+      'Users are responsible for account security and for complying with applicable laws while using the platform.',
+    section3Title: 'Intellectual property',
+    section3Body:
+      'All software and related materials are owned by TrairX Technology O.U and its licensors.',
+    section4Title: 'Changes and termination',
+    section4Body:
+      'Service scope and terms may be updated when needed; material changes are announced in advance.',
   },
   login: {
     title: 'Wellness Club admin',

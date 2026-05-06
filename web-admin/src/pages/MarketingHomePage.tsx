@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { MarketingContactForm } from '../components/MarketingContactForm';
+import { MarketingFooter } from '../components/MarketingFooter';
 
 export function MarketingHomePage() {
   const { t } = useTranslation();
@@ -10,6 +12,11 @@ export function MarketingHomePage() {
         <p className="badge">{t('marketing.badge')}</p>
         <h1>{t('marketing.title')}</h1>
         <p className="muted">{t('marketing.subtitle')}</p>
+        <div className="statRow">
+          <span>{t('marketing.stat1')}</span>
+          <span>{t('marketing.stat2')}</span>
+          <span>{t('marketing.stat3')}</span>
+        </div>
         <div className="heroActions">
           <Link className="cta" to="/login">
             {t('marketing.login')}
@@ -30,6 +37,24 @@ export function MarketingHomePage() {
       </section>
 
       <section className="card">
+        <h2>{t('marketing.whyTitle')}</h2>
+        <div className="metricsGrid">
+          <article className="metricCard">
+            <h3>{t('marketing.whyCard1Title')}</h3>
+            <p className="muted">{t('marketing.whyCard1Body')}</p>
+          </article>
+          <article className="metricCard">
+            <h3>{t('marketing.whyCard2Title')}</h3>
+            <p className="muted">{t('marketing.whyCard2Body')}</p>
+          </article>
+          <article className="metricCard">
+            <h3>{t('marketing.whyCard3Title')}</h3>
+            <p className="muted">{t('marketing.whyCard3Body')}</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="card">
         <h2>{t('marketing.panelsTitle')}</h2>
         <p className="muted">{t('marketing.panelsSubtitle')}</p>
         <div className="panelLinks">
@@ -47,6 +72,14 @@ export function MarketingHomePage() {
           </Link>
         </div>
       </section>
+
+      <section className="card" id="contact">
+        <h2>{t('marketing.contactBlockTitle')}</h2>
+        <p className="muted">{t('marketing.contactBlockBody')}</p>
+        <MarketingContactForm />
+      </section>
+
+      <MarketingFooter />
     </div>
   );
 }

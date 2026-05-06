@@ -153,6 +153,14 @@ button:hover:not(:disabled) {
 
 .marketingHero {
   margin-bottom: 1.25rem;
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: radial-gradient(
+    circle at top right,
+    rgba(59, 130, 246, 0.18),
+    rgba(24, 27, 33, 0.92)
+  );
 }
 
 .badge {
@@ -169,6 +177,21 @@ button:hover:not(:disabled) {
   display: flex;
   gap: 0.75rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.statRow {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.statRow span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 a.cta {
@@ -198,6 +221,7 @@ a.cta:hover {
 .panelLinks {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .metricsGrid {
@@ -242,6 +266,53 @@ a.cta:hover {
 
 .notesList li p {
   margin: 0 0 0.5rem;
+}
+
+.marketingFooter {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.footerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.footerGrid h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+}
+
+.footerGrid p {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.footerGrid a {
+  color: #dbeafe;
+  text-decoration: none;
+}
+
+.footerGrid a:hover {
+  text-decoration: underline;
+}
+
+.footerLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.legal p {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+}
+
+.marketingForm {
+  margin-top: 0.8rem;
 }
 
 .card button {

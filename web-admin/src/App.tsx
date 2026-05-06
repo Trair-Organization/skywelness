@@ -11,6 +11,8 @@ import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
 import { MarketingPricingPage } from './pages/MarketingPricingPage';
 import { MarketingContactPage } from './pages/MarketingContactPage';
+import { MarketingPrivacyPage } from './pages/MarketingPrivacyPage';
+import { MarketingTermsPage } from './pages/MarketingTermsPage';
 import { ClubInsightsPage } from './pages/ClubInsightsPage';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
@@ -22,6 +24,8 @@ function AppRoutes() {
       <Route path="/" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
       <Route path="/contact" element={<MarketingContactPage />} />
+      <Route path="/privacy" element={<MarketingPrivacyPage />} />
+      <Route path="/terms" element={<MarketingTermsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute allowedRoles={['administrator', 'platform_admin']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />

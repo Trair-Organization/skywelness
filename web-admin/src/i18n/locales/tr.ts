@@ -13,19 +13,41 @@ export default {
     feature3: 'Ziyaretçiyi potansiyel müşteriye dönüştüren kurumsal web sitesi.',
     panelsTitle: 'Paneller',
     panelsSubtitle: 'Rolünüze uygun panele giriş yapın.',
+    stat1: 'Tek panelden kulüp operasyonu',
+    stat2: 'Eğitmen ve üye iş akışları',
+    stat3: 'Dönüşüm odaklı web deneyimi',
+    whyTitle: 'Premium kulüpler için tasarlandı',
+    whyCard1Title: 'Operasyonel Mükemmellik',
+    whyCard1Body:
+      'Kulüp onay, etkinlik ve günlük operasyon süreçlerini tek, güvenli panelde birleştirir.',
+    whyCard2Title: 'Eğitmen Verimliliği',
+    whyCard2Body:
+      'Eğitmenlerin öğrenci takibi ve not akışlarını düzenli hale getirerek performansı görünür kılar.',
+    whyCard3Title: 'Gelir Büyümesi',
+    whyCard3Body:
+      'Kurumsal web üzerinde lead toplayarak satış ekibine daha kaliteli ve hızlı fırsatlar sağlar.',
     pricingLink: 'Fiyatlandırma →',
     contactLink: 'İletişim →',
     clubPanelLink: 'Kulüp paneli →',
     trainerPanelLink: 'Eğitmen paneli →',
+    contactBlockTitle: 'Bize Ulaşın',
+    contactBlockBody:
+      'Kulübünüz için demo veya teklif almak isterseniz formu doldurun; ekibimiz en kısa sürede size dönüş yapsın.',
   },
   pricing: {
     title: 'Fiyatlandırma',
     back: 'Ana sayfaya dön',
     starterTitle: 'Starter Paket',
     starterDesc: 'Dijital operasyonlara başlayan butik kulüpler için temel yönetim özellikleri.',
+    starterPoint1: 'Rol bazlı kulüp panel altyapısı',
+    starterPoint2: 'Üye onay ve etkinlik yönetimi',
+    starterPoint3: 'Temel operasyonel rapor kartları',
     proTitle: 'Pro Paket',
     proDesc:
       'Gelişmiş raporlama ve eğitmen performans araçları isteyen çok şubeli işletmeler için.',
+    proPoint1: 'Gelişmiş eğitmen iş akışları ve not sistemi',
+    proPoint2: 'Lead toplama ve dijital onboarding süreçleri',
+    proPoint3: 'Çok kulüplü büyüme ve özel entegrasyon desteği',
   },
   contact: {
     title: 'İletişim',
@@ -43,6 +65,53 @@ export default {
     sending: 'Gönderiliyor…',
     error: 'Başvuru gönderilemedi',
     success: 'Teşekkürler! Mesajınız alındı.',
+  },
+  footer: {
+    productTitle: 'Wellness Club',
+    productBody:
+      'Modern kulüpler için operasyon, eğitmen ve üye deneyimini uçtan uca yöneten dijital platform.',
+    company: 'TrairX Technology O.U ürünüdür.',
+    linksTitle: 'Kurumsal',
+    pricing: 'Fiyatlandırma',
+    contact: 'Bize Ulaşın',
+    privacy: 'Gizlilik Politikası',
+    terms: 'Kullanım Şartları',
+    reachTitle: 'İletişim',
+  },
+  privacy: {
+    title: 'Gizlilik Politikası',
+    back: 'Ana sayfaya dön',
+    intro:
+      'Bu politika, Wellness Club hizmetlerini kullanırken kişisel verilerin nasıl işlendiğini açıklar.',
+    section1Title: 'Toplanan veriler',
+    section1Body:
+      'Formlar, kimlik doğrulama ve kullanım süreçlerinde kimlik, iletişim ve kullanım kayıtları toplanabilir.',
+    section2Title: 'İşleme amaçları',
+    section2Body:
+      'Veriler hizmet sunumu, hesap güvenliği, destek operasyonları ve ürün geliştirme amacıyla işlenir.',
+    section3Title: 'Veri paylaşımı',
+    section3Body:
+      'Kişisel veriler satılmaz; yalnızca yasal yükümlülük veya sözleşmeli altyapı sağlayıcıları kapsamında paylaşılır.',
+    section4Title: 'İletişim',
+    section4Body: 'Gizlilik talepleriniz için info@wellnessclub.com adresine yazabilirsiniz.',
+  },
+  terms: {
+    title: 'Kullanım Şartları',
+    back: 'Ana sayfaya dön',
+    intro:
+      'Bu şartlar Wellness Club ürün ve hizmetlerinin kullanımına ilişkin hukuki çerçeveyi tanımlar.',
+    section1Title: 'Hizmet kapsamı',
+    section1Body:
+      'Wellness Club; kulüp operasyonu, eğitmen iş akışları ve dijital lead yönetimi için SaaS modülleri sunar.',
+    section2Title: 'Kullanıcı sorumlulukları',
+    section2Body:
+      'Kullanıcılar hesap güvenliğinden sorumludur ve platformu yürürlükteki mevzuata uygun şekilde kullanır.',
+    section3Title: 'Fikri mülkiyet',
+    section3Body:
+      'Yazılım ve ilgili tüm içerik hakları TrairX Technology O.U ve lisans sağlayıcılarına aittir.',
+    section4Title: 'Değişiklik ve fesih',
+    section4Body:
+      'Gerekli durumlarda hizmet kapsamı ve şartlar güncellenebilir; önemli değişiklikler önceden duyurulur.',
   },
   login: {
     title: 'Wellness Club yönetim',
