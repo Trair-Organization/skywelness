@@ -47,6 +47,7 @@ export default {
     heroMassage: 'Remaining massage count',
     heroEvents: 'Joined events',
     upcomingEventsTitle: 'Upcoming events',
+    ourTrainersTitle: 'Our Trainers',
     noUpcomingEvents:
       'No published upcoming events yet. They will appear here when your club adds them.',
   },

@@ -47,6 +47,7 @@ export default {
     heroMassage: 'Kalan masaj sayısı',
     heroEvents: 'Aktif Etkinlikler',
     upcomingEventsTitle: 'Yaklaşan Etkinlikler',
+    ourTrainersTitle: 'Antrenörlerimiz',
     noUpcomingEvents:
       'Yaklaşan yayınlanmış etkinlik yok. Kulüp yönetimi etkinlik eklediğinde burada görünür.',
   },

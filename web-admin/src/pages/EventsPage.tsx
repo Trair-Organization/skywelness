@@ -168,7 +168,7 @@ export function EventsPage() {
               {t('lang.en')}
             </button>
           </div>
-          <Link className="secondary" to="/">
+          <Link className="secondary" to="/club/dashboard">
             {t('eventsPage.back')}
           </Link>
         </div>

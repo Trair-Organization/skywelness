@@ -94,7 +94,7 @@ export function PendingMembersPage() {
               {t('lang.en')}
             </button>
           </div>
-          <Link className="secondary" to="/">
+          <Link className="secondary" to="/club/dashboard">
             {t('pendingMembers.back')}
           </Link>
         </div>

@@ -2,7 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
-export function ProtectedRoute() {
+type ProtectedRouteProps = {
+  allowedRoles?: string[];
+};
+
+export function ProtectedRoute({
+  allowedRoles = ['administrator', 'platform_admin'],
+}: ProtectedRouteProps) {
   const { t } = useTranslation();
   const { token, user, ready, logout } = useAuth();
   const navigate = useNavigate();
@@ -20,7 +26,7 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (user.role !== 'administrator' && user.role !== 'platform_admin') {
+  if (!allowedRoles.includes(user.role)) {
     return (
       <div className="shell narrow">
         <h1>{t('protected.deniedTitle')}</h1>

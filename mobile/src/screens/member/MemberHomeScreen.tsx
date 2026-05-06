@@ -25,7 +25,12 @@ import type { MemberTabParamList } from '../../navigation/memberTabTypes';
 type TrainerRow = {
   id: string;
   tenantId: string;
-  user: { id: string; firstName: string; lastName: string };
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    photoUrl?: string | null;
+  };
 };
 
 type SlotRow = {
@@ -599,6 +604,48 @@ export function MemberHomeScreen() {
         {!loadingEvents && clubEvents.length === 0 ? (
           <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
         ) : null}
+
+        <Text style={styles.trainersSectionTitle}>{t('home.ourTrainersTitle')}</Text>
+        {loadingTrainers && trainers.length === 0 ? (
+          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
+        ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.trainersRail}
+          contentContainerStyle={styles.trainersRailInner}
+        >
+          {trainers.map((tr) => {
+            const fullName = `${tr.user.firstName} ${tr.user.lastName}`.trim();
+            const initials = `${tr.user.firstName?.[0] ?? ''}${tr.user.lastName?.[0] ?? ''}`
+              .trim()
+              .toUpperCase();
+            return (
+              <Pressable
+                key={`showcase-${tr.id}`}
+                style={({ pressed }) => [
+                  styles.trainerProfileCard,
+                  pressed && styles.trainerRowPressed,
+                ]}
+                onPress={() => selectTrainerAndScroll(tr.id)}
+              >
+                <View style={styles.trainerAvatarRing}>
+                  {tr.user.photoUrl ? (
+                    <Image source={{ uri: tr.user.photoUrl }} style={styles.trainerAvatarImage} />
+                  ) : (
+                    <Text style={styles.trainerAvatarFallback}>{initials || 'TR'}</Text>
+                  )}
+                </View>
+                <Text style={styles.trainerProfileName} numberOfLines={2}>
+                  {fullName}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        {!loadingTrainers && trainers.length === 0 ? (
+          <Text style={styles.eventsEmpty}>{t('home.trainersEmpty')}</Text>
+        ) : null}
         <Modal
           visible={!!selectedEvent}
           animationType="slide"
@@ -1166,6 +1213,62 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: premium.textMuted,
     marginBottom: 12,
+  },
+  trainersSectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: premium.text,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  trainersRail: {
+    marginBottom: 10,
+    marginHorizontal: -4,
+  },
+  trainersRailInner: {
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  trainerProfileCard: {
+    width: 112,
+    minHeight: 140,
+    borderRadius: premium.radiusMd,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 10,
+    alignItems: 'center',
+  },
+  trainerAvatarRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1.5,
+    borderColor: premium.glassBorder,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    marginBottom: 10,
+  },
+  trainerAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  trainerAvatarFallback: {
+    color: premium.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  trainerProfileName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: premium.text,
+    textAlign: 'center',
   },
   langRow: {
     flexDirection: 'row',

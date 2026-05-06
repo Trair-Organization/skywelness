@@ -18,8 +18,11 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  if (ready && token && user?.role === 'administrator') {
-    return <Navigate to={from === '/login' ? '/' : from} replace />;
+  if (ready && token && user) {
+    if (user.role === 'trainer') {
+      return <Navigate to="/trainer/dashboard" replace />;
+    }
+    return <Navigate to={from === '/login' || from === '/' ? '/club/dashboard' : from} replace />;
   }
 
   async function onSubmit(e: FormEvent) {
@@ -28,7 +31,7 @@ export function LoginPage() {
     setPending(true);
     try {
       await login(email.trim(), password, tenantSubdomain.trim().toLowerCase());
-      navigate(from === '/login' ? '/' : from, { replace: true });
+      navigate(from === '/login' || from === '/' ? '/club/dashboard' : from, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.error'));
     } finally {

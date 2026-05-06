@@ -2,23 +2,37 @@ import { I18nextProvider } from 'react-i18next';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import i18n from './i18n';
 import { AuthProvider } from './auth/AuthContext';
-import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { EventsPage } from './pages/EventsPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
+import { ClubDashboardPage } from './pages/ClubDashboardPage';
+import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
+import { MarketingHomePage } from './pages/MarketingHomePage';
+import { MarketingPricingPage } from './pages/MarketingPricingPage';
+import { MarketingContactPage } from './pages/MarketingContactPage';
+import { ClubInsightsPage } from './pages/ClubInsightsPage';
+import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import './admin.css';
 
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<MarketingHomePage />} />
+      <Route path="/pricing" element={<MarketingPricingPage />} />
+      <Route path="/contact" element={<MarketingContactPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<DashboardPage />} />
+      <Route element={<ProtectedRoute allowedRoles={['administrator', 'platform_admin']} />}>
+        <Route path="/club/dashboard" element={<ClubDashboardPage />} />
+        <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
         <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
         <Route path="/events" element={<EventsPage />} />
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
+        <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
+        <Route path="/trainer/students" element={<TrainerStudentsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
