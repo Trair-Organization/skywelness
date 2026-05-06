@@ -16,6 +16,9 @@ export default {
     stat1: 'Tek panelden kulüp operasyonu',
     stat2: 'Eğitmen ve üye iş akışları',
     stat3: 'Dönüşüm odaklı web deneyimi',
+    trust1: 'Kurumsal seviyede güvenlik yaklaşımı',
+    trust2: 'Premium fitness operasyonları için tasarlandı',
+    trust3: 'Çok kulüplü yapıya ölçeklenebilir altyapı',
     whyTitle: 'Premium kulüpler için tasarlandı',
     whyCard1Title: 'Operasyonel Mükemmellik',
     whyCard1Body:
@@ -26,6 +29,16 @@ export default {
     whyCard3Title: 'Gelir Büyümesi',
     whyCard3Body:
       'Kurumsal web üzerinde lead toplayarak satış ekibine daha kaliteli ve hızlı fırsatlar sağlar.',
+    solutionTitle: 'Tek platformda neler var?',
+    solutionCard1Title: 'Kulüp Operasyon Merkezi',
+    solutionCard1Body:
+      'Üye onayları, etkinlik yönetimi, ekip süreçleri ve hizmet kalitesini tek noktadan yönetin.',
+    solutionCard2Title: 'Eğitmen İş Akışı Merkezi',
+    solutionCard2Body:
+      'Eğitmenlere öğrenci, not ve günlük görev görünürlüğü vererek koçluk kalitesini artırın.',
+    solutionCard3Title: 'Büyüme Odaklı Web Katmanı',
+    solutionCard3Body:
+      'Web sitenizi güçlü mesaj, dönüşüm akışları ve iletişim formları ile lead makinesine dönüştürün.',
     pricingLink: 'Fiyatlandırma →',
     contactLink: 'İletişim →',
     clubPanelLink: 'Kulüp paneli →',
@@ -38,11 +51,13 @@ export default {
     title: 'Fiyatlandırma',
     back: 'Ana sayfaya dön',
     starterTitle: 'Starter Paket',
+    starterPrice: '€149 / ay başlangıç',
     starterDesc: 'Dijital operasyonlara başlayan butik kulüpler için temel yönetim özellikleri.',
     starterPoint1: 'Rol bazlı kulüp panel altyapısı',
     starterPoint2: 'Üye onay ve etkinlik yönetimi',
     starterPoint3: 'Temel operasyonel rapor kartları',
     proTitle: 'Pro Paket',
+    proPrice: '€349 / ay başlangıç',
     proDesc:
       'Gelişmiş raporlama ve eğitmen performans araçları isteyen çok şubeli işletmeler için.',
     proPoint1: 'Gelişmiş eğitmen iş akışları ve not sistemi',
@@ -61,6 +76,8 @@ export default {
     clubCount: 'Kulüp sayısı',
     website: 'Web sitesi (opsiyonel)',
     message: 'Mesaj',
+    directEmail: 'E-posta:',
+    instagram: 'Instagram:',
     send: 'Gönder',
     sending: 'Gönderiliyor…',
     error: 'Başvuru gönderilemedi',

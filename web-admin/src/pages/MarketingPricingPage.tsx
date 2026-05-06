@@ -16,6 +16,7 @@ export function MarketingPricingPage() {
 
       <section className="card">
         <h2>{t('pricing.starterTitle')}</h2>
+        <p className="priceLabel">{t('pricing.starterPrice')}</p>
         <p className="muted">{t('pricing.starterDesc')}</p>
         <ul className="featureList">
           <li>{t('pricing.starterPoint1')}</li>
@@ -24,8 +25,9 @@ export function MarketingPricingPage() {
         </ul>
       </section>
 
-      <section className="card">
+      <section className="card highlightCard">
         <h2>{t('pricing.proTitle')}</h2>
+        <p className="priceLabel">{t('pricing.proPrice')}</p>
         <p className="muted">{t('pricing.proDesc')}</p>
         <ul className="featureList">
           <li>{t('pricing.proPoint1')}</li>

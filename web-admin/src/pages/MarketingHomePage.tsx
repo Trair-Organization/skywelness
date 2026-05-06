@@ -8,6 +8,17 @@ export function MarketingHomePage() {
 
   return (
     <div className="shell marketing">
+      <nav className="marketingNav">
+        <strong>Wellness Club</strong>
+        <div className="marketingNavLinks">
+          <a href="#features">{t('marketing.featuresCta')}</a>
+          <a href="#contact">{t('marketing.contactLink')}</a>
+          <Link to="/pricing">{t('marketing.pricingLink')}</Link>
+          <Link className="secondary" to="/login">
+            {t('marketing.login')}
+          </Link>
+        </div>
+      </nav>
       <header className="marketingHero">
         <p className="badge">{t('marketing.badge')}</p>
         <h1>{t('marketing.title')}</h1>
@@ -36,6 +47,12 @@ export function MarketingHomePage() {
         </ul>
       </section>
 
+      <section className="trustStrip">
+        <span>{t('marketing.trust1')}</span>
+        <span>{t('marketing.trust2')}</span>
+        <span>{t('marketing.trust3')}</span>
+      </section>
+
       <section className="card">
         <h2>{t('marketing.whyTitle')}</h2>
         <div className="metricsGrid">
@@ -50,6 +67,24 @@ export function MarketingHomePage() {
           <article className="metricCard">
             <h3>{t('marketing.whyCard3Title')}</h3>
             <p className="muted">{t('marketing.whyCard3Body')}</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>{t('marketing.solutionTitle')}</h2>
+        <div className="solutionGrid">
+          <article className="solutionCard">
+            <h3>{t('marketing.solutionCard1Title')}</h3>
+            <p>{t('marketing.solutionCard1Body')}</p>
+          </article>
+          <article className="solutionCard">
+            <h3>{t('marketing.solutionCard2Title')}</h3>
+            <p>{t('marketing.solutionCard2Body')}</p>
+          </article>
+          <article className="solutionCard">
+            <h3>{t('marketing.solutionCard3Title')}</h3>
+            <p>{t('marketing.solutionCard3Body')}</p>
           </article>
         </div>
       </section>

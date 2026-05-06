@@ -17,6 +17,14 @@ export function MarketingContactPage() {
 
       <section className="card">
         <p className="muted">{t('contact.subtitle')}</p>
+        <div className="contactMeta">
+          <p>
+            <strong>{t('contact.directEmail')}</strong> info@wellnessclub.com
+          </p>
+          <p>
+            <strong>{t('contact.instagram')}</strong> @wellnessclub.tr
+          </p>
+        </div>
         <MarketingContactForm />
       </section>
 

@@ -16,6 +16,9 @@ export default {
     stat1: 'Unified club operations',
     stat2: 'Trainer and member workflows',
     stat3: 'Conversion-focused web presence',
+    trust1: 'Enterprise-grade security practices',
+    trust2: 'Built for premium fitness operations',
+    trust3: 'Scalable multi-club architecture',
     whyTitle: 'Built for premium fitness brands',
     whyCard1Title: 'Operational Excellence',
     whyCard1Body:
@@ -26,6 +29,16 @@ export default {
     whyCard3Title: 'Revenue Growth',
     whyCard3Body:
       'Capture new leads from your corporate website and convert them into paying memberships.',
+    solutionTitle: 'What you get in one platform',
+    solutionCard1Title: 'Club Command Center',
+    solutionCard1Body:
+      'Manage member approvals, events, staff operations, and service quality from one place.',
+    solutionCard2Title: 'Trainer Workflow Hub',
+    solutionCard2Body:
+      'Give trainers better visibility on students, notes, and daily tasks to improve coaching quality.',
+    solutionCard3Title: 'Growth Website Layer',
+    solutionCard3Body:
+      'Turn your website into a lead machine with proper messaging, conversion routes, and contact flows.',
     pricingLink: 'Pricing →',
     contactLink: 'Contact →',
     clubPanelLink: 'Club panel →',
@@ -38,11 +51,13 @@ export default {
     title: 'Pricing',
     back: 'Back to home',
     starterTitle: 'Starter Plan',
+    starterPrice: 'Starting from €149 / month',
     starterDesc: 'For boutique clubs launching digital workflows with core management features.',
     starterPoint1: 'Role-based club panel foundation',
     starterPoint2: 'Member approval and event management',
     starterPoint3: 'Core operational reporting cards',
     proTitle: 'Pro Plan',
+    proPrice: 'Starting from €349 / month',
     proDesc:
       'For multi-branch operations that need advanced reporting and trainer performance tools.',
     proPoint1: 'Advanced trainer workflows and notes',
@@ -61,6 +76,8 @@ export default {
     clubCount: 'Number of clubs',
     website: 'Website (optional)',
     message: 'Message',
+    directEmail: 'Email:',
+    instagram: 'Instagram:',
     send: 'Send',
     sending: 'Sending…',
     error: 'Could not submit your request',
