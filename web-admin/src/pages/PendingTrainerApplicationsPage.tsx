@@ -95,7 +95,7 @@ export function PendingTrainerApplicationsPage() {
               {t('lang.en')}
             </button>
           </div>
-          <Link className="secondary" to="/club/dashboard">
+          <Link className="secondary" to="/super-admin/dashboard">
             {t('pendingTrainerApplications.back')}
           </Link>
         </div>

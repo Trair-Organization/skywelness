@@ -7,6 +7,7 @@ import { FacilityAccessLog } from './entities/facility-access-log.entity';
 import { HealthData } from './entities/health-data.entity';
 import { AppNotification } from './entities/notification.entity';
 import { PartnerApplication } from './entities/partner-application.entity';
+import { PlatformAdminAuditLog } from './entities/platform-admin-audit-log.entity';
 import { PackageRequest } from './entities/package-request.entity';
 import { PackageType } from './entities/package-type.entity';
 import { Package } from './entities/package.entity';
@@ -49,4 +50,5 @@ export const typeOrmEntities = [
   FacilityAccessLog,
   ApiKey,
   PartnerApplication,
+  PlatformAdminAuditLog,
 ];

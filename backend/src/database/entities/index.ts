@@ -4,6 +4,7 @@ export * from './discount-code.entity';
 export * from './facility-access-log.entity';
 export * from './health-data.entity';
 export * from './notification.entity'; // AppNotification
+export * from './platform-admin-audit-log.entity';
 export * from './package-type.entity';
 export * from './package.entity';
 export * from './payment-transaction.entity';

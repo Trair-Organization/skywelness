@@ -22,6 +22,9 @@ export function LoginPage() {
     if (user.role === 'trainer') {
       return <Navigate to="/trainer/dashboard" replace />;
     }
+    if (user.role === 'platform_admin') {
+      return <Navigate to="/super-admin/dashboard" replace />;
+    }
     return <Navigate to={from === '/login' || from === '/' ? '/club/dashboard' : from} replace />;
   }
 
@@ -31,7 +34,7 @@ export function LoginPage() {
     setPending(true);
     try {
       await login(email.trim(), password, tenantSubdomain.trim().toLowerCase());
-      navigate(from === '/login' || from === '/' ? '/club/dashboard' : from, { replace: true });
+      navigate(from === '/login' || from === '/' ? '/' : from, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.error'));
     } finally {

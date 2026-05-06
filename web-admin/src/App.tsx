@@ -15,6 +15,11 @@ import { MarketingPrivacyPage } from './pages/MarketingPrivacyPage';
 import { MarketingTermsPage } from './pages/MarketingTermsPage';
 import { ClubInsightsPage } from './pages/ClubInsightsPage';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
+import { SuperAdminDashboardPage } from './pages/SuperAdminDashboardPage';
+import { SuperAdminTenantsPage } from './pages/SuperAdminTenantsPage';
+import { SuperAdminUsersPage } from './pages/SuperAdminUsersPage';
+import { SuperAdminTrainersPage } from './pages/SuperAdminTrainersPage';
+import { SuperAdminAuditPage } from './pages/SuperAdminAuditPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import './admin.css';
 
@@ -27,12 +32,19 @@ function AppRoutes() {
       <Route path="/privacy" element={<MarketingPrivacyPage />} />
       <Route path="/terms" element={<MarketingTermsPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route element={<ProtectedRoute allowedRoles={['administrator', 'platform_admin']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
         <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
-        <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
         <Route path="/events" element={<EventsPage />} />
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
+        <Route path="/super-admin/dashboard" element={<SuperAdminDashboardPage />} />
+        <Route path="/super-admin/tenants" element={<SuperAdminTenantsPage />} />
+        <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
+        <Route path="/super-admin/trainers" element={<SuperAdminTrainersPage />} />
+        <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+        <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
