@@ -27,9 +27,9 @@ export function RegistrationTypeScreen() {
         <Text style={styles.sub}>{t('registration.typeSubtitle')}</Text>
 
         <GlassCard style={styles.card}>
-          <Pressable style={styles.typeCard} onPress={() => navigation.navigate('CorporateEntry')}>
-            <Text style={styles.typeTitle}>{t('registration.corporateTitle')}</Text>
-            <Text style={styles.typeSub}>{t('registration.corporateSubtitle')}</Text>
+          <Pressable style={styles.typeCard} onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.typeTitle}>{t('registration.memberTitle')}</Text>
+            <Text style={styles.typeSub}>{t('registration.memberSubtitle')}</Text>
           </Pressable>
 
           <Pressable style={styles.typeCard} onPress={() => navigation.navigate('TrainerRegister')}>
@@ -37,9 +37,9 @@ export function RegistrationTypeScreen() {
             <Text style={styles.typeSub}>{t('registration.trainerSubtitle')}</Text>
           </Pressable>
 
-          <Pressable style={styles.typeCard} onPress={() => navigation.navigate('MemberEntry')}>
-            <Text style={styles.typeTitle}>{t('registration.memberTitle')}</Text>
-            <Text style={styles.typeSub}>{t('registration.memberSubtitle')}</Text>
+          <Pressable style={styles.typeCard} onPress={() => navigation.navigate('CorporateEntry')}>
+            <Text style={styles.typeTitle}>{t('registration.corporateTitle')}</Text>
+            <Text style={styles.typeSub}>{t('registration.corporateSubtitle')}</Text>
           </Pressable>
         </GlassCard>
       </View>

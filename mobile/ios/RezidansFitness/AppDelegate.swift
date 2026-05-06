@@ -1,4 +1,5 @@
 import UIKit
+import UserNotifications
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
@@ -28,8 +29,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       in: window,
       launchOptions: launchOptions
     )
+    requestNotificationPermission()
 
     return true
+  }
+
+  private func requestNotificationPermission() {
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in
+      // No-op: iOS handles prompt lifecycle and system state.
+    }
   }
 }
 

@@ -81,6 +81,10 @@ export default {
     show: 'Show',
     hide: 'Hide',
     ok: 'OK',
+    cancel: 'Cancel',
+    chooseSource: 'Choose photo source',
+    camera: 'Camera',
+    gallery: 'Gallery',
   },
   tenant: {
     section: 'Club',
@@ -111,6 +115,8 @@ export default {
     submit: 'Sign in',
     needTenant: 'Verify your club first',
     invalidCredentials: 'Email or password is incorrect.',
+    emailRequiresClubChoice:
+      'This email is registered in more than one club. Please select your club or enter your club code.',
     pendingApproval: 'Your membership is awaiting club approval. You can sign in after approval.',
     rejected: 'Your membership was rejected by the club. Please contact your club for support.',
     failed: 'Sign-in failed',
@@ -166,6 +172,7 @@ export default {
     memberTitle: 'User',
     memberSubtitle: 'Select a club or continue without one.',
     memberOptionalClub: 'Club selection is optional at this step.',
+    selectClubOptional: 'Select your club (optional)',
     continueWithoutClub: 'Continue without club',
     noClubYetTitle: 'No-club signup is coming soon',
     noClubYetBody:
@@ -232,6 +239,10 @@ export default {
     acceptPrivacy: 'I have read and accept the Privacy Policy.',
     acceptTerms: 'I accept the User Agreement and terms of use.',
     acceptRequired: 'You must accept the agreements to continue.',
+    photoUpload: 'Upload profile photo',
+    photoUploading: 'Uploading photo...',
+    photoChange: 'Change profile photo',
+    photoUploadFailed: 'Profile photo upload failed.',
   },
   trainerRegister: {
     cta: 'Register as trainer',

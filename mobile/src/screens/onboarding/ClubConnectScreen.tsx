@@ -1,10 +1,11 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useEffect } from 'react';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
+import type { TenantListRow } from '../../auth/memberAuthTypes';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import type { RootStackParamList } from '../../navigation/types';
@@ -20,6 +21,7 @@ export function ClubConnectScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
+  const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
   const activeClubCount = String(tenantDirectory.length);
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
     if (typeof fn !== 'function') {
@@ -63,8 +65,6 @@ export function ClubConnectScreen() {
           />
           <Text style={styles.headline}>{t('onboarding.clubHeadline')}</Text>
           <Text style={styles.slogan}>{t('onboarding.ecosystemSlogan')}</Text>
-          <Text style={styles.valueProp}>{t('onboarding.valueProposition')}</Text>
-          <Text style={styles.sub}>{t('onboarding.clubSubtitle')}</Text>
         </View>
 
         <View style={styles.metricsRow}>
@@ -102,27 +102,30 @@ export function ClubConnectScreen() {
                 .map((part) => part[0]?.toUpperCase() ?? '')
                 .join('');
               return (
-                <View
+                <Pressable
                   key={club.id}
                   style={[styles.popularClubCard, featured && styles.popularClubCardFeatured]}
+                  onPress={() => setPreviewClub(club)}
                 >
-                  <View style={styles.popularTop}>
-                    <Text style={styles.popularBadge}>
-                      {featured
-                        ? t('onboarding.clubCardFeaturedBadge')
-                        : t('onboarding.clubCardBadge')}
-                    </Text>
-                    <View style={styles.popularLogoBubble}>
-                      {club.logoUrl ? (
-                        <Image source={{ uri: club.logoUrl }} style={styles.popularLogoImage} />
-                      ) : (
-                        <Text style={styles.popularLogoTxt}>{initials || 'WC'}</Text>
-                      )}
-                    </View>
+                  <View
+                    style={[styles.popularLogoBubble, featured && styles.popularLogoBubbleFeatured]}
+                  >
+                    {club.logoUrl ? (
+                      <Image source={{ uri: club.logoUrl }} style={styles.popularLogoImage} />
+                    ) : (
+                      <Text style={styles.popularLogoTxt}>{initials || 'WC'}</Text>
+                    )}
                   </View>
-                  <Text style={styles.popularClubName}>{club.name}</Text>
+                  <Text style={styles.popularBadge}>
+                    {featured
+                      ? t('onboarding.clubCardFeaturedBadge')
+                      : t('onboarding.clubCardBadge')}
+                  </Text>
+                  <Text style={styles.popularClubName} numberOfLines={2}>
+                    {club.name}
+                  </Text>
                   <Text style={styles.popularClubCode}>@{club.subdomain}</Text>
-                </View>
+                </Pressable>
               );
             })}
           </ScrollView>
@@ -145,6 +148,67 @@ export function ClubConnectScreen() {
           </Pressable>
         </GlassCard>
       </ScrollView>
+      <Modal
+        visible={!!previewClub}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setPreviewClub(null)}
+      >
+        <View
+          style={[
+            styles.modalBackdrop,
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 },
+          ]}
+        >
+          <Pressable style={styles.modalDismissArea} onPress={() => setPreviewClub(null)} />
+          <View style={styles.modalSheet}>
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalCard}>
+                <View style={styles.modalAvatar}>
+                  {previewClub?.logoUrl ? (
+                    <Image source={{ uri: previewClub.logoUrl }} style={styles.modalAvatarImage} />
+                  ) : (
+                    <Text style={styles.modalAvatarTxt}>
+                      {(previewClub?.name ?? 'Wellness Club')
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0]?.toUpperCase() ?? '')
+                        .join('') || 'WC'}
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.modalTitle}>{previewClub?.name}</Text>
+                <Text style={styles.modalCode}>@{previewClub?.subdomain}</Text>
+                <Text style={styles.modalBody}>
+                  Bu kulup ile kaydolursan hesabin bu kulube bagli olusturulur. Istersen daha sonra
+                  kulupsuz da devam edebilirsin.
+                </Text>
+                <Pressable
+                  style={styles.modalPrimaryBtn}
+                  onPress={() => {
+                    const subdomain = previewClub?.subdomain;
+                    setPreviewClub(null);
+                    navigation.navigate('Register', {
+                      preselectedSubdomain: subdomain,
+                    });
+                  }}
+                >
+                  <Text style={styles.modalPrimaryTxt}>Kulube Katil</Text>
+                </Pressable>
+                <Pressable style={styles.modalSecondaryBtn} onPress={() => setPreviewClub(null)}>
+                  <Text style={styles.modalSecondaryTxt}>{t('common.cancel')}</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -206,20 +270,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.2,
   },
-  valueProp: {
-    marginTop: 10,
-    fontSize: 14,
-    color: premium.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 320,
-  },
-  sub: {
-    marginTop: 10,
-    fontSize: 16,
-    color: premium.textMuted,
-    textAlign: 'center',
-  },
   metricsRow: {
     flexDirection: 'row',
     gap: 10,
@@ -271,62 +321,59 @@ const styles = StyleSheet.create({
   popularSlider: {
     gap: 12,
     paddingRight: 12,
+    alignItems: 'flex-start',
   },
   popularClubCard: {
-    width: 270,
-    minHeight: 152,
-    borderRadius: premium.radiusSm,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.24)',
-    padding: 16,
+    width: 116,
+    alignItems: 'center',
+    paddingVertical: 4,
   },
   popularClubCardFeatured: {
-    borderColor: 'rgba(56,189,248,0.45)',
-    backgroundColor: 'rgba(8,47,73,0.4)',
-  },
-  popularTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    transform: [{ scale: 1.02 }],
   },
   popularBadge: {
     color: premium.accentBlue,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.7,
+    letterSpacing: 0.5,
+    marginTop: 10,
   },
   popularLogoBubble: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
     borderColor: premium.glassBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    overflow: 'hidden',
+  },
+  popularLogoBubbleFeatured: {
+    borderColor: 'rgba(56,189,248,0.55)',
   },
   popularLogoImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: '100%',
+    height: '100%',
   },
   popularLogoTxt: {
     color: premium.text,
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: 24,
   },
   popularClubName: {
     color: premium.text,
-    fontSize: 19,
+    fontSize: 13,
     fontWeight: '700',
-    marginTop: 14,
+    marginTop: 6,
+    textAlign: 'center',
+    minHeight: 34,
   },
   popularClubCode: {
     color: premium.textMuted,
-    fontSize: 13,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
   },
   card: {
     marginTop: 4,
@@ -369,6 +416,118 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   secondaryTxt: {
+    color: premium.textMuted,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(2,8,18,0.86)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 32,
+  },
+  modalDismissArea: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalSheet: {
+    width: '100%',
+    maxWidth: 370,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(6,18,33,0.98)',
+    maxHeight: '72%',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  modalScroll: {
+    width: '100%',
+  },
+  modalScrollContent: {
+    paddingBottom: 8,
+  },
+  modalCard: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingHorizontal: 6,
+    paddingBottom: 6,
+  },
+  modalAvatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  modalAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  modalAvatarTxt: {
+    color: premium.text,
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  modalTitle: {
+    marginTop: 12,
+    fontSize: 20,
+    fontWeight: '800',
+    color: premium.text,
+    textAlign: 'center',
+  },
+  modalCode: {
+    marginTop: 4,
+    fontSize: 13,
+    color: premium.textMuted,
+  },
+  modalBody: {
+    marginTop: 12,
+    marginBottom: 14,
+    fontSize: 13,
+    lineHeight: 20,
+    color: premium.textMuted,
+    textAlign: 'center',
+  },
+  modalPrimaryBtn: {
+    width: '100%',
+    minHeight: 50,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    marginBottom: 8,
+  },
+  modalPrimaryTxt: {
+    color: premium.accentGreen,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalSecondaryBtn: {
+    width: '100%',
+    minHeight: 44,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  modalSecondaryTxt: {
     color: premium.textMuted,
     fontSize: 14,
     fontWeight: '700',

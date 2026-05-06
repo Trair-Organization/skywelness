@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -214,7 +215,7 @@ export class AuthService {
     });
     await this.usersRepo.save(user);
 
-    return this.buildAuthResponse(user);
+    return await this.buildAuthResponse(user);
   }
 
   private slugifyForSubdomain(value: string): string {
@@ -428,15 +429,37 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, requestSubdomain?: string | null) {
-    const subdomain = this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain);
-    const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
-    if (!tenant) {
-      throw new UnauthorizedException('Invalid credentials');
+    const hasTenantHint = Boolean(dto.tenantSubdomain?.trim() || requestSubdomain?.trim());
+
+    let user: User | null = null;
+
+    if (hasTenantHint) {
+      const subdomain = this.resolveTenantSubdomain(dto.tenantSubdomain, requestSubdomain);
+      const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
+      if (!tenant) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      user = await this.usersRepo.findOne({
+        where: { tenantId: tenant.id, email: dto.email.toLowerCase() },
+        relations: ['tenant'],
+      });
+    } else {
+      const matches = await this.usersRepo.find({
+        where: { email: dto.email.toLowerCase() },
+        relations: ['tenant'],
+      });
+      if (matches.length === 0) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      if (matches.length > 1) {
+        throw new BadRequestException(
+          'This email is registered in more than one club. Please select your club or enter your club code.',
+        );
+      }
+      user = matches[0] ?? null;
     }
 
-    const user = await this.usersRepo.findOne({
-      where: { tenantId: tenant.id, email: dto.email.toLowerCase() },
-    });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -465,7 +488,7 @@ export class AuthService {
       { failedLoginAttempts: 0, lockedUntil: null, lastLogin: new Date() },
     );
 
-    return this.buildAuthResponse(user);
+    return await this.buildAuthResponse(user);
   }
 
   async refresh(refreshToken: string) {
@@ -491,7 +514,7 @@ export class AuthService {
 
     this.assertMemberAccountAllowed(user);
 
-    return this.buildAuthResponse(user);
+    return await this.buildAuthResponse(user);
   }
 
   private assertMemberAccountAllowed(user: User) {
@@ -567,7 +590,18 @@ export class AuthService {
     return this.sanitizeUser(saved);
   }
 
-  private buildAuthResponse(user: User) {
+  private async buildAuthResponse(user: User) {
+    let tenantSubdomain: string | undefined = user.tenant?.subdomain;
+    if (!tenantSubdomain) {
+      const tenantRow = await this.tenantsRepo.findOne({
+        where: { id: user.tenantId },
+        select: ['subdomain'],
+      });
+      tenantSubdomain = tenantRow?.subdomain;
+    }
+    if (!tenantSubdomain) {
+      throw new InternalServerErrorException('Tenant resolution failed');
+    }
     const accessPayload: JwtAccessPayload = {
       sub: user.id,
       tid: user.tenantId,
@@ -602,6 +636,7 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresIn,
+      tenantSubdomain,
       user: this.sanitizeUser(user),
     };
   }

@@ -25,7 +25,6 @@ export function LoginScreen() {
     setPassword,
     loadingAuth,
     login,
-    clearClubSelection,
     resolveTenantByCode,
   } = useMemberAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -114,16 +113,6 @@ export function LoginScreen() {
             <Text style={styles.submitTxt}>{t('login.submit')}</Text>
           </Pressable>
         </GlassCard>
-
-        <Pressable
-          style={styles.changeClub}
-          onPress={() => {
-            clearClubSelection();
-            navigation.navigate('ClubConnect');
-          }}
-        >
-          <Text style={styles.changeClubTxt}>{t('onboarding.changeClub')}</Text>
-        </Pressable>
       </View>
     </GradientBackground>
   );
@@ -198,14 +187,5 @@ const styles = StyleSheet.create({
     color: premium.accentBlue,
     fontSize: 18,
     fontWeight: '700',
-  },
-  changeClub: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  changeClubTxt: {
-    color: premium.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

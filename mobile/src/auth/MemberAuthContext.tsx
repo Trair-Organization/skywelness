@@ -38,6 +38,7 @@ type MemberAuthContextValue = {
     emailVal: string,
     phoneVal: string,
     passwordVal: string,
+    photoUrl?: string,
   ) => Promise<'pending' | 'signed_in' | null>;
   refreshMe: () => Promise<boolean>;
   logout: () => Promise<void>;
@@ -109,6 +110,9 @@ function localizeApiMessage(
   }
   if (m.includes('tenant not found for subdomain')) {
     return t('tenant.loadFailed');
+  }
+  if (m.includes('more than one club')) {
+    return t('login.emailRequiresClubChoice');
   }
   return t(fallbackKey);
 }
@@ -276,22 +280,40 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
   }, [token, tenant]);
 
   const login = useCallback(async () => {
-    if (!tenant) {
-      Alert.alert(t('login.section'), t('login.needTenant'));
+    const normalizedEmail = email.trim();
+    const normalizedPassword = password;
+    if (!normalizedEmail || !normalizedPassword) {
+      Alert.alert(t('login.section'), t('login.failed'));
       return;
     }
+
     setLoadingAuth(true);
     try {
+      const body: { email: string; password: string; tenantSubdomain?: string } = {
+        email: normalizedEmail,
+        password: normalizedPassword,
+      };
+      const hint = tenant?.subdomain ?? subdomain.trim().toLowerCase();
+      if (hint) {
+        body.tenantSubdomain = hint;
+      }
       const res = await apiJson<AuthRes>('/auth/login', {
         method: 'POST',
         auth: false,
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-          tenantSubdomain: tenant.subdomain,
-        }),
+        body: JSON.stringify(body),
       });
-      await completeSignIn(res, tenant);
+      const resolvedSub = (res.tenantSubdomain ?? hint).trim().toLowerCase();
+      if (!resolvedSub) {
+        Alert.alert(t('login.section'), t('login.failed'));
+        return;
+      }
+      const tenantInfo = await apiJson<TenantInfo>(
+        `/tenants/by-subdomain/${encodeURIComponent(resolvedSub)}`,
+        { auth: false },
+      );
+      setTenant(tenantInfo);
+      setSubdomain(resolvedSub);
+      await completeSignIn(res, tenantInfo);
     } catch (e) {
       Alert.alert(
         t('login.section'),
@@ -302,7 +324,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingAuth(false);
     }
-  }, [tenant, email, password, t, completeSignIn]);
+  }, [tenant, subdomain, email, password, t, completeSignIn]);
 
   const splitFullName = (full: string) => {
     const tname = full.trim();
@@ -322,6 +344,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
       emailVal: string,
       phoneVal: string,
       passwordVal: string,
+      photoUrl?: string,
     ) => {
       const { first, last } = splitFullName(fullName);
       if (!first) {
@@ -345,6 +368,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
           password: passwordVal,
           firstName: first,
           lastName: last,
+          photoUrl: photoUrl?.trim() || undefined,
           tenantSubdomain: tenant?.subdomain,
         };
         let res: AuthRes | { pendingApproval: true; message?: string };

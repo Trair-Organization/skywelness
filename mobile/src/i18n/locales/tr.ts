@@ -81,6 +81,10 @@ export default {
     show: 'Goster',
     hide: 'Gizle',
     ok: 'Tamam',
+    cancel: 'Vazgeç',
+    chooseSource: 'Fotoğraf kaynağı seç',
+    camera: 'Kamera',
+    gallery: 'Galeri',
   },
   tenant: {
     section: 'Kulüp',
@@ -111,6 +115,8 @@ export default {
     submit: 'Giriş yap',
     needTenant: 'Önce kulübü doğrulayın',
     invalidCredentials: 'E-posta veya şifre hatalı.',
+    emailRequiresClubChoice:
+      'Bu e-posta birden fazla kulüpte kayıtlı. Lütfen kulübünüzü seçin veya kulüp kodunu girin.',
     pendingApproval: 'Üyeliğiniz kulüp onayı bekliyor. Onaylandıktan sonra giriş yapabilirsiniz.',
     rejected: 'Üyeliğiniz kulüp tarafından reddedildi. Destek için kulübünüzle iletişime geçin.',
     failed: 'Giriş başarısız',
@@ -166,6 +172,7 @@ export default {
     memberTitle: 'Kullanıcı',
     memberSubtitle: 'İster kulüp seç, ister kulüpsüz devam et.',
     memberOptionalClub: 'Kulüp seçimi bu adımda isteğe bağlıdır.',
+    selectClubOptional: 'Kulübünü Seç (opsiyonel)',
     continueWithoutClub: 'Kulüpsüz devam et',
     noClubYetTitle: 'Kulüpsüz kayıt yakında',
     noClubYetBody:
@@ -233,6 +240,10 @@ export default {
     acceptPrivacy: 'Gizlilik Sözleşmesini okudum ve kabul ediyorum.',
     acceptTerms: 'Kullanıcı Sözleşmesini ve kullanım şartlarını kabul ediyorum.',
     acceptRequired: 'Devam etmek için sözleşmeleri kabul etmelisiniz.',
+    photoUpload: 'Profil fotoğrafı yükle',
+    photoUploading: 'Fotoğraf yükleniyor...',
+    photoChange: 'Profil fotoğrafını değiştir',
+    photoUploadFailed: 'Profil fotoğrafı yüklenemedi.',
   },
   trainerRegister: {
     cta: 'Eğitmen olarak kayıt ol',

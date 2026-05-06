@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -75,12 +75,19 @@ export function CorporateEntryScreen() {
     }
   };
 
-  const uploadLogo = async () => {
-    const pick = await launchImageLibrary({
-      mediaType: 'photo',
-      selectionLimit: 1,
-      includeBase64: false,
-    });
+  const pickAndUploadLogo = async (source: 'camera' | 'gallery') => {
+    const pick =
+      source === 'camera'
+        ? await launchCamera({
+            mediaType: 'photo',
+            cameraType: 'back',
+            saveToPhotos: false,
+          })
+        : await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 1,
+            includeBase64: false,
+          });
     const asset = pick.assets?.[0];
     if (!asset?.uri) {
       return;
@@ -114,6 +121,24 @@ export function CorporateEntryScreen() {
     }
   };
 
+  const uploadLogo = () => {
+    Alert.alert(t('common.chooseSource'), '', [
+      {
+        text: t('common.camera'),
+        onPress: () => {
+          pickAndUploadLogo('camera').catch(() => {});
+        },
+      },
+      {
+        text: t('common.gallery'),
+        onPress: () => {
+          pickAndUploadLogo('gallery').catch(() => {});
+        },
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
   return (
     <GradientBackground>
       <ScrollView
@@ -131,7 +156,36 @@ export function CorporateEntryScreen() {
         <Text style={styles.sub}>{t('registration.partnerFormSubtitle')}</Text>
 
         <GlassCard style={styles.card}>
-          <Text style={styles.sectionTitle}>{t('registration.partnerCompanySection')}</Text>
+          <View style={styles.avatarSection}>
+            <Pressable
+              style={styles.avatarRing}
+              onPress={() => {
+                uploadLogo();
+              }}
+              disabled={uploadingLogo}
+            >
+              {logoUrl ? (
+                <Image source={{ uri: logoUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarPlus}>+</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.avatarCta}
+              onPress={() => {
+                uploadLogo();
+              }}
+              disabled={uploadingLogo}
+            >
+              <Text style={styles.avatarCtaTxt}>
+                {uploadingLogo
+                  ? t('registration.partnerLogoUploading')
+                  : logoUrl
+                    ? t('registration.partnerLogoChange')
+                    : t('registration.partnerLogoUpload')}
+              </Text>
+            </Pressable>
+          </View>
           <PremiumInput
             label={t('registration.partnerCompanyName')}
             value={companyName}
@@ -153,24 +207,6 @@ export function CorporateEntryScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          <Pressable
-            style={styles.submitBtn}
-            onPress={() => {
-              uploadLogo().catch(() => {});
-            }}
-            disabled={uploadingLogo}
-          >
-            <Text style={styles.submitTxt}>
-              {uploadingLogo
-                ? t('registration.partnerLogoUploading')
-                : logoUrl
-                  ? t('registration.partnerLogoChange')
-                  : t('registration.partnerLogoUpload')}
-            </Text>
-          </Pressable>
-          {logoUrl ? <Text style={styles.logoLine}>{logoUrl}</Text> : null}
-
-          <Text style={styles.sectionTitle}>{t('registration.partnerContactSection')}</Text>
           <PremiumInput
             label={t('registration.partnerContactName')}
             value={contactName}
@@ -257,13 +293,39 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 6,
   },
-  sectionTitle: {
-    color: premium.text,
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    borderColor: premium.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlus: {
+    color: premium.accentBlue,
+    fontSize: 34,
+    fontWeight: '300',
+    marginTop: -2,
+  },
+  avatarCta: {
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  avatarCtaTxt: {
+    color: premium.accentBlue,
     fontSize: 13,
     fontWeight: '700',
-    marginBottom: 10,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
   },
   submitBtn: {
     borderWidth: 1,
@@ -282,11 +344,5 @@ const styles = StyleSheet.create({
   },
   submitBtnDisabled: {
     opacity: 0.6,
-  },
-  logoLine: {
-    color: premium.textMuted,
-    fontSize: 11,
-    marginTop: 6,
-    marginBottom: 10,
   },
 });

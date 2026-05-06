@@ -9,6 +9,7 @@ export type AuthRes = {
   accessToken: string;
   refreshToken: string;
   expiresIn?: number;
+  tenantSubdomain?: string;
   user: {
     id: string;
     tenantId?: string;

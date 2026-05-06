@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -177,12 +178,19 @@ export function TrainerRegisterScreen() {
     }
   };
 
-  const uploadPhoto = async () => {
-    const pick = await launchImageLibrary({
-      mediaType: 'photo',
-      selectionLimit: 1,
-      includeBase64: false,
-    });
+  const pickAndUploadPhoto = async (source: 'camera' | 'gallery') => {
+    const pick =
+      source === 'camera'
+        ? await launchCamera({
+            mediaType: 'photo',
+            cameraType: 'front',
+            saveToPhotos: false,
+          })
+        : await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 1,
+            includeBase64: false,
+          });
     const asset = pick.assets?.[0];
     if (!asset?.uri) {
       return;
@@ -216,6 +224,24 @@ export function TrainerRegisterScreen() {
     }
   };
 
+  const uploadPhoto = () => {
+    Alert.alert(t('common.chooseSource'), '', [
+      {
+        text: t('common.camera'),
+        onPress: () => {
+          pickAndUploadPhoto('camera').catch(() => {});
+        },
+      },
+      {
+        text: t('common.gallery'),
+        onPress: () => {
+          pickAndUploadPhoto('gallery').catch(() => {});
+        },
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
   return (
     <GradientBackground>
       <ScrollView
@@ -231,7 +257,36 @@ export function TrainerRegisterScreen() {
         <Text style={styles.title}>{t('trainerRegister.title')}</Text>
         <Text style={styles.subTitle}>{t('trainerRegister.subtitle')}</Text>
         <GlassCard style={styles.card}>
-          <Text style={styles.sectionTitle}>{t('trainerRegister.identitySection')}</Text>
+          <View style={styles.avatarSection}>
+            <Pressable
+              style={styles.avatarRing}
+              onPress={() => {
+                uploadPhoto();
+              }}
+              disabled={uploadingPhoto}
+            >
+              {photoUrl ? (
+                <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarPlus}>+</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.avatarCta}
+              onPress={() => {
+                uploadPhoto();
+              }}
+              disabled={uploadingPhoto}
+            >
+              <Text style={styles.avatarCtaTxt}>
+                {uploadingPhoto
+                  ? t('trainerRegister.photoUploading')
+                  : photoUrl
+                    ? t('trainerRegister.photoChange')
+                    : t('trainerRegister.photoUpload')}
+              </Text>
+            </Pressable>
+          </View>
           <PremiumInput
             label={t('onboarding.fullName')}
             value={fullName}
@@ -254,7 +309,6 @@ export function TrainerRegisterScreen() {
           />
           <PremiumInput label={t('trainerRegister.city')} value={city} onChangeText={setCity} />
 
-          <Text style={styles.sectionTitle}>{t('trainerRegister.accountSection')}</Text>
           <PremiumInput
             label={t('register.usernameLabel')}
             value={username}
@@ -269,7 +323,6 @@ export function TrainerRegisterScreen() {
             onChangeText={setPassword}
           />
 
-          <Text style={styles.sectionTitle}>{t('trainerRegister.profileSection')}</Text>
           <PremiumInput
             label={t('trainerRegister.bio')}
             value={bio}
@@ -310,22 +363,6 @@ export function TrainerRegisterScreen() {
             onChangeText={setPricingNote}
             placeholder={t('trainerRegister.pricingNoteHint')}
           />
-          <Pressable
-            style={styles.photoBtn}
-            onPress={() => {
-              uploadPhoto().catch(() => {});
-            }}
-            disabled={uploadingPhoto}
-          >
-            <Text style={styles.photoBtnTxt}>
-              {uploadingPhoto
-                ? t('trainerRegister.photoUploading')
-                : photoUrl
-                  ? t('trainerRegister.photoChange')
-                  : t('trainerRegister.photoUpload')}
-            </Text>
-          </Pressable>
-          {photoUrl ? <Text style={styles.photoLine}>{photoUrl}</Text> : null}
           <Pressable
             style={styles.optionalClubToggle}
             onPress={() => {
@@ -422,13 +459,39 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', color: premium.text },
   subTitle: { marginTop: 6, marginBottom: 12, color: premium.textMuted, fontSize: 14 },
   card: { marginTop: 8 },
-  sectionTitle: {
-    color: premium.text,
-    fontSize: 12,
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    borderColor: premium.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlus: {
+    color: premium.accentBlue,
+    fontSize: 34,
+    fontWeight: '300',
+    marginTop: -2,
+  },
+  avatarCta: {
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  avatarCtaTxt: {
+    color: premium.accentBlue,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 8,
-    letterSpacing: 0.45,
-    textTransform: 'uppercase',
   },
   optionalClubToggle: {
     marginTop: 6,
@@ -518,24 +581,4 @@ const styles = StyleSheet.create({
   submitBtnPressed: { backgroundColor: 'rgba(255,255,255,0.06)' },
   submitBtnDisabled: { opacity: 0.6 },
   submitTxt: { color: premium.accentBlue, fontSize: 18, fontWeight: '700' },
-  photoBtn: {
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    borderRadius: premium.radiusSm,
-    minHeight: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  photoBtnTxt: {
-    color: premium.accentBlue,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  photoLine: {
-    color: premium.textMuted,
-    fontSize: 11,
-    marginBottom: 10,
-  },
 });

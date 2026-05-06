@@ -1,20 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { apiJson } from '../../api/client';
+import { getApiBaseUrl } from '../../config';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -22,6 +27,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Register'>;
+type RegisterRoute = RouteProp<RootStackParamList, 'Register'>;
 type UsernameStatus =
   | 'idle'
   | 'too_short'
@@ -39,19 +45,45 @@ export function RegisterScreen() {
   const { height } = useWindowDimensions();
   const compact = height <= 860;
   const navigation = useNavigation<Nav>();
-  const { tenant, loadingAuth, registerWithFullName } = useMemberAuth();
+  const route = useRoute<RegisterRoute>();
+  const {
+    tenant,
+    subdomain,
+    setSubdomain,
+    tenantDirectory,
+    loadingTenantDir,
+    loadingAuth,
+    resolveTenantByCode,
+    loadTenantDirectory,
+    clearClubSelection,
+    registerWithFullName,
+  } = useMemberAuth();
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const [clubQuery, setClubQuery] = useState('');
   const successAnim = useRef(new Animated.Value(0)).current;
+
+  const filteredDirectory = useMemo(() => {
+    const q = clubQuery.trim().toLowerCase();
+    if (!q) {
+      return tenantDirectory;
+    }
+    return tenantDirectory.filter(
+      (row) => row.name.toLowerCase().includes(q) || row.subdomain.toLowerCase().includes(q),
+    );
+  }, [clubQuery, tenantDirectory]);
 
   useEffect(() => {
     if (!tenant) {
@@ -124,9 +156,80 @@ export function RegisterScreen() {
     }).start();
   }, [showSuccessModal, successAnim]);
 
+  useEffect(() => {
+    const preselected = route.params?.preselectedSubdomain?.trim().toLowerCase();
+    if (!preselected) {
+      return;
+    }
+    setSubdomain(preselected);
+    resolveTenantByCode(preselected, true).catch(() => {});
+  }, [route.params?.preselectedSubdomain, resolveTenantByCode, setSubdomain]);
+
+  const pickAndUpload = async (source: 'camera' | 'gallery') => {
+    const pick =
+      source === 'camera'
+        ? await launchCamera({
+            mediaType: 'photo',
+            cameraType: 'front',
+            saveToPhotos: false,
+          })
+        : await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 1,
+            includeBase64: false,
+          });
+    const asset = pick.assets?.[0];
+    if (!asset?.uri) return;
+    setUploadingPhoto(true);
+    try {
+      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
+      const form = new FormData();
+      form.append('file', {
+        uri: asset.uri,
+        name: asset.fileName ?? `member-${Date.now()}.jpg`,
+        type: asset.type ?? 'image/jpeg',
+      } as never);
+      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) {
+        throw new Error('upload_failed');
+      }
+      const body = (await res.json()) as { url?: string };
+      if (!body.url) {
+        throw new Error('upload_failed');
+      }
+      const absolute = body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`;
+      setPhotoUrl(absolute);
+    } catch {
+      Alert.alert(t('register.section'), t('register.photoUploadFailed'));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const uploadPhoto = () => {
+    Alert.alert(t('common.chooseSource'), '', [
+      {
+        text: t('common.camera'),
+        onPress: () => {
+          pickAndUpload('camera').catch(() => {});
+        },
+      },
+      {
+        text: t('common.gallery'),
+        onPress: () => {
+          pickAndUpload('gallery').catch(() => {});
+        },
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
   return (
     <GradientBackground>
-      <View
+      <ScrollView
         style={[
           styles.root,
           {
@@ -134,6 +237,8 @@ export function RegisterScreen() {
             paddingBottom: insets.bottom + (compact ? 12 : 24),
           },
         ]}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
         <Pressable
           style={styles.backBtn}
@@ -147,29 +252,37 @@ export function RegisterScreen() {
         >
           <Text style={styles.backTxt}>{t('common.back')}</Text>
         </Pressable>
-        <View style={[styles.authSeg, compact && styles.authSegCompact]}>
-          <Pressable
-            style={styles.authBtn}
-            onPress={() => {
-              navigation.navigate('Login');
-            }}
-          >
-            <Text style={styles.authTxt}>{t('auth.tabLogin')}</Text>
-          </Pressable>
-          <Pressable style={[styles.authBtn, styles.authBtnOn]}>
-            <Text style={[styles.authTxt, styles.authTxtOn]}>{t('auth.tabRegister')}</Text>
-          </Pressable>
-        </View>
-
         <GlassCard style={[styles.card, compact && styles.cardCompact]}>
-          <Pressable
-            style={styles.trainerCta}
-            onPress={() => {
-              navigation.navigate('TrainerRegister');
-            }}
-          >
-            <Text style={styles.trainerCtaTxt}>{t('trainerRegister.cta')}</Text>
-          </Pressable>
+          <View style={styles.avatarSection}>
+            <Pressable
+              style={styles.avatarRing}
+              onPress={() => {
+                uploadPhoto();
+              }}
+              disabled={uploadingPhoto}
+            >
+              {photoUrl ? (
+                <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarPlus}>+</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.avatarCta}
+              onPress={() => {
+                uploadPhoto();
+              }}
+              disabled={uploadingPhoto}
+            >
+              <Text style={styles.avatarCtaTxt}>
+                {uploadingPhoto
+                  ? t('register.photoUploading')
+                  : photoUrl
+                    ? t('register.photoChange')
+                    : t('register.photoUpload')}
+              </Text>
+            </Pressable>
+          </View>
           <PremiumInput
             label={t('onboarding.fullName')}
             value={fullName}
@@ -232,6 +345,71 @@ export function RegisterScreen() {
                 ))}
               </View>
             </View>
+          ) : null}
+          <Text style={styles.clubOptionalInfo}>{t('registration.memberOptionalClub')}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.clubBtn, pressed && styles.clubBtnPressed]}
+            onPress={() => {
+              const next = !listOpen;
+              setListOpen(next);
+              if (next) {
+                loadTenantDirectory().catch(() => {});
+              }
+            }}
+            disabled={loadingTenantDir}
+          >
+            {loadingTenantDir ? (
+              <ActivityIndicator color={premium.accentBlue} />
+            ) : (
+              <Text style={styles.clubBtnTxt}>
+                {tenant?.name ?? t('registration.selectClubOptional')}
+              </Text>
+            )}
+          </Pressable>
+          {listOpen ? (
+            <View style={styles.clubList}>
+              <PremiumInput
+                label={t('tenant.searchLabel')}
+                value={clubQuery}
+                onChangeText={setClubQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder={t('tenant.searchPlaceholder')}
+              />
+              {filteredDirectory.map((row) => (
+                <Pressable
+                  key={row.id}
+                  style={styles.clubRow}
+                  onPress={() => {
+                    resolveTenantByCode(row.subdomain).catch(() => {});
+                    setListOpen(false);
+                    setClubQuery('');
+                  }}
+                >
+                  <Text style={styles.clubRowName}>{row.name}</Text>
+                  <Text style={styles.clubRowCode}>{row.subdomain}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          <PremiumInput
+            label={t('tenant.subdomainLabel')}
+            value={subdomain}
+            onChangeText={setSubdomain}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder={t('tenant.placeholder')}
+          />
+          {tenant ? (
+            <Pressable
+              style={styles.unlinkBtn}
+              onPress={() => {
+                clearClubSelection();
+                setSubdomain('');
+              }}
+            >
+              <Text style={styles.unlinkTxt}>{t('registration.continueWithoutClub')}</Text>
+            </Pressable>
           ) : null}
           <PremiumInput
             label={t('register.phoneLabel')}
@@ -317,21 +495,30 @@ export function RegisterScreen() {
                 styles.submitBtnDisabled,
             ]}
             onPress={() => {
-              if (!acceptPrivacy || !acceptTerms) {
-                Alert.alert(t('register.section'), t('register.acceptRequired'));
-                return;
-              }
-              if (!PASSWORD_RULE.test(password)) {
-                Alert.alert(t('register.section'), t('register.passwordRules'));
-                return;
-              }
-              registerWithFullName(fullName, username, email, phone, password)
-                .then((result) => {
-                  if (result === 'pending') {
-                    setShowSuccessModal(true);
+              const submitRegister = async () => {
+                if (!tenant && subdomain.trim()) {
+                  const ok = await resolveTenantByCode(subdomain.trim());
+                  if (!ok) {
+                    return;
                   }
-                })
-                .catch(() => {});
+                }
+                if (!acceptPrivacy || !acceptTerms) {
+                  Alert.alert(t('register.section'), t('register.acceptRequired'));
+                  return;
+                }
+                if (!PASSWORD_RULE.test(password)) {
+                  Alert.alert(t('register.section'), t('register.passwordRules'));
+                  return;
+                }
+                registerWithFullName(fullName, username, email, phone, password, photoUrl)
+                  .then((result) => {
+                    if (result === 'pending') {
+                      setShowSuccessModal(true);
+                    }
+                  })
+                  .catch(() => {});
+              };
+              submitRegister().catch(() => {});
             }}
             disabled={
               loadingAuth ||
@@ -350,7 +537,7 @@ export function RegisterScreen() {
             )}
           </Pressable>
         </GlassCard>
-      </View>
+      </ScrollView>
       {showSuccessModal ? (
         <View style={styles.modalBackdrop}>
           <Animated.View
@@ -389,11 +576,13 @@ export function RegisterScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
     paddingHorizontal: 22,
     maxWidth: 440,
     width: '100%',
     alignSelf: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   backBtn: {
     alignSelf: 'flex-start',
@@ -409,30 +598,102 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 8,
   },
-  trainerCta: {
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-    paddingVertical: 4,
-  },
-  trainerCtaTxt: {
-    color: premium.accentBlue,
-    fontSize: 13,
-    fontWeight: '700',
-  },
   cardCompact: {
     marginTop: 4,
     paddingVertical: 14,
   },
-  authSeg: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-    marginBottom: 14,
-  },
-  authSegCompact: {
+  avatarSection: {
+    alignItems: 'center',
     marginBottom: 10,
+  },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1.5,
+    borderColor: premium.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlus: {
+    color: premium.accentBlue,
+    fontSize: 34,
+    fontWeight: '300',
+    marginTop: -2,
+  },
+  avatarCta: {
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  avatarCtaTxt: {
+    color: premium.accentBlue,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  clubOptionalInfo: {
+    color: premium.accentBlue,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  clubBtn: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  clubBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  clubBtnTxt: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  clubList: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    padding: 8,
+    maxHeight: 260,
+    marginBottom: 10,
+    backgroundColor: 'rgba(4,13,24,0.98)',
+  },
+  clubRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: premium.glassBorder,
+  },
+  clubRowName: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  clubRowCode: {
+    color: premium.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  unlinkBtn: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  unlinkTxt: {
+    color: premium.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   inputCompact: {
     marginBottom: 10,
@@ -492,24 +753,6 @@ const styles = StyleSheet.create({
     color: premium.accentBlue,
     fontSize: 12,
     fontWeight: '600',
-  },
-  authBtn: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authBtnOn: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  authTxt: {
-    color: premium.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  authTxtOn: {
-    color: premium.text,
   },
   hint: {
     fontSize: 12,
