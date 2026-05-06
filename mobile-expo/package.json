@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:ios:production": "eas build --platform ios --profile production",
+    "submit:ios:production": "eas submit --platform ios --profile production"
   },
   "dependencies": {
     "expo": "~54.0.33",
