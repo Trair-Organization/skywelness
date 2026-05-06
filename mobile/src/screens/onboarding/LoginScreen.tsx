@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -17,27 +17,11 @@ export function LoginScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const {
-    tenant,
-    email,
-    setEmail,
-    password,
-    setPassword,
-    loadingAuth,
-    login,
-    resolveTenantByCode,
-  } = useMemberAuth();
+  const { tenant, email, setEmail, password, setPassword, loadingAuth, login } = useMemberAuth();
   const [showPassword, setShowPassword] = useState(false);
   const title = tenant
     ? t('login.welcomeClub', { club: tenant.name })
     : t('onboarding.welcomeBack');
-  useEffect(() => {
-    if (tenant) {
-      return;
-    }
-    resolveTenantByCode('independent-hub', true).catch(() => {});
-  }, [tenant, resolveTenantByCode]);
-
   return (
     <GradientBackground>
       <View

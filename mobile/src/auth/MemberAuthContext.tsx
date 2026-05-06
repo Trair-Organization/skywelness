@@ -289,20 +289,15 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
 
     setLoadingAuth(true);
     try {
-      const body: { email: string; password: string; tenantSubdomain?: string } = {
-        email: normalizedEmail,
-        password: normalizedPassword,
-      };
-      const hint = tenant?.subdomain ?? subdomain.trim().toLowerCase();
-      if (hint) {
-        body.tenantSubdomain = hint;
-      }
       const res = await apiJson<AuthRes>('/auth/login', {
         method: 'POST',
         auth: false,
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: normalizedPassword,
+        }),
       });
-      const resolvedSub = (res.tenantSubdomain ?? hint).trim().toLowerCase();
+      const resolvedSub = (res.tenantSubdomain ?? '').trim().toLowerCase();
       if (!resolvedSub) {
         Alert.alert(t('login.section'), t('login.failed'));
         return;
@@ -324,7 +319,7 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingAuth(false);
     }
-  }, [tenant, subdomain, email, password, t, completeSignIn]);
+  }, [email, password, t, completeSignIn]);
 
   const splitFullName = (full: string) => {
     const tname = full.trim();
