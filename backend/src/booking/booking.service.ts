@@ -92,7 +92,7 @@ export class BookingService {
 
   private async resolveTrainerForUser(user: User): Promise<Trainer> {
     const trainer = await this.trainersRepo.findOne({
-      where: { userId: user.id, tenantId: user.tenantId },
+      where: { userId: user.id },
     });
     if (!trainer) {
       throw new NotFoundException('Trainer profile not found');
@@ -137,7 +137,7 @@ export class BookingService {
       throw new ForbiddenException('Only members can connect to trainers');
     }
     const trainer = await this.trainersRepo.findOne({
-      where: { id: trainerId, tenantId: user.tenantId },
+      where: { id: trainerId },
       relations: { user: true },
     });
     if (!trainer) {
@@ -147,17 +147,18 @@ export class BookingService {
       throw new BadRequestException('Trainer account is not active');
     }
     const existing = await this.trainerMemberLinksRepo.findOne({
-      where: { tenantId: user.tenantId, trainerId, memberUserId: user.id },
+      where: { trainerId, memberUserId: user.id },
     });
     if (existing) {
       if (existing.status === 'archived') {
+        existing.tenantId = trainer.tenantId;
         existing.status = 'active';
         await this.trainerMemberLinksRepo.save(existing);
       }
       return { id: existing.id, status: existing.status };
     }
     const link = this.trainerMemberLinksRepo.create({
-      tenantId: user.tenantId,
+      tenantId: trainer.tenantId,
       trainerId,
       memberUserId: user.id,
       status: 'active',
@@ -171,7 +172,7 @@ export class BookingService {
       throw new ForbiddenException('Only members can list connected trainers');
     }
     const rows = await this.trainerMemberLinksRepo.find({
-      where: { tenantId: user.tenantId, memberUserId: user.id, status: 'active' },
+      where: { memberUserId: user.id, status: 'active' },
       relations: { trainer: { user: true } },
       order: { createdAt: 'DESC' },
     });
@@ -194,7 +195,7 @@ export class BookingService {
     }
     const trainer = await this.resolveTrainerForUser(user);
     const rows = await this.trainerMemberLinksRepo.find({
-      where: { tenantId: user.tenantId, trainerId: trainer.id, status: 'active' },
+      where: { trainerId: trainer.id, status: 'active' },
       relations: { memberUser: true },
       order: { createdAt: 'DESC' },
     });
@@ -218,7 +219,6 @@ export class BookingService {
     const trainer = await this.resolveTrainerForUser(user);
     const linked = await this.trainerMemberLinksRepo.findOne({
       where: {
-        tenantId: user.tenantId,
         trainerId: trainer.id,
         memberUserId,
         status: 'active',
@@ -228,7 +228,7 @@ export class BookingService {
       throw new ForbiddenException('Member is not linked to this trainer');
     }
     const row = this.trainerMemberNotesRepo.create({
-      tenantId: user.tenantId,
+      tenantId: trainer.tenantId,
       trainerId: trainer.id,
       memberUserId,
       createdByUserId: user.id,
@@ -249,7 +249,7 @@ export class BookingService {
 
     if (user.role === UserRole.MEMBER) {
       const notes = await this.trainerMemberNotesRepo.find({
-        where: { tenantId: user.tenantId, memberUserId: user.id },
+        where: { memberUserId: user.id },
         relations: { trainer: { user: true }, createdByUser: true },
         order: { createdAt: 'DESC' },
       });
@@ -269,7 +269,6 @@ export class BookingService {
     }
     const linked = await this.trainerMemberLinksRepo.findOne({
       where: {
-        tenantId: user.tenantId,
         trainerId: trainer.id,
         memberUserId,
         status: 'active',
@@ -279,7 +278,7 @@ export class BookingService {
       throw new ForbiddenException('Member is not linked to this trainer');
     }
     const notes = await this.trainerMemberNotesRepo.find({
-      where: { tenantId: user.tenantId, trainerId: trainer.id, memberUserId },
+      where: { trainerId: trainer.id, memberUserId },
       relations: { createdByUser: true, memberUser: true },
       order: { createdAt: 'DESC' },
     });

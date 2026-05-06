@@ -13,7 +13,7 @@ import { Trainer } from './trainer.entity';
 import { User } from './user.entity';
 
 @Entity({ name: 'trainer_member_link' })
-@Index(['tenantId', 'trainerId', 'memberUserId'], { unique: true })
+@Index(['trainerId', 'memberUserId'], { unique: true })
 export class TrainerMemberLink {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
