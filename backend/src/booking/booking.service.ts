@@ -100,7 +100,7 @@ export class BookingService {
     return trainer;
   }
 
-  async listTrainers(tenantId: string, sessionType?: string) {
+  async listTrainers(tenantId: string, sessionType?: string, includeIndependent = false) {
     const qb = this.trainersRepo
       .createQueryBuilder('t')
       .innerJoinAndSelect('t.user', 'u')
@@ -110,12 +110,14 @@ export class BookingService {
     if (sessionType) {
       // Booking/service hub keeps tenant-local behavior.
       qb.andWhere('t.tenantId = :tenantId', { tenantId });
-    } else {
+    } else if (includeIndependent) {
       // Trainer network can discover both club trainers and independent trainers.
       qb.andWhere('(t.tenantId = :tenantId OR u.role = :independentRole)', {
         tenantId,
         independentRole: UserRole.INDEPENDENT_TRAINER,
       });
+    } else {
+      qb.andWhere('t.tenantId = :tenantId', { tenantId });
     }
 
     const rows = await qb.getMany();

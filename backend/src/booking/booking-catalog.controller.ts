@@ -18,7 +18,8 @@ export class BookingCatalogController {
 
   @Get('trainers')
   listTrainers(@CurrentUser() user: User, @Query() query: TrainersQueryDto) {
-    return this.bookingService.listTrainers(user.tenantId, query.sessionType);
+    const includeIndependent = !query.sessionType && user.role === UserRole.MEMBER;
+    return this.bookingService.listTrainers(user.tenantId, query.sessionType, includeIndependent);
   }
 
   @Get('availability')

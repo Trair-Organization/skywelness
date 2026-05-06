@@ -7,6 +7,8 @@ type TrainerRow = {
   id: string;
   tenantId: string;
   tenantName: string | null;
+  role: 'trainer' | 'independent_trainer' | null;
+  isIndependent: boolean;
   firstName: string;
   lastName: string;
   email: string;
@@ -23,6 +25,7 @@ export function SuperAdminTrainersPage() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<TrainerRow[]>([]);
   const [q, setQ] = useState('');
+  const [scope, setScope] = useState<'all' | 'club' | 'independent'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tenants, setTenants] = useState<TenantOpt[]>([]);
@@ -83,6 +86,12 @@ export function SuperAdminTrainersPage() {
     }
   }
 
+  const filteredRows = useMemo(() => {
+    if (scope === 'club') return rows.filter((row) => !row.isIndependent);
+    if (scope === 'independent') return rows.filter((row) => row.isIndependent);
+    return rows;
+  }, [rows, scope]);
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -96,10 +105,21 @@ export function SuperAdminTrainersPage() {
           {t('superAdmin.common.search')}
           <input value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
+        <label>
+          {t('superAdmin.trainers.scopeLabel')}
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value as 'all' | 'club' | 'independent')}
+          >
+            <option value="all">{t('superAdmin.trainers.scopeAll')}</option>
+            <option value="club">{t('superAdmin.trainers.scopeClub')}</option>
+            <option value="independent">{t('superAdmin.trainers.scopeIndependent')}</option>
+          </select>
+        </label>
         {error ? <p className="error">{error}</p> : null}
         {loading ? (
           <p className="muted">{t('superAdmin.common.loading')}</p>
-        ) : rows.length === 0 ? (
+        ) : filteredRows.length === 0 ? (
           <p className="muted">{t('superAdmin.common.empty')}</p>
         ) : (
           <table className="table">
@@ -107,6 +127,7 @@ export function SuperAdminTrainersPage() {
               <tr>
                 <th>{t('superAdmin.trainers.name')}</th>
                 <th>{t('superAdmin.trainers.email')}</th>
+                <th>{t('superAdmin.trainers.type')}</th>
                 <th>{t('superAdmin.trainers.tenant')}</th>
                 <th>{t('superAdmin.trainers.sessions')}</th>
                 <th>{t('superAdmin.trainers.rating')}</th>
@@ -115,12 +136,17 @@ export function SuperAdminTrainersPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {filteredRows.map((row) => (
                 <tr key={row.id}>
                   <td>
                     {row.firstName} {row.lastName}
                   </td>
                   <td>{row.email}</td>
+                  <td>
+                    {row.isIndependent
+                      ? t('superAdmin.trainers.typeIndependent')
+                      : t('superAdmin.trainers.typeClub')}
+                  </td>
                   <td>{row.tenantName ?? '-'}</td>
                   <td>{row.totalSessions}</td>
                   <td>{row.avgRating}</td>

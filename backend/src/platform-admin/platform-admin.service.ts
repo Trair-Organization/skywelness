@@ -252,6 +252,8 @@ export class PlatformAdminService {
       id: row.id,
       tenantId: row.tenantId,
       tenantName: row.tenant?.name ?? null,
+      role: row.user?.role ?? null,
+      isIndependent: row.user?.role === UserRole.INDEPENDENT_TRAINER,
       firstName: row.user?.firstName ?? '',
       lastName: row.user?.lastName ?? '',
       email: row.user?.email ?? '',
