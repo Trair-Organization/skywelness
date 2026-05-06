@@ -101,11 +101,24 @@ export class BookingService {
   }
 
   async listTrainers(tenantId: string, sessionType?: string) {
-    const rows = await this.trainersRepo.find({
-      where: { tenantId },
-      relations: { user: true },
-      order: { createdAt: 'ASC' },
-    });
+    const qb = this.trainersRepo
+      .createQueryBuilder('t')
+      .innerJoinAndSelect('t.user', 'u')
+      .where('u.accountStatus = :activeStatus', { activeStatus: MemberAccountStatus.ACTIVE })
+      .orderBy('t.createdAt', 'ASC');
+
+    if (sessionType) {
+      // Booking/service hub keeps tenant-local behavior.
+      qb.andWhere('t.tenantId = :tenantId', { tenantId });
+    } else {
+      // Trainer network can discover both club trainers and independent trainers.
+      qb.andWhere('(t.tenantId = :tenantId OR u.role = :independentRole)', {
+        tenantId,
+        independentRole: UserRole.INDEPENDENT_TRAINER,
+      });
+    }
+
+    const rows = await qb.getMany();
     const filtered =
       sessionType && (sessionType === 'personal_training' || sessionType === 'massage')
         ? rows.filter(
@@ -116,6 +129,7 @@ export class BookingService {
     return filtered.map((t) => ({
       id: t.id,
       tenantId: t.tenantId,
+      isIndependent: t.user.role === UserRole.INDEPENDENT_TRAINER,
       bio: t.bio,
       certifications: t.certifications,
       specializations: t.specializations,

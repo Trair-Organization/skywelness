@@ -17,7 +17,12 @@ import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
 import { premium } from '../../theme/premiumTheme';
 
-type TrainerCandidate = { id: string; user: { firstName: string; lastName: string } };
+type TrainerCandidate = {
+  id: string;
+  tenantId: string;
+  isIndependent?: boolean;
+  user: { firstName: string; lastName: string };
+};
 type LinkedTrainer = {
   linkId: string;
   trainerId: string;
@@ -46,6 +51,7 @@ export function MemberTrainerNetworkScreen() {
   const [myStudents, setMyStudents] = useState<StudentRow[]>([]);
   const [notes, setNotes] = useState<NoteRow[]>([]);
   const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
+  const [trainerScope, setTrainerScope] = useState<'all' | 'club' | 'independent'>('all');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
 
@@ -111,6 +117,17 @@ export function MemberTrainerNetworkScreen() {
     () => allTrainers.filter((tr) => !myTrainers.some((mt) => mt.trainerId === tr.id)),
     [allTrainers, myTrainers],
   );
+
+  const visibleConnectable = useMemo(() => {
+    if (!tenant) return connectable;
+    if (trainerScope === 'club') {
+      return connectable.filter((tr) => !tr.isIndependent && tr.tenantId === tenant.id);
+    }
+    if (trainerScope === 'independent') {
+      return connectable.filter((tr) => tr.isIndependent);
+    }
+    return connectable;
+  }, [connectable, tenant, trainerScope]);
 
   const connectTrainer = async () => {
     if (!token || !tenant || !selectedTrainerId) return;
@@ -188,7 +205,23 @@ export function MemberTrainerNetworkScreen() {
 
             <GlassCard style={styles.card}>
               <Text style={styles.cardTitle}>{t('network.connectTrainer')}</Text>
-              {connectable.map((tr) => {
+              <View style={styles.scopeRow}>
+                {(['all', 'club', 'independent'] as const).map((scope) => {
+                  const active = trainerScope === scope;
+                  return (
+                    <Pressable
+                      key={scope}
+                      style={[styles.scopeChip, active && styles.scopeChipOn]}
+                      onPress={() => setTrainerScope(scope)}
+                    >
+                      <Text style={[styles.scopeChipTxt, active && styles.scopeChipTxtOn]}>
+                        {t(`network.scope.${scope}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {visibleConnectable.map((tr) => {
                 const selected = selectedTrainerId === tr.id;
                 return (
                   <Pressable
@@ -199,9 +232,17 @@ export function MemberTrainerNetworkScreen() {
                     <Text style={styles.pickTxt}>
                       {tr.user.firstName} {tr.user.lastName}
                     </Text>
+                    <Text style={styles.pickMeta}>
+                      {tr.isIndependent
+                        ? t('network.tags.independent')
+                        : t('network.tags.clubTrainer')}
+                    </Text>
                   </Pressable>
                 );
               })}
+              {visibleConnectable.length === 0 ? (
+                <Text style={styles.muted}>{t('network.emptyConnectable')}</Text>
+              ) : null}
               <Pressable
                 style={[styles.btn, !selectedTrainerId && styles.btnDisabled]}
                 onPress={() => connectTrainer().catch(() => {})}
@@ -296,6 +337,22 @@ const styles = StyleSheet.create({
   },
   pickOn: { borderColor: premium.accentGreen, backgroundColor: 'rgba(16,185,129,0.12)' },
   pickTxt: { color: premium.text, fontSize: 14, fontWeight: '600' },
+  pickMeta: { color: premium.textMuted, fontSize: 12, marginTop: 4 },
+  scopeRow: { flexDirection: 'row', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  scopeChip: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  scopeChipOn: {
+    borderColor: premium.accentBlue,
+    backgroundColor: 'rgba(56,189,248,0.18)',
+  },
+  scopeChipTxt: { color: premium.textMuted, fontSize: 12, fontWeight: '700' },
+  scopeChipTxtOn: { color: premium.text, fontWeight: '800' },
   btn: {
     marginTop: 4,
     borderWidth: 1,
