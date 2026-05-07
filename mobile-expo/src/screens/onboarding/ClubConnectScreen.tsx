@@ -1,4 +1,13 @@
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  ImageSourcePropType,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +22,49 @@ import { premium } from '../../theme/premiumTheme';
 import { persistLanguage } from '../../i18n';
 
 const logoLight = require('../../../assets/branding/wellness-club-logo-header.png');
+const owellnessLogo = require('../../../assets/branding/clubs/owellness.png');
+const skylandLogo = require('../../../assets/branding/clubs/skyland.png');
+
+type FeaturedClub = {
+  id: string;
+  name: string;
+  subdomain: string;
+  location: string;
+  logo: ImageSourcePropType;
+  featured?: boolean;
+};
+
+const FEATURED_CLUBS: FeaturedClub[] = [
+  {
+    id: 'o-wellness-sky',
+    name: "O'Wellness Sky",
+    subdomain: 'o-wellness-sky',
+    location: 'İstanbul · Skyland',
+    logo: owellnessLogo,
+    featured: true,
+  },
+  {
+    id: 'o-wellness-dragos',
+    name: "O'Wellness Dragos",
+    subdomain: 'o-wellness-dragos',
+    location: 'İstanbul · Dragos',
+    logo: owellnessLogo,
+  },
+  {
+    id: 'o-wellness-yalikavak',
+    name: "O'Wellness Yalıkavak",
+    subdomain: 'o-wellness-yalikavak',
+    location: 'Bodrum · Yalıkavak',
+    logo: owellnessLogo,
+  },
+  {
+    id: 'skyland-wellness',
+    name: 'Skyland Wellness',
+    subdomain: 'skyland-wellness',
+    location: 'İstanbul · Skyland',
+    logo: skylandLogo,
+  },
+];
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ClubConnect'>;
 
@@ -22,7 +74,7 @@ export function ClubConnectScreen() {
   const navigation = useNavigation<Nav>();
   const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
-  const activeClubCount = String(tenantDirectory.length);
+  const activeClubCount = String(Math.max(tenantDirectory.length, FEATURED_CLUBS.length));
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
     if (typeof fn !== 'function') {
       return;
@@ -87,49 +139,53 @@ export function ClubConnectScreen() {
           <Text style={styles.popularSubtitle}>{t('onboarding.clubShowcaseSubtitle')}</Text>
         </View>
 
-        <GlassCard style={styles.popularCard}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.popularSlider}
-          >
-            {tenantDirectory.map((club, index) => {
-              const featured = index === 0;
-              const initials = club.name
-                .split(' ')
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((part) => part[0]?.toUpperCase() ?? '')
-                .join('');
-              return (
-                <Pressable
-                  key={club.id}
-                  style={[styles.popularClubCard, featured && styles.popularClubCardFeatured]}
-                  onPress={() => setPreviewClub(club)}
-                >
-                  <View
-                    style={[styles.popularLogoBubble, featured && styles.popularLogoBubbleFeatured]}
-                  >
-                    {club.logoUrl ? (
-                      <Image source={{ uri: club.logoUrl }} style={styles.popularLogoImage} />
-                    ) : (
-                      <Text style={styles.popularLogoTxt}>{initials || 'WC'}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.popularBadge}>
-                    {featured
-                      ? t('onboarding.clubCardFeaturedBadge')
-                      : t('onboarding.clubCardBadge')}
-                  </Text>
-                  <Text style={styles.popularClubName} numberOfLines={2}>
-                    {club.name}
-                  </Text>
-                  <Text style={styles.popularClubCode}>@{club.subdomain}</Text>
-                </Pressable>
+        <View style={styles.clubsGrid}>
+          {FEATURED_CLUBS.map((club) => {
+            const directoryMatch = tenantDirectory.find((row) => row.subdomain === club.subdomain);
+            const handlePress = () => {
+              setPreviewClub(
+                directoryMatch ?? {
+                  id: club.id,
+                  name: club.name,
+                  subdomain: club.subdomain,
+                  logoUrl: null,
+                },
               );
-            })}
-          </ScrollView>
-        </GlassCard>
+            };
+            return (
+              <Pressable
+                key={club.id}
+                onPress={handlePress}
+                style={({ pressed }) => [
+                  styles.clubCard,
+                  club.featured && styles.clubCardFeatured,
+                  pressed && styles.clubCardPressed,
+                ]}
+              >
+                {club.featured ? (
+                  <View style={styles.featuredRibbon}>
+                    <Text style={styles.featuredRibbonTxt}>
+                      {t('onboarding.clubCardFeaturedBadge')}
+                    </Text>
+                  </View>
+                ) : null}
+                <View style={styles.clubLogoWrap}>
+                  <Image source={club.logo} style={styles.clubLogoImage} resizeMode="contain" />
+                </View>
+                <Text style={styles.clubName} numberOfLines={2}>
+                  {club.name}
+                </Text>
+                <Text style={styles.clubLocation} numberOfLines={1}>
+                  {club.location}
+                </Text>
+                <View style={styles.clubCtaRow}>
+                  <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
+                  <Text style={styles.clubCtaArrow}>›</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <GlassCard style={styles.card}>
           <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
@@ -299,14 +355,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textAlign: 'center',
   },
-  popularCard: {
-    marginTop: 0,
-    marginBottom: 12,
-    paddingVertical: 14,
-  },
   popularHeader: {
     marginTop: 2,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   popularTitle: {
     fontSize: 20,
@@ -318,62 +369,103 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: premium.textMuted,
   },
-  popularSlider: {
+  clubsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 12,
-    paddingRight: 12,
-    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  popularClubCard: {
-    width: 116,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  popularClubCardFeatured: {
-    transform: [{ scale: 1.02 }],
-  },
-  popularBadge: {
-    color: premium.accentBlue,
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 10,
-  },
-  popularLogoBubble: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 1.5,
+  clubCard: {
+    width: '48%',
+    borderRadius: 18,
+    borderWidth: 1,
     borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(8,16,28,0.7)',
+    padding: 14,
+    alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  clubCardFeatured: {
+    borderColor: 'rgba(56,189,248,0.55)',
+    backgroundColor: 'rgba(14,28,46,0.85)',
+  },
+  clubCardPressed: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  featuredRibbon: {
+    position: 'absolute',
+    top: 8,
+    right: -22,
+    transform: [{ rotate: '32deg' }],
+    paddingHorizontal: 24,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(56,189,248,0.85)',
+  },
+  featuredRibbonTxt: {
+    color: '#02121f',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  clubLogoWrap: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    overflow: 'hidden',
+    marginBottom: 10,
+    padding: 10,
   },
-  popularLogoBubbleFeatured: {
-    borderColor: 'rgba(56,189,248,0.55)',
-  },
-  popularLogoImage: {
+  clubLogoImage: {
     width: '100%',
     height: '100%',
   },
-  popularLogoTxt: {
+  clubName: {
     color: premium.text,
+    fontSize: 14,
     fontWeight: '800',
-    fontSize: 24,
-  },
-  popularClubName: {
-    color: premium.text,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 6,
     textAlign: 'center',
-    minHeight: 34,
+    minHeight: 36,
   },
-  popularClubCode: {
+  clubLocation: {
     color: premium.textMuted,
     fontSize: 11,
     marginTop: 2,
+    textAlign: 'center',
+  },
+  clubCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: premium.glassBorder,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  clubCtaTxt: {
+    color: premium.accentBlue,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  clubCtaArrow: {
+    color: premium.accentBlue,
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 16,
+    marginTop: -2,
   },
   card: {
     marginTop: 4,
