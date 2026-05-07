@@ -76,6 +76,14 @@ export function ClubDashboardPage() {
           Siparisleri Gor
         </Link>
       </section>
+
+      <section className="card">
+        <h2>Masaj Talep Onayı</h2>
+        <p className="muted">Mobil uygulamadan gelen masaj rezervasyon taleplerini onaylayın.</p>
+        <Link className="link" to="/club/reservation-requests">
+          Talepleri Yönet
+        </Link>
+      </section>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { MarketingPrivacyPage } from './pages/MarketingPrivacyPage';
 import { MarketingTermsPage } from './pages/MarketingTermsPage';
 import { ClubInsightsPage } from './pages/ClubInsightsPage';
 import { ClubCafeOrdersPage } from './pages/ClubCafeOrdersPage';
+import { ClubReservationRequestsPage } from './pages/ClubReservationRequestsPage';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { SuperAdminDashboardPage } from './pages/SuperAdminDashboardPage';
 import { SuperAdminTenantsPage } from './pages/SuperAdminTenantsPage';
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
         <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/club/cafe-orders" element={<ClubCafeOrdersPage />} />
+        <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
         <Route path="/events" element={<EventsPage />} />
       </Route>

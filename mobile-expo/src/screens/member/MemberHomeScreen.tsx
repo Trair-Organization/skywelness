@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -838,25 +839,33 @@ export function MemberHomeScreen() {
               .trim()
               .toUpperCase();
             return (
-              <Pressable
-                key={`showcase-${tr.id}`}
-                style={({ pressed }) => [
-                  styles.trainerProfileCard,
-                  pressed && styles.trainerRowPressed,
-                ]}
-                onPress={() => selectTrainerAndScroll(tr.id)}
-              >
-                <View style={styles.trainerAvatarRing}>
-                  {tr.user.photoUrl ? (
-                    <Image source={{ uri: tr.user.photoUrl }} style={styles.trainerAvatarImage} />
-                  ) : (
-                    <Text style={styles.trainerAvatarFallback}>{initials || 'TR'}</Text>
-                  )}
-                </View>
-                <Text style={styles.trainerProfileName} numberOfLines={2}>
-                  {fullName}
-                </Text>
-              </Pressable>
+              <View key={`showcase-${tr.id}`} style={styles.trainerCardWrap}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.trainerProfileCard,
+                    pressed && styles.trainerRowPressed,
+                  ]}
+                  onPress={() => selectTrainerAndScroll(tr.id)}
+                >
+                  <View style={styles.trainerAvatarRing}>
+                    {tr.user.photoUrl ? (
+                      <Image source={{ uri: tr.user.photoUrl }} style={styles.trainerAvatarImage} />
+                    ) : (
+                      <Text style={styles.trainerAvatarFallback}>{initials || 'TR'}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.trainerProfileName} numberOfLines={2}>
+                    {fullName}
+                  </Text>
+                </Pressable>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.trainerPlanBtn}
+                  onPress={() => selectTrainerAndScroll(tr.id)}
+                >
+                  <Text style={styles.trainerPlanBtnTxt}>Özel Ders Planla</Text>
+                </TouchableOpacity>
+              </View>
             );
           })}
         </ScrollView>
@@ -1369,6 +1378,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  trainerCardWrap: {
+    width: 112,
+  },
   trainerProfileCard: {
     width: 112,
     minHeight: 140,
@@ -1407,6 +1419,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: premium.text,
     textAlign: 'center',
+  },
+  trainerPlanBtn: {
+    marginTop: 8,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(7, 61, 106, 0.35)',
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trainerPlanBtnTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   langRow: {
     flexDirection: 'row',

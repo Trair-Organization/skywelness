@@ -1,5 +1,5 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 import { gradientButton, premium } from '../../theme/premiumTheme';
 
 type Props = {

@@ -8,12 +8,14 @@ import { User } from '../database/entities/user.entity';
 import { AdminMembersService } from './admin-members.service';
 import { AssignPackageTrainerDto } from './dto/assign-package-trainer.dto';
 import { CafeOrdersService } from '../booking/cafe-orders.service';
+import { BookingService } from '../booking/booking.service';
 
 @Controller('admin')
 export class AdminController {
   constructor(
     private readonly adminMembers: AdminMembersService,
     private readonly cafeOrders: CafeOrdersService,
+    private readonly bookingService: BookingService,
   ) {}
 
   /** Smoke test: JWT + administrator role only. */
@@ -93,5 +95,32 @@ export class AdminController {
     @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
   ) {
     return this.cafeOrders.cancelTenantOrder(admin.tenantId, orderId);
+  }
+
+  @Get('reservation-requests')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listReservationRequests(@CurrentUser() admin: User) {
+    return this.bookingService.listPendingMassageReservations(admin.tenantId);
+  }
+
+  @Post('reservation-requests/:reservationId/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  approveReservationRequest(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+  ) {
+    return this.bookingService.approveReservationByAdmin(admin.tenantId, reservationId);
+  }
+
+  @Post('reservation-requests/:reservationId/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  rejectReservationRequest(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+  ) {
+    return this.bookingService.rejectReservationByAdmin(admin.tenantId, reservationId);
   }
 }

@@ -56,6 +56,6 @@ import { CafeOrdersService } from './cafe-orders.service';
     CafeOrdersController,
   ],
   providers: [BookingService, CafeOrdersService, RolesGuard],
-  exports: [CafeOrdersService],
+  exports: [CafeOrdersService, BookingService],
 })
 export class BookingModule {}

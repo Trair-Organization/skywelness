@@ -580,6 +580,7 @@ export class BookingService {
       await em.save(Package, pkg);
 
       const sessionType = pkg.packageType.sessionType;
+      const isMassage = sessionType === SessionType.MASSAGE;
       const reservation = em.create(Reservation, {
         userId: user.id,
         trainerId: slot.trainerId,
@@ -589,7 +590,7 @@ export class BookingService {
         sessionType,
         startTime: slot.startTime,
         endTime: slot.endTime,
-        status: ReservationStatus.CONFIRMED,
+        status: isMassage ? ReservationStatus.PENDING : ReservationStatus.CONFIRMED,
         notes: null,
         cancelledAt: null,
       });
@@ -602,11 +603,113 @@ export class BookingService {
       return this.toReservationResponse(full!);
     });
 
-    void this.afterReservationCreated(user, result).catch((cause: unknown) => {
-      const msg = cause instanceof Error ? cause.message : String(cause);
-      this.logger.error(`afterReservationCreated failed: ${msg}`);
-    });
+    if (result.status === ReservationStatus.CONFIRMED) {
+      void this.afterReservationCreated(user, result).catch((cause: unknown) => {
+        const msg = cause instanceof Error ? cause.message : String(cause);
+        this.logger.error(`afterReservationCreated failed: ${msg}`);
+      });
+    } else {
+      void this.afterReservationPending(user, result).catch((cause: unknown) => {
+        const msg = cause instanceof Error ? cause.message : String(cause);
+        this.logger.error(`afterReservationPending failed: ${msg}`);
+      });
+    }
     return result;
+  }
+
+  async listPendingMassageReservations(tenantId: string) {
+    const rows = await this.reservationsRepo.find({
+      where: {
+        tenantId,
+        sessionType: SessionType.MASSAGE,
+        status: ReservationStatus.PENDING,
+      },
+      relations: {
+        user: true,
+        trainer: { user: true },
+        package: { packageType: true },
+        timeSlot: true,
+      },
+      order: { createdAt: 'DESC' },
+      take: 200,
+    });
+    return rows.map((r) => this.toReservationResponse(r));
+  }
+
+  async approveReservationByAdmin(tenantId: string, reservationId: string) {
+    const row = await this.reservationsRepo.findOne({
+      where: { id: reservationId, tenantId, status: ReservationStatus.PENDING },
+      relations: {
+        user: true,
+        trainer: { user: true },
+        package: { packageType: true },
+        timeSlot: true,
+      },
+    });
+    if (!row) {
+      throw new NotFoundException('Pending reservation not found');
+    }
+    row.status = ReservationStatus.CONFIRMED;
+    await this.reservationsRepo.save(row);
+    const view = this.toReservationResponse(row);
+    void this.afterReservationCreated(row.user, view).catch(() => {});
+    return view;
+  }
+
+  async rejectReservationByAdmin(tenantId: string, reservationId: string) {
+    let memberEmailTarget: User | null = null;
+    const view = await this.dataSource.transaction(async (em) => {
+      const reservation = await em
+        .createQueryBuilder(Reservation, 'r')
+        .setLock('pessimistic_write')
+        .where('r.id = :id', { id: reservationId })
+        .andWhere('r.tenantId = :tenantId', { tenantId })
+        .andWhere('r.status = :status', { status: ReservationStatus.PENDING })
+        .getOne();
+      if (!reservation) {
+        throw new NotFoundException('Pending reservation not found');
+      }
+      memberEmailTarget = await em.findOne(User, { where: { id: reservation.userId } });
+      reservation.status = ReservationStatus.CANCELLED;
+      reservation.cancelledAt = new Date();
+      await em.save(Reservation, reservation);
+
+      const slot = await em
+        .createQueryBuilder(TimeSlot, 's')
+        .setLock('pessimistic_write')
+        .where('s.id = :id', { id: reservation.timeSlotId })
+        .getOne();
+      if (slot && slot.bookedCount > 0) {
+        slot.bookedCount -= 1;
+        await em.save(TimeSlot, slot);
+      }
+      const pkg = await em
+        .createQueryBuilder(Package, 'p')
+        .setLock('pessimistic_write')
+        .where('p.id = :id', { id: reservation.packageId })
+        .getOne();
+      if (pkg) {
+        pkg.remainingSessions += 1;
+        if (pkg.status === PackageStatus.DEPLETED && pkg.remainingSessions > 0) {
+          pkg.status = PackageStatus.ACTIVE;
+        }
+        await em.save(Package, pkg);
+      }
+      const full = await em.findOne(Reservation, {
+        where: { id: reservation.id },
+        relations: {
+          user: true,
+          trainer: { user: true },
+          package: { packageType: true },
+          timeSlot: true,
+        },
+      });
+      return this.toReservationResponse(full!);
+    });
+    if (memberEmailTarget) {
+      void this.afterReservationRejected(memberEmailTarget, view).catch(() => {});
+    }
+    return view;
   }
 
   async cancelReservation(user: User, reservationId: string) {
@@ -899,6 +1002,70 @@ export class BookingService {
       startTime: new Date(res.startTime),
       endTime: new Date(res.endTime),
       packageTypeName: res.package.packageTypeName,
+      remainingSessions: res.package.remainingSessions,
+    });
+  }
+
+  private async afterReservationPending(
+    member: User,
+    res: Pick<MemberReservationView, 'id' | 'startTime' | 'endTime' | 'trainer'>,
+  ): Promise<void> {
+    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const { locale, timeZone } = this.getMailFormatting();
+    const { dateLine, timeLine } = formatDateRange(
+      new Date(res.startTime),
+      new Date(res.endTime),
+      locale,
+      timeZone,
+    );
+    const bodyLine = `Talep alındı: ${trainerName} — ${dateLine} ${timeLine}`;
+    await this.notificationsRepo.save(
+      this.notificationsRepo.create({
+        userId: member.id,
+        type: NotificationType.RESERVATION,
+        title: 'Rezervasyon talebiniz alındı',
+        body: bodyLine,
+        data: { reservationId: res.id },
+        isRead: false,
+        readAt: null,
+      }),
+    );
+    await this.sendPushToUser(member.id, 'Rezervasyon talebiniz alındı', bodyLine);
+  }
+
+  private async afterReservationRejected(
+    member: User,
+    res: Pick<MemberReservationView, 'id' | 'startTime' | 'endTime' | 'trainer' | 'package'>,
+  ): Promise<void> {
+    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const { locale, timeZone } = this.getMailFormatting();
+    const { dateLine, timeLine } = formatDateRange(
+      new Date(res.startTime),
+      new Date(res.endTime),
+      locale,
+      timeZone,
+    );
+    const bodyLine = `Onaylanmadı: ${trainerName} — ${dateLine} ${timeLine}`;
+    await this.notificationsRepo.save(
+      this.notificationsRepo.create({
+        userId: member.id,
+        type: NotificationType.RESERVATION,
+        title: 'Rezervasyon talebiniz onaylanmadı',
+        body: bodyLine,
+        data: { reservationId: res.id },
+        isRead: false,
+        readAt: null,
+      }),
+    );
+    await this.sendPushToUser(member.id, 'Rezervasyon talebiniz onaylanmadı', bodyLine);
+    await this.mail.sendReservationCancelled({
+      to: member.email,
+      memberFirstName: member.firstName,
+      clubName: 'Kulüp',
+      trainerName,
+      sessionType: SessionType.MASSAGE,
+      startTime: new Date(res.startTime),
+      endTime: new Date(res.endTime),
       remainingSessions: res.package.remainingSessions,
     });
   }

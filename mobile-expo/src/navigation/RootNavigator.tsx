@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useMemberAuth } from '../auth/MemberAuthContext';
@@ -23,7 +23,6 @@ export function RootNavigator() {
   const [navReady, setNavReady] = useState(false);
   const [splashMinDone, setSplashMinDone] = useState(false);
   const lastTargetRef = useRef<string | null>(null);
-  const splashAnim = useRef(new Animated.Value(0)).current;
   const showSplash = !authReady || !splashMinDone;
 
   useEffect(() => {
@@ -47,57 +46,15 @@ export function RootNavigator() {
     navigationRef.reset({ index: 0, routes: [{ name: target }] });
   }, [authReady, navReady, user, token, tenant, navigationRef]);
 
-  useEffect(() => {
-    if (!showSplash) {
-      splashAnim.stopAnimation();
-      splashAnim.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(splashAnim, {
-          toValue: 1,
-          duration: 1100,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(splashAnim, {
-          toValue: 0,
-          duration: 1100,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [showSplash, splashAnim]);
-
   if (showSplash) {
-    const glowOpacity = splashAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.3, 0.9],
-    });
-    const logoScale = splashAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1, 1.06],
-    });
-    const textOpacity = splashAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.75, 1],
-    });
     return (
       <View style={styles.boot}>
-        <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
-        <Animated.View style={{ transform: [{ scale: logoScale }] }}>
+        <View style={styles.glow} />
+        <View>
           <Image source={logoLight} style={styles.bootLogo} />
-        </Animated.View>
-        <Animated.Text style={[styles.bootTitle, { opacity: textOpacity }]}>
-          Wellness Club
-        </Animated.Text>
-        <Animated.Text style={[styles.bootSubtitle, { opacity: textOpacity }]}>
-          Exclusive Fitness & Wellness Ecosystem
-        </Animated.Text>
+        </View>
+        <Text style={styles.bootTitle}>Wellness Club</Text>
+        <Text style={styles.bootSubtitle}>Exclusive Fitness & Wellness Ecosystem</Text>
       </View>
     );
   }

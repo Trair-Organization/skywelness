@@ -102,7 +102,6 @@ type MassageSlotCard = {
   endTime: string;
   remainingCapacity: number;
   imageUrl?: string;
-  isDemo?: boolean;
 };
 
 const SKY_CAFE_PRODUCTS: CafeProduct[] = [
@@ -153,31 +152,6 @@ const TRAINER_PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=480&q=80',
   'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=480&q=80',
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=480&q=80',
-];
-
-const DEMO_MASSAGE_SLOTS: MassageSlotCard[] = [
-  {
-    id: 'demo-1',
-    trainerId: 'demo-trainer-1',
-    trainerName: 'Ayse Yildiz (Masöz)',
-    startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-    endTime: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
-    remainingCapacity: 2,
-    imageUrl:
-      'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=900&q=80',
-    isDemo: true,
-  },
-  {
-    id: 'demo-2',
-    trainerId: 'demo-trainer-2',
-    trainerName: 'Melis Kara (Masöz)',
-    startTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    endTime: new Date(Date.now() + 150 * 60 * 1000).toISOString(),
-    remainingCapacity: 1,
-    imageUrl:
-      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=900&q=80',
-    isDemo: true,
-  },
 ];
 
 function fmt(iso: string) {
@@ -326,10 +300,11 @@ export function MemberHomeScreen() {
   const [eventNotice, setEventNotice] = useState<string | null>(null);
   const [massageSlotsToday, setMassageSlotsToday] = useState<MassageSlotCard[]>([]);
   const [loadingMassageSlots, setLoadingMassageSlots] = useState(false);
+  const [massageRequestSlot, setMassageRequestSlot] = useState<MassageSlotCard | null>(null);
+  const [massageRequestPackageId, setMassageRequestPackageId] = useState<string | null>(null);
+  const [submittingMassageRequest, setSubmittingMassageRequest] = useState(false);
   const [selectedCafeProduct, setSelectedCafeProduct] = useState<CafeProduct | null>(null);
   const [cafeCartItems, setCafeCartItems] = useState<CafeCartItem[]>([]);
-  const [showAllCafeModal, setShowAllCafeModal] = useState(false);
-  const [cafeCategory, setCafeCategory] = useState<'food' | 'drink'>('food');
   const [submittingCafeOrder, setSubmittingCafeOrder] = useState(false);
   const [cafeName, setCafeName] = useState('');
   const [cafeBlock, setCafeBlock] = useState('');
@@ -619,9 +594,9 @@ export function MemberHomeScreen() {
         .flat()
         .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
         .slice(0, 12);
-      setMassageSlotsToday(merged.length ? merged : DEMO_MASSAGE_SLOTS);
+      setMassageSlotsToday(merged);
     } catch {
-      setMassageSlotsToday(DEMO_MASSAGE_SLOTS);
+      setMassageSlotsToday([]);
     } finally {
       setLoadingMassageSlots(false);
     }
@@ -701,20 +676,81 @@ export function MemberHomeScreen() {
     });
   }, []);
 
-  const quickBookMassageSlot = useCallback(async (slot: MassageSlotCard) => {
-    if (!slot.isDemo) {
-      setSelectedTrainerId(slot.trainerId);
-      setSelectedSlotId(slot.id);
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({
-          y: Math.max(0, bookingSectionY.current - 12),
-          animated: true,
-        });
-      });
+  const quickBookMassageSlot = useCallback(
+    async (slot: MassageSlotCard) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const eligiblePackages = packages.filter(
+        (p) =>
+          p.packageType?.sessionType === 'massage' &&
+          p.status === 'active' &&
+          p.remainingSessions > 0 &&
+          p.expiresAt >= today,
+      );
+      if (!eligiblePackages.length || !token || !tenant) {
+        Alert.alert(
+          'Masaj Paketi Gerekli',
+          'Rezervasyon istegi gonderebilmek icin aktif masaj paketi satin almalisiniz.',
+          [
+            { text: 'Vazgec', style: 'cancel' },
+            {
+              text: 'Paket Al',
+              onPress: () => navigation.navigate('Massage'),
+            },
+          ],
+        );
+        return;
+      }
+      setMassageRequestSlot(slot);
+      setMassageRequestPackageId((prev) =>
+        prev && eligiblePackages.some((p) => p.id === prev) ? prev : eligiblePackages[0]!.id,
+      );
+    },
+    [navigation, packages, token, tenant],
+  );
+
+  const massageEligiblePackages = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return packages.filter(
+      (p) =>
+        p.packageType?.sessionType === 'massage' &&
+        p.status === 'active' &&
+        p.remainingSessions > 0 &&
+        p.expiresAt >= today,
+    );
+  }, [packages]);
+
+  const submitMassageReservationRequest = useCallback(async () => {
+    if (!massageRequestSlot || !massageRequestPackageId || !token || !tenant) {
       return;
     }
-    Alert.alert('Demo', 'Bu satir demo gorunum icindir. Gercek rezervasyon icin canli slot secin.');
-  }, []);
+    setSubmittingMassageRequest(true);
+    try {
+      await apiJson('/reservations', {
+        method: 'POST',
+        token,
+        tenantSubdomain: tenant.subdomain,
+        body: JSON.stringify({
+          timeSlotId: massageRequestSlot.id,
+          packageId: massageRequestPackageId,
+        }),
+      });
+      Alert.alert('Masaj', 'Rezervasyon talebiniz kulüp onayına gönderildi.');
+      setMassageRequestSlot(null);
+      await loadReservations();
+      await loadMassageSlotsToday();
+    } catch (e) {
+      Alert.alert('Masaj', e instanceof ApiError ? e.message : 'Talep gönderilemedi.');
+    } finally {
+      setSubmittingMassageRequest(false);
+    }
+  }, [
+    massageRequestSlot,
+    massageRequestPackageId,
+    token,
+    tenant,
+    loadReservations,
+    loadMassageSlotsToday,
+  ]);
 
   const openCafeOrder = useCallback(
     (item: CafeProduct) => {
@@ -821,10 +857,6 @@ export function MemberHomeScreen() {
     [],
   );
   const homeCafeProducts = useMemo(() => SKY_CAFE_PRODUCTS.slice(0, 3), []);
-  const filteredCafeProducts = useMemo(
-    () => SKY_CAFE_PRODUCTS.filter((x) => x.category === cafeCategory),
-    [cafeCategory],
-  );
 
   const pauseRailTemporarily = useCallback(
     (
@@ -1045,6 +1077,70 @@ export function MemberHomeScreen() {
           ))}
         </ScrollView>
 
+        <Modal
+          visible={!!massageRequestSlot}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setMassageRequestSlot(null)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setMassageRequestSlot(null)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>Rezervasyon Formu</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalCloseBtn,
+                    pressed && styles.modalCloseBtnPressed,
+                  ]}
+                  onPress={() => setMassageRequestSlot(null)}
+                >
+                  <Text style={styles.modalCloseTxt}>×</Text>
+                </Pressable>
+              </View>
+              {massageRequestSlot ? (
+                <>
+                  <Text style={styles.modalMeta}>Masöz: {massageRequestSlot.trainerName}</Text>
+                  <Text style={styles.modalMeta}>
+                    Saat: {fmtHourRange(massageRequestSlot.startTime)}
+                  </Text>
+                  <Text style={styles.subLabel}>Paket Seçimi</Text>
+                  {massageEligiblePackages.map((p) => {
+                    const selected = p.id === massageRequestPackageId;
+                    return (
+                      <Pressable
+                        key={`massage-pkg-${p.id}`}
+                        style={[styles.pick, selected && styles.pickOn]}
+                        onPress={() => setMassageRequestPackageId(p.id)}
+                      >
+                        <Text style={styles.pickTxt}>
+                          {p.packageType.name} · {p.remainingSessions}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.btnPrimary,
+                      pressed && styles.btnPrimaryPressed,
+                      (!massageRequestPackageId || submittingMassageRequest) && styles.disabled,
+                    ]}
+                    disabled={!massageRequestPackageId || submittingMassageRequest}
+                    onPress={() => {
+                      submitMassageReservationRequest().catch(() => {});
+                    }}
+                  >
+                    {submittingMassageRequest ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.btnPrimaryTxt}>Onaya Gönder</Text>
+                    )}
+                  </Pressable>
+                </>
+              ) : null}
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         <View style={styles.sectionTitleRow}>
           <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
           <TouchableOpacity
@@ -1189,21 +1285,29 @@ export function MemberHomeScreen() {
               tr.user.photoUrl ||
               TRAINER_PLACEHOLDER_IMAGES[idx % TRAINER_PLACEHOLDER_IMAGES.length];
             return (
-              <Pressable
-                key={`showcase-${tr.id}-${idx}`}
-                style={({ pressed }) => [
-                  styles.trainerProfileCard,
-                  pressed && styles.trainerRowPressed,
-                ]}
-                onPress={() => selectTrainerAndScroll(tr.id)}
-              >
-                <View style={styles.trainerAvatarRing}>
-                  <Image source={{ uri: trainerImageUri }} style={styles.trainerAvatarImage} />
-                </View>
-                <Text style={styles.trainerProfileName} numberOfLines={2}>
-                  {fullName}
-                </Text>
-              </Pressable>
+              <View key={`showcase-${tr.id}-${idx}`} style={styles.trainerCardWrap}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.trainerProfileCard,
+                    pressed && styles.trainerRowPressed,
+                  ]}
+                  onPress={() => selectTrainerAndScroll(tr.id)}
+                >
+                  <View style={styles.trainerAvatarRing}>
+                    <Image source={{ uri: trainerImageUri }} style={styles.trainerAvatarImage} />
+                  </View>
+                  <Text style={styles.trainerProfileName} numberOfLines={2}>
+                    {fullName}
+                  </Text>
+                </Pressable>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.trainerPlanBtn}
+                  onPress={() => selectTrainerAndScroll(tr.id)}
+                >
+                  <Text style={styles.trainerPlanBtnTxt}>Özel Ders Planla</Text>
+                </TouchableOpacity>
+              </View>
             );
           })}
         </ScrollView>
@@ -1217,8 +1321,8 @@ export function MemberHomeScreen() {
             activeOpacity={0.82}
             style={styles.seeAllBtn}
             onPress={() => {
-              pauseRailTemporarily(cafePausedRef, cafeResumeTimerRef, 2600);
-              setTimeout(() => setShowAllCafeModal(true), 180);
+              setHubPlaceholder(null);
+              navigation.navigate('Cafe');
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -1272,65 +1376,6 @@ export function MemberHomeScreen() {
             </View>
           ))}
         </ScrollView>
-
-        <Modal
-          visible={showAllCafeModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowAllCafeModal(false)}
-        >
-          <View style={styles.modalBackdrop}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowAllCafeModal(false)} />
-            <Pressable style={styles.modalCard} onPress={() => {}}>
-              <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalTitle}>SkyCafe Menü</Text>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.modalCloseBtn,
-                    pressed && styles.modalCloseBtnPressed,
-                  ]}
-                  onPress={() => setShowAllCafeModal(false)}
-                >
-                  <Text style={styles.modalCloseTxt}>×</Text>
-                </Pressable>
-              </View>
-              <View style={styles.paymentRow}>
-                <Pressable
-                  style={[styles.pick, cafeCategory === 'food' && styles.pickOn]}
-                  onPress={() => setCafeCategory('food')}
-                >
-                  <Text style={styles.pickTxt}>Yiyecek</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.pick, cafeCategory === 'drink' && styles.pickOn]}
-                  onPress={() => setCafeCategory('drink')}
-                >
-                  <Text style={styles.pickTxt}>İçecek</Text>
-                </Pressable>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.cafeMenuList}>
-                {filteredCafeProducts.map((item) => (
-                  <View key={`menu-${item.id}`} style={styles.cafeMenuRow}>
-                    <Image source={{ uri: item.imageUrl }} style={styles.cafeMenuImage} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cafeItemTitle}>{item.title}</Text>
-                      <Text style={styles.eventMetaLine}>{item.priceLabel}</Text>
-                    </View>
-                    <Pressable
-                      style={styles.cafeQtyBtn}
-                      onPress={() => {
-                        setShowAllCafeModal(false);
-                        openCafeOrder(item);
-                      }}
-                    >
-                      <Text style={styles.cafeQtyBtnTxt}>+</Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </ScrollView>
-            </Pressable>
-          </View>
-        </Modal>
 
         <Modal
           visible={!!selectedCafeProduct}
@@ -1582,14 +1627,20 @@ export function MemberHomeScreen() {
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
-            onPress={() => setHubPlaceholder('events')}
+            onPress={() => {
+              setHubPlaceholder(null);
+              navigation.navigate('Events');
+            }}
           >
             <Text style={styles.svcTitle}>{t('home.serviceEventsTitle')}</Text>
             <Text style={styles.svcSub}>{t('home.serviceEventsSubtitle')}</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
-            onPress={() => setHubPlaceholder('cafe')}
+            onPress={() => {
+              setHubPlaceholder(null);
+              navigation.navigate('Cafe');
+            }}
           >
             <Text style={styles.svcTitle}>{t('home.serviceCafeTitle')}</Text>
             <Text style={styles.svcSub}>{t('home.serviceCafeSubtitle')}</Text>
@@ -1937,6 +1988,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  trainerCardWrap: {
+    width: HORIZONTAL_CARD_WIDTH,
+  },
   trainerProfileCard: {
     width: HORIZONTAL_CARD_WIDTH,
     minHeight: 148,
@@ -1975,6 +2029,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: premium.text,
     textAlign: 'center',
+  },
+  trainerPlanBtn: {
+    marginTop: 8,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(7, 61, 106, 0.35)',
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trainerPlanBtnTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   skyCafeCardWrap: {
     width: HORIZONTAL_CARD_WIDTH,

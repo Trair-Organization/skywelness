@@ -45,6 +45,7 @@
         "projectId": "4809fe50-74fa-493f-bc8a-e7d81072c5e5"
       }
     },
-    "owner": "trairx"
+    "owner": "trairx",
+    "plugins": ["@react-native-community/datetimepicker"]
   }
 }
