@@ -817,7 +817,7 @@ export function ClubConnectScreen() {
 
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Bu hafta yakında</Text>
+            <Text style={styles.sectionTitle}>Yaklaşan Etkinlikler</Text>
             <Text style={styles.sectionSubtitle}>
               Üye olmadan da incele, kontenjanı kapanmadan yerini ayır.
             </Text>
