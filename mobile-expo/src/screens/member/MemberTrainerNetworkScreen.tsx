@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,8 @@ import { GradientBackground } from '../../components/premium/GradientBackground'
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
 import { premium } from '../../theme/premiumTheme';
+
+type LessonSessionType = 'personal_training' | 'massage';
 
 type TrainerCandidate = {
   id: string;
@@ -54,6 +57,13 @@ export function MemberTrainerNetworkScreen() {
   const [trainerScope, setTrainerScope] = useState<'all' | 'club' | 'independent'>('all');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
+  const [lessonRequest, setLessonRequest] = useState<{
+    trainerId: string;
+    trainerName: string;
+  } | null>(null);
+  const [lessonSession, setLessonSession] = useState<LessonSessionType>('personal_training');
+  const [lessonMessage, setLessonMessage] = useState('');
+  const [lessonSubmitting, setLessonSubmitting] = useState(false);
 
   const isMember = user?.role === 'member';
   const isTrainer = user?.role === 'trainer' || user?.role === 'independent_trainer';
@@ -160,6 +170,44 @@ export function MemberTrainerNetworkScreen() {
     }
   };
 
+  const openLessonRequest = (trainerId: string, trainerName: string) => {
+    setLessonRequest({ trainerId, trainerName });
+    setLessonSession('personal_training');
+    setLessonMessage('');
+  };
+
+  const closeLessonRequest = () => {
+    if (lessonSubmitting) return;
+    setLessonRequest(null);
+  };
+
+  const submitLessonRequest = async () => {
+    if (!lessonRequest || !token || !tenant) return;
+    setLessonSubmitting(true);
+    try {
+      await apiJson('/package-requests', {
+        method: 'POST',
+        token,
+        tenantSubdomain: tenant.subdomain,
+        body: JSON.stringify({
+          sessionType: lessonSession,
+          preferredTrainerId: lessonRequest.trainerId,
+          message: lessonMessage.trim() || undefined,
+        }),
+      });
+      setLessonRequest(null);
+      setLessonMessage('');
+      Alert.alert(t('network.requestLessonTitle'), t('network.requestOk'));
+    } catch (e) {
+      Alert.alert(
+        t('network.requestLessonTitle'),
+        e instanceof ApiError ? e.message : t('network.requestFail'),
+      );
+    } finally {
+      setLessonSubmitting(false);
+    }
+  };
+
   const submitNote = async () => {
     if (!token || !tenant || !selectedStudentId || newNote.trim().length < 2) return;
     try {
@@ -194,13 +242,25 @@ export function MemberTrainerNetworkScreen() {
               {myTrainers.length === 0 ? (
                 <Text style={styles.muted}>{t('network.emptyTrainers')}</Text>
               ) : null}
-              {myTrainers.map((tr) => (
-                <View key={tr.linkId} style={styles.row}>
-                  <Text style={styles.rowTxt}>
-                    {tr.trainer.firstName} {tr.trainer.lastName}
-                  </Text>
-                </View>
-              ))}
+              {myTrainers.map((tr) => {
+                const fullName = `${tr.trainer.firstName} ${tr.trainer.lastName}`.trim();
+                return (
+                  <View key={tr.linkId} style={styles.row}>
+                    <Text style={styles.rowTxt}>{fullName}</Text>
+                    <Pressable
+                      onPress={() => openLessonRequest(tr.trainerId, fullName)}
+                      style={({ pressed }) => [
+                        styles.lessonRequestPill,
+                        pressed && styles.lessonRequestPillPressed,
+                      ]}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.lessonRequestPillIcon}>🥇</Text>
+                      <Text style={styles.lessonRequestPillTxt}>{t('network.requestLesson')}</Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
             </GlassCard>
 
             <GlassCard style={styles.card}>
@@ -254,6 +314,36 @@ export function MemberTrainerNetworkScreen() {
           </>
         ) : null}
 
+        {isMember && allTrainers.length > 0 ? (
+          <GlassCard style={styles.card}>
+            <Text style={styles.cardTitle}>{t('network.requestLessonTitle')}</Text>
+            <Text style={styles.muted}>{t('network.requestLessonHint')}</Text>
+            {allTrainers.map((tr) => {
+              const fullName = `${tr.user.firstName} ${tr.user.lastName}`.trim();
+              const trainerLabel = tr.isIndependent
+                ? t('network.tags.independent')
+                : t('network.tags.clubTrainer');
+              return (
+                <Pressable
+                  key={`req-${tr.id}`}
+                  style={({ pressed }) => [
+                    styles.lessonTrainerRow,
+                    pressed && styles.lessonTrainerRowPressed,
+                  ]}
+                  onPress={() => openLessonRequest(tr.id, fullName)}
+                  accessibilityRole="button"
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowTxt}>{fullName}</Text>
+                    <Text style={styles.pickMeta}>{trainerLabel}</Text>
+                  </View>
+                  <Text style={styles.lessonTrainerArrow}>›</Text>
+                </Pressable>
+              );
+            })}
+          </GlassCard>
+        ) : null}
+
         {isTrainer ? (
           <>
             <GlassCard style={styles.card}>
@@ -305,6 +395,95 @@ export function MemberTrainerNetworkScreen() {
           </>
         ) : null}
       </ScrollView>
+
+      <Modal
+        visible={!!lessonRequest}
+        transparent
+        animationType="fade"
+        onRequestClose={closeLessonRequest}
+        statusBarTranslucent
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeLessonRequest} />
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>{t('network.requestLessonTitle')}</Text>
+            {lessonRequest ? (
+              <Text style={styles.modalSubtitle}>{lessonRequest.trainerName}</Text>
+            ) : null}
+            <Text style={styles.modalHint}>{t('network.requestLessonHint')}</Text>
+
+            <Text style={styles.modalSectionLabel}>{t('network.requestSessionTypeLabel')}</Text>
+            <View style={styles.lessonTypeRow}>
+              {(
+                [
+                  {
+                    id: 'personal_training',
+                    label: t('network.requestSessionPersonal'),
+                    icon: '💪',
+                  },
+                  { id: 'massage', label: t('network.requestSessionMassage'), icon: '💆' },
+                ] as { id: LessonSessionType; label: string; icon: string }[]
+              ).map((opt) => {
+                const active = lessonSession === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => setLessonSession(opt.id)}
+                    style={({ pressed }) => [
+                      styles.lessonTypeChip,
+                      active && styles.lessonTypeChipActive,
+                      pressed && styles.lessonTypeChipPressed,
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.lessonTypeIcon}>{opt.icon}</Text>
+                    <Text
+                      style={[styles.lessonTypeTxt, active && styles.lessonTypeTxtActive]}
+                      numberOfLines={1}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <PremiumInput
+              label={t('network.requestMessageLabel')}
+              placeholder={t('network.requestMessagePh')}
+              value={lessonMessage}
+              onChangeText={setLessonMessage}
+              multiline
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={({ pressed }) => [styles.modalCancel, pressed && styles.modalCancelPressed]}
+                onPress={closeLessonRequest}
+                disabled={lessonSubmitting}
+              >
+                <Text style={styles.modalCancelTxt}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.modalConfirm,
+                  pressed && styles.modalConfirmPressed,
+                  lessonSubmitting && styles.btnDisabled,
+                ]}
+                onPress={() => submitLessonRequest().catch(() => {})}
+                disabled={lessonSubmitting}
+              >
+                {lessonSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.btnTxt}>{t('network.requestSubmit')}</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -324,8 +503,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: 'rgba(0,0,0,0.2)',
     marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
-  rowTxt: { color: premium.text, fontSize: 14, fontWeight: '600' },
+  rowTxt: { color: premium.text, fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  lessonRequestPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.55)',
+    backgroundColor: 'rgba(56,189,248,0.14)',
+  },
+  lessonRequestPillPressed: {
+    backgroundColor: 'rgba(56,189,248,0.28)',
+    transform: [{ scale: 0.97 }],
+  },
+  lessonRequestPillIcon: { fontSize: 14 },
+  lessonRequestPillTxt: {
+    color: premium.accentBlue,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  lessonTrainerRow: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  lessonTrainerRowPressed: {
+    backgroundColor: 'rgba(56,189,248,0.1)',
+    borderColor: 'rgba(56,189,248,0.45)',
+  },
+  lessonTrainerArrow: {
+    color: premium.accentBlue,
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
   pick: {
     borderWidth: 1,
     borderColor: premium.glassBorder,
@@ -376,4 +603,118 @@ const styles = StyleSheet.create({
   },
   noteTxt: { color: premium.text, fontSize: 14, lineHeight: 20 },
   noteDate: { color: premium.textMuted, fontSize: 11, marginTop: 6 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(2,8,18,0.84)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 22,
+  },
+  modalSheet: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(6,18,33,0.98)',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 14,
+  },
+  modalTitle: {
+    color: premium.text,
+    fontSize: 19,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    color: premium.accentBlue,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalHint: {
+    color: premium.textMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  modalSectionLabel: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  lessonTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  lessonTypeChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  lessonTypeChipActive: {
+    borderColor: 'rgba(56,189,248,0.7)',
+    backgroundColor: 'rgba(56,189,248,0.14)',
+  },
+  lessonTypeChipPressed: {
+    transform: [{ scale: 0.97 }],
+  },
+  lessonTypeIcon: { fontSize: 18 },
+  lessonTypeTxt: {
+    color: premium.text,
+    fontSize: 13,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  lessonTypeTxtActive: {
+    color: premium.accentBlue,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  modalCancel: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  modalCancelTxt: {
+    color: premium.textMuted,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalConfirm: {
+    flex: 1.4,
+    backgroundColor: 'rgba(56,189,248,0.45)',
+    borderColor: 'rgba(56,189,248,0.7)',
+  },
+  modalConfirmPressed: {
+    backgroundColor: 'rgba(56,189,248,0.6)',
+    transform: [{ scale: 0.98 }],
+  },
 });

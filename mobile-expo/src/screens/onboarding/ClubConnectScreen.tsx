@@ -191,10 +191,14 @@ type Trainer = {
   name: string;
   specialties: string[];
   clubName: string;
+  clubSubdomain: string;
   ratingValue: string;
   reviewCount: number;
   initials: string;
   accentColor: string;
+  goalId: Goal['id'];
+  bio: string;
+  pricePerSession: string;
 };
 
 const TRAINERS: Trainer[] = [
@@ -203,50 +207,70 @@ const TRAINERS: Trainer[] = [
     name: 'Burcu A.',
     specialties: ['Yoga', 'Reformer'],
     clubName: "O'Wellness Sky",
+    clubSubdomain: 'o-wellness-sky',
     ratingValue: '4.9',
     reviewCount: 124,
     initials: 'BA',
     accentColor: '#7c3aed',
+    goalId: 'yoga',
+    bio: '12 yıllık yoga ve reformer pilates deneyimi. Yeni başlayanlardan ileri seviyeye birebir program.',
+    pricePerSession: '₺1.200',
   },
   {
     id: 't-emre',
     name: 'Emre K.',
     specialties: ['Kuvvet', 'CrossFit'],
     clubName: 'Skyland Wellness',
+    clubSubdomain: 'skyland-wellness',
     ratingValue: '4.8',
     reviewCount: 98,
     initials: 'EK',
     accentColor: '#ef4444',
+    goalId: 'strength',
+    bio: 'CrossFit Lvl-2 sertifikalı, sporcu performansı ve kuvvet artışı odaklı çalışıyor.',
+    pricePerSession: '₺1.500',
   },
   {
     id: 't-selin',
     name: 'Selin D.',
     specialties: ['Beslenme', 'Form'],
     clubName: "O'Wellness Dragos",
+    clubSubdomain: 'o-wellness-dragos',
     ratingValue: '5.0',
     reviewCount: 156,
     initials: 'SD',
     accentColor: '#0ea5e9',
+    goalId: 'fat-loss',
+    bio: 'Diyetisyen + antrenör. 3-6 ay vadeli kilo kontrolü ve metabolik form planları.',
+    pricePerSession: '₺1.350',
   },
   {
     id: 't-mert',
     name: 'Mert T.',
     specialties: ['Performans', 'Atletik'],
     clubName: "O'Wellness Yalıkavak",
+    clubSubdomain: 'o-wellness-yalikavak',
     ratingValue: '4.9',
     reviewCount: 87,
     initials: 'MT',
     accentColor: '#22c55e',
+    goalId: 'performance',
+    bio: 'Eski milli sporcu. Koşu ekonomisi, kondisyon ve maç-içi performans gelişimi.',
+    pricePerSession: '₺1.450',
   },
   {
     id: 't-zeynep',
     name: 'Zeynep G.',
     specialties: ['Pilates', 'Postür'],
     clubName: 'Skyland Wellness',
+    clubSubdomain: 'skyland-wellness',
     ratingValue: '4.7',
     reviewCount: 203,
     initials: 'ZG',
     accentColor: '#f59e0b',
+    goalId: 'yoga',
+    bio: 'Mat ve reformer pilates uzmanı. Postür, omurga sağlığı ve hareket kalitesi.',
+    pricePerSession: '₺1.250',
   },
 ];
 
@@ -335,6 +359,7 @@ export function ClubConnectScreen() {
   const navigation = useNavigation<Nav>();
   const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
+  const [previewTrainer, setPreviewTrainer] = useState<Trainer | null>(null);
   const [headlineIdx, setHeadlineIdx] = useState(0);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
@@ -652,12 +677,7 @@ export function ClubConnectScreen() {
                 return (
                   <Pressable
                     key={`r-${trainer.id}`}
-                    onPress={() =>
-                      Alert.alert(
-                        trainer.name,
-                        `${trainer.specialties.join(' · ')}\n${trainer.clubName}\n\nEğitmen profili ve rezervasyon yakında.`,
-                      )
-                    }
+                    onPress={() => setPreviewTrainer(trainer)}
                     style={({ pressed }) => [
                       styles.trainerCard,
                       isMatch && styles.resultCardMatched,
@@ -689,6 +709,10 @@ export function ClubConnectScreen() {
                     <Text style={styles.trainerClub} numberOfLines={1}>
                       {trainer.clubName}
                     </Text>
+                    <View style={styles.trainerCtaPill}>
+                      <Text style={styles.trainerCtaPillIcon}>🥇</Text>
+                      <Text style={styles.trainerCtaPillTxt}>Özel ders al</Text>
+                    </View>
                   </Pressable>
                 );
               })}
@@ -885,12 +909,7 @@ export function ClubConnectScreen() {
             {[...TRAINERS, ...TRAINERS].map((trainer, idx) => (
               <Pressable
                 key={`${trainer.id}-${idx}`}
-                onPress={() =>
-                  Alert.alert(
-                    trainer.name,
-                    `${trainer.specialties.join(' · ')}\n${trainer.clubName}\n\nEğitmen profili ve rezervasyon yakında.`,
-                  )
-                }
+                onPress={() => setPreviewTrainer(trainer)}
                 style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
               >
                 <View style={[styles.trainerAvatar, { backgroundColor: trainer.accentColor }]}>
@@ -913,6 +932,10 @@ export function ClubConnectScreen() {
                 <Text style={styles.trainerClub} numberOfLines={1}>
                   {trainer.clubName}
                 </Text>
+                <View style={styles.trainerCtaPill}>
+                  <Text style={styles.trainerCtaPillIcon}>🥇</Text>
+                  <Text style={styles.trainerCtaPillTxt}>Özel ders al</Text>
+                </View>
               </Pressable>
             ))}
           </Animated.View>
@@ -999,6 +1022,116 @@ export function ClubConnectScreen() {
           </View>
         </GlassCard>
       </ScrollView>
+      <Modal
+        visible={!!previewTrainer}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setPreviewTrainer(null)}
+      >
+        <View
+          style={[
+            styles.modalBackdrop,
+            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 },
+          ]}
+        >
+          <Pressable style={styles.modalDismissArea} onPress={() => setPreviewTrainer(null)} />
+          <View style={styles.modalSheet}>
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalCard}>
+                <View
+                  style={[
+                    styles.modalAvatar,
+                    previewTrainer ? { backgroundColor: previewTrainer.accentColor } : null,
+                  ]}
+                >
+                  <Text style={styles.modalAvatarTxt}>{previewTrainer?.initials ?? ''}</Text>
+                </View>
+                <Text style={styles.modalTitle}>{previewTrainer?.name}</Text>
+                <View style={styles.modalRatingRow}>
+                  <Text style={styles.modalRating}>★ {previewTrainer?.ratingValue}</Text>
+                  <Text style={styles.modalRatingMeta}>
+                    · {previewTrainer?.reviewCount} değerlendirme
+                  </Text>
+                </View>
+                <View style={styles.modalSpecRow}>
+                  {(previewTrainer?.specialties ?? []).map((spec) => (
+                    <View key={spec} style={styles.modalSpecChip}>
+                      <Text style={styles.modalSpecTxt}>{spec}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.modalClubRow}>
+                  <Text style={styles.modalClubLabel}>Kulüp:</Text>
+                  <Text style={styles.modalClubName}>{previewTrainer?.clubName}</Text>
+                </View>
+                <Text style={styles.modalBio}>{previewTrainer?.bio}</Text>
+                <View style={styles.modalPriceCard}>
+                  <Text style={styles.modalPriceLabel}>Tahmini özel ders ücreti</Text>
+                  <Text style={styles.modalPriceValue}>{previewTrainer?.pricePerSession}</Text>
+                  <Text style={styles.modalPriceHint}>
+                    seans başı · kulüp paketine göre değişebilir
+                  </Text>
+                </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalPrimaryBtn,
+                    styles.modalPrimaryBtnLesson,
+                    pressed && styles.modalPrimaryPressed,
+                  ]}
+                  onPress={() => {
+                    const trainer = previewTrainer;
+                    if (!trainer) return;
+                    setPreviewTrainer(null);
+                    navigation.navigate('Register', {
+                      preselectedSubdomain: trainer.clubSubdomain,
+                      preselectedGoal: trainer.goalId,
+                    });
+                  }}
+                >
+                  <Text style={styles.modalPrimaryLessonTxt}>Üye olup özel ders al</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalSecondaryBtn,
+                    pressed && styles.modalSecondaryPressed,
+                  ]}
+                  onPress={() => {
+                    const trainer = previewTrainer;
+                    if (!trainer) return;
+                    setPreviewTrainer(null);
+                    const directoryMatch = tenantDirectory.find(
+                      (row) => row.subdomain === trainer.clubSubdomain,
+                    );
+                    setPreviewClub(
+                      directoryMatch ?? {
+                        id: trainer.clubSubdomain,
+                        name: trainer.clubName,
+                        subdomain: trainer.clubSubdomain,
+                        logoUrl: null,
+                      },
+                    );
+                  }}
+                >
+                  <Text style={styles.modalSecondaryTxt}>Kulübü incele</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.modalCloseBtn}
+                  onPress={() => setPreviewTrainer(null)}
+                  hitSlop={6}
+                >
+                  <Text style={styles.modalCloseTxt}>{t('common.cancel')}</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <Modal
         visible={!!previewClub}
         transparent
@@ -1674,6 +1807,150 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  trainerCtaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.55)',
+    backgroundColor: 'rgba(34,197,94,0.16)',
+  },
+  trainerCtaPillIcon: {
+    fontSize: 11,
+  },
+  trainerCtaPillTxt: {
+    color: premium.accentGreen,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  modalRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginTop: 6,
+  },
+  modalRating: {
+    color: '#fbbf24',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  modalRatingMeta: {
+    color: premium.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalSpecRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  modalSpecChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  modalSpecTxt: {
+    color: premium.text,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  modalClubRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 14,
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  modalClubLabel: {
+    color: premium.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalClubName: {
+    color: premium.accentBlue,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  modalBio: {
+    marginTop: 12,
+    fontSize: 13,
+    lineHeight: 19,
+    color: premium.text,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  modalPriceCard: {
+    width: '100%',
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.45)',
+    backgroundColor: 'rgba(34,197,94,0.08)',
+    alignItems: 'center',
+  },
+  modalPriceLabel: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  modalPriceValue: {
+    color: premium.accentGreen,
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  modalPriceHint: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  modalPrimaryBtnLesson: {
+    marginTop: 14,
+    backgroundColor: 'rgba(34,197,94,0.32)',
+    borderColor: 'rgba(34,197,94,0.6)',
+  },
+  modalPrimaryLessonTxt: {
+    color: premium.accentGreen,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  modalPrimaryPressed: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  modalSecondaryPressed: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  modalCloseBtn: {
+    marginTop: 6,
+    paddingVertical: 6,
+    alignSelf: 'center',
+  },
+  modalCloseTxt: {
+    color: premium.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   eventCard: {
     width: EVENT_CARD_WIDTH,
