@@ -74,7 +74,7 @@ const SLIDER_CARD_WIDTH = 168;
 const SLIDER_CARD_GAP = 12;
 const SLIDER_STEP = SLIDER_CARD_WIDTH + SLIDER_CARD_GAP;
 const SLIDER_TRACK_WIDTH = SLIDER_STEP * FEATURED_CLUBS.length;
-const SLIDER_DURATION_MS = 3200 * FEATURED_CLUBS.length;
+const SLIDER_DURATION_MS = 6000 * FEATURED_CLUBS.length;
 
 export function ClubConnectScreen() {
   const { t, i18n } = useTranslation();
