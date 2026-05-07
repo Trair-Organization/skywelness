@@ -1,4 +1,5 @@
 import {
+  Alert,
   Animated,
   Easing,
   Image,
@@ -153,6 +154,149 @@ const TESTIMONIALS: Testimonial[] = [
 
 const TESTIMONIAL_ROTATE_MS = 6000;
 
+type Trainer = {
+  id: string;
+  name: string;
+  specialties: string[];
+  clubName: string;
+  ratingValue: string;
+  reviewCount: number;
+  initials: string;
+  accentColor: string;
+};
+
+const TRAINERS: Trainer[] = [
+  {
+    id: 't-burcu',
+    name: 'Burcu A.',
+    specialties: ['Yoga', 'Reformer'],
+    clubName: "O'Wellness Sky",
+    ratingValue: '4.9',
+    reviewCount: 124,
+    initials: 'BA',
+    accentColor: '#7c3aed',
+  },
+  {
+    id: 't-emre',
+    name: 'Emre K.',
+    specialties: ['Kuvvet', 'CrossFit'],
+    clubName: 'Skyland Wellness',
+    ratingValue: '4.8',
+    reviewCount: 98,
+    initials: 'EK',
+    accentColor: '#ef4444',
+  },
+  {
+    id: 't-selin',
+    name: 'Selin D.',
+    specialties: ['Beslenme', 'Form'],
+    clubName: "O'Wellness Dragos",
+    ratingValue: '5.0',
+    reviewCount: 156,
+    initials: 'SD',
+    accentColor: '#0ea5e9',
+  },
+  {
+    id: 't-mert',
+    name: 'Mert T.',
+    specialties: ['Performans', 'Atletik'],
+    clubName: "O'Wellness Yalıkavak",
+    ratingValue: '4.9',
+    reviewCount: 87,
+    initials: 'MT',
+    accentColor: '#22c55e',
+  },
+  {
+    id: 't-zeynep',
+    name: 'Zeynep G.',
+    specialties: ['Pilates', 'Postür'],
+    clubName: 'Skyland Wellness',
+    ratingValue: '4.7',
+    reviewCount: 203,
+    initials: 'ZG',
+    accentColor: '#f59e0b',
+  },
+];
+
+const TRAINER_CARD_WIDTH = 184;
+const TRAINER_GAP = 12;
+const TRAINER_STEP = TRAINER_CARD_WIDTH + TRAINER_GAP;
+const TRAINER_TRACK_WIDTH = TRAINER_STEP * TRAINERS.length;
+const TRAINER_DURATION_MS = 11000 * TRAINERS.length;
+
+type EventItem = {
+  id: string;
+  emoji: string;
+  title: string;
+  when: string;
+  clubName: string;
+  capacityLabel: string;
+  urgent?: boolean;
+  accentBg: string;
+  accentBorder: string;
+};
+
+const EVENTS: EventItem[] = [
+  {
+    id: 'e-sunset-yoga',
+    emoji: '🌅',
+    title: 'Sunset Yoga',
+    when: 'Cuma · 19:00',
+    clubName: "O'Wellness Yalıkavak",
+    capacityLabel: '7 kontenjan',
+    urgent: true,
+    accentBg: 'rgba(124,58,237,0.18)',
+    accentBorder: 'rgba(124,58,237,0.45)',
+  },
+  {
+    id: 'e-hiit',
+    emoji: '🔥',
+    title: 'HIIT Workshop',
+    when: 'Cumartesi · 11:00',
+    clubName: 'Skyland Wellness',
+    capacityLabel: '12 kontenjan',
+    accentBg: 'rgba(239,68,68,0.18)',
+    accentBorder: 'rgba(239,68,68,0.45)',
+  },
+  {
+    id: 'e-nutrition',
+    emoji: '🥗',
+    title: 'Beslenme Semineri',
+    when: 'Pazar · 15:00',
+    clubName: "O'Wellness Sky",
+    capacityLabel: '23 kontenjan',
+    accentBg: 'rgba(34,197,94,0.18)',
+    accentBorder: 'rgba(34,197,94,0.45)',
+  },
+  {
+    id: 'e-reformer',
+    emoji: '🧘',
+    title: 'Reformer Master Class',
+    when: 'Pazartesi · 18:30',
+    clubName: "O'Wellness Dragos",
+    capacityLabel: '4 kontenjan',
+    urgent: true,
+    accentBg: 'rgba(14,165,233,0.18)',
+    accentBorder: 'rgba(14,165,233,0.45)',
+  },
+  {
+    id: 'e-running',
+    emoji: '🏃',
+    title: 'Açık Hava Koşusu',
+    when: 'Cumartesi · 07:00',
+    clubName: "O'Wellness Sky",
+    capacityLabel: 'Sınırsız',
+    accentBg: 'rgba(245,158,11,0.18)',
+    accentBorder: 'rgba(245,158,11,0.45)',
+  },
+];
+
+const EVENT_CARD_WIDTH = 248;
+const EVENT_GAP = 12;
+const EVENT_STEP = EVENT_CARD_WIDTH + EVENT_GAP;
+const EVENT_TRACK_WIDTH = EVENT_STEP * EVENTS.length;
+const EVENT_DURATION_MS = 13000 * EVENTS.length;
+
 export function ClubConnectScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -163,6 +307,8 @@ export function ClubConnectScreen() {
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
   const sliderX = useRef(new Animated.Value(0)).current;
+  const trainerX = useRef(new Animated.Value(0)).current;
+  const eventX = useRef(new Animated.Value(0)).current;
   const headlineOpacity = useRef(new Animated.Value(1)).current;
   const testimonialOpacity = useRef(new Animated.Value(1)).current;
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
@@ -191,6 +337,34 @@ export function ClubConnectScreen() {
       animation.stop();
     };
   }, [sliderX]);
+
+  useEffect(() => {
+    trainerX.setValue(0);
+    const animation = Animated.loop(
+      Animated.timing(trainerX, {
+        toValue: -TRAINER_TRACK_WIDTH,
+        duration: TRAINER_DURATION_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [trainerX]);
+
+  useEffect(() => {
+    eventX.setValue(0);
+    const animation = Animated.loop(
+      Animated.timing(eventX, {
+        toValue: -EVENT_TRACK_WIDTH,
+        duration: EVENT_DURATION_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [eventX]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -400,6 +574,111 @@ export function ClubConnectScreen() {
           </View>
         </Animated.View>
 
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Öne çıkan eğitmenler</Text>
+            <Text style={styles.sectionSubtitle}>
+              Sertifikalı, doğrulanmış ve kullanıcılar tarafından derecelendirilmiş.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.sliderViewport} pointerEvents="box-none">
+          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: trainerX }] }]}>
+            {[...TRAINERS, ...TRAINERS].map((trainer, idx) => (
+              <Pressable
+                key={`${trainer.id}-${idx}`}
+                onPress={() =>
+                  Alert.alert(
+                    trainer.name,
+                    `${trainer.specialties.join(' · ')}\n${trainer.clubName}\n\nEğitmen profili ve rezervasyon yakında.`,
+                  )
+                }
+                style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
+              >
+                <View style={[styles.trainerAvatar, { backgroundColor: trainer.accentColor }]}>
+                  <Text style={styles.trainerAvatarTxt}>{trainer.initials}</Text>
+                </View>
+                <Text style={styles.trainerName} numberOfLines={1}>
+                  {trainer.name}
+                </Text>
+                <View style={styles.trainerSpecRow}>
+                  {trainer.specialties.map((spec) => (
+                    <View key={spec} style={styles.trainerSpecChip}>
+                      <Text style={styles.trainerSpecTxt}>{spec}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.trainerRatingRow}>
+                  <Text style={styles.trainerRatingValue}>★ {trainer.ratingValue}</Text>
+                  <Text style={styles.trainerRatingMeta}>· {trainer.reviewCount}</Text>
+                </View>
+                <Text style={styles.trainerClub} numberOfLines={1}>
+                  {trainer.clubName}
+                </Text>
+              </Pressable>
+            ))}
+          </Animated.View>
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Bu hafta yakında</Text>
+            <Text style={styles.sectionSubtitle}>
+              Üye olmadan da incele, kontenjanı kapanmadan yerini ayır.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.sliderViewport} pointerEvents="box-none">
+          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: eventX }] }]}>
+            {[...EVENTS, ...EVENTS].map((evt, idx) => (
+              <Pressable
+                key={`${evt.id}-${idx}`}
+                onPress={() =>
+                  Alert.alert(
+                    evt.title,
+                    `${evt.when}\n${evt.clubName}\n${evt.capacityLabel}\n\nKayıt akışı yakında.`,
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.eventCard,
+                  { borderColor: evt.accentBorder },
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <View style={[styles.eventCover, { backgroundColor: evt.accentBg }]}>
+                  <Text style={styles.eventEmoji}>{evt.emoji}</Text>
+                  {evt.urgent ? (
+                    <View style={styles.eventUrgentBadge}>
+                      <Text style={styles.eventUrgentTxt}>SON KONTENJAN</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.eventTitle} numberOfLines={1}>
+                  {evt.title}
+                </Text>
+                <View style={styles.eventMetaRow}>
+                  <Text style={styles.eventMetaTxt}>{evt.when}</Text>
+                </View>
+                <Text style={styles.eventClub} numberOfLines={1}>
+                  {evt.clubName}
+                </Text>
+                <View style={styles.eventCapacityRow}>
+                  <Text style={[styles.eventCapacityTxt, evt.urgent && styles.eventCapacityUrgent]}>
+                    {evt.capacityLabel}
+                  </Text>
+                  <Text style={styles.eventCtaArrow}>›</Text>
+                </View>
+              </Pressable>
+            ))}
+          </Animated.View>
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
+        </View>
+
         <GlassCard style={styles.card}>
           <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
 
@@ -415,6 +694,51 @@ export function ClubConnectScreen() {
           <Pressable style={styles.secondaryBtn} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.secondaryTxt}>{t('onboarding.signIn')}</Text>
           </Pressable>
+
+          <Text style={styles.ctaChipsTitle}>Veya farklı bir yolla başla</Text>
+          <View style={styles.ctaChipsRow}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('Register', {
+                  preselectedSubdomain: 'demo',
+                  preselectedGoal: selectedGoal ?? undefined,
+                })
+              }
+              style={({ pressed }) => [
+                styles.ctaChip,
+                styles.ctaChipDemo,
+                pressed && styles.ctaChipPressed,
+              ]}
+            >
+              <Text style={styles.ctaChipIcon}>🎬</Text>
+              <Text style={styles.ctaChipLabel}>Demo ile başla</Text>
+              <Text style={styles.ctaChipHint}>Kayıt olmadan tur at</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate('TrainerRegister')}
+              style={({ pressed }) => [
+                styles.ctaChip,
+                styles.ctaChipTrainer,
+                pressed && styles.ctaChipPressed,
+              ]}
+            >
+              <Text style={styles.ctaChipIcon}>👟</Text>
+              <Text style={styles.ctaChipLabel}>Eğitmen başvurusu</Text>
+              <Text style={styles.ctaChipHint}>Hizmet vermek istiyorum</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate('CorporateEntry')}
+              style={({ pressed }) => [
+                styles.ctaChip,
+                styles.ctaChipCorporate,
+                pressed && styles.ctaChipPressed,
+              ]}
+            >
+              <Text style={styles.ctaChipIcon}>🏢</Text>
+              <Text style={styles.ctaChipLabel}>Kurumsal kayıt</Text>
+              <Text style={styles.ctaChipHint}>Kulüp / şirket olarak</Text>
+            </Pressable>
+          </View>
         </GlassCard>
       </ScrollView>
       <Modal
@@ -465,6 +789,7 @@ export function ClubConnectScreen() {
                     setPreviewClub(null);
                     navigation.navigate('Register', {
                       preselectedSubdomain: subdomain,
+                      preselectedGoal: selectedGoal ?? undefined,
                     });
                   }}
                 >
@@ -851,6 +1176,177 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: -2,
   },
+  sectionHeader: {
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: premium.textMuted,
+  },
+  cardPressed: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  trainerCard: {
+    width: TRAINER_CARD_WIDTH,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(8,16,28,0.7)',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  trainerAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  trainerAvatarTxt: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  trainerName: {
+    color: premium.text,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  trainerSpecRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  trainerSpecChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  trainerSpecTxt: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  trainerRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginBottom: 4,
+  },
+  trainerRatingValue: {
+    color: '#fbbf24',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  trainerRatingMeta: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  trainerClub: {
+    color: premium.accentBlue,
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  eventCard: {
+    width: EVENT_CARD_WIDTH,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: 'rgba(8,16,28,0.7)',
+    overflow: 'hidden',
+  },
+  eventCover: {
+    height: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  eventEmoji: {
+    fontSize: 38,
+  },
+  eventUrgentBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(239,68,68,0.92)',
+  },
+  eventUrgentTxt: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  eventTitle: {
+    color: premium.text,
+    fontSize: 15,
+    fontWeight: '800',
+    paddingHorizontal: 14,
+    paddingTop: 10,
+  },
+  eventMetaRow: {
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  eventMetaTxt: {
+    color: premium.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  eventClub: {
+    color: premium.accentBlue,
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  eventCapacityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: premium.glassBorder,
+  },
+  eventCapacityTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  eventCapacityUrgent: {
+    color: '#f87171',
+  },
+  eventCtaArrow: {
+    color: premium.accentBlue,
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
   card: {
     marginTop: 4,
     paddingBottom: 26,
@@ -895,6 +1391,61 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     fontSize: 14,
     fontWeight: '700',
+  },
+  ctaChipsTitle: {
+    marginTop: 18,
+    marginBottom: 10,
+    fontSize: 11,
+    fontWeight: '800',
+    color: premium.textMuted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  ctaChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ctaChip: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  ctaChipDemo: {
+    borderColor: 'rgba(34,197,94,0.45)',
+  },
+  ctaChipTrainer: {
+    borderColor: 'rgba(245,158,11,0.45)',
+  },
+  ctaChipCorporate: {
+    borderColor: 'rgba(124,58,237,0.45)',
+  },
+  ctaChipPressed: {
+    transform: [{ scale: 0.97 }],
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  ctaChipIcon: {
+    fontSize: 22,
+    marginBottom: 6,
+  },
+  ctaChipLabel: {
+    color: premium.text,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  ctaChipHint: {
+    marginTop: 2,
+    color: premium.textMuted,
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 12,
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,

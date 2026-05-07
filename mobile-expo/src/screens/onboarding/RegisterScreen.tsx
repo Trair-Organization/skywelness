@@ -73,6 +73,7 @@ export function RegisterScreen() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [clubQuery, setClubQuery] = useState('');
+  const [preselectedGoal, setPreselectedGoal] = useState<string | null>(null);
   const successAnim = useRef(new Animated.Value(0)).current;
 
   const filteredDirectory = useMemo(() => {
@@ -165,6 +166,28 @@ export function RegisterScreen() {
     resolveTenantByCode(preselected, true).catch(() => {});
   }, [route.params?.preselectedSubdomain, resolveTenantByCode, setSubdomain]);
 
+  useEffect(() => {
+    const goal = route.params?.preselectedGoal?.trim();
+    if (goal) {
+      setPreselectedGoal(goal);
+    }
+  }, [route.params?.preselectedGoal]);
+
+  const goalLabel = useMemo(() => {
+    switch (preselectedGoal) {
+      case 'fat-loss':
+        return { icon: '🔥', label: 'Form & Kilo' };
+      case 'strength':
+        return { icon: '💪', label: 'Kuvvet' };
+      case 'yoga':
+        return { icon: '🧘', label: 'Yoga & Pilates' };
+      case 'performance':
+        return { icon: '🏃', label: 'Performans' };
+      default:
+        return null;
+    }
+  }, [preselectedGoal]);
+
   const pickAndUpload = async (source: 'camera' | 'gallery') => {
     const pick =
       source === 'camera'
@@ -253,6 +276,25 @@ export function RegisterScreen() {
           <Text style={styles.backTxt}>{t('common.back')}</Text>
         </Pressable>
         <GlassCard style={[styles.card, compact && styles.cardCompact]}>
+          {goalLabel ? (
+            <View style={styles.goalPill}>
+              <Text style={styles.goalPillIcon}>{goalLabel.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.goalPillTitle}>Hedefin: {goalLabel.label}</Text>
+                <Text style={styles.goalPillSubtitle}>
+                  Sana uygun eğitmen ve programları öne çıkaracağız.
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setPreselectedGoal(null)}
+                style={styles.goalPillClose}
+                hitSlop={8}
+              >
+                <Text style={styles.goalPillCloseTxt}>×</Text>
+              </Pressable>
+            </View>
+          ) : null}
           <View style={styles.avatarSection}>
             <Pressable
               style={styles.avatarRing}
@@ -601,6 +643,46 @@ const styles = StyleSheet.create({
   cardCompact: {
     marginTop: 4,
     paddingVertical: 14,
+  },
+  goalPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.45)',
+    backgroundColor: 'rgba(56,189,248,0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 14,
+  },
+  goalPillIcon: {
+    fontSize: 22,
+  },
+  goalPillTitle: {
+    color: premium.text,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  goalPillSubtitle: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  goalPillClose: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  goalPillCloseTxt: {
+    color: premium.textMuted,
+    fontSize: 16,
+    fontWeight: '900',
+    lineHeight: 18,
   },
   avatarSection: {
     alignItems: 'center',

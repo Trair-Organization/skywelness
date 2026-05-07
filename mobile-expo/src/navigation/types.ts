@@ -4,7 +4,7 @@ export type RootStackParamList = {
   CorporateEntry: undefined;
   Login: undefined;
   ForgotPassword: undefined;
-  Register: { preselectedSubdomain?: string } | undefined;
+  Register: { preselectedSubdomain?: string; preselectedGoal?: string } | undefined;
   TrainerRegister: undefined;
   PendingApproval: undefined;
   Main: undefined;
