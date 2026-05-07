@@ -30,6 +30,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { UpdatePushTokenDto } from './dto/update-push-token.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const uploadOptions: MulterOptions = {
@@ -139,5 +140,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   updateMe(@CurrentUser() user: User, @Body() dto: UpdateMeDto) {
     return this.authService.updateMe(user, dto);
+  }
+
+  @Patch('push-token')
+  @UseGuards(JwtAuthGuard)
+  updatePushToken(@CurrentUser() user: User, @Body() dto: UpdatePushTokenDto) {
+    return this.authService.updatePushToken(user, dto.expoPushToken ?? null);
   }
 }

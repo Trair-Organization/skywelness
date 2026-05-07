@@ -1,4 +1,5 @@
 export * from './api-key.entity';
+export * from './cafe-order.entity';
 export * from './availability.entity';
 export * from './discount-code.entity';
 export * from './facility-access-log.entity';

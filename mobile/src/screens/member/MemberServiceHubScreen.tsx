@@ -287,6 +287,7 @@ export function MemberServiceHubScreen({ mode }: Props) {
   const [packageRequestTrainerId, setPackageRequestTrainerId] = useState<string | null>(null);
   const [trainerRequestPickerOpen, setTrainerRequestPickerOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [massageServiceKind, setMassageServiceKind] = useState<'massage' | 'kese_kopuk'>('massage');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [iosPickerValue, setIosPickerValue] = useState(() => new Date());
   const suppressCalendarDaySyncRef = useRef(false);
@@ -758,6 +759,31 @@ export function MemberServiceHubScreen({ mode }: Props) {
               <Text style={styles.addPackageIcon}>+</Text>
             </Pressable>
           </View>
+          {mode === 'massage' ? (
+            <View style={styles.serviceKindRow}>
+              <Pressable
+                style={[
+                  styles.serviceKindChip,
+                  massageServiceKind === 'massage' && styles.serviceKindChipOn,
+                ]}
+                onPress={() => setMassageServiceKind('massage')}
+              >
+                <Text style={styles.serviceKindTxt}>Klasik Masaj</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.serviceKindChip,
+                  massageServiceKind === 'kese_kopuk' && styles.serviceKindChipOn,
+                ]}
+                onPress={() => setMassageServiceKind('kese_kopuk')}
+              >
+                <Text style={styles.serviceKindTxt}>Kese + Köpük</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {mode === 'massage' ? (
+            <Text style={styles.muted}>Her iki hizmet türü de 1 masaj hakkı düşer.</Text>
+          ) : null}
           {filteredPackages.length === 0 ? (
             <Text style={styles.warn}>{t('serviceHub.noActivePackage')}</Text>
           ) : (
@@ -1702,6 +1728,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   hRail: { marginBottom: 12, paddingBottom: 4 },
+  serviceKindRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  serviceKindChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  serviceKindChipOn: {
+    borderColor: premium.accentGreen,
+    backgroundColor: 'rgba(74,222,128,0.18)',
+  },
+  serviceKindTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   staffCardOuter: {
     width: 176,
     marginRight: 12,

@@ -590,6 +590,25 @@ export class AuthService {
     return this.sanitizeUser(saved);
   }
 
+  async updatePushToken(currentUser: User, expoPushToken: string | null) {
+    const user = await this.usersRepo.findOne({
+      where: { id: currentUser.id, tenantId: currentUser.tenantId },
+    });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    const prev = user.notificationPreferences ?? {};
+    const next: Record<string, unknown> = { ...prev };
+    if (expoPushToken && expoPushToken.trim()) {
+      next.expoPushToken = expoPushToken.trim();
+    } else {
+      delete next.expoPushToken;
+    }
+    user.notificationPreferences = next;
+    await this.usersRepo.save(user);
+    return { ok: true as const };
+  }
+
   private async buildAuthResponse(user: User) {
     let tenantSubdomain: string | undefined = user.tenant?.subdomain;
     if (!tenantSubdomain) {

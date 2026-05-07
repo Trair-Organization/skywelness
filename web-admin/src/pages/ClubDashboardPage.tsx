@@ -68,6 +68,14 @@ export function ClubDashboardPage() {
           {t('clubDashboard.reportsLink')}
         </Link>
       </section>
+
+      <section className="card">
+        <h2>SkyCafe</h2>
+        <p className="muted">Uyelerin verdigi cafe siparislerini buradan takip edin.</p>
+        <Link className="link" to="/club/cafe-orders">
+          Siparisleri Gor
+        </Link>
+      </section>
     </div>
   );
 }

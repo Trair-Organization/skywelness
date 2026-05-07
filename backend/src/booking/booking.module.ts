@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { AppNotification } from '../database/entities/notification.entity';
+import { CafeOrder } from '../database/entities/cafe-order.entity';
 import { PackageRequest } from '../database/entities/package-request.entity';
 import { Package } from '../database/entities/package.entity';
 import { Reservation } from '../database/entities/reservation.entity';
@@ -22,6 +23,8 @@ import { TrainerNetworkController } from './trainer-network.controller';
 import { PackageRequestsController } from './package-requests.controller';
 import { NotificationsController } from './notifications.controller';
 import { WaitingListController } from './waiting-list.controller';
+import { CafeOrdersController } from './cafe-orders.controller';
+import { CafeOrdersService } from './cafe-orders.service';
 
 @Module({
   imports: [
@@ -35,6 +38,7 @@ import { WaitingListController } from './waiting-list.controller';
       User,
       Tenant,
       AppNotification,
+      CafeOrder,
       TrainerMemberLink,
       TrainerMemberNote,
     ]),
@@ -49,7 +53,9 @@ import { WaitingListController } from './waiting-list.controller';
     PackageRequestsController,
     TrainerNetworkController,
     NotificationsController,
+    CafeOrdersController,
   ],
-  providers: [BookingService, RolesGuard],
+  providers: [BookingService, CafeOrdersService, RolesGuard],
+  exports: [CafeOrdersService],
 })
 export class BookingModule {}

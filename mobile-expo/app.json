@@ -5,27 +5,31 @@
     "scheme": "wellnessclubai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/branding/wellness-club-app-icon-1024.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/branding/wellness-club-logo-header.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#050810"
     },
     "ios": {
       "bundleIdentifier": "com.trairx.wellnessclub",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Profil fotografinizi yuklemek ve guncellemek icin fotograf kitapliginiza erisim gerekir.",
+        "NSPhotoLibraryAddUsageDescription": "Profil fotografinizi uygulama icinden kaydetmek icin fotograf kitapligina yazma izni gerekir.",
+        "NSCameraUsageDescription": "Profil fotografinizi cekebilmeniz icin kameraya erisim gerekir.",
+        "NSUserNotificationsUsageDescription": "Rezervasyon, etkinlik ve SkyCafe siparis durumlari hakkinda bildirim gonderebilmek icin izin gerekir."
       }
     },
     "android": {
       "package": "com.trairx.wellnessclub",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/branding/wellness-club-app-icon-1024.png",
+        "backgroundColor": "#050810"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -34,7 +38,13 @@
       "policy": "appVersion"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/branding/wellness-club-logo-header.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4809fe50-74fa-493f-bc8a-e7d81072c5e5"
+      }
+    },
+    "owner": "trairx"
   }
 }

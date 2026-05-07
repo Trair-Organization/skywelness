@@ -888,6 +888,7 @@ export class BookingService {
         readAt: null,
       }),
     );
+    await this.sendPushToUser(member.id, 'Rezervasyon onaylandi', bodyLine);
 
     await this.mail.sendReservationConfirmed({
       to: member.email,
@@ -939,6 +940,7 @@ export class BookingService {
         readAt: null,
       }),
     );
+    await this.sendPushToUser(member.id, 'Rezervasyon iptal edildi', bodyLine);
 
     await this.mail.sendReservationCancelled({
       to: member.email,
@@ -982,5 +984,36 @@ export class BookingService {
         packageTypeName: r.package.packageType.name,
       },
     };
+  }
+
+  private async sendPushToUser(userId: string, title: string, body: string) {
+    try {
+      const user = await this.usersRepo.findOne({
+        where: { id: userId },
+        select: ['id', 'notificationPreferences'],
+      });
+      const rawToken =
+        user?.notificationPreferences &&
+        typeof user.notificationPreferences === 'object' &&
+        'expoPushToken' in user.notificationPreferences
+          ? user.notificationPreferences.expoPushToken
+          : null;
+      const token = typeof rawToken === 'string' ? rawToken.trim() : '';
+      if (!token) {
+        return;
+      }
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: token,
+          title,
+          body,
+          sound: 'default',
+        }),
+      });
+    } catch {
+      // keep reservation flow resilient even if push delivery fails
+    }
   }
 }

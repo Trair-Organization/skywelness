@@ -9,6 +9,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -79,6 +81,105 @@ type ClubEventRow = {
   isJoined: boolean;
 };
 
+type CafeProduct = {
+  id: string;
+  title: string;
+  priceLabel: string;
+  imageUrl: string;
+  category: 'food' | 'drink';
+};
+
+type CafeCartItem = {
+  product: CafeProduct;
+  quantity: number;
+};
+
+type MassageSlotCard = {
+  id: string;
+  trainerId: string;
+  trainerName: string;
+  startTime: string;
+  endTime: string;
+  remainingCapacity: number;
+  imageUrl?: string;
+  isDemo?: boolean;
+};
+
+const SKY_CAFE_PRODUCTS: CafeProduct[] = [
+  {
+    id: 'fit-bowl',
+    title: 'Protein Bowl',
+    priceLabel: '₺280',
+    imageUrl:
+      'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80',
+    category: 'food',
+  },
+  {
+    id: 'green-juice',
+    title: 'Green Detox',
+    priceLabel: '₺160',
+    imageUrl:
+      'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?auto=format&fit=crop&w=900&q=80',
+    category: 'drink',
+  },
+  {
+    id: 'oat-pancake',
+    title: 'Yulaf Pancake',
+    priceLabel: '₺220',
+    imageUrl:
+      'https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=900&q=80',
+    category: 'food',
+  },
+  {
+    id: 'cold-brew',
+    title: 'Cold Brew',
+    priceLabel: '₺120',
+    imageUrl:
+      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80',
+    category: 'drink',
+  },
+  {
+    id: 'salad-plate',
+    title: 'Akdeniz Salata',
+    priceLabel: '₺240',
+    imageUrl:
+      'https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&fit=crop&w=900&q=80',
+    category: 'food',
+  },
+];
+
+const TRAINER_PLACEHOLDER_IMAGES = [
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=480&q=80',
+  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=480&q=80',
+  'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=480&q=80',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=480&q=80',
+];
+
+const DEMO_MASSAGE_SLOTS: MassageSlotCard[] = [
+  {
+    id: 'demo-1',
+    trainerId: 'demo-trainer-1',
+    trainerName: 'Ayse Yildiz (Masöz)',
+    startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    endTime: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
+    remainingCapacity: 2,
+    imageUrl:
+      'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=900&q=80',
+    isDemo: true,
+  },
+  {
+    id: 'demo-2',
+    trainerId: 'demo-trainer-2',
+    trainerName: 'Melis Kara (Masöz)',
+    startTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    endTime: new Date(Date.now() + 150 * 60 * 1000).toISOString(),
+    remainingCapacity: 1,
+    imageUrl:
+      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=900&q=80',
+    isDemo: true,
+  },
+];
+
 function fmt(iso: string) {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -104,6 +205,24 @@ function fmtTime(iso: string) {
   } catch {
     return iso;
   }
+}
+
+function fmtHourRange(iso: string) {
+  try {
+    const start = new Date(iso);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1, 0, 0, 0);
+    const toHour = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:00`;
+    return `${toHour(start)} - ${toHour(end)}`;
+  } catch {
+    return fmtTime(iso);
+  }
+}
+
+function parsePrice(label: string): number {
+  const normalized = label.replace(/[^\d.,]/g, '').replace(',', '.');
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) ? value : 0;
 }
 
 function pickDefaultPackageId(rows: MyPackageRow[]): string | null {
@@ -162,6 +281,20 @@ function localizeEventAction(t: (key: string) => string, message: string): strin
 }
 
 const TAB_BAR_PAD = 72;
+const HORIZONTAL_CARD_WIDTH = 190;
+const HORIZONTAL_CARD_GAP = 10;
+const HORIZONTAL_ITEM_SPAN = HORIZONTAL_CARD_WIDTH + HORIZONTAL_CARD_GAP;
+const AUTO_SCROLL_INTERVAL_MS = 28;
+const AUTO_SCROLL_STEP_PX = 1.1;
+const ENABLE_AUTO_SCROLL = false;
+
+type RailMetrics = {
+  x: number;
+  contentW: number;
+  layoutW: number;
+  itemCount: number;
+  initialized: boolean;
+};
 
 export function MemberHomeScreen() {
   const { t } = useTranslation();
@@ -191,6 +324,58 @@ export function MemberHomeScreen() {
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ClubEventRow | null>(null);
   const [eventNotice, setEventNotice] = useState<string | null>(null);
+  const [massageSlotsToday, setMassageSlotsToday] = useState<MassageSlotCard[]>([]);
+  const [loadingMassageSlots, setLoadingMassageSlots] = useState(false);
+  const [selectedCafeProduct, setSelectedCafeProduct] = useState<CafeProduct | null>(null);
+  const [cafeCartItems, setCafeCartItems] = useState<CafeCartItem[]>([]);
+  const [showAllCafeModal, setShowAllCafeModal] = useState(false);
+  const [cafeCategory, setCafeCategory] = useState<'food' | 'drink'>('food');
+  const [submittingCafeOrder, setSubmittingCafeOrder] = useState(false);
+  const [cafeName, setCafeName] = useState('');
+  const [cafeBlock, setCafeBlock] = useState('');
+  const [cafeApartment, setCafeApartment] = useState('');
+  const [cafePhone, setCafePhone] = useState('');
+  const [cafePaymentMethod, setCafePaymentMethod] = useState<'cash' | 'card'>('cash');
+  const massageRailRef = useRef<ScrollView>(null);
+  const eventsRailRef = useRef<ScrollView>(null);
+  const trainerRailRef = useRef<ScrollView>(null);
+  const cafeRailRef = useRef<ScrollView>(null);
+  const massagePausedRef = useRef(false);
+  const eventsPausedRef = useRef(false);
+  const trainerPausedRef = useRef(false);
+  const cafePausedRef = useRef(false);
+  const massageResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const eventsResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trainerResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cafeResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const massageRailMetrics = useRef<RailMetrics>({
+    x: 0,
+    contentW: 0,
+    layoutW: 0,
+    itemCount: 0,
+    initialized: false,
+  });
+  const eventsRailMetrics = useRef<RailMetrics>({
+    x: 0,
+    contentW: 0,
+    layoutW: 0,
+    itemCount: 0,
+    initialized: false,
+  });
+  const trainerRailMetrics = useRef<RailMetrics>({
+    x: 0,
+    contentW: 0,
+    layoutW: 0,
+    itemCount: 0,
+    initialized: false,
+  });
+  const cafeRailMetrics = useRef<RailMetrics>({
+    x: 0,
+    contentW: 0,
+    layoutW: 0,
+    itemCount: 0,
+    initialized: false,
+  });
 
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
@@ -388,10 +573,65 @@ export function MemberHomeScreen() {
     }
   }, [token, tenant, t]);
 
+  const loadMassageSlotsToday = useCallback(async () => {
+    if (!token || !tenant) {
+      return;
+    }
+    setLoadingMassageSlots(true);
+    try {
+      const trainerRows = await apiJson<TrainerRow[]>('/trainers?sessionType=massage', {
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      const now = new Date();
+      const end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+
+      const all = await Promise.all(
+        trainerRows.slice(0, 4).map(async (tr) => {
+          const q = new URLSearchParams({
+            trainerId: tr.id,
+            from: now.toISOString(),
+            to: end.toISOString(),
+          });
+          const rows = await apiJson<SlotRow[]>(`/availability?${q.toString()}`, {
+            token,
+            tenantSubdomain: tenant.subdomain,
+          });
+          const trainerName = `${tr.user.firstName} ${tr.user.lastName}`.trim();
+          return rows
+            .filter((slot) => slot.remainingCapacity > 0)
+            .map<MassageSlotCard>((slot) => ({
+              id: slot.id,
+              trainerId: tr.id,
+              trainerName,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              remainingCapacity: slot.remainingCapacity,
+              imageUrl:
+                tr.user.photoUrl ??
+                'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=900&q=80',
+            }));
+        }),
+      );
+
+      const merged = all
+        .flat()
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+        .slice(0, 12);
+      setMassageSlotsToday(merged.length ? merged : DEMO_MASSAGE_SLOTS);
+    } catch {
+      setMassageSlotsToday(DEMO_MASSAGE_SLOTS);
+    } finally {
+      setLoadingMassageSlots(false);
+    }
+  }, [token, tenant]);
+
   useFocusEffect(
     useCallback(() => {
       loadClubEvents().catch(() => {});
-    }, [loadClubEvents]),
+      loadMassageSlotsToday().catch(() => {});
+    }, [loadClubEvents, loadMassageSlotsToday]),
   );
 
   useEffect(() => {
@@ -461,6 +701,203 @@ export function MemberHomeScreen() {
     });
   }, []);
 
+  const quickBookMassageSlot = useCallback(async (slot: MassageSlotCard) => {
+    if (!slot.isDemo) {
+      setSelectedTrainerId(slot.trainerId);
+      setSelectedSlotId(slot.id);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, bookingSectionY.current - 12),
+          animated: true,
+        });
+      });
+      return;
+    }
+    Alert.alert('Demo', 'Bu satir demo gorunum icindir. Gercek rezervasyon icin canli slot secin.');
+  }, []);
+
+  const openCafeOrder = useCallback(
+    (item: CafeProduct) => {
+      setSelectedCafeProduct(item);
+      setCafeCartItems([{ product: item, quantity: 1 }]);
+      setCafeName(`${user.firstName} ${user.lastName}`.trim());
+      setCafeBlock('');
+      setCafeApartment('');
+      setCafePhone('');
+      setCafePaymentMethod('cash');
+    },
+    [user.firstName, user.lastName],
+  );
+
+  const changeCafeItemQty = useCallback((product: CafeProduct, delta: number) => {
+    setCafeCartItems((prev) => {
+      const existing = prev.find((x) => x.product.id === product.id);
+      if (!existing && delta <= 0) {
+        return prev;
+      }
+      if (!existing && delta > 0) {
+        return [...prev, { product, quantity: delta }];
+      }
+      return prev
+        .map((x) =>
+          x.product.id === product.id ? { ...x, quantity: Math.max(0, x.quantity + delta) } : x,
+        )
+        .filter((x) => x.quantity > 0);
+    });
+  }, []);
+
+  const submitCafeOrder = useCallback(async () => {
+    if (!token || !tenant || !selectedCafeProduct) {
+      return;
+    }
+    if (cafeCartItems.length === 0) {
+      Alert.alert('SkyCafe', 'En az bir ürün seçmelisiniz.');
+      return;
+    }
+    if (!cafeName.trim() || !cafeBlock.trim() || !cafeApartment.trim() || !cafePhone.trim()) {
+      Alert.alert('SkyCafe', 'Lütfen tüm teslimat alanlarını doldurun.');
+      return;
+    }
+    setSubmittingCafeOrder(true);
+    try {
+      await apiJson('/cafe/orders', {
+        method: 'POST',
+        token,
+        tenantSubdomain: tenant.subdomain,
+        body: JSON.stringify({
+          customerName: cafeName.trim(),
+          blockLabel: cafeBlock.trim(),
+          apartmentLabel: cafeApartment.trim(),
+          phoneNumber: cafePhone.trim(),
+          paymentMethod: cafePaymentMethod,
+          items: cafeCartItems.map((row) => ({
+            productId: row.product.id,
+            title: row.product.title,
+            quantity: row.quantity,
+            unitPrice: parsePrice(row.product.priceLabel),
+          })),
+        }),
+      });
+      Alert.alert('SkyCafe', 'Siparişiniz alınmıştır.');
+      setSelectedCafeProduct(null);
+      setCafeCartItems([]);
+    } catch (e) {
+      Alert.alert('SkyCafe', e instanceof ApiError ? e.message : 'Sipariş gönderilemedi.');
+    } finally {
+      setSubmittingCafeOrder(false);
+    }
+  }, [
+    token,
+    tenant,
+    selectedCafeProduct,
+    cafeCartItems,
+    cafeName,
+    cafeBlock,
+    cafeApartment,
+    cafePhone,
+    cafePaymentMethod,
+  ]);
+
+  const loopedMassageSlots = useMemo(
+    () =>
+      massageSlotsToday.length > 1
+        ? [...massageSlotsToday, ...massageSlotsToday, ...massageSlotsToday]
+        : massageSlotsToday,
+    [massageSlotsToday],
+  );
+  const loopedEvents = useMemo(
+    () => (clubEvents.length > 1 ? [...clubEvents, ...clubEvents, ...clubEvents] : clubEvents),
+    [clubEvents],
+  );
+  const loopedTrainers = useMemo(
+    () => (trainers.length > 1 ? [...trainers, ...trainers, ...trainers] : trainers),
+    [trainers],
+  );
+  const loopedCafeProducts = useMemo(
+    () =>
+      SKY_CAFE_PRODUCTS.length > 1
+        ? [...SKY_CAFE_PRODUCTS, ...SKY_CAFE_PRODUCTS, ...SKY_CAFE_PRODUCTS]
+        : SKY_CAFE_PRODUCTS,
+    [],
+  );
+  const homeCafeProducts = useMemo(() => SKY_CAFE_PRODUCTS.slice(0, 3), []);
+  const filteredCafeProducts = useMemo(
+    () => SKY_CAFE_PRODUCTS.filter((x) => x.category === cafeCategory),
+    [cafeCategory],
+  );
+
+  const pauseRailTemporarily = useCallback(
+    (
+      pausedRef: { current: boolean },
+      timerRef: { current: ReturnType<typeof setTimeout> | null },
+      delayMs = 1200,
+    ) => {
+      pausedRef.current = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        pausedRef.current = false;
+        timerRef.current = null;
+      }, delayMs);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!ENABLE_AUTO_SCROLL) {
+      return;
+    }
+    const normalizeLoopPosition = (
+      ref: { current: ScrollView | null },
+      metrics: RailMetrics,
+      forceInit = false,
+    ) => {
+      if (metrics.itemCount <= 1 || metrics.layoutW <= 0) {
+        return;
+      }
+      const segmentW = metrics.itemCount * HORIZONTAL_ITEM_SPAN;
+      if (forceInit && !metrics.initialized) {
+        metrics.x = segmentW;
+        metrics.initialized = true;
+        ref.current?.scrollTo({ x: metrics.x, animated: false });
+        return;
+      }
+      if (!metrics.initialized) {
+        return;
+      }
+      if (metrics.x >= segmentW * 2) {
+        metrics.x -= segmentW;
+        ref.current?.scrollTo({ x: metrics.x, animated: false });
+      } else if (metrics.x <= 0) {
+        metrics.x += segmentW;
+        ref.current?.scrollTo({ x: metrics.x, animated: false });
+      }
+    };
+
+    const tick = (ref: { current: ScrollView | null }, metrics: RailMetrics, paused: boolean) => {
+      if (paused || metrics.layoutW <= 0 || metrics.contentW <= metrics.layoutW + 6) {
+        return;
+      }
+      normalizeLoopPosition(ref, metrics);
+      metrics.x += AUTO_SCROLL_STEP_PX;
+      ref.current?.scrollTo({ x: metrics.x, animated: false });
+    };
+
+    const id = setInterval(() => {
+      normalizeLoopPosition(massageRailRef, massageRailMetrics.current, true);
+      normalizeLoopPosition(eventsRailRef, eventsRailMetrics.current, true);
+      normalizeLoopPosition(trainerRailRef, trainerRailMetrics.current, true);
+      normalizeLoopPosition(cafeRailRef, cafeRailMetrics.current, true);
+      tick(massageRailRef, massageRailMetrics.current, massagePausedRef.current);
+      tick(eventsRailRef, eventsRailMetrics.current, eventsPausedRef.current);
+      tick(trainerRailRef, trainerRailMetrics.current, trainerPausedRef.current);
+      // Keep SkyCafe rail stable for reliable taps.
+    }, AUTO_SCROLL_INTERVAL_MS);
+
+    return () => clearInterval(id);
+  }, []);
+
   const ripple =
     Platform.OS === 'android' ? { android_ripple: { color: 'rgba(255,255,255,0.2)' } } : {};
 
@@ -487,7 +924,7 @@ export function MemberHomeScreen() {
             <Pressable
               {...ripple}
               style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed]}
-              onPress={() => navigation.navigate('SpecialLessons')}
+              onPress={() => navigation.navigate('Notifications')}
             >
               <Text style={styles.notifyIcon}>🔔</Text>
             </Pressable>
@@ -538,23 +975,123 @@ export function MemberHomeScreen() {
           </View>
         </View>
 
-        <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.eventsSectionTitle}>Müsait Masaj Saatleri</Text>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            style={styles.seeAllBtn}
+            onPress={() => {
+              requestAnimationFrame(() => navigation.navigate('Massage'));
+            }}
+          >
+            <Text style={styles.seeAllBtnTxt}>Tümünü Gör</Text>
+          </TouchableOpacity>
+        </View>
+        {loadingMassageSlots ? (
+          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
+        ) : null}
+        {!loadingMassageSlots && massageSlotsToday.length === 0 ? (
+          <Text style={styles.eventsEmpty}>Bugun icin musait masaj saati bulunmuyor.</Text>
+        ) : null}
+        <ScrollView
+          ref={massageRailRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.eventsRail}
+          contentContainerStyle={styles.eventsRailInner}
+          onTouchStart={() => {
+            pauseRailTemporarily(massagePausedRef, massageResumeTimerRef, 1800);
+          }}
+          onTouchEnd={() => {
+            pauseRailTemporarily(massagePausedRef, massageResumeTimerRef, 900);
+          }}
+          onScroll={(e) => {
+            massageRailMetrics.current.x = e.nativeEvent.contentOffset.x;
+          }}
+          onLayout={(e) => {
+            massageRailMetrics.current.layoutW = e.nativeEvent.layout.width;
+          }}
+          onContentSizeChange={(w) => {
+            massageRailMetrics.current.contentW = w;
+            massageRailMetrics.current.itemCount = massageSlotsToday.length;
+            if (massageSlotsToday.length <= 1) {
+              massageRailMetrics.current.initialized = false;
+              massageRailMetrics.current.x = 0;
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          {loopedMassageSlots.map((slot, idx) => (
+            <View key={`massage-slot-${slot.id}-${idx}`} style={styles.slotCardWrap}>
+              <View style={styles.slotChip}>
+                <Image
+                  source={{ uri: slot.imageUrl }}
+                  style={styles.slotImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.slotChipTitle}>{slot.trainerName}</Text>
+                <Text style={styles.slotChipMeta}>{fmtHourRange(slot.startTime)}</Text>
+              </View>
+              <Pressable
+                {...ripple}
+                style={({ pressed }) => [styles.slotBookBtn, pressed && styles.slotBookBtnPressed]}
+                onPress={() => {
+                  quickBookMassageSlot(slot).catch(() => {});
+                }}
+              >
+                <Text style={styles.slotBookBtnTxt}>Rezervasyon Yap</Text>
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            style={styles.seeAllBtn}
+            onPress={() => {
+              requestAnimationFrame(() => navigation.navigate('Events'));
+            }}
+          >
+            <Text style={styles.seeAllBtnTxt}>Tümünü Gör</Text>
+          </TouchableOpacity>
+        </View>
         {eventNotice ? <Text style={styles.eventsNotice}>{eventNotice}</Text> : null}
         {loadingEvents && clubEvents.length === 0 ? (
           <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
         ) : null}
         <ScrollView
+          ref={eventsRailRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          snapToAlignment="start"
-          decelerationRate="fast"
           style={styles.eventsRail}
           contentContainerStyle={styles.eventsRailInner}
+          onTouchStart={() => {
+            pauseRailTemporarily(eventsPausedRef, eventsResumeTimerRef, 1800);
+          }}
+          onTouchEnd={() => {
+            pauseRailTemporarily(eventsPausedRef, eventsResumeTimerRef, 900);
+          }}
+          onScroll={(e) => {
+            eventsRailMetrics.current.x = e.nativeEvent.contentOffset.x;
+          }}
+          onLayout={(e) => {
+            eventsRailMetrics.current.layoutW = e.nativeEvent.layout.width;
+          }}
+          onContentSizeChange={(w) => {
+            eventsRailMetrics.current.contentW = w;
+            eventsRailMetrics.current.itemCount = clubEvents.length;
+            if (clubEvents.length <= 1) {
+              eventsRailMetrics.current.initialized = false;
+              eventsRailMetrics.current.x = 0;
+            }
+          }}
+          scrollEventThrottle={16}
         >
-          {clubEvents.map((ev) => {
+          {loopedEvents.map((ev, idx) => {
             return (
-              <View key={ev.id} style={styles.eventCard}>
+              <View key={`${ev.id}-${idx}`} style={styles.eventCard}>
                 <Pressable
                   style={({ pressed }) => [
                     styles.eventTapArea,
@@ -605,24 +1142,55 @@ export function MemberHomeScreen() {
           <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
         ) : null}
 
-        <Text style={styles.trainersSectionTitle}>{t('home.ourTrainersTitle')}</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.trainersSectionTitle}>{t('home.ourTrainersTitle')}</Text>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            style={styles.seeAllBtn}
+            onPress={() => navigation.navigate('Network')}
+          >
+            <Text style={styles.seeAllBtnTxt}>Tümünü Gör</Text>
+          </TouchableOpacity>
+        </View>
         {loadingTrainers && trainers.length === 0 ? (
           <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
         ) : null}
         <ScrollView
+          ref={trainerRailRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.trainersRail}
           contentContainerStyle={styles.trainersRailInner}
+          onTouchStart={() => {
+            pauseRailTemporarily(trainerPausedRef, trainerResumeTimerRef, 1800);
+          }}
+          onTouchEnd={() => {
+            pauseRailTemporarily(trainerPausedRef, trainerResumeTimerRef, 900);
+          }}
+          onScroll={(e) => {
+            trainerRailMetrics.current.x = e.nativeEvent.contentOffset.x;
+          }}
+          onLayout={(e) => {
+            trainerRailMetrics.current.layoutW = e.nativeEvent.layout.width;
+          }}
+          onContentSizeChange={(w) => {
+            trainerRailMetrics.current.contentW = w;
+            trainerRailMetrics.current.itemCount = trainers.length;
+            if (trainers.length <= 1) {
+              trainerRailMetrics.current.initialized = false;
+              trainerRailMetrics.current.x = 0;
+            }
+          }}
+          scrollEventThrottle={16}
         >
-          {trainers.map((tr) => {
+          {loopedTrainers.map((tr, idx) => {
             const fullName = `${tr.user.firstName} ${tr.user.lastName}`.trim();
-            const initials = `${tr.user.firstName?.[0] ?? ''}${tr.user.lastName?.[0] ?? ''}`
-              .trim()
-              .toUpperCase();
+            const trainerImageUri =
+              tr.user.photoUrl ||
+              TRAINER_PLACEHOLDER_IMAGES[idx % TRAINER_PLACEHOLDER_IMAGES.length];
             return (
               <Pressable
-                key={`showcase-${tr.id}`}
+                key={`showcase-${tr.id}-${idx}`}
                 style={({ pressed }) => [
                   styles.trainerProfileCard,
                   pressed && styles.trainerRowPressed,
@@ -630,11 +1198,7 @@ export function MemberHomeScreen() {
                 onPress={() => selectTrainerAndScroll(tr.id)}
               >
                 <View style={styles.trainerAvatarRing}>
-                  {tr.user.photoUrl ? (
-                    <Image source={{ uri: tr.user.photoUrl }} style={styles.trainerAvatarImage} />
-                  ) : (
-                    <Text style={styles.trainerAvatarFallback}>{initials || 'TR'}</Text>
-                  )}
+                  <Image source={{ uri: trainerImageUri }} style={styles.trainerAvatarImage} />
                 </View>
                 <Text style={styles.trainerProfileName} numberOfLines={2}>
                   {fullName}
@@ -646,6 +1210,255 @@ export function MemberHomeScreen() {
         {!loadingTrainers && trainers.length === 0 ? (
           <Text style={styles.eventsEmpty}>{t('home.trainersEmpty')}</Text>
         ) : null}
+
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.eventsSectionTitle}>SkyCafe - Günün Ürünleri</Text>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            style={styles.seeAllBtn}
+            onPress={() => {
+              pauseRailTemporarily(cafePausedRef, cafeResumeTimerRef, 2600);
+              setTimeout(() => setShowAllCafeModal(true), 180);
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.seeAllBtnTxt}>Tümünü Gör</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          ref={cafeRailRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.eventsRail}
+          contentContainerStyle={styles.eventsRailInner}
+          onScroll={(e) => {
+            cafeRailMetrics.current.x = e.nativeEvent.contentOffset.x;
+          }}
+          onLayout={(e) => {
+            cafeRailMetrics.current.layoutW = e.nativeEvent.layout.width;
+          }}
+          onContentSizeChange={(w) => {
+            cafeRailMetrics.current.contentW = w;
+            cafeRailMetrics.current.itemCount = SKY_CAFE_PRODUCTS.length;
+            if (SKY_CAFE_PRODUCTS.length <= 1) {
+              cafeRailMetrics.current.initialized = false;
+              cafeRailMetrics.current.x = 0;
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          {homeCafeProducts.map((item) => (
+            <View key={item.id} style={styles.skyCafeCardWrap}>
+              <Pressable style={styles.skyCafeCard} onPress={() => openCafeOrder(item)}>
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.skyCafeImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.skyCafeCardBody}>
+                  <Text style={styles.eventTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.eventMetaLine}>{item.priceLabel}</Text>
+                </View>
+              </Pressable>
+              <TouchableOpacity
+                activeOpacity={0.82}
+                style={styles.skyCafeOrderBtn}
+                onPress={() => openCafeOrder(item)}
+              >
+                <Text style={styles.skyCafeOrderBtnTxt}>Sipariş Ver</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+
+        <Modal
+          visible={showAllCafeModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowAllCafeModal(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowAllCafeModal(false)} />
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>SkyCafe Menü</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalCloseBtn,
+                    pressed && styles.modalCloseBtnPressed,
+                  ]}
+                  onPress={() => setShowAllCafeModal(false)}
+                >
+                  <Text style={styles.modalCloseTxt}>×</Text>
+                </Pressable>
+              </View>
+              <View style={styles.paymentRow}>
+                <Pressable
+                  style={[styles.pick, cafeCategory === 'food' && styles.pickOn]}
+                  onPress={() => setCafeCategory('food')}
+                >
+                  <Text style={styles.pickTxt}>Yiyecek</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.pick, cafeCategory === 'drink' && styles.pickOn]}
+                  onPress={() => setCafeCategory('drink')}
+                >
+                  <Text style={styles.pickTxt}>İçecek</Text>
+                </Pressable>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} style={styles.cafeMenuList}>
+                {filteredCafeProducts.map((item) => (
+                  <View key={`menu-${item.id}`} style={styles.cafeMenuRow}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.cafeMenuImage} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cafeItemTitle}>{item.title}</Text>
+                      <Text style={styles.eventMetaLine}>{item.priceLabel}</Text>
+                    </View>
+                    <Pressable
+                      style={styles.cafeQtyBtn}
+                      onPress={() => {
+                        setShowAllCafeModal(false);
+                        openCafeOrder(item);
+                      }}
+                    >
+                      <Text style={styles.cafeQtyBtnTxt}>+</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            </Pressable>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={!!selectedCafeProduct}
+          transparent
+          animationType="slide"
+          onRequestClose={() => {
+            setSelectedCafeProduct(null);
+            setCafeCartItems([]);
+          }}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => {
+              setSelectedCafeProduct(null);
+              setCafeCartItems([]);
+            }}
+          >
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <View style={styles.modalHeaderRow}>
+                <Text style={styles.modalTitle}>SkyCafe Sipariş</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalCloseBtn,
+                    pressed && styles.modalCloseBtnPressed,
+                  ]}
+                  onPress={() => {
+                    setSelectedCafeProduct(null);
+                    setCafeCartItems([]);
+                  }}
+                >
+                  <Text style={styles.modalCloseTxt}>×</Text>
+                </Pressable>
+              </View>
+              {selectedCafeProduct ? (
+                <Text style={styles.modalMeta}>
+                  {selectedCafeProduct.title} · {selectedCafeProduct.priceLabel}
+                </Text>
+              ) : null}
+              <Text style={styles.subLabel}>Ürünler</Text>
+              {SKY_CAFE_PRODUCTS.map((item) => {
+                const qty = cafeCartItems.find((x) => x.product.id === item.id)?.quantity ?? 0;
+                return (
+                  <View key={`cafe-item-${item.id}`} style={styles.cafeItemRow}>
+                    <Text style={styles.cafeItemTitle} numberOfLines={1}>
+                      {item.title} · {item.priceLabel}
+                    </Text>
+                    <View style={styles.cafeQtyRow}>
+                      <Pressable
+                        style={styles.cafeQtyBtn}
+                        onPress={() => changeCafeItemQty(item, -1)}
+                      >
+                        <Text style={styles.cafeQtyBtnTxt}>−</Text>
+                      </Pressable>
+                      <Text style={styles.cafeQtyTxt}>{qty}</Text>
+                      <Pressable
+                        style={styles.cafeQtyBtn}
+                        onPress={() => changeCafeItemQty(item, 1)}
+                      >
+                        <Text style={styles.cafeQtyBtnTxt}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
+              <TextInput
+                value={cafeName}
+                onChangeText={setCafeName}
+                placeholder="İsim Soyisim"
+                placeholderTextColor={premium.textMuted}
+                style={styles.cafeInput}
+              />
+              <TextInput
+                value={cafeBlock}
+                onChangeText={setCafeBlock}
+                placeholder="Blok"
+                placeholderTextColor={premium.textMuted}
+                style={styles.cafeInput}
+              />
+              <TextInput
+                value={cafeApartment}
+                onChangeText={setCafeApartment}
+                placeholder="Daire"
+                placeholderTextColor={premium.textMuted}
+                style={styles.cafeInput}
+              />
+              <TextInput
+                value={cafePhone}
+                onChangeText={setCafePhone}
+                placeholder="Telefon"
+                placeholderTextColor={premium.textMuted}
+                keyboardType="phone-pad"
+                style={styles.cafeInput}
+              />
+              <View style={styles.paymentRow}>
+                <Pressable
+                  style={[styles.pick, cafePaymentMethod === 'cash' && styles.pickOn]}
+                  onPress={() => setCafePaymentMethod('cash')}
+                >
+                  <Text style={styles.pickTxt}>Nakit</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.pick, cafePaymentMethod === 'card' && styles.pickOn]}
+                  onPress={() => setCafePaymentMethod('card')}
+                >
+                  <Text style={styles.pickTxt}>Kart</Text>
+                </Pressable>
+              </View>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnPrimary,
+                  pressed && styles.btnPrimaryPressed,
+                  submittingCafeOrder && styles.disabled,
+                ]}
+                disabled={submittingCafeOrder}
+                onPress={() => {
+                  submitCafeOrder().catch(() => {});
+                }}
+              >
+                {submittingCafeOrder ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.btnPrimaryTxt}>Siparişi Gönder</Text>
+                )}
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         <Modal
           visible={!!selectedEvent}
           animationType="slide"
@@ -805,186 +1618,6 @@ export function MemberHomeScreen() {
             </Pressable>
           </GlassCard>
         ) : null}
-
-        <GlassCard style={styles.sectionCard}>
-          <Text style={styles.cardTitle}>{t('home.trainersTitle')}</Text>
-          <Text style={styles.muted}>{t('home.trainersSubtitle')}</Text>
-          {loadingTrainers && trainers.length === 0 ? (
-            <ActivityIndicator color={premium.accentBlue} style={styles.spinnerPad} />
-          ) : null}
-          {!loadingTrainers && trainers.length === 0 ? (
-            <Text style={styles.muted}>{t('home.trainersEmpty')}</Text>
-          ) : null}
-          {(trainersShowAll ? trainers : trainers.slice(0, 3)).map((tr) => (
-            <Pressable
-              key={tr.id}
-              style={({ pressed }) => [styles.trainerRow, pressed && styles.trainerRowPressed]}
-              onPress={() => selectTrainerAndScroll(tr.id)}
-            >
-              <Text style={styles.trainerName}>
-                {tr.user.firstName} {tr.user.lastName}
-              </Text>
-              <Text style={styles.trainerCta}>{t('home.ctaBookPt')}</Text>
-            </Pressable>
-          ))}
-          {trainers.length > 3 ? (
-            <Pressable
-              style={({ pressed }) => [styles.btnGhost, pressed && styles.btnGhostPressed]}
-              onPress={() => setTrainersShowAll((v) => !v)}
-            >
-              <Text style={styles.btnGhostTxt}>
-                {trainersShowAll ? t('home.seeLess') : t('home.seeAll')}
-              </Text>
-            </Pressable>
-          ) : null}
-        </GlassCard>
-
-        <View
-          onLayout={(e) => {
-            bookingSectionY.current = e.nativeEvent.layout.y;
-          }}
-        >
-          <GlassCard style={styles.sectionCard}>
-            <Text style={styles.cardTitle}>{t('home.bookingHubTitle')}</Text>
-            <Text style={styles.muted}>{t('booking.packageHint')}</Text>
-
-            <Pressable
-              {...ripple}
-              style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-              onPress={() => {
-                loadPackages().catch(() => {});
-              }}
-              disabled={loadingPackages}
-            >
-              {loadingPackages ? (
-                <ActivityIndicator color={premium.accentBlue} />
-              ) : (
-                <Text style={styles.btnOutlineTxt}>{t('booking.loadPackages')}</Text>
-              )}
-            </Pressable>
-
-            {packages.length === 0 ? (
-              <Text style={styles.warn}>{t('booking.noPackages')}</Text>
-            ) : (
-              <>
-                <Text style={styles.subLabel}>{t('booking.pickPackage')}</Text>
-                {packages.map((p) => {
-                  const selected = p.id === selectedPackageId;
-                  return (
-                    <Pressable
-                      key={p.id}
-                      style={[styles.pick, selected && styles.pickOn]}
-                      onPress={() => setSelectedPackageId(p.id)}
-                    >
-                      <Text style={styles.pickTxt}>
-                        {p.packageType.name} · {p.remainingSessions} · {p.status}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </>
-            )}
-
-            <Pressable
-              {...ripple}
-              style={({ pressed }) => [
-                styles.btnPrimary,
-                pressed && styles.btnPrimaryPressed,
-                loadingTrainers && styles.disabled,
-              ]}
-              onPress={() => {
-                loadTrainers().catch(() => {});
-              }}
-              disabled={loadingTrainers}
-            >
-              {loadingTrainers ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.btnPrimaryTxt}>{t('booking.listTrainers')}</Text>
-              )}
-            </Pressable>
-
-            {trainers.map((tr) => {
-              const selected = tr.id === selectedTrainerId;
-              return (
-                <Pressable
-                  key={tr.id}
-                  style={[styles.pick, selected && styles.pickOn]}
-                  onPress={() => setSelectedTrainerId(tr.id)}
-                >
-                  <Text style={styles.pickTxt}>
-                    {tr.user.firstName} {tr.user.lastName}
-                  </Text>
-                </Pressable>
-              );
-            })}
-
-            <Pressable
-              {...ripple}
-              style={({ pressed }) => [
-                styles.btnPrimary,
-                pressed && styles.btnPrimaryPressed,
-                (!selectedTrainerId || loadingSlots) && styles.disabled,
-              ]}
-              onPress={() => {
-                loadAvailability().catch(() => {});
-              }}
-              disabled={!selectedTrainerId || loadingSlots}
-            >
-              {loadingSlots ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.btnPrimaryTxt}>{t('booking.loadAvailability')}</Text>
-              )}
-            </Pressable>
-
-            <Text style={styles.subLabel}>{t('booking.slotsTitle')}</Text>
-            {slots.length === 0 ? (
-              <Text style={styles.muted}>{t('booking.emptySlots')}</Text>
-            ) : null}
-            {slots.map((s) => {
-              const selected = s.id === selectedSlotId;
-              return (
-                <Pressable
-                  key={s.id}
-                  style={[styles.pick, selected && styles.pickOn]}
-                  onPress={() => setSelectedSlotId(s.id)}
-                >
-                  <Text style={styles.pickTxt}>
-                    {fmt(s.startTime)} — {fmt(s.endTime)} · {s.remainingCapacity}
-                  </Text>
-                </Pressable>
-              );
-            })}
-
-            <Pressable
-              {...ripple}
-              style={({ pressed }) => [
-                styles.btnPrimary,
-                pressed && styles.btnPrimaryPressed,
-                (!selectedSlotId || booking) && styles.disabled,
-              ]}
-              onPress={() => {
-                bookSlot().catch(() => {});
-              }}
-              disabled={!selectedSlotId || booking}
-            >
-              {booking ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.btnPrimaryTxt}>{t('booking.book')}</Text>
-              )}
-            </Pressable>
-
-            <Pressable
-              {...ripple}
-              style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-              onPress={() => navigation.navigate('Reservations')}
-            >
-              <Text style={styles.btnOutlineTxt}>{t('tabs.openReservations')}</Text>
-            </Pressable>
-          </GlassCard>
-        </View>
       </ScrollView>
     </GradientBackground>
   );
@@ -1075,8 +1708,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     color: premium.text,
-    marginTop: 12,
-    marginBottom: 10,
+    marginTop: 0,
+    marginBottom: 0,
   },
   eventsLoader: {
     marginBottom: 12,
@@ -1086,6 +1719,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: premium.accentGreen,
     marginBottom: 8,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  seeAllBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 0,
+    zIndex: 2,
+  },
+  seeAllBtnPressed: {
+    opacity: 0.86,
+  },
+  seeAllBtnTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   eventsRail: {
     marginBottom: 8,
@@ -1097,8 +1755,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   eventCard: {
-    width: 130,
-    marginRight: 8,
+    width: HORIZONTAL_CARD_WIDTH,
+    marginRight: HORIZONTAL_CARD_GAP,
     borderRadius: premium.radiusMd,
     borderWidth: 1,
     borderColor: premium.glassBorder,
@@ -1113,7 +1771,7 @@ const styles = StyleSheet.create({
   },
   eventImage: {
     width: '100%',
-    height: 60,
+    height: 86,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   eventImagePh: {
@@ -1214,12 +1872,60 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     marginBottom: 12,
   },
+  slotCardWrap: {
+    width: HORIZONTAL_CARD_WIDTH,
+    marginRight: HORIZONTAL_CARD_GAP,
+  },
+  slotChip: {
+    minWidth: HORIZONTAL_CARD_WIDTH,
+    borderRadius: premium.radiusMd,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.24)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  slotImage: {
+    width: '100%',
+    height: 86,
+    borderRadius: premium.radiusSm,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  slotChipTitle: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  slotChipMeta: {
+    color: premium.textMuted,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  slotBookBtn: {
+    marginTop: 8,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(37, 99, 235, 0.32)',
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotBookBtnPressed: {
+    backgroundColor: 'rgba(37, 99, 235, 0.45)',
+  },
+  slotBookBtnTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   trainersSectionTitle: {
     fontSize: 17,
     fontWeight: '800',
     color: premium.text,
-    marginTop: 6,
-    marginBottom: 10,
+    marginTop: 0,
+    marginBottom: 0,
   },
   trainersRail: {
     marginBottom: 10,
@@ -1232,8 +1938,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   trainerProfileCard: {
-    width: 112,
-    minHeight: 140,
+    width: HORIZONTAL_CARD_WIDTH,
+    minHeight: 148,
     borderRadius: premium.radiusMd,
     borderWidth: 1,
     borderColor: premium.glassBorder,
@@ -1268,6 +1974,126 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: premium.text,
+    textAlign: 'center',
+  },
+  skyCafeCardWrap: {
+    width: HORIZONTAL_CARD_WIDTH,
+    marginRight: HORIZONTAL_CARD_GAP + 2,
+  },
+  skyCafeCard: {
+    width: HORIZONTAL_CARD_WIDTH,
+    borderRadius: premium.radiusMd,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    overflow: 'hidden',
+  },
+  skyCafeImage: {
+    width: '100%',
+    height: 120,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  skyCafeCardBody: {
+    padding: 10,
+    gap: 6,
+  },
+  skyCafeOrderBtn: {
+    marginTop: 8,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(56,189,248,0.2)',
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  skyCafeOrderBtnPressed: {
+    backgroundColor: 'rgba(56,189,248,0.35)',
+  },
+  skyCafeOrderBtnTxt: {
+    color: premium.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cafeInput: {
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    color: premium.text,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  cafeMenuList: {
+    marginTop: 8,
+    maxHeight: 320,
+  },
+  cafeMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    padding: 8,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  cafeMenuImage: {
+    width: 56,
+    height: 56,
+    borderRadius: premium.radiusSm,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  cafeItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusSm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 6,
+  },
+  cafeItemTitle: {
+    flex: 1,
+    color: premium.text,
+    fontSize: 12,
+    marginRight: 8,
+  },
+  cafeQtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cafeQtyBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  cafeQtyBtnTxt: {
+    color: premium.text,
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: -1,
+  },
+  cafeQtyTxt: {
+    color: premium.text,
+    fontSize: 13,
+    fontWeight: '700',
+    minWidth: 14,
     textAlign: 'center',
   },
   langRow: {

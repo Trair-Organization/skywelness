@@ -1,5 +1,6 @@
 import { ClubEvent } from './entities/club-event.entity';
 import { ClubEventRegistration } from './entities/club-event-registration.entity';
+import { CafeOrder } from './entities/cafe-order.entity';
 import { ApiKey } from './entities/api-key.entity';
 import { Availability } from './entities/availability.entity';
 import { DiscountCode } from './entities/discount-code.entity';
@@ -27,6 +28,7 @@ import { WaitingListEntry } from './entities/waiting-list.entity';
 /** Registration order for TypeORM / migrations */
 export const typeOrmEntities = [
   Tenant,
+  CafeOrder,
   ClubEvent,
   ClubEventRegistration,
   User,

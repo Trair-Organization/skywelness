@@ -89,8 +89,10 @@ export function MemberTabNavigator() {
         name="Notifications"
         component={MemberNotificationsScreen}
         options={{
-          tabBarLabel: t('tabs.notifications'),
-          tabBarIcon: ({ focused }) => tabIcon('✦', focused),
+          // Notifications are opened from the bell button in Home.
+          // Keep this route mounted, but hide it from the bottom tab bar.
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
         }}
       />
       <Tab.Screen
