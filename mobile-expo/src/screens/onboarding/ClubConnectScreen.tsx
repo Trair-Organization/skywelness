@@ -72,11 +72,12 @@ const FEATURED_CLUBS: FeaturedClub[] = [
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ClubConnect'>;
 
-const SLIDER_CARD_WIDTH = 168;
+const SLIDER_CARD_WIDTH = 220;
 const SLIDER_CARD_GAP = 12;
 const SLIDER_STEP = SLIDER_CARD_WIDTH + SLIDER_CARD_GAP;
 const SLIDER_TRACK_WIDTH = SLIDER_STEP * FEATURED_CLUBS.length;
-const SLIDER_DURATION_MS = 9500 * FEATURED_CLUBS.length;
+const SLIDER_PER_CARD_MS = 12000;
+const SLIDER_DURATION_MS = SLIDER_PER_CARD_MS * FEATURED_CLUBS.length;
 
 type RotatingHeadline = {
   title: string;
@@ -322,11 +323,11 @@ const EVENTS: EventItem[] = [
   },
 ];
 
-const EVENT_CARD_WIDTH = 248;
-const EVENT_GAP = 12;
+const EVENT_CARD_WIDTH = SLIDER_CARD_WIDTH;
+const EVENT_GAP = SLIDER_CARD_GAP;
 const EVENT_STEP = EVENT_CARD_WIDTH + EVENT_GAP;
 const EVENT_TRACK_WIDTH = EVENT_STEP * EVENTS.length;
-const EVENT_DURATION_MS = 13000 * EVENTS.length;
+const EVENT_DURATION_MS = SLIDER_PER_CARD_MS * EVENTS.length;
 
 export function ClubConnectScreen() {
   const { t, i18n } = useTranslation();
