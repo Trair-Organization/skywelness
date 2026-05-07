@@ -816,6 +816,62 @@ export function ClubConnectScreen() {
 
         <View style={styles.sectionHeader}>
           <View>
+            <Text style={styles.sectionTitle}>Bu hafta yakında</Text>
+            <Text style={styles.sectionSubtitle}>
+              Üye olmadan da incele, kontenjanı kapanmadan yerini ayır.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.sliderViewport} pointerEvents="box-none">
+          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: eventX }] }]}>
+            {[...EVENTS, ...EVENTS].map((evt, idx) => (
+              <Pressable
+                key={`${evt.id}-${idx}`}
+                onPress={() =>
+                  Alert.alert(
+                    evt.title,
+                    `${evt.when}\n${evt.clubName}\n${evt.capacityLabel}\n\nKayıt akışı yakında.`,
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.eventCard,
+                  { borderColor: evt.accentBorder },
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <View style={[styles.eventCover, { backgroundColor: evt.accentBg }]}>
+                  <Text style={styles.eventEmoji}>{evt.emoji}</Text>
+                  {evt.urgent ? (
+                    <View style={styles.eventUrgentBadge}>
+                      <Text style={styles.eventUrgentTxt}>SON KONTENJAN</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.eventTitle} numberOfLines={1}>
+                  {evt.title}
+                </Text>
+                <View style={styles.eventMetaRow}>
+                  <Text style={styles.eventMetaTxt}>{evt.when}</Text>
+                </View>
+                <Text style={styles.eventClub} numberOfLines={1}>
+                  {evt.clubName}
+                </Text>
+                <View style={styles.eventCapacityRow}>
+                  <Text style={[styles.eventCapacityTxt, evt.urgent && styles.eventCapacityUrgent]}>
+                    {evt.capacityLabel}
+                  </Text>
+                  <Text style={styles.eventCtaArrow}>›</Text>
+                </View>
+              </Pressable>
+            ))}
+          </Animated.View>
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <View>
             <Text style={styles.sectionTitle}>Öne çıkan eğitmenler</Text>
             <Text style={styles.sectionSubtitle}>
               Sertifikalı, doğrulanmış ve kullanıcılar tarafından derecelendirilmiş.
@@ -879,62 +935,6 @@ export function ClubConnectScreen() {
             ))}
           </View>
         </Animated.View>
-
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>Bu hafta yakında</Text>
-            <Text style={styles.sectionSubtitle}>
-              Üye olmadan da incele, kontenjanı kapanmadan yerini ayır.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.sliderViewport} pointerEvents="box-none">
-          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: eventX }] }]}>
-            {[...EVENTS, ...EVENTS].map((evt, idx) => (
-              <Pressable
-                key={`${evt.id}-${idx}`}
-                onPress={() =>
-                  Alert.alert(
-                    evt.title,
-                    `${evt.when}\n${evt.clubName}\n${evt.capacityLabel}\n\nKayıt akışı yakında.`,
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.eventCard,
-                  { borderColor: evt.accentBorder },
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <View style={[styles.eventCover, { backgroundColor: evt.accentBg }]}>
-                  <Text style={styles.eventEmoji}>{evt.emoji}</Text>
-                  {evt.urgent ? (
-                    <View style={styles.eventUrgentBadge}>
-                      <Text style={styles.eventUrgentTxt}>SON KONTENJAN</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={styles.eventTitle} numberOfLines={1}>
-                  {evt.title}
-                </Text>
-                <View style={styles.eventMetaRow}>
-                  <Text style={styles.eventMetaTxt}>{evt.when}</Text>
-                </View>
-                <Text style={styles.eventClub} numberOfLines={1}>
-                  {evt.clubName}
-                </Text>
-                <View style={styles.eventCapacityRow}>
-                  <Text style={[styles.eventCapacityTxt, evt.urgent && styles.eventCapacityUrgent]}>
-                    {evt.capacityLabel}
-                  </Text>
-                  <Text style={styles.eventCtaArrow}>›</Text>
-                </View>
-              </Pressable>
-            ))}
-          </Animated.View>
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
-        </View>
 
         <GlassCard style={styles.card}>
           <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
