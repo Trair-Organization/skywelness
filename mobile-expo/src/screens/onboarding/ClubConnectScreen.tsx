@@ -76,14 +76,95 @@ const SLIDER_STEP = SLIDER_CARD_WIDTH + SLIDER_CARD_GAP;
 const SLIDER_TRACK_WIDTH = SLIDER_STEP * FEATURED_CLUBS.length;
 const SLIDER_DURATION_MS = 9500 * FEATURED_CLUBS.length;
 
+type RotatingHeadline = {
+  title: string;
+  personas: string[];
+};
+
+const ROTATING_HEADLINES: RotatingHeadline[] = [
+  {
+    title: 'Yakınındaki en iyi spor kulübü\nparmaklarının ucunda.',
+    personas: ['Yeni başlayan', 'Spor salonu arayan'],
+  },
+  {
+    title: 'Hedefin zayıflamak mı?\nSana özel eğitmen ve plan.',
+    personas: ['Kilo veren', 'Form tutmak isteyen'],
+  },
+  {
+    title: 'Bu hafta semtinde 12 etkinlik var.\nYeri kapmak ister misin?',
+    personas: ['Etkinlik avcısı', 'Sosyal sporcu'],
+  },
+  {
+    title: 'Sertifikalı eğitmenler bir tık uzakta.\nSeninle çalışmaya hazırlar.',
+    personas: ['Eğitmen arayan', 'Performans odaklı'],
+  },
+];
+
+const HEADLINE_ROTATE_MS = 4500;
+
+type Goal = {
+  id: 'fat-loss' | 'strength' | 'yoga' | 'performance';
+  icon: string;
+  label: string;
+  hint: string;
+};
+
+const GOALS: Goal[] = [
+  { id: 'fat-loss', icon: '🔥', label: 'Form & Kilo', hint: 'Yağ yak, fit kal' },
+  { id: 'strength', icon: '💪', label: 'Kuvvet', hint: 'Kas & güç' },
+  { id: 'yoga', icon: '🧘', label: 'Yoga & Pilates', hint: 'Esneklik & nefes' },
+  { id: 'performance', icon: '🏃', label: 'Performans', hint: 'Sporcu seviyesi' },
+];
+
+type SocialStat = {
+  value: string;
+  label: string;
+};
+
+const SOCIAL_STATS: SocialStat[] = [
+  { value: '12.500+', label: 'Aktif üye' },
+  { value: '350+', label: 'Doğrulanmış eğitmen' },
+  { value: '4.8 ★', label: 'App Store puanı' },
+];
+
+type Testimonial = {
+  quote: string;
+  author: string;
+  meta: string;
+};
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    quote: '3 ayda 9 kilo verdim. Eğitmenim sayesinde antrenmana gitmek artık keyif.',
+    author: 'Ayşe K.',
+    meta: "O'Wellness Sky · 6 aylık üye",
+  },
+  {
+    quote: 'Rezervasyonu telefondan 10 saniyede yapıyorum. Sıra beklemek tarih oldu.',
+    author: 'Mert D.',
+    meta: 'Skyland Wellness · 1 yıllık üye',
+  },
+  {
+    quote: 'Kulüp değiştirdiğimde tüm geçmişim, paketlerim taşındı. Tek uygulama yetiyor.',
+    author: 'Selin Y.',
+    meta: "O'Wellness Yalıkavak · 4 aylık üye",
+  },
+];
+
+const TESTIMONIAL_ROTATE_MS = 6000;
+
 export function ClubConnectScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
-  const activeClubCount = String(Math.max(tenantDirectory.length, FEATURED_CLUBS.length));
+  const [headlineIdx, setHeadlineIdx] = useState(0);
+  const [testimonialIdx, setTestimonialIdx] = useState(0);
+  const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
   const sliderX = useRef(new Animated.Value(0)).current;
+  const headlineOpacity = useRef(new Animated.Value(1)).current;
+  const testimonialOpacity = useRef(new Animated.Value(1)).current;
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
     if (typeof fn !== 'function') {
       return;
@@ -110,6 +191,55 @@ export function ClubConnectScreen() {
       animation.stop();
     };
   }, [sliderX]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(headlineOpacity, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(headlineOpacity, {
+          toValue: 1,
+          duration: 450,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      setTimeout(() => {
+        setHeadlineIdx((prev) => (prev + 1) % ROTATING_HEADLINES.length);
+      }, 350);
+    }, HEADLINE_ROTATE_MS);
+    return () => clearInterval(interval);
+  }, [headlineOpacity]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(testimonialOpacity, {
+          toValue: 0,
+          duration: 320,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(testimonialOpacity, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      setTimeout(() => {
+        setTestimonialIdx((prev) => (prev + 1) % TESTIMONIALS.length);
+      }, 320);
+    }, TESTIMONIAL_ROTATE_MS);
+    return () => clearInterval(interval);
+  }, [testimonialOpacity]);
+
+  const headline = ROTATING_HEADLINES[headlineIdx];
+  const testimonial = TESTIMONIALS[testimonialIdx];
 
   return (
     <GradientBackground>
@@ -140,22 +270,57 @@ export function ClubConnectScreen() {
             source={logoLight}
             style={styles.logo}
           />
-          <Text style={styles.headline}>{t('onboarding.clubHeadline')}</Text>
+          <Animated.View style={[styles.headlineWrap, { opacity: headlineOpacity }]}>
+            <Text style={styles.headline}>{headline.title}</Text>
+            <View style={styles.personasRow}>
+              {headline.personas.map((p) => (
+                <View key={p} style={styles.personaChip}>
+                  <Text style={styles.personaChipTxt}>{p}</Text>
+                </View>
+              ))}
+            </View>
+          </Animated.View>
           <Text style={styles.slogan}>{t('onboarding.ecosystemSlogan')}</Text>
         </View>
 
-        <View style={styles.metricsRow}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{activeClubCount}</Text>
-            <Text style={styles.metricLabel}>{t('onboarding.metricClubs')}</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>24/7</Text>
-            <Text style={styles.metricLabel}>{t('onboarding.metricAvailability')}</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>Premium</Text>
-            <Text style={styles.metricLabel}>{t('onboarding.metricExperience')}</Text>
+        <View style={styles.statsRow}>
+          {SOCIAL_STATS.map((stat) => (
+            <View key={stat.label} style={styles.statCard}>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.goalsBlock}>
+          <Text style={styles.goalsTitle}>Hedefin ne?</Text>
+          <Text style={styles.goalsSubtitle}>
+            Sana en uygun kulüp ve eğitmenleri öne çıkaralım.
+          </Text>
+          <View style={styles.goalsGrid}>
+            {GOALS.map((goal) => {
+              const active = selectedGoal === goal.id;
+              return (
+                <Pressable
+                  key={goal.id}
+                  onPress={() => setSelectedGoal(active ? null : goal.id)}
+                  style={({ pressed }) => [
+                    styles.goalChip,
+                    active && styles.goalChipActive,
+                    pressed && styles.goalChipPressed,
+                  ]}
+                >
+                  <Text style={styles.goalIcon}>{goal.icon}</Text>
+                  <View style={styles.goalTextWrap}>
+                    <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>
+                      {goal.label}
+                    </Text>
+                    <Text style={styles.goalHint}>{goal.hint}</Text>
+                  </View>
+                  {active ? <Text style={styles.goalCheck}>✓</Text> : null}
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
@@ -217,6 +382,23 @@ export function ClubConnectScreen() {
           <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
           <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
         </View>
+
+        <Animated.View style={[styles.testimonialCard, { opacity: testimonialOpacity }]}>
+          <Text style={styles.testimonialQuoteMark}>“</Text>
+          <Text style={styles.testimonialQuote}>{testimonial.quote}</Text>
+          <View style={styles.testimonialFooter}>
+            <Text style={styles.testimonialAuthor}>{testimonial.author}</Text>
+            <Text style={styles.testimonialMeta}>{testimonial.meta}</Text>
+          </View>
+          <View style={styles.testimonialDots}>
+            {TESTIMONIALS.map((_, i) => (
+              <View
+                key={i}
+                style={[styles.testimonialDot, i === testimonialIdx && styles.testimonialDotActive]}
+              />
+            ))}
+          </View>
+        </Animated.View>
 
         <GlassCard style={styles.card}>
           <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
@@ -342,42 +524,72 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginBottom: 20,
   },
+  headlineWrap: {
+    minHeight: 96,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
   headline: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: premium.text,
     textAlign: 'center',
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
+    lineHeight: 28,
+  },
+  personasRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  personaChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.35)',
+    backgroundColor: 'rgba(56,189,248,0.08)',
+  },
+  personaChipTxt: {
+    color: premium.accentBlue,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   slogan: {
-    marginTop: 10,
-    fontSize: 15,
-    fontWeight: '800',
-    color: premium.accentBlue,
+    marginTop: 14,
+    fontSize: 13,
+    fontWeight: '700',
+    color: premium.textMuted,
     textAlign: 'center',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
-  metricsRow: {
+  statsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  metricCard: {
+  statCard: {
     flex: 1,
     borderRadius: premium.radiusSm,
     borderWidth: 1,
     borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: 'center',
   },
-  metricValue: {
+  statValue: {
     color: premium.text,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
-  metricLabel: {
+  statLabel: {
     marginTop: 4,
     color: premium.textMuted,
     fontSize: 10,
@@ -385,6 +597,129 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     textAlign: 'center',
+  },
+  goalsBlock: {
+    marginBottom: 18,
+  },
+  goalsTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 4,
+  },
+  goalsSubtitle: {
+    fontSize: 13,
+    color: premium.textMuted,
+    marginBottom: 12,
+  },
+  goalsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  goalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexBasis: '48%',
+    flexGrow: 1,
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  goalChipActive: {
+    borderColor: 'rgba(56,189,248,0.7)',
+    backgroundColor: 'rgba(56,189,248,0.12)',
+  },
+  goalChipPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  goalIcon: {
+    fontSize: 22,
+  },
+  goalTextWrap: {
+    flex: 1,
+  },
+  goalLabel: {
+    color: premium.text,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.1,
+  },
+  goalLabelActive: {
+    color: premium.accentBlue,
+  },
+  goalHint: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  goalCheck: {
+    color: premium.accentBlue,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  testimonialCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(8,16,28,0.6)',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 18,
+    minHeight: 156,
+  },
+  testimonialQuoteMark: {
+    color: 'rgba(56,189,248,0.35)',
+    fontSize: 40,
+    lineHeight: 32,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  testimonialQuote: {
+    color: premium.text,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  testimonialFooter: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  testimonialAuthor: {
+    color: premium.text,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  testimonialMeta: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  testimonialDots: {
+    position: 'absolute',
+    right: 14,
+    top: 14,
+    flexDirection: 'row',
+    gap: 4,
+  },
+  testimonialDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  testimonialDotActive: {
+    backgroundColor: premium.accentBlue,
   },
   popularHeader: {
     marginTop: 2,
