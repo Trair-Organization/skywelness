@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { BookingModule } from '../booking/booking.module';
+import { MailModule } from '../mail/mail.module';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
@@ -17,6 +18,7 @@ import { AdminMembersService } from './admin-members.service';
   imports: [
     AuthModule,
     BookingModule,
+    MailModule,
     TypeOrmModule.forFeature([User, Package, Trainer, ClubEvent, ClubEventRegistration]),
   ],
   controllers: [AdminController, AdminEventsController],

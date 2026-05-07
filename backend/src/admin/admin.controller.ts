@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRole } from '../database/enums';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -9,6 +19,7 @@ import { AdminMembersService } from './admin-members.service';
 import { AssignPackageTrainerDto } from './dto/assign-package-trainer.dto';
 import { CafeOrdersService } from '../booking/cafe-orders.service';
 import { BookingService } from '../booking/booking.service';
+import { MailService } from '../mail/mail.service';
 
 @Controller('admin')
 export class AdminController {
@@ -16,7 +27,32 @@ export class AdminController {
     private readonly adminMembers: AdminMembersService,
     private readonly cafeOrders: CafeOrdersService,
     private readonly bookingService: BookingService,
+    private readonly mailService: MailService,
   ) {}
+
+  /** Diagnostic: probe the active mail transport (SMTP verify). */
+  @Get('mail/health')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR, UserRole.PLATFORM_ADMIN)
+  mailHealth() {
+    return this.mailService.verifyTransport();
+  }
+
+  /**
+   * Diagnostic: send a test email through the active transport.
+   * `to` defaults to the calling admin's address.
+   */
+  @Post('mail/test')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR, UserRole.PLATFORM_ADMIN)
+  async mailTest(@CurrentUser() admin: User, @Query('to') to?: string) {
+    const recipient = (to ?? admin.email)?.trim();
+    if (!recipient) {
+      throw new BadRequestException('recipient (to) is required');
+    }
+    await this.mailService.sendTestEmail(recipient);
+    return { ok: true, sentTo: recipient };
+  }
 
   /** Smoke test: JWT + administrator role only. */
   @Get('ping')

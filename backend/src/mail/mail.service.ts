@@ -1,10 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { SessionType } from '../database/enums';
 import { emailShell, escapeHtml, formatDateRange } from './mail-templates';
 
 type SessionTypeKey = 'personal_training' | 'massage';
+type Transport = 'smtp' | 'resend' | null;
 
 function pickResendMessageId(data: unknown): string {
   if (data && typeof data === 'object' && 'id' in data) {
@@ -19,28 +22,87 @@ function pickResendMessageId(data: unknown): string {
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
+  private readonly transport: Transport;
   private readonly resend: Resend | null;
+  private readonly smtp: Transporter | null;
   private readonly fromAddress: string;
   private readonly replyTo: string | undefined;
   private readonly locale: string;
   private readonly timeZone: string;
 
   constructor(private readonly config: ConfigService) {
-    const key = config.get<string>('RESEND_API_KEY')?.trim();
-    this.resend = key ? new Resend(key) : null;
+    const smtpHost = config.get<string>('SMTP_HOST')?.trim();
+    const resendKey = config.get<string>('RESEND_API_KEY')?.trim();
+
+    if (smtpHost) {
+      const port = Number.parseInt(config.get<string>('SMTP_PORT') ?? '587', 10) || 587;
+      const user = config.get<string>('SMTP_USER')?.trim();
+      const pass = config.get<string>('SMTP_PASSWORD')?.trim();
+      // Port 465 = implicit TLS; 587 = STARTTLS upgrade.
+      const secure = port === 465;
+      this.smtp = nodemailer.createTransport({
+        host: smtpHost,
+        port,
+        secure,
+        auth: user && pass ? { user, pass } : undefined,
+        // Some shared hosting (e.g. Natro) uses certs that don't perfectly match
+        // the hostname; relax verification to avoid TLS errors while still using
+        // an encrypted channel.
+        tls: { rejectUnauthorized: false },
+      });
+      this.resend = null;
+      this.transport = 'smtp';
+      this.logger.log(`Mail transport: SMTP ${smtpHost}:${port} (secure=${secure})`);
+    } else if (resendKey) {
+      this.resend = new Resend(resendKey);
+      this.smtp = null;
+      this.transport = 'resend';
+      this.logger.log('Mail transport: Resend');
+    } else {
+      this.resend = null;
+      this.smtp = null;
+      this.transport = null;
+      this.logger.warn(
+        'No mail transport configured (SMTP_HOST and RESEND_API_KEY both missing). Transactional emails are disabled.',
+      );
+    }
+
     this.fromAddress =
-      config.get<string>('MAIL_FROM')?.trim() || 'Sky Wellness <onboarding@resend.dev>';
+      config.get<string>('MAIL_FROM')?.trim() ||
+      (this.transport === 'smtp'
+        ? 'Wellness Club <info@wellnessclub.com>'
+        : 'Sky Wellness <onboarding@resend.dev>');
     const rt = config.get<string>('MAIL_REPLY_TO')?.trim();
     this.replyTo = rt || undefined;
     this.locale = config.get<string>('MAIL_LOCALE')?.trim() || 'tr-TR';
     this.timeZone = config.get<string>('MAIL_TIMEZONE')?.trim() || 'Europe/Istanbul';
-    if (!this.resend) {
-      this.logger.warn('RESEND_API_KEY is not set; transactional emails are disabled.');
-    }
   }
 
   isConfigured(): boolean {
-    return this.resend !== null;
+    return this.transport !== null;
+  }
+
+  /**
+   * Verify the active transport can reach the mail server. Used by the test endpoint
+   * during deploy/smoke tests. SMTP only — Resend has no built-in verify.
+   */
+  async verifyTransport(): Promise<{ ok: boolean; transport: Transport; error?: string }> {
+    if (!this.transport) {
+      return { ok: false, transport: null, error: 'no transport configured' };
+    }
+    if (this.transport === 'smtp' && this.smtp) {
+      try {
+        await this.smtp.verify();
+        return { ok: true, transport: 'smtp' };
+      } catch (cause: unknown) {
+        return {
+          ok: false,
+          transport: 'smtp',
+          error: cause instanceof Error ? cause.message : String(cause),
+        };
+      }
+    }
+    return { ok: true, transport: this.transport };
   }
 
   private async send(params: {
@@ -49,31 +111,79 @@ export class MailService {
     html: string;
     text: string;
   }): Promise<void> {
-    if (!this.resend) {
+    if (!this.transport) {
       return;
     }
     const recipients = params.to.filter(Boolean);
     if (recipients.length === 0) {
       return;
     }
-    try {
-      const { data, error } = await this.resend.emails.send({
-        from: this.fromAddress,
-        to: recipients,
-        subject: params.subject,
-        html: params.html,
-        text: params.text,
-        ...(this.replyTo ? { replyTo: this.replyTo } : {}),
-      });
-      if (error) {
-        this.logger.error(`Resend API error: ${JSON.stringify(error)}`);
-        return;
+    if (this.transport === 'smtp' && this.smtp) {
+      try {
+        const info: unknown = await this.smtp.sendMail({
+          from: this.fromAddress,
+          to: recipients,
+          subject: params.subject,
+          html: params.html,
+          text: params.text,
+          ...(this.replyTo ? { replyTo: this.replyTo } : {}),
+        });
+        let msgId = 'ok';
+        if (info && typeof info === 'object' && 'messageId' in info) {
+          const raw = (info as { messageId?: unknown }).messageId;
+          if (typeof raw === 'string') {
+            msgId = raw;
+          }
+        }
+        this.logger.log(`Email sent via SMTP: ${msgId} → ${recipients.join(', ')}`);
+      } catch (cause: unknown) {
+        const msg = cause instanceof Error ? cause.message : String(cause);
+        this.logger.error(`Failed to send email via SMTP: ${msg}`);
       }
-      this.logger.log(`Email queued: ${pickResendMessageId(data)} → ${recipients.join(', ')}`);
-    } catch (cause: unknown) {
-      const msg = cause instanceof Error ? cause.message : String(cause);
-      this.logger.error(`Failed to send email via Resend: ${msg}`);
+      return;
     }
+    if (this.transport === 'resend' && this.resend) {
+      try {
+        const { data, error } = await this.resend.emails.send({
+          from: this.fromAddress,
+          to: recipients,
+          subject: params.subject,
+          html: params.html,
+          text: params.text,
+          ...(this.replyTo ? { replyTo: this.replyTo } : {}),
+        });
+        if (error) {
+          this.logger.error(`Resend API error: ${JSON.stringify(error)}`);
+          return;
+        }
+        this.logger.log(`Email queued: ${pickResendMessageId(data)} → ${recipients.join(', ')}`);
+      } catch (cause: unknown) {
+        const msg = cause instanceof Error ? cause.message : String(cause);
+        this.logger.error(`Failed to send email via Resend: ${msg}`);
+      }
+    }
+  }
+
+  /** Used by the admin test endpoint to send a basic ping to verify deliverability end-to-end. */
+  async sendTestEmail(to: string, fromName?: string): Promise<void> {
+    const subject = `Wellness Club mail testi · ${new Date().toLocaleString(this.locale, { timeZone: this.timeZone })}`;
+    const inner = `
+<p style="margin:0 0 16px;">Bu, Wellness Club platformundan gönderilen otomatik bir test e-postasıdır.</p>
+<p style="margin:0 0 16px;">Bu mesajı görüyorsanız transactional mail altyapısı doğru çalışıyor demektir.</p>
+<p style="margin:0;font-size:13px;color:#94a3b8;">Gönderim zamanı: ${escapeHtml(new Date().toISOString())}</p>`;
+    const html = emailShell({
+      title: 'Mail testi',
+      previewText: 'Wellness Club transactional mail testi',
+      innerHtml: inner,
+      clubName: fromName?.trim() || 'Wellness Club',
+    });
+    const text = [
+      'Wellness Club mail testi',
+      '',
+      'Bu, transactional mail altyapısının çalıştığını doğrulamak için gönderilmiş otomatik bir mesajdır.',
+      `Gönderim zamanı: ${new Date().toISOString()}`,
+    ].join('\n');
+    await this.send({ to: [to], subject, html, text });
   }
 
   private sessionTypeKey(st: SessionType): SessionTypeKey {
