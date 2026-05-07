@@ -1,4 +1,6 @@
 import {
+  Animated,
+  Easing,
   Image,
   ImageSourcePropType,
   Modal,
@@ -8,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +70,12 @@ const FEATURED_CLUBS: FeaturedClub[] = [
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ClubConnect'>;
 
+const SLIDER_CARD_WIDTH = 168;
+const SLIDER_CARD_GAP = 12;
+const SLIDER_STEP = SLIDER_CARD_WIDTH + SLIDER_CARD_GAP;
+const SLIDER_TRACK_WIDTH = SLIDER_STEP * FEATURED_CLUBS.length;
+const SLIDER_DURATION_MS = 3200 * FEATURED_CLUBS.length;
+
 export function ClubConnectScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -75,6 +83,7 @@ export function ClubConnectScreen() {
   const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
   const activeClubCount = String(Math.max(tenantDirectory.length, FEATURED_CLUBS.length));
+  const sliderX = useRef(new Animated.Value(0)).current;
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
     if (typeof fn !== 'function') {
       return;
@@ -85,6 +94,22 @@ export function ClubConnectScreen() {
   useEffect(() => {
     Promise.resolve(loadTenantDirectory()).catch(() => {});
   }, [loadTenantDirectory]);
+
+  useEffect(() => {
+    sliderX.setValue(0);
+    const animation = Animated.loop(
+      Animated.timing(sliderX, {
+        toValue: -SLIDER_TRACK_WIDTH,
+        duration: SLIDER_DURATION_MS,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    animation.start();
+    return () => {
+      animation.stop();
+    };
+  }, [sliderX]);
 
   return (
     <GradientBackground>
@@ -139,52 +164,58 @@ export function ClubConnectScreen() {
           <Text style={styles.popularSubtitle}>{t('onboarding.clubShowcaseSubtitle')}</Text>
         </View>
 
-        <View style={styles.clubsGrid}>
-          {FEATURED_CLUBS.map((club) => {
-            const directoryMatch = tenantDirectory.find((row) => row.subdomain === club.subdomain);
-            const handlePress = () => {
-              setPreviewClub(
-                directoryMatch ?? {
-                  id: club.id,
-                  name: club.name,
-                  subdomain: club.subdomain,
-                  logoUrl: null,
-                },
+        <View style={styles.sliderViewport} pointerEvents="box-none">
+          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: sliderX }] }]}>
+            {[...FEATURED_CLUBS, ...FEATURED_CLUBS].map((club, idx) => {
+              const directoryMatch = tenantDirectory.find(
+                (row) => row.subdomain === club.subdomain,
               );
-            };
-            return (
-              <Pressable
-                key={club.id}
-                onPress={handlePress}
-                style={({ pressed }) => [
-                  styles.clubCard,
-                  club.featured && styles.clubCardFeatured,
-                  pressed && styles.clubCardPressed,
-                ]}
-              >
-                {club.featured ? (
-                  <View style={styles.featuredRibbon}>
-                    <Text style={styles.featuredRibbonTxt}>
-                      {t('onboarding.clubCardFeaturedBadge')}
-                    </Text>
+              const handlePress = () => {
+                setPreviewClub(
+                  directoryMatch ?? {
+                    id: club.id,
+                    name: club.name,
+                    subdomain: club.subdomain,
+                    logoUrl: null,
+                  },
+                );
+              };
+              return (
+                <Pressable
+                  key={`${club.id}-${idx}`}
+                  onPress={handlePress}
+                  style={({ pressed }) => [
+                    styles.clubCard,
+                    club.featured && styles.clubCardFeatured,
+                    pressed && styles.clubCardPressed,
+                  ]}
+                >
+                  {club.featured ? (
+                    <View style={styles.featuredRibbon}>
+                      <Text style={styles.featuredRibbonTxt}>
+                        {t('onboarding.clubCardFeaturedBadge')}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.clubLogoWrap}>
+                    <Image source={club.logo} style={styles.clubLogoImage} resizeMode="contain" />
                   </View>
-                ) : null}
-                <View style={styles.clubLogoWrap}>
-                  <Image source={club.logo} style={styles.clubLogoImage} resizeMode="contain" />
-                </View>
-                <Text style={styles.clubName} numberOfLines={2}>
-                  {club.name}
-                </Text>
-                <Text style={styles.clubLocation} numberOfLines={1}>
-                  {club.location}
-                </Text>
-                <View style={styles.clubCtaRow}>
-                  <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
-                  <Text style={styles.clubCtaArrow}>›</Text>
-                </View>
-              </Pressable>
-            );
-          })}
+                  <Text style={styles.clubName} numberOfLines={2}>
+                    {club.name}
+                  </Text>
+                  <Text style={styles.clubLocation} numberOfLines={1}>
+                    {club.location}
+                  </Text>
+                  <View style={styles.clubCtaRow}>
+                    <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
+                    <Text style={styles.clubCtaArrow}>›</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
+          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
         </View>
 
         <GlassCard style={styles.card}>
@@ -369,15 +400,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: premium.textMuted,
   },
-  clubsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
+  sliderViewport: {
+    marginHorizontal: -22,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  sliderTrack: {
+    flexDirection: 'row',
+    gap: SLIDER_CARD_GAP,
+    paddingHorizontal: 22,
+    paddingVertical: 6,
+  },
+  sliderFade: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 28,
+  },
+  sliderFadeLeft: {
+    left: 0,
+    backgroundColor: 'rgba(2,8,18,0.55)',
+  },
+  sliderFadeRight: {
+    right: 0,
+    backgroundColor: 'rgba(2,8,18,0.55)',
   },
   clubCard: {
-    width: '48%',
+    width: SLIDER_CARD_WIDTH,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: premium.glassBorder,
