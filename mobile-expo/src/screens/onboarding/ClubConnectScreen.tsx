@@ -109,13 +109,43 @@ type Goal = {
   icon: string;
   label: string;
   hint: string;
+  searchKey: string;
+  matchKeywords: string[];
 };
 
 const GOALS: Goal[] = [
-  { id: 'fat-loss', icon: '🔥', label: 'Form & Kilo', hint: 'Yağ yak, fit kal' },
-  { id: 'strength', icon: '💪', label: 'Kuvvet', hint: 'Kas & güç' },
-  { id: 'yoga', icon: '🧘', label: 'Yoga & Pilates', hint: 'Esneklik & nefes' },
-  { id: 'performance', icon: '🏃', label: 'Performans', hint: 'Sporcu seviyesi' },
+  {
+    id: 'fat-loss',
+    icon: '🔥',
+    label: 'Form & Kilo',
+    hint: 'Yağ yak, fit kal',
+    searchKey: 'form',
+    matchKeywords: ['form', 'kilo', 'beslenme', 'yağ', 'hiit'],
+  },
+  {
+    id: 'strength',
+    icon: '💪',
+    label: 'Kuvvet',
+    hint: 'Kas & güç',
+    searchKey: 'kuvvet',
+    matchKeywords: ['kuvvet', 'crossfit', 'kas', 'güç'],
+  },
+  {
+    id: 'yoga',
+    icon: '🧘',
+    label: 'Yoga & Pilates',
+    hint: 'Esneklik & nefes',
+    searchKey: 'yoga',
+    matchKeywords: ['yoga', 'pilates', 'reformer', 'esneklik', 'nefes', 'postür'],
+  },
+  {
+    id: 'performance',
+    icon: '🏃',
+    label: 'Performans',
+    hint: 'Sporcu seviyesi',
+    searchKey: 'performans',
+    matchKeywords: ['performans', 'atletik', 'koşu', 'sporcu'],
+  },
 ];
 
 type SocialStat = {
@@ -308,6 +338,7 @@ export function ClubConnectScreen() {
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
   const sliderX = useRef(new Animated.Value(0)).current;
   const trainerX = useRef(new Animated.Value(0)).current;
   const eventX = useRef(new Animated.Value(0)).current;
@@ -417,26 +448,52 @@ export function ClubConnectScreen() {
   const headline = ROTATING_HEADLINES[headlineIdx];
   const testimonial = TESTIMONIALS[testimonialIdx];
 
-  const searchTerm = searchQuery.trim().toLocaleLowerCase('tr-TR');
-  const trainerResults =
-    searchTerm.length >= 2
-      ? TRAINERS.filter((tr) => {
-          const haystack = [tr.name, tr.clubName, ...tr.specialties]
-            .join(' ')
-            .toLocaleLowerCase('tr-TR');
-          return haystack.includes(searchTerm);
-        }).slice(0, 4)
-      : [];
-  const clubResults =
-    searchTerm.length >= 2
-      ? FEATURED_CLUBS.filter((club) => {
-          const haystack = [club.name, club.location, club.subdomain]
-            .join(' ')
-            .toLocaleLowerCase('tr-TR');
-          return haystack.includes(searchTerm);
-        }).slice(0, 4)
-      : [];
-  const hasSearchResults = trainerResults.length + clubResults.length > 0;
+  useEffect(() => {
+    if (!selectedGoal) {
+      setSearchQuery('');
+      setSubmittedQuery(null);
+      return;
+    }
+    const goal = GOALS.find((g) => g.id === selectedGoal);
+    if (goal) {
+      setSearchQuery(goal.searchKey);
+      setSubmittedQuery(null);
+    }
+  }, [selectedGoal]);
+
+  const handleRunSearch = () => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+    setSubmittedQuery(trimmed);
+  };
+
+  const goalForResults = selectedGoal ? (GOALS.find((g) => g.id === selectedGoal) ?? null) : null;
+  const submittedTerm = submittedQuery?.toLocaleLowerCase('tr-TR') ?? '';
+  const matchKeywords = goalForResults?.matchKeywords ?? [];
+
+  const matchesQuery = (haystack: string) => {
+    const hay = haystack.toLocaleLowerCase('tr-TR');
+    if (submittedTerm && hay.includes(submittedTerm)) return true;
+    return matchKeywords.some((kw) => hay.includes(kw));
+  };
+
+  const matchedTrainers = TRAINERS.filter((tr) =>
+    matchesQuery([tr.name, tr.clubName, ...tr.specialties].join(' ')),
+  );
+  const fallbackTrainers = TRAINERS.filter((tr) => !matchedTrainers.includes(tr));
+  const trainerResults = [...matchedTrainers, ...fallbackTrainers].slice(
+    0,
+    Math.max(3, matchedTrainers.length),
+  );
+
+  const matchedClubs = FEATURED_CLUBS.filter((club) =>
+    matchesQuery([club.name, club.location, club.subdomain].join(' ')),
+  );
+  const fallbackClubs = FEATURED_CLUBS.filter((club) => !matchedClubs.includes(club));
+  const clubResults = [...matchedClubs, ...fallbackClubs].slice(
+    0,
+    Math.max(3, matchedClubs.length),
+  );
 
   return (
     <GradientBackground>
@@ -522,119 +579,181 @@ export function ClubConnectScreen() {
 
           {selectedGoal ? (
             <View style={styles.searchBlock}>
-              <View style={styles.searchBox}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <TextInput
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Eğitmen, kulüp veya semt ara..."
-                  placeholderTextColor={premium.textMuted}
-                  style={styles.searchInput}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="search"
-                />
-                {searchQuery ? (
-                  <Pressable hitSlop={8} onPress={() => setSearchQuery('')}>
-                    <Text style={styles.searchClear}>×</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-
-              {searchTerm.length >= 2 ? (
-                <View style={styles.searchResults}>
-                  {!hasSearchResults ? (
-                    <Text style={styles.searchEmpty}>
-                      Aradığın kriterle eşleşen eğitmen veya kulüp bulunamadı.
-                    </Text>
-                  ) : null}
-                  {trainerResults.length ? (
-                    <Text style={styles.searchSectionLabel}>EĞİTMENLER</Text>
-                  ) : null}
-                  {trainerResults.map((trainer) => (
-                    <Pressable
-                      key={`s-${trainer.id}`}
-                      style={({ pressed }) => [
-                        styles.searchRow,
-                        pressed && styles.searchRowPressed,
-                      ]}
-                      onPress={() => {
-                        setSearchQuery('');
-                        Alert.alert(
-                          trainer.name,
-                          `${trainer.specialties.join(' · ')}\n${trainer.clubName}\n\nEğitmen profili ve rezervasyon yakında.`,
-                        );
-                      }}
-                    >
-                      <View style={[styles.searchAvatar, { backgroundColor: trainer.accentColor }]}>
-                        <Text style={styles.searchAvatarTxt}>{trainer.initials}</Text>
-                      </View>
-                      <View style={styles.searchRowText}>
-                        <Text style={styles.searchRowTitle} numberOfLines={1}>
-                          {trainer.name}
-                        </Text>
-                        <Text style={styles.searchRowMeta} numberOfLines={1}>
-                          {trainer.specialties.join(' · ')} · {trainer.clubName}
-                        </Text>
-                      </View>
-                      <Text style={styles.searchRowArrow}>›</Text>
+              <View style={styles.searchRow2}>
+                <View style={styles.searchBox}>
+                  <Text style={styles.searchIcon}>🔍</Text>
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onSubmitEditing={handleRunSearch}
+                    placeholder="Eğitmen, kulüp veya semt ara..."
+                    placeholderTextColor={premium.textMuted}
+                    style={styles.searchInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="search"
+                  />
+                  {searchQuery ? (
+                    <Pressable hitSlop={8} onPress={() => setSearchQuery('')}>
+                      <Text style={styles.searchClear}>×</Text>
                     </Pressable>
-                  ))}
-
-                  {clubResults.length ? (
-                    <Text style={styles.searchSectionLabel}>KULÜPLER</Text>
                   ) : null}
-                  {clubResults.map((club) => {
-                    const directoryMatch = tenantDirectory.find(
-                      (row) => row.subdomain === club.subdomain,
-                    );
-                    return (
-                      <Pressable
-                        key={`s-${club.id}`}
-                        style={({ pressed }) => [
-                          styles.searchRow,
-                          pressed && styles.searchRowPressed,
-                        ]}
-                        onPress={() => {
-                          setSearchQuery('');
-                          setPreviewClub(
-                            directoryMatch ?? {
-                              id: club.id,
-                              name: club.name,
-                              subdomain: club.subdomain,
-                              logoUrl: null,
-                            },
-                          );
-                        }}
-                      >
-                        <View style={styles.searchClubLogo}>
-                          <Image
-                            source={club.logo}
-                            style={styles.searchClubLogoImage}
-                            resizeMode="contain"
-                          />
-                        </View>
-                        <View style={styles.searchRowText}>
-                          <Text style={styles.searchRowTitle} numberOfLines={1}>
-                            {club.name}
-                          </Text>
-                          <Text style={styles.searchRowMeta} numberOfLines={1}>
-                            {club.location}
-                          </Text>
-                        </View>
-                        <Text style={styles.searchRowArrow}>›</Text>
-                      </Pressable>
-                    );
-                  })}
                 </View>
-              ) : (
+                <Pressable
+                  onPress={handleRunSearch}
+                  disabled={!searchQuery.trim()}
+                  style={({ pressed }) => [
+                    styles.searchBtn,
+                    !searchQuery.trim() && styles.searchBtnDisabled,
+                    pressed && styles.searchBtnPressed,
+                  ]}
+                >
+                  <Text style={styles.searchBtnTxt}>Ara</Text>
+                </Pressable>
+              </View>
+              {!submittedQuery ? (
                 <Text style={styles.searchHelp}>
-                  En az 2 karakter yaz — sana özel kulüp ve eğitmenleri listeleyelim.
+                  Otomatik olarak hedefine göre dolduruldu — istersen değiştir, sonra Ara'ya bas.
                 </Text>
-              )}
+              ) : null}
             </View>
           ) : null}
         </View>
+
+        {selectedGoal && submittedQuery ? (
+          <View style={styles.resultsSection}>
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsTitle} numberOfLines={2}>
+                "{submittedQuery}" için sana özel öneriler
+              </Text>
+              <Pressable
+                onPress={() => setSubmittedQuery(null)}
+                hitSlop={8}
+                style={styles.resultsClose}
+              >
+                <Text style={styles.resultsCloseTxt}>Temizle</Text>
+              </Pressable>
+            </View>
+
+            <Text style={styles.resultsSubtitle}>
+              {matchedTrainers.length + matchedClubs.length} eşleşme · {trainerResults.length}{' '}
+              eğitmen · {clubResults.length} kulüp
+            </Text>
+
+            <Text style={styles.resultsGroupLabel}>EĞİTMENLER</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.resultsScrollInner}
+            >
+              {trainerResults.map((trainer) => {
+                const isMatch = matchedTrainers.includes(trainer);
+                return (
+                  <Pressable
+                    key={`r-${trainer.id}`}
+                    onPress={() =>
+                      Alert.alert(
+                        trainer.name,
+                        `${trainer.specialties.join(' · ')}\n${trainer.clubName}\n\nEğitmen profili ve rezervasyon yakında.`,
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.trainerCard,
+                      isMatch && styles.resultCardMatched,
+                      pressed && styles.cardPressed,
+                    ]}
+                  >
+                    {isMatch ? (
+                      <View style={styles.resultMatchBadge}>
+                        <Text style={styles.resultMatchBadgeTxt}>EŞLEŞME</Text>
+                      </View>
+                    ) : null}
+                    <View style={[styles.trainerAvatar, { backgroundColor: trainer.accentColor }]}>
+                      <Text style={styles.trainerAvatarTxt}>{trainer.initials}</Text>
+                    </View>
+                    <Text style={styles.trainerName} numberOfLines={1}>
+                      {trainer.name}
+                    </Text>
+                    <View style={styles.trainerSpecRow}>
+                      {trainer.specialties.map((spec) => (
+                        <View key={spec} style={styles.trainerSpecChip}>
+                          <Text style={styles.trainerSpecTxt}>{spec}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={styles.trainerRatingRow}>
+                      <Text style={styles.trainerRatingValue}>★ {trainer.ratingValue}</Text>
+                      <Text style={styles.trainerRatingMeta}>· {trainer.reviewCount}</Text>
+                    </View>
+                    <Text style={styles.trainerClub} numberOfLines={1}>
+                      {trainer.clubName}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={[styles.resultsGroupLabel, styles.resultsGroupLabelSpaced]}>KULÜPLER</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.resultsScrollInner}
+            >
+              {clubResults.map((club) => {
+                const isMatch = matchedClubs.includes(club);
+                const directoryMatch = tenantDirectory.find(
+                  (row) => row.subdomain === club.subdomain,
+                );
+                return (
+                  <Pressable
+                    key={`r-${club.id}`}
+                    onPress={() => {
+                      setPreviewClub(
+                        directoryMatch ?? {
+                          id: club.id,
+                          name: club.name,
+                          subdomain: club.subdomain,
+                          logoUrl: null,
+                        },
+                      );
+                    }}
+                    style={({ pressed }) => [
+                      styles.clubCard,
+                      club.featured && styles.clubCardFeatured,
+                      isMatch && styles.resultCardMatched,
+                      pressed && styles.clubCardPressed,
+                    ]}
+                  >
+                    {isMatch ? (
+                      <View style={styles.resultMatchBadge}>
+                        <Text style={styles.resultMatchBadgeTxt}>EŞLEŞME</Text>
+                      </View>
+                    ) : club.featured ? (
+                      <View style={styles.featuredRibbon}>
+                        <Text style={styles.featuredRibbonTxt}>
+                          {t('onboarding.clubCardFeaturedBadge')}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.clubLogoWrap}>
+                      <Image source={club.logo} style={styles.clubLogoImage} resizeMode="contain" />
+                    </View>
+                    <Text style={styles.clubName} numberOfLines={2}>
+                      {club.name}
+                    </Text>
+                    <Text style={styles.clubLocation} numberOfLines={1}>
+                      {club.location}
+                    </Text>
+                    <View style={styles.clubCtaRow}>
+                      <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
+                      <Text style={styles.clubCtaArrow}>›</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
 
         <View style={styles.popularHeader}>
           <Text style={styles.popularTitle}>Popüler Kulüpler</Text>
@@ -1129,7 +1248,13 @@ const styles = StyleSheet.create({
   searchBlock: {
     marginTop: 14,
   },
+  searchRow2: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 8,
+  },
   searchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -1157,6 +1282,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 4,
   },
+  searchBtn: {
+    paddingHorizontal: 18,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.7)',
+    backgroundColor: 'rgba(56,189,248,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBtnDisabled: {
+    opacity: 0.45,
+  },
+  searchBtnPressed: {
+    transform: [{ scale: 0.97 }],
+    backgroundColor: 'rgba(56,189,248,0.3)',
+  },
+  searchBtnTxt: {
+    color: premium.accentBlue,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
   searchHelp: {
     color: premium.textMuted,
     fontSize: 11,
@@ -1164,89 +1312,82 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 4,
   },
-  searchResults: {
-    marginTop: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(8,16,28,0.7)',
-    paddingVertical: 6,
+  resultsSection: {
+    marginTop: 4,
+    marginBottom: 18,
+    marginHorizontal: -22,
+    paddingTop: 18,
+    paddingBottom: 18,
+    paddingHorizontal: 22,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(56,189,248,0.25)',
+    backgroundColor: 'rgba(56,189,248,0.05)',
   },
-  searchEmpty: {
+  resultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 4,
+  },
+  resultsTitle: {
+    flex: 1,
+    color: premium.text,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  resultsClose: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  resultsCloseTxt: {
     color: premium.textMuted,
     fontSize: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    textAlign: 'center',
+    fontWeight: '700',
   },
-  searchSectionLabel: {
+  resultsSubtitle: {
+    color: premium.accentBlue,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    marginBottom: 14,
+  },
+  resultsGroupLabel: {
     color: premium.textMuted,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.7,
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 4,
+    marginBottom: 8,
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  resultsGroupLabelSpaced: {
+    marginTop: 16,
   },
-  searchRowPressed: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+  resultsScrollInner: {
+    gap: 12,
+    paddingRight: 22,
   },
-  searchAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.18)',
+  resultCardMatched: {
+    borderColor: 'rgba(56,189,248,0.7)',
+    backgroundColor: 'rgba(14,28,46,0.85)',
   },
-  searchAvatarTxt: {
-    color: '#fff',
-    fontSize: 13,
+  resultMatchBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(56,189,248,0.92)',
+    zIndex: 2,
+  },
+  resultMatchBadgeTxt: {
+    color: '#02121f',
+    fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 0.3,
-  },
-  searchClubLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderWidth: 1.5,
-    borderColor: premium.glassBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    padding: 4,
-  },
-  searchClubLogoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  searchRowText: {
-    flex: 1,
-  },
-  searchRowTitle: {
-    color: premium.text,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  searchRowMeta: {
-    color: premium.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  searchRowArrow: {
-    color: premium.accentBlue,
-    fontSize: 18,
-    fontWeight: '900',
+    letterSpacing: 0.6,
   },
   testimonialCard: {
     borderRadius: 16,
