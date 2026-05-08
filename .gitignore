@@ -9,6 +9,7 @@ build/
 # NestJS / backend
 backend/dist/
 backend/coverage/
+backend/uploads/
 
 # Vite
 web-admin/dist/

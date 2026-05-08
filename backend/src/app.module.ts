@@ -1,13 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { LoggerModule } from 'nestjs-pino';
 import { join } from 'path';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BookingModule } from './booking/booking.module';
 import { EventsModule } from './events/events.module';
+import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { PlatformAdminModule } from './platform-admin/platform-admin.module';
@@ -20,6 +23,23 @@ import { typeOrmEntities } from './database/typeorm-entities';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [join(__dirname, '..', '.env'), join(__dirname, '..', '..', '.env')],
+    }),
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const isDev = config.get<string>('NODE_ENV') === 'development';
+        return {
+          pinoHttp: {
+            level: isDev ? 'debug' : 'info',
+            transport: isDev ? { target: 'pino-pretty', options: { colorize: true } } : undefined,
+            // Health check endpoint'lerini loglamayı atla (gürültü azaltma)
+            autoLogging: {
+              ignore: (req: { url?: string }) => req.url?.startsWith('/api/v1/health') ?? false,
+            },
+          },
+        };
+      },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -42,8 +62,20 @@ import { typeOrmEntities } from './database/typeorm-entities';
     PlatformAdminModule,
     BookingModule,
     EventsModule,
+    HealthModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000, // 1 dakika
+        limit: 120, // varsayılan IP başına 120 req/dk
+      },
+    ]),
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor }],
+  providers: [
+    AppService,
+    { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

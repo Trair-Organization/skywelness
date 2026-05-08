@@ -12,14 +12,11 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
-import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
-import { extname, join } from 'path';
-import { randomUUID } from 'crypto';
-import { mkdirSync } from 'fs';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { imageUploadOptions } from '../common/uploads/upload.config';
 import { User } from '../database/entities/user.entity';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -33,46 +30,35 @@ import { UpdateMeDto } from './dto/update-me.dto';
 import { UpdatePushTokenDto } from './dto/update-push-token.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-const uploadOptions: MulterOptions = {
-  storage: diskStorage({
-    destination: (_req, _file, cb) => {
-      const uploadDir = join(process.cwd(), 'uploads');
-      mkdirSync(uploadDir, { recursive: true });
-      cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-      const ext = extname(file.originalname || '').toLowerCase() || '.jpg';
-      cb(null, `${Date.now()}-${randomUUID()}${ext}`);
-    },
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 },
-};
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(201)
   register(@Body() dto: RegisterDto, @Req() req: Request) {
     return this.authService.register(dto, req.requestSubdomain ?? null);
   }
 
   @Post('register-trainer')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(201)
   registerTrainer(@Body() dto: RegisterIndependentTrainerDto) {
     return this.authService.registerIndependentTrainer(dto);
   }
 
   @Post('register-partner')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(201)
   registerPartner(@Body() dto: RegisterPartnerDto) {
     return this.authService.registerPartnerApplication(dto);
   }
 
   @Post('upload-image')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file', uploadOptions))
+  @UseInterceptors(FileInterceptor('file', imageUploadOptions))
   uploadImage(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       return { message: 'No file uploaded' };
@@ -81,6 +67,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.authService.login(dto, req.requestSubdomain ?? null);
   }
@@ -105,12 +92,14 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(200)
   forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
     return this.authService.forgotPassword(dto, req.requestSubdomain ?? null);
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);

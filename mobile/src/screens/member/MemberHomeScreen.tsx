@@ -278,21 +278,21 @@ export function MemberHomeScreen() {
 
   const [packages, setPackages] = useState<MyPackageRow[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [loadingPackages, setLoadingPackages] = useState(false);
+  const [_loadingPackages, setLoadingPackages] = useState(false);
 
   const [trainers, setTrainers] = useState<TrainerRow[]>([]);
   const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
-  const [slots, setSlots] = useState<SlotRow[]>([]);
+  const [_slots, setSlots] = useState<SlotRow[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [loadingTrainers, setLoadingTrainers] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [booking, setBooking] = useState(false);
+  const [_loadingSlots, setLoadingSlots] = useState(false);
+  const [_booking, setBooking] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const bookingSectionY = useRef(0);
   const [hubPlaceholder, setHubPlaceholder] = useState<'massage' | 'events' | 'cafe' | null>(null);
-  const [trainersShowAll, setTrainersShowAll] = useState(false);
+  const [_trainersShowAll, _setTrainersShowAll] = useState(false);
   const [clubEvents, setClubEvents] = useState<ClubEventRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
@@ -318,11 +318,9 @@ export function MemberHomeScreen() {
   const massagePausedRef = useRef(false);
   const eventsPausedRef = useRef(false);
   const trainerPausedRef = useRef(false);
-  const cafePausedRef = useRef(false);
   const massageResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eventsResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trainerResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cafeResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const massageRailMetrics = useRef<RailMetrics>({
     x: 0,
     contentW: 0,
@@ -455,7 +453,8 @@ export function MemberHomeScreen() {
     }
   }, [token, tenant, selectedTrainerId, t]);
 
-  const bookSlot = useCallback(async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _bookSlot = useCallback(async () => {
     if (!token || !tenant || !selectedSlotId) {
       Alert.alert(t('booking.section'), t('booking.pickSlotFirst'));
       return;
@@ -849,7 +848,8 @@ export function MemberHomeScreen() {
     () => (trainers.length > 1 ? [...trainers, ...trainers, ...trainers] : trainers),
     [trainers],
   );
-  const loopedCafeProducts = useMemo(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _loopedCafeProducts = useMemo(
     () =>
       SKY_CAFE_PRODUCTS.length > 1
         ? [...SKY_CAFE_PRODUCTS, ...SKY_CAFE_PRODUCTS, ...SKY_CAFE_PRODUCTS]

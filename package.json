@@ -5,6 +5,7 @@
   "workspaces": [
     "backend",
     "mobile",
+    "mobile-expo",
     "web-admin",
     "shared"
   ],
