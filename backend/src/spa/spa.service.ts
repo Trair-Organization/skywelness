@@ -6,6 +6,7 @@ import { SpaPackage } from '../database/entities/spa-package.entity';
 import { SpaReview } from '../database/entities/spa-review.entity';
 import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
+import { Tenant } from '../database/entities/tenant.entity';
 import { PushService } from '../notifications/push.service';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class SpaServiceService {
     @InjectRepository(SpaPackage) private readonly packagesRepo: Repository<SpaPackage>,
     @InjectRepository(SpaBooking) private readonly bookingsRepo: Repository<SpaBooking>,
     @InjectRepository(SpaReview) private readonly reviewsRepo: Repository<SpaReview>,
+    @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     private readonly pushService: PushService,
   ) {}
 
@@ -234,6 +236,15 @@ export class SpaServiceService {
     if (!pkg) throw new NotFoundException('Package not found');
     Object.assign(pkg, data);
     return this.packagesRepo.save(pkg);
+  }
+
+  /** Public: Keşif ekranı için spa hizmetleri (subdomain ile). */
+  async listPublicServicesBySubdomain(subdomain: string) {
+    const tenant = await this.tenantsRepo.findOne({
+      where: { subdomain: subdomain.trim().toLowerCase() },
+    });
+    if (!tenant) return [];
+    return this.listPublicServices(tenant.id);
   }
 
   /** Public: Keşif ekranı için spa hizmetleri. */

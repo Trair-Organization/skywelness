@@ -13,8 +13,7 @@ export class SpaController {
   @Get('services/public/:tenantSubdomain')
   @SkipThrottle()
   async listPublicServices(@Param('tenantSubdomain') subdomain: string) {
-    // tenantId'yi subdomain'den çöz — basit yaklaşım
-    return this.spaService.listPublicServices(subdomain);
+    return this.spaService.listPublicServicesBySubdomain(subdomain);
   }
 
   /** Üye: Hizmet kataloğu. */
