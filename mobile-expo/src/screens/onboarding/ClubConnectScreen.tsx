@@ -912,7 +912,7 @@ export function ClubConnectScreen() {
         <View style={styles.sliderViewport} pointerEvents="box-none">
           <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: sliderX }] }]}>
             {apiClubs.length > 0
-              ? [...apiClubs, ...apiClubs].map((club, idx) => {
+              ? apiClubs.map((club, idx) => {
                   const handlePress = () => {
                     setPreviewClub({
                       id: club.id,
@@ -1087,7 +1087,7 @@ export function ClubConnectScreen() {
                     </View>
                     <View style={styles.trainerCtaPill}>
                       <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                      <Text style={styles.trainerCtaPillTxt}>Katılmak İstiyorum</Text>
+                      <Text style={styles.trainerCtaPillTxt}>Katıl</Text>
                     </View>
                   </View>
                 </Pressable>
