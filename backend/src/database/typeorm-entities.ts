@@ -2,6 +2,11 @@ import { Campaign } from './entities/campaign.entity';
 import { Conversation } from './entities/conversation.entity';
 import { Lead } from './entities/lead.entity';
 import { Message } from './entities/message.entity';
+import { SpaBooking } from './entities/spa-booking.entity';
+import { SpaPackage } from './entities/spa-package.entity';
+import { SpaReview } from './entities/spa-review.entity';
+import { SpaService } from './entities/spa-service.entity';
+import { SpaTherapist } from './entities/spa-therapist.entity';
 import { ClubEvent } from './entities/club-event.entity';
 import { ClubEventRegistration } from './entities/club-event-registration.entity';
 import { CafeOrder } from './entities/cafe-order.entity';
@@ -36,6 +41,11 @@ export const typeOrmEntities = [
   Conversation,
   Lead,
   Message,
+  SpaBooking,
+  SpaPackage,
+  SpaReview,
+  SpaService,
+  SpaTherapist,
   CafeOrder,
   ClubEvent,
   ClubEventRegistration,
