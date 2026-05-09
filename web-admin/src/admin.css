@@ -3311,3 +3311,88 @@ button.primary:disabled {
 .cell-popup-cancel:hover {
   background: rgba(239, 68, 68, 0.2);
 }
+
+/* ─── Hamburger Menu & Sidebar Toggle ──────────────────────────────────────── */
+.hamburger-btn {
+  position: fixed;
+  top: 18px;
+  left: 270px;
+  z-index: 200;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s;
+}
+
+.hamburger-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sidebar-collapsed .admin-sidebar {
+  transform: translateX(-100%);
+}
+
+.sidebar-collapsed .admin-main {
+  margin-left: 0;
+}
+
+.sidebar-collapsed .hamburger-btn {
+  left: 16px;
+}
+
+.admin-sidebar {
+  transition: transform 0.25s ease;
+}
+
+.admin-main {
+  transition: margin-left 0.25s ease;
+}
+
+.main-expanded {
+  margin-left: 0;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hamburger-btn {
+    left: 16px;
+    top: 14px;
+  }
+
+  .admin-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .admin-sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .admin-main {
+    margin-left: 0;
+    padding-top: 56px;
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 140;
+  }
+
+  .sidebar-collapsed .sidebar-overlay {
+    display: none;
+  }
+}
