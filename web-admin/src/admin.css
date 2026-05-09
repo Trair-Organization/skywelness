@@ -3198,3 +3198,88 @@ button.primary:disabled {
   color: var(--muted);
   margin-left: auto;
 }
+
+/* ─── Calendar Past/Today/Disabled States ──────────────────────────────────── */
+.cal-day-past {
+  opacity: 0.5;
+}
+
+.cal-day-past .cal-day-name,
+.cal-day-past .cal-day-num {
+  color: var(--muted);
+}
+
+.cal-day-today {
+  background: rgba(59, 130, 246, 0.06);
+  border-bottom: 2px solid var(--accent);
+}
+
+.cal-today-badge {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calendar-cell-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.calendar-cell-disabled:hover {
+  background: #f9fafb;
+}
+
+.cell-check-past {
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.cell-booked-past {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+/* Calendar Legend */
+.calendar-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.legend-green {
+  background: #22c55e;
+}
+
+.legend-blue {
+  background: #3b82f6;
+}
+
+.legend-gray {
+  background: #d1d5db;
+}
+
+.legend-today {
+  background: transparent;
+  border: 2px solid #3b82f6;
+}

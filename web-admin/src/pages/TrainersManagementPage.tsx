@@ -47,8 +47,8 @@ const SESSION_TYPE_OPTIONS = [
 const DAYS_LABELS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const WEEKDAY_NUMS = [1, 2, 3, 4, 5, 6, 0];
 
-const TIME_SLOTS = Array.from({ length: 14 }, (_, i) => {
-  const h = 8 + i;
+const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
+  const h = 6 + i;
   return {
     start: `${h.toString().padStart(2, '0')}:00`,
     end: `${(h + 1).toString().padStart(2, '0')}:00`,
@@ -538,26 +538,42 @@ export function TrainersManagementPage() {
           <div className="calendar-grid">
             <div className="calendar-header-row">
               <div className="calendar-time-col">Saat</div>
-              {weekDays.map((day) => (
-                <div key={day.date} className="calendar-day-col">
-                  <span className="cal-day-name">{day.label.slice(0, 3)}</span>
-                  <span className="cal-day-num">{day.dayNum}</span>
-                  {schedule.filter((s) => s.date === day.date).length > 0 && (
-                    <button
-                      className="cal-clear-btn"
-                      onClick={() => void clearDay(day.date)}
-                      title="Günü temizle"
-                    >
-                      🗑
-                    </button>
-                  )}
-                </div>
-              ))}
+              {weekDays.map((day) => {
+                const today = new Date().toISOString().slice(0, 10);
+                const isPast = day.date < today;
+                const isToday = day.date === today;
+                return (
+                  <div
+                    key={day.date}
+                    className={`calendar-day-col ${isPast ? 'cal-day-past' : ''} ${isToday ? 'cal-day-today' : ''}`}
+                  >
+                    <span className="cal-day-name">{day.label.slice(0, 3)}</span>
+                    <span className="cal-day-num">{day.dayNum}</span>
+                    {isToday && <span className="cal-today-badge">Bugün</span>}
+                    {!isPast && schedule.filter((s) => s.date === day.date).length > 0 && (
+                      <button
+                        className="cal-clear-btn"
+                        onClick={() => void clearDay(day.date)}
+                        title="Günü temizle"
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             {TIME_SLOTS.map((slot) => (
               <div key={slot.start} className="calendar-row">
                 <div className="calendar-time-cell">{slot.label}</div>
                 {weekDays.map((day) => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  const currentHour = new Date().getHours();
+                  const slotHour = parseInt(slot.start.split(':')[0]);
+                  const isPastDay = day.date < today;
+                  const isPastSlot = day.date === today && slotHour <= currentHour;
+                  const isDisabled = isPastDay || isPastSlot;
+
                   const slotData = schedule.find(
                     (s) => s.date === day.date && s.startTime === slot.start,
                   );
@@ -565,21 +581,29 @@ export function TrainersManagementPage() {
                   const isBooked = slotData?.booked || false;
                   const isPopupTarget =
                     cellPopup?.date === day.date && cellPopup?.start === slot.start;
+
                   return (
                     <div
                       key={`${day.date}-${slot.start}`}
-                      className={`calendar-cell ${hasSlot ? (isBooked ? 'calendar-cell-booked' : 'calendar-cell-active') : ''} ${isPopupTarget ? 'calendar-cell-selected' : ''}`}
-                      onClick={() =>
+                      className={`calendar-cell ${isDisabled ? 'calendar-cell-disabled' : ''} ${hasSlot ? (isBooked ? 'calendar-cell-booked' : 'calendar-cell-active') : ''} ${isPopupTarget ? 'calendar-cell-selected' : ''}`}
+                      onClick={() => {
+                        if (isDisabled) return;
                         setCellPopup(
                           isPopupTarget
                             ? null
                             : { date: day.date, start: slot.start, end: slot.end, hasSlot },
-                        )
-                      }
+                        );
+                      }}
                     >
-                      {isBooked && <span className="cell-booked">●</span>}
-                      {hasSlot && !isBooked && <span className="cell-check">✓</span>}
-                      {isPopupTarget && (
+                      {isDisabled && hasSlot && isBooked && (
+                        <span className="cell-booked-past">●</span>
+                      )}
+                      {isDisabled && hasSlot && !isBooked && (
+                        <span className="cell-check-past">✓</span>
+                      )}
+                      {!isDisabled && isBooked && <span className="cell-booked">●</span>}
+                      {!isDisabled && hasSlot && !isBooked && <span className="cell-check">✓</span>}
+                      {isPopupTarget && !isDisabled && (
                         <div className="cell-popup" onClick={(e) => e.stopPropagation()}>
                           <div className="cell-popup-header">
                             {day.label.slice(0, 3)} {day.dayNum} · {slot.label}
@@ -625,10 +649,20 @@ export function TrainersManagementPage() {
             ))}
           </div>
         )}
-        <p className="muted" style={{ marginTop: 12, fontSize: '0.8rem' }}>
-          💡 Yeşil ✓ = müsait saat. Tıklayarak ekle/kaldır. Kullanıcılar sadece yeşil saatlere
-          randevu alabilir.
-        </p>
+        <div className="calendar-legend">
+          <span>
+            <span className="legend-dot legend-green"></span> Müsait (boş)
+          </span>
+          <span>
+            <span className="legend-dot legend-blue"></span> Dolu (randevu alınmış)
+          </span>
+          <span>
+            <span className="legend-dot legend-gray"></span> Geçmiş / Kapalı
+          </span>
+          <span>
+            <span className="legend-dot legend-today"></span> Bugün
+          </span>
+        </div>
       </div>
     );
   }
