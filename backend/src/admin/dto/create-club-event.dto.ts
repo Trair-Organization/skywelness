@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsISO8601,
   IsInt,
@@ -9,7 +10,18 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+
+class ScheduleItemDto {
+  @IsString()
+  @MaxLength(20)
+  time!: string;
+
+  @IsString()
+  @MaxLength(200)
+  title!: string;
+}
 
 export class CreateClubEventDto {
   @IsString()
@@ -22,10 +34,10 @@ export class CreateClubEventDto {
   @MaxLength(8000)
   description?: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(200)
-  coachName!: string;
+  coachName?: string;
 
   @IsString()
   @MinLength(1)
@@ -49,6 +61,22 @@ export class CreateClubEventDto {
   @Min(1)
   @Max(50000)
   capacity?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  category?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  requirements?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ScheduleItemDto)
+  schedule?: ScheduleItemDto[];
 
   @IsOptional()
   @IsBoolean()

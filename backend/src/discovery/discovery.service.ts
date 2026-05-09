@@ -117,6 +117,9 @@ export class DiscoveryService {
       startsAt: e.startsAt,
       endsAt: e.endsAt,
       capacity: e.capacity,
+      category: e.category ?? 'general',
+      requirements: e.requirements,
+      schedule: e.schedule,
       clubName: e.tenant?.name ?? null,
       clubSubdomain: e.tenant?.subdomain ?? null,
     }));

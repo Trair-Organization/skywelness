@@ -49,6 +49,17 @@ export class ClubEvent {
   @Column({ type: 'int', default: 30 })
   capacity!: number;
 
+  @Column({ type: 'varchar', length: 50, default: 'general' })
+  category!: string;
+
+  /** Katılımcıların getirmesi gerekenler. */
+  @Column({ type: 'text', nullable: true })
+  requirements!: string | null;
+
+  /** Etkinlik programı/ajanda (JSON array: [{time, title}]). */
+  @Column({ type: 'jsonb', nullable: true })
+  schedule!: Array<{ time: string; title: string }> | null;
+
   @Column({ type: 'boolean', default: true })
   published!: boolean;
 

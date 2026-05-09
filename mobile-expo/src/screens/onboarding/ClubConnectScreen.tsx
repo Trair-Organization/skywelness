@@ -22,6 +22,7 @@ import type { TenantListRow } from '../../auth/memberAuthTypes';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { LeadCaptureModal } from '../../components/premium/LeadCaptureModal';
+import { EventDetailModal } from '../../components/premium/EventDetailModal';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
 import { persistLanguage } from '../../i18n';
@@ -100,6 +101,9 @@ type DiscoveryEvent = {
   startsAt: string;
   endsAt: string | null;
   capacity: number;
+  category?: string;
+  requirements?: string | null;
+  schedule?: Array<{ time: string; title: string }> | null;
   clubName: string | null;
   clubSubdomain: string | null;
 };
@@ -254,6 +258,7 @@ export function ClubConnectScreen() {
   const [previewTrainer, setPreviewTrainer] = useState<Trainer | null>(null);
   const [previewCampaign, setPreviewCampaign] = useState<PublicCampaign | null>(null);
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<DiscoveryEvent | null>(null);
   const [leadModal, setLeadModal] = useState<{
     visible: boolean;
     source: 'club' | 'trainer' | 'campaign' | 'event';
@@ -999,16 +1004,7 @@ export function ClubConnectScreen() {
                 return (
                   <Pressable
                     key={`${evt.id}-${idx}`}
-                    onPress={() => {
-                      setLeadModal({
-                        visible: true,
-                        source: 'event',
-                        sourceRef: evt.id,
-                        sourceLabel: `${evt.title} — ${dateStr}`,
-                        clubSubdomain: evt.clubSubdomain ?? undefined,
-                        prefillMessage: `${evt.title} etkinliğine katılmak istiyorum.`,
-                      });
-                    }}
+                    onPress={() => setSelectedEvent(evt)}
                     style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
                   >
                     {evt.imageUrl && (
@@ -1383,6 +1379,23 @@ export function ClubConnectScreen() {
         sourceLabel={leadModal.sourceLabel}
         clubSubdomain={leadModal.clubSubdomain}
         prefillMessage={leadModal.prefillMessage}
+      />
+
+      <EventDetailModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onJoin={(eventId) => {
+          setSelectedEvent(null);
+          const evt = apiEvents.find((e) => e.id === eventId);
+          setLeadModal({
+            visible: true,
+            source: 'event',
+            sourceRef: eventId,
+            sourceLabel: evt?.title ?? 'Etkinlik',
+            clubSubdomain: evt?.clubSubdomain ?? undefined,
+            prefillMessage: `${evt?.title ?? 'Etkinlik'} etkinliğine katılmak istiyorum.`,
+          });
+        }}
       />
     </GradientBackground>
   );

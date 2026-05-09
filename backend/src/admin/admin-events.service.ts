@@ -30,12 +30,15 @@ export class AdminEventsService {
       tenantId,
       title: dto.title.trim(),
       description: dto.description?.trim() || null,
-      coachName: dto.coachName.trim(),
+      coachName: dto.coachName?.trim() || null,
       location: dto.location.trim(),
       imageUrl: dto.imageUrl?.trim() || null,
       startsAt,
       endsAt,
       capacity: dto.capacity ?? 30,
+      category: dto.category?.trim() || 'general',
+      requirements: dto.requirements?.trim() || null,
+      schedule: dto.schedule ?? null,
       published: dto.published ?? true,
     });
     return this.eventsRepo.save(row);
