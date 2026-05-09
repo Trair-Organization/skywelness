@@ -398,8 +398,12 @@ export function ClubConnectScreen() {
     return () => clearInterval(interval);
   }, [testimonialOpacity]);
 
-  const headline = ROTATING_HEADLINES[headlineIdx];
-  const testimonial = TESTIMONIALS[testimonialIdx];
+  const headline =
+    ROTATING_HEADLINES.length > 0
+      ? ROTATING_HEADLINES[headlineIdx % ROTATING_HEADLINES.length]
+      : null;
+  const testimonial =
+    TESTIMONIALS.length > 0 ? TESTIMONIALS[testimonialIdx % TESTIMONIALS.length] : null;
 
   useEffect(() => {
     if (!selectedGoal) {
@@ -477,16 +481,18 @@ export function ClubConnectScreen() {
             source={logoLight}
             style={styles.logo}
           />
-          <Animated.View style={[styles.headlineWrap, { opacity: headlineOpacity }]}>
-            <Text style={styles.headline}>{headline.title}</Text>
-            <View style={styles.personasRow}>
-              {headline.personas.map((p) => (
-                <View key={p} style={styles.personaChip}>
-                  <Text style={styles.personaChipTxt}>{p}</Text>
-                </View>
-              ))}
-            </View>
-          </Animated.View>
+          {headline && (
+            <Animated.View style={[styles.headlineWrap, { opacity: headlineOpacity }]}>
+              <Text style={styles.headline}>{headline.title}</Text>
+              <View style={styles.personasRow}>
+                {headline.personas.map((p) => (
+                  <View key={p} style={styles.personaChip}>
+                    <Text style={styles.personaChipTxt}>{p}</Text>
+                  </View>
+                ))}
+              </View>
+            </Animated.View>
+          )}
           <Text style={styles.slogan}>{t('onboarding.ecosystemSlogan')}</Text>
         </View>
 
@@ -1123,22 +1129,16 @@ export function ClubConnectScreen() {
           <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
         </View>
 
-        <Animated.View style={[styles.testimonialCard, { opacity: testimonialOpacity }]}>
-          <Text style={styles.testimonialQuoteMark}>“</Text>
-          <Text style={styles.testimonialQuote}>{testimonial.quote}</Text>
-          <View style={styles.testimonialFooter}>
-            <Text style={styles.testimonialAuthor}>{testimonial.author}</Text>
-            <Text style={styles.testimonialMeta}>{testimonial.meta}</Text>
-          </View>
-          <View style={styles.testimonialDots}>
-            {TESTIMONIALS.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.testimonialDot, i === testimonialIdx && styles.testimonialDotActive]}
-              />
-            ))}
-          </View>
-        </Animated.View>
+        {testimonial && (
+          <Animated.View style={[styles.testimonialCard, { opacity: testimonialOpacity }]}>
+            <Text style={styles.testimonialQuoteMark}>"</Text>
+            <Text style={styles.testimonialQuote}>{testimonial.quote}</Text>
+            <View style={styles.testimonialFooter}>
+              <Text style={styles.testimonialAuthor}>{testimonial.author}</Text>
+              <Text style={styles.testimonialMeta}>{testimonial.meta}</Text>
+            </View>
+          </Animated.View>
+        )}
 
         <GlassCard style={styles.card}>
           <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
