@@ -663,26 +663,30 @@ export function TrainersManagementPage() {
                                 </button>
                               </div>
                             ) : (
+                              <div className="cell-popup-actions">
+                                <button
+                                  className="cell-popup-btn cell-popup-close"
+                                  onClick={() => {
+                                    void toggleSlot(day.date, slot.start, slot.end);
+                                    setCellPopup(null);
+                                  }}
+                                >
+                                  🔴 Rezervasyona Kapat
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            <div className="cell-popup-actions">
                               <button
-                                className="cell-popup-btn cell-popup-close"
+                                className="cell-popup-btn cell-popup-open"
                                 onClick={() => {
                                   void toggleSlot(day.date, slot.start, slot.end);
                                   setCellPopup(null);
                                 }}
                               >
-                                🔴 Rezervasyona Kapat
+                                🟢 Rezervasyona Aç
                               </button>
-                            )
-                          ) : (
-                            <button
-                              className="cell-popup-btn cell-popup-open"
-                              onClick={() => {
-                                void toggleSlot(day.date, slot.start, slot.end);
-                                setCellPopup(null);
-                              }}
-                            >
-                              🟢 Rezervasyona Aç
-                            </button>
+                            </div>
                           )}
                         </div>
                       )}
