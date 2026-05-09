@@ -1684,3 +1684,242 @@ a.secondary:hover {
     margin-left: 0;
   }
 }
+
+/* ─── Page Header ──────────────────────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ─── Form Grid (Campaigns) ────────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.form-grid input,
+.form-grid textarea,
+.form-grid select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.form-grid input:focus,
+.form-grid textarea:focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-grid textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Table Wrap ───────────────────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table-wrap th {
+  text-align: left;
+  padding: 12px 14px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-wrap td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.table-wrap tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrap tbody tr:hover {
+  background: rgba(59, 130, 246, 0.02);
+}
+
+/* ─── Badges ───────────────────────────────────────────────────────────────── */
+.badge-green {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-yellow {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-gray {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ─── Small Buttons ────────────────────────────────────────────────────────── */
+button.small {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  margin-right: 4px;
+  transition: all 0.15s;
+}
+
+button.small:hover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+button.small.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+button.small.danger:hover {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+a.small.primary {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a.small.primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ─── Small Select (Leads) ─────────────────────────────────────────────────── */
+.small-select {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.small-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ─── Primary Button Class ─────────────────────────────────────────────────── */
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Fix shell inside admin-main ──────────────────────────────────────────── */
+.admin-main .shell {
+  max-width: 100%;
+  padding: 0;
+}
+
+.admin-main .topbar {
+  margin-bottom: 20px;
+}
+
+/* ─── Messages layout fix inside admin-main ────────────────────────────────── */
+.admin-main .messages-layout {
+  height: calc(100vh - 140px);
+}
