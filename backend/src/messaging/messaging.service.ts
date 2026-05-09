@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Conversation } from '../database/entities/conversation.entity';
 import { Message } from '../database/entities/message.entity';
 import { User } from '../database/entities/user.entity';
+import { PushService } from '../notifications/push.service';
 
 @Injectable()
 export class MessagingService {
@@ -11,6 +12,7 @@ export class MessagingService {
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
     @InjectRepository(Message) private readonly msgRepo: Repository<Message>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    private readonly pushService: PushService,
   ) {}
 
   /** Participant ID'lerini sıralı tut (tutarlılık için). */
@@ -132,6 +134,18 @@ export class MessagingService {
       });
     }
     await updateQb.execute();
+
+    // Push notification gönder (karşı tarafa)
+    const recipientId = isA ? conversation.participantBId : conversation.participantAId;
+    const sender = await this.usersRepo.findOne({
+      where: { id: userId },
+      select: ['firstName', 'lastName'],
+    });
+    const senderName = sender ? `${sender.firstName} ${sender.lastName}`.trim() : 'Birisi';
+    void this.pushService.sendToUser(recipientId, `💬 ${senderName}`, preview, {
+      type: 'message',
+      conversationId,
+    });
 
     return {
       id: message.id,

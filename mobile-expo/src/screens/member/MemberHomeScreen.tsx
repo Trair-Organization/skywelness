@@ -378,6 +378,27 @@ export function MemberHomeScreen() {
     }
   }, [token, tenant, loadPackages, loadReservations, loadTrainers, loadCampaigns, t]);
 
+  const startConversationWith = useCallback(
+    async (otherUserId: string, firstName: string, lastName: string, photoUrl: string | null) => {
+      if (!token || !tenant) return;
+      try {
+        const res = await apiJson<{ conversationId: string }>('/messages/conversations', {
+          method: 'POST',
+          token,
+          tenantSubdomain: tenant.subdomain,
+          body: JSON.stringify({ otherUserId }),
+        });
+        navigation.navigate('Chat', {
+          conversationId: res.conversationId,
+          otherUser: { id: otherUserId, firstName, lastName, photoUrl },
+        });
+      } catch {
+        showToast('Mesaj başlatılamadı', 'error');
+      }
+    },
+    [token, tenant, navigation],
+  );
+
   const loadAvailability = useCallback(async () => {
     if (!token || !tenant) {
       return;
@@ -1014,6 +1035,20 @@ export function MemberHomeScreen() {
                 >
                   <Text style={styles.trainerPlanBtnTxt}>Özel Ders Planla</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.trainerMsgBtn}
+                  onPress={() =>
+                    startConversationWith(
+                      tr.user.id,
+                      tr.user.firstName,
+                      tr.user.lastName,
+                      tr.user.photoUrl ?? null,
+                    )
+                  }
+                >
+                  <Text style={styles.trainerMsgBtnTxt}>💬 Mesaj</Text>
+                </TouchableOpacity>
               </View>
             );
           })}
@@ -1582,6 +1617,21 @@ const styles = StyleSheet.create({
   trainerPlanBtnTxt: {
     color: premium.text,
     fontSize: 12,
+    fontWeight: '700',
+  },
+  trainerMsgBtn: {
+    marginTop: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    backgroundColor: 'rgba(56,189,248,0.08)',
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trainerMsgBtnTxt: {
+    color: premium.accentBlue,
+    fontSize: 11,
     fontWeight: '700',
   },
   langRow: {
