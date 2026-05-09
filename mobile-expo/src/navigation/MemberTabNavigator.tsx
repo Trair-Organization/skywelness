@@ -17,6 +17,7 @@ import { MemberNotificationsScreen } from '../screens/member/MemberNotifications
 import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import { LegalScreen } from '../screens/member/LegalScreen';
+import { SpaScreen } from '../screens/member/SpaScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -98,10 +99,10 @@ export function MemberTabNavigator() {
       />
       <Tab.Screen
         name="Massage"
-        component={MemberMassageScreen}
+        component={SpaScreen}
         options={{
-          tabBarLabel: t('tabs.massage'),
-          tabBarIcon: ({ focused }) => tabIcon('◇', focused),
+          tabBarLabel: 'Spa',
+          tabBarIcon: ({ focused }) => tabIcon('🧖', focused),
         }}
       />
       <Tab.Screen
