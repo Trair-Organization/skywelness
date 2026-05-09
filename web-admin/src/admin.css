@@ -3415,3 +3415,17 @@ button.primary:disabled {
 .cell-popup-reschedule:hover {
   background: rgba(245, 158, 11, 0.2);
 }
+
+/* ─── Booked Cell Name ─────────────────────────────────────────────────────── */
+.cell-booked-name {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: block;
+}

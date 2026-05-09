@@ -129,27 +129,37 @@ export class SmsService {
   // ─── Hazır Mesaj Şablonları ─────────────────────────────────────────────────
 
   async sendReservationConfirmed(phone: string, trainerName: string, date: string, time: string) {
-    const msg = `Randevunuz onaylandi. ${date} ${time} - ${trainerName}. Skyland Wellness Club`;
+    const msg = `Sayin uyemiz, ${date} tarihinde saat ${time} icin ${trainerName} ile randevunuz olusturulmustur. Iyi seanslar dileriz. Skyland Wellness Club | 0212 XXX XX XX`;
     return this.send(phone, msg);
   }
 
   async sendReservationCancelled(phone: string, date: string, time: string) {
-    const msg = `Randevunuz iptal edildi. ${date} ${time}. Detay icin kulubu arayin. Skyland Wellness`;
+    const msg = `Sayin uyemiz, ${date} saat ${time} randevunuz iptal edilmistir. Yeni randevu icin uygulamamizi kullanabilirsiniz. Skyland Wellness Club`;
     return this.send(phone, msg);
   }
 
   async sendMemberApproved(phone: string, firstName: string) {
-    const msg = `Merhaba ${firstName}, Skyland Wellness Club uyeliginiz onaylandi. Hosgeldiniz!`;
+    const msg = `Merhaba ${firstName}, Skyland Wellness Club uyeliginiz onaylandi. Artik randevu alabilir, etkinliklere katilabilirsiniz. Hosgeldiniz!`;
     return this.send(phone, msg);
   }
 
   async sendNewBookingNotification(phone: string, memberName: string, date: string, time: string) {
-    const msg = `Yeni randevu: ${memberName} - ${date} ${time}. Skyland Wellness Club`;
+    const msg = `Yeni randevu bilgisi: ${memberName} - ${date} saat ${time}. Skyland Wellness Club`;
     return this.send(phone, msg);
   }
 
   async sendPackageAssigned(phone: string, packageName: string) {
-    const msg = `${packageName} paketiniz tanimlanmistir. Iyi seanslar! Skyland Wellness Club`;
+    const msg = `Sayin uyemiz, ${packageName} paketiniz basariyla tanimlanmistir. Iyi seanslar dileriz. Skyland Wellness Club`;
+    return this.send(phone, msg);
+  }
+
+  async sendReservationRescheduled(
+    phone: string,
+    newDate: string,
+    newTime: string,
+    trainerName: string,
+  ) {
+    const msg = `Sayin uyemiz, randevunuz ${newDate} saat ${newTime} olarak guncellenmistir. Egitmen: ${trainerName}. Skyland Wellness Club`;
     return this.send(phone, msg);
   }
 }

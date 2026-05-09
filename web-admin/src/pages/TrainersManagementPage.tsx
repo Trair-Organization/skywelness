@@ -707,7 +707,11 @@ export function TrainersManagementPage() {
                       {isDisabled && hasSlot && !isBooked && (
                         <span className="cell-check-past">✓</span>
                       )}
-                      {!isDisabled && isBooked && <span className="cell-booked">●</span>}
+                      {!isDisabled && isBooked && (
+                        <span className="cell-booked-name">
+                          {slotData?.bookedBy?.firstName} {slotData?.bookedBy?.lastName?.charAt(0)}.
+                        </span>
+                      )}
                       {!isDisabled && hasSlot && !isBooked && (
                         <span className="cell-check">Müsait</span>
                       )}
