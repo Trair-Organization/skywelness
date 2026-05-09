@@ -53,7 +53,7 @@ export class SpaAdminController {
 
   @Get('therapists')
   listTherapists(@CurrentUser() user: User) {
-    return this.spaService.listTherapists(user.tenantId);
+    return this.spaService.listTherapists(user.tenantId, true);
   }
 
   @Post('therapists')

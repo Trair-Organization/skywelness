@@ -31,8 +31,10 @@ export class SpaServiceService {
   }
 
   /** Masöz listesi (aktif olanlar). */
-  async listTherapists(tenantId: string) {
-    return this.therapistsRepo.find({ where: { tenantId, active: true }, order: { name: 'ASC' } });
+  async listTherapists(tenantId: string, includeInactive = false) {
+    const where: Record<string, unknown> = { tenantId };
+    if (!includeInactive) where.active = true;
+    return this.therapistsRepo.find({ where, order: { name: 'ASC' } });
   }
 
   /** Paket listesi (aktif olanlar). */
