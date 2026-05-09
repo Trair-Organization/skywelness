@@ -2010,3 +2010,275 @@ button.primary:disabled {
   margin: 0 0 10px;
   font-size: 0.9rem;
 }
+
+/* ─── Schedule Management ──────────────────────────────────────────────────── */
+.schedule-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  min-height: 500px;
+}
+
+.schedule-sidebar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  height: fit-content;
+}
+
+.schedule-sidebar-title {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.schedule-person {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+}
+
+.schedule-person:hover {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.schedule-person-active {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid var(--accent);
+}
+
+.schedule-person-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.schedule-person-type {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.schedule-calendar {
+  min-width: 0;
+}
+
+/* Week Navigation */
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.week-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  min-width: 160px;
+  text-align: center;
+}
+
+/* Week Grid */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.day-column {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+.day-header {
+  padding: 10px 8px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.day-name {
+  display: block;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.day-date {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.day-slots {
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-empty {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+.time-slot-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.time-slot-card.slot-unavailable {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.slot-time {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.slot-delete {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.slot-delete:hover {
+  opacity: 1;
+}
+
+/* Inline Form */
+.inline-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.inline-form input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+/* Therapist Schedule */
+.therapist-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.working-hours-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.wh-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wh-day {
+  width: 90px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.wh-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  max-width: 200px;
+}
+
+.wh-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.working-hours-display {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.wh-row-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.wh-day-display {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text);
+  min-width: 70px;
+}
+
+.wh-value {
+  font-size: 0.8rem;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.wh-value.wh-off {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+@media (max-width: 900px) {
+  .schedule-layout {
+    grid-template-columns: 1fr;
+  }
+  .week-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .week-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

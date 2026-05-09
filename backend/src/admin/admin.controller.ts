@@ -279,4 +279,120 @@ export class AdminController {
   ) {
     return this.adminMembers.assignPackageToMember(admin.tenantId, userId, body);
   }
+
+  // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
+
+  @Get('trainers/:trainerId/schedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTrainerSchedule(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.adminMembers.listTrainerSchedule(admin.tenantId, trainerId, from, to);
+  }
+
+  @Post('trainers/:trainerId/schedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  addTrainerAvailability(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Body() body: { date: string; startTime: string; endTime: string; available?: boolean },
+  ) {
+    return this.adminMembers.addTrainerAvailability(admin.tenantId, trainerId, body);
+  }
+
+  @Post('trainers/:trainerId/schedule/bulk')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  bulkAddTrainerAvailability(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Body()
+    body: {
+      startDate: string;
+      endDate: string;
+      weekdays: number[];
+      startTime: string;
+      endTime: string;
+    },
+  ) {
+    return this.adminMembers.bulkAddTrainerAvailability(admin.tenantId, trainerId, body);
+  }
+
+  @Patch('trainers/:trainerId/schedule/:availabilityId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updateTrainerAvailability(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Param('availabilityId', new ParseUUIDPipe({ version: '4' })) availabilityId: string,
+    @Body() body: { startTime?: string; endTime?: string; available?: boolean },
+  ) {
+    return this.adminMembers.updateTrainerAvailability(
+      admin.tenantId,
+      trainerId,
+      availabilityId,
+      body,
+    );
+  }
+
+  @Delete('trainers/:trainerId/schedule/:availabilityId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deleteTrainerAvailability(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Param('availabilityId', new ParseUUIDPipe({ version: '4' })) availabilityId: string,
+  ) {
+    return this.adminMembers.deleteTrainerAvailability(admin.tenantId, trainerId, availabilityId);
+  }
+
+  @Delete('trainers/:trainerId/schedule-day')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  clearTrainerDay(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Query('date') date: string,
+  ) {
+    return this.adminMembers.clearTrainerDay(admin.tenantId, trainerId, date);
+  }
+
+  // ─── Masöz Ajanda Yönetimi ───────────────────────────────────────────────────
+
+  @Get('therapists/schedules')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTherapistSchedules(@CurrentUser() admin: User) {
+    return this.adminMembers.listTherapistSchedules(admin.tenantId);
+  }
+
+  @Get('therapists/:therapistId/schedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getTherapistSchedule(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+  ) {
+    return this.adminMembers.getTherapistSchedule(admin.tenantId, therapistId);
+  }
+
+  @Patch('therapists/:therapistId/schedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updateTherapistSchedule(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+    @Body() body: { workingHours: Record<string, string> },
+  ) {
+    return this.adminMembers.updateTherapistSchedule(
+      admin.tenantId,
+      therapistId,
+      body.workingHours,
+    );
+  }
 }

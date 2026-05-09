@@ -12,6 +12,7 @@ import { MembersPage } from './pages/MembersPage';
 import { TrainersManagementPage } from './pages/TrainersManagementPage';
 import { SpaManagementPage } from './pages/SpaManagementPage';
 import { PackageTypesPage } from './pages/PackageTypesPage';
+import { ScheduleManagementPage } from './pages/ScheduleManagementPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
@@ -51,6 +52,7 @@ function AppRoutes() {
         <Route path="/members/pending" element={<PendingMembersPage />} />
         <Route path="/trainers" element={<TrainersManagementPage />} />
         <Route path="/packages" element={<PackageTypesPage />} />
+        <Route path="/schedule" element={<ScheduleManagementPage />} />
         <Route path="/spa" element={<SpaManagementPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />

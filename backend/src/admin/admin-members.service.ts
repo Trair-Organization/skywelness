@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
+import { Availability } from '../database/entities/availability.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
+import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
@@ -23,6 +25,10 @@ export class AdminMembersService {
     private readonly reservationsRepo: Repository<Reservation>,
     @InjectRepository(Trainer)
     private readonly trainersRepo: Repository<Trainer>,
+    @InjectRepository(Availability)
+    private readonly availabilityRepo: Repository<Availability>,
+    @InjectRepository(SpaTherapist)
+    private readonly spaTherapistsRepo: Repository<SpaTherapist>,
     @InjectRepository(ClubEvent)
     private readonly eventsRepo: Repository<ClubEvent>,
   ) {}
@@ -496,5 +502,167 @@ export class AdminMembersService {
     });
     await this.packagesRepo.save(pkg);
     return { ok: true as const, packageId: pkg.id };
+  }
+
+  // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
+
+  /** Eğitmenin belirli tarih aralığındaki müsaitlik kayıtlarını getir */
+  async listTrainerSchedule(tenantId: string, trainerId: string, from: string, to: string) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    const rows = await this.availabilityRepo.find({
+      where: { trainerId, date: Between(from, to) },
+      order: { date: 'ASC', startTime: 'ASC' },
+    });
+    return rows;
+  }
+
+  /** Eğitmene müsaitlik bloğu ekle (tek gün, saat aralığı) */
+  async addTrainerAvailability(
+    tenantId: string,
+    trainerId: string,
+    data: { date: string; startTime: string; endTime: string; available?: boolean },
+  ) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    const row = this.availabilityRepo.create({
+      trainerId,
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      available: data.available !== false,
+    });
+    return this.availabilityRepo.save(row);
+  }
+
+  /** Toplu müsaitlik ekle (haftalık tekrar) */
+  async bulkAddTrainerAvailability(
+    tenantId: string,
+    trainerId: string,
+    data: {
+      startDate: string;
+      endDate: string;
+      weekdays: number[]; // 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
+      startTime: string;
+      endTime: string;
+    },
+  ) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (start > end)
+      throw new BadRequestException('Başlangıç tarihi bitiş tarihinden sonra olamaz');
+
+    const rows: Availability[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      if (data.weekdays.includes(current.getDay())) {
+        rows.push(
+          this.availabilityRepo.create({
+            trainerId,
+            date: current.toISOString().slice(0, 10),
+            startTime: data.startTime,
+            endTime: data.endTime,
+            available: true,
+          }),
+        );
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    if (rows.length === 0) return { created: 0 };
+    await this.availabilityRepo.save(rows);
+    return { created: rows.length };
+  }
+
+  /** Müsaitlik kaydını güncelle */
+  async updateTrainerAvailability(
+    tenantId: string,
+    trainerId: string,
+    availabilityId: string,
+    data: { startTime?: string; endTime?: string; available?: boolean },
+  ) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    const row = await this.availabilityRepo.findOne({ where: { id: availabilityId, trainerId } });
+    if (!row) throw new NotFoundException('Müsaitlik kaydı bulunamadı');
+
+    if (data.startTime !== undefined) row.startTime = data.startTime;
+    if (data.endTime !== undefined) row.endTime = data.endTime;
+    if (data.available !== undefined) row.available = data.available;
+    return this.availabilityRepo.save(row);
+  }
+
+  /** Müsaitlik kaydını sil */
+  async deleteTrainerAvailability(tenantId: string, trainerId: string, availabilityId: string) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    const row = await this.availabilityRepo.findOne({ where: { id: availabilityId, trainerId } });
+    if (!row) throw new NotFoundException('Müsaitlik kaydı bulunamadı');
+    await this.availabilityRepo.remove(row);
+    return { ok: true as const };
+  }
+
+  /** Eğitmenin belirli tarihteki tüm müsaitliklerini sil */
+  async clearTrainerDay(tenantId: string, trainerId: string, date: string) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    await this.availabilityRepo.delete({ trainerId, date });
+    return { ok: true as const };
+  }
+
+  // ─── Masöz Ajanda Yönetimi ───────────────────────────────────────────────────
+
+  /** Masözün çalışma saatlerini getir */
+  async getTherapistSchedule(tenantId: string, therapistId: string) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+    return {
+      id: therapist.id,
+      name: therapist.name,
+      workingHours: therapist.workingHours,
+      active: therapist.active,
+    };
+  }
+
+  /** Masözün çalışma saatlerini güncelle */
+  async updateTherapistSchedule(
+    tenantId: string,
+    therapistId: string,
+    workingHours: Record<string, string>,
+  ) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+    therapist.workingHours = workingHours;
+    await this.spaTherapistsRepo.save(therapist);
+    return { ok: true as const };
+  }
+
+  /** Tüm masözlerin çalışma saatlerini getir */
+  async listTherapistSchedules(tenantId: string) {
+    const therapists = await this.spaTherapistsRepo.find({
+      where: { tenantId },
+      order: { name: 'ASC' },
+    });
+    return therapists.map((t) => ({
+      id: t.id,
+      name: t.name,
+      phone: t.phone,
+      photoUrl: t.photoUrl,
+      workingHours: t.workingHours,
+      active: t.active,
+      specialties: t.specialties,
+    }));
   }
 }
