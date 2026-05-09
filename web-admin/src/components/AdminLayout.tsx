@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
@@ -40,6 +41,7 @@ const TRAINER_NAV: NavItem[] = [
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   if (!user) return <>{children}</>;
 
@@ -58,8 +60,20 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         : 'Kulüp Yöneticisi';
 
   return (
-    <div className="admin-layout">
-      <aside className="admin-sidebar">
+    <div className={`admin-layout ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
+      {/* Hamburger Button */}
+      <button
+        className="hamburger-btn"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        title={sidebarOpen ? 'Menüyü Kapat' : 'Menüyü Aç'}
+      >
+        {sidebarOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="sidebar-brand-icon">⚡</span>
           <span className="sidebar-brand-text">Wellness Club</span>
@@ -70,6 +84,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               key={item.path}
               to={item.path}
               className={({ isActive }) => `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
+              onClick={() => {
+                if (window.innerWidth < 768) setSidebarOpen(false);
+              }}
             >
               <span className="sidebar-link-icon">{item.icon}</span>
               <span className="sidebar-link-label">{item.label}</span>
@@ -100,7 +117,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
-      <main className="admin-main">{children}</main>
+      <main className={`admin-main ${sidebarOpen ? '' : 'main-expanded'}`}>{children}</main>
     </div>
   );
 }

@@ -36,7 +36,13 @@ type AvailabilityRow = {
   endTime: string;
   available: boolean;
   booked: boolean;
-  bookedBy: { firstName: string; lastName: string; status: string } | null;
+  bookedBy: {
+    reservationId: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    status: string;
+  } | null;
 };
 
 const SESSION_TYPE_OPTIONS = [
@@ -345,6 +351,18 @@ export function TrainersManagementPage() {
     void loadTrainerSchedule(scheduleTrainer.id, weekOffset);
   }
 
+  async function cancelReservation(reservationId: string) {
+    if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) return;
+    try {
+      await apiJson(`/admin/reservations/${reservationId}/cancel`, { method: 'POST' });
+      setSuccess('✅ Rezervasyon iptal edildi');
+      if (scheduleTrainer) void loadTrainerSchedule(scheduleTrainer.id, weekOffset);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'İptal başarısız');
+    }
+  }
+
   async function clearDay(date: string) {
     if (!scheduleTrainer) return;
     if (!confirm(`${date} tarihindeki tüm saatleri silmek istiyor musunuz?`)) return;
@@ -615,12 +633,34 @@ export function TrainersManagementPage() {
                           {isBooked && slotData?.bookedBy && (
                             <div className="cell-popup-booked">
                               👤 {slotData.bookedBy.firstName} {slotData.bookedBy.lastName}
+                              {slotData.bookedBy.phone && (
+                                <a
+                                  href={`tel:${slotData.bookedBy.phone}`}
+                                  className="cell-popup-phone"
+                                >
+                                  📞 {slotData.bookedBy.phone}
+                                </a>
+                              )}
                             </div>
                           )}
                           {hasSlot ? (
                             isBooked ? (
-                              <div className="cell-popup-info">
-                                🔵 Randevu alınmış — kapatılamaz
+                              <div className="cell-popup-actions">
+                                <div className="cell-popup-info">
+                                  🔵 Randevu:{' '}
+                                  {slotData?.bookedBy?.status === 'confirmed'
+                                    ? 'Onaylı'
+                                    : 'Bekliyor'}
+                                </div>
+                                <button
+                                  className="cell-popup-btn cell-popup-cancel"
+                                  onClick={() => {
+                                    void cancelReservation(slotData!.bookedBy!.reservationId);
+                                    setCellPopup(null);
+                                  }}
+                                >
+                                  ❌ Rezervasyonu İptal Et
+                                </button>
                               </div>
                             ) : (
                               <button

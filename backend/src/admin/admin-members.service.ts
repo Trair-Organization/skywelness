@@ -692,6 +692,25 @@ export class AdminMembersService {
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
 
+  /** Admin herhangi bir rezervasyonu iptal eder (pending veya confirmed) */
+  async cancelReservationByAdmin(tenantId: string, reservationId: string) {
+    const reservation = await this.reservationsRepo.findOne({
+      where: { id: reservationId, tenantId },
+      relations: ['user'],
+    });
+    if (!reservation) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (
+      reservation.status === ReservationStatus.CANCELLED ||
+      reservation.status === ReservationStatus.COMPLETED
+    ) {
+      throw new BadRequestException('Bu rezervasyon zaten iptal/tamamlanmış');
+    }
+    reservation.status = ReservationStatus.CANCELLED;
+    reservation.cancelledAt = new Date();
+    await this.reservationsRepo.save(reservation);
+    return { ok: true as const, cancelledReservationId: reservationId };
+  }
+
   /** Eğitmenin belirli tarih aralığındaki müsaitlik kayıtlarını getir (rezervasyon durumu dahil) */
   async listTrainerSchedule(tenantId: string, trainerId: string, from: string, to: string) {
     const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
@@ -730,8 +749,10 @@ export class AdminMembersService {
         booked: !!booking,
         bookedBy: booking
           ? {
+              reservationId: booking.id,
               firstName: booking.user?.firstName,
               lastName: booking.user?.lastName,
+              phone: booking.user?.phone,
               status: booking.status,
             }
           : null,

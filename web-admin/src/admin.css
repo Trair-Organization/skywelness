@@ -3283,3 +3283,31 @@ button.primary:disabled {
   background: transparent;
   border: 2px solid #3b82f6;
 }
+
+/* ─── Cell Popup Enhancements ──────────────────────────────────────────────── */
+.cell-popup-phone {
+  display: block;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.78rem;
+  margin-top: 3px;
+}
+
+.cell-popup-phone:hover {
+  text-decoration: underline;
+}
+
+.cell-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cell-popup-cancel {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.cell-popup-cancel:hover {
+  background: rgba(239, 68, 68, 0.2);
+}

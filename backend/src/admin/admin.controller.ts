@@ -208,6 +208,17 @@ export class AdminController {
     return this.bookingService.rejectReservationByAdmin(admin.tenantId, reservationId);
   }
 
+  /** Admin herhangi bir rezervasyonu iptal edebilir (pending veya confirmed) */
+  @Post('reservations/:reservationId/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  cancelReservationByAdmin(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+  ) {
+    return this.adminMembers.cancelReservationByAdmin(admin.tenantId, reservationId);
+  }
+
   // ─── Eğitmen CRUD ────────────────────────────────────────────────────────────
 
   @Post('trainers')
