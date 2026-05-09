@@ -7,6 +7,7 @@ const CLUB_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
   { path: '/trainers', icon: '🏋️', label: 'Eğitmenler' },
+  { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
   { path: '/spa', icon: '🧖', label: 'Spa & Wellness' },
   { path: '/leads', icon: '📋', label: 'Gelen Talepler' },

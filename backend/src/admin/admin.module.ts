@@ -7,6 +7,8 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Package } from '../database/entities/package.entity';
+import { PackageType } from '../database/entities/package-type.entity';
+import { Reservation } from '../database/entities/reservation.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { AdminController } from './admin.controller';
@@ -19,7 +21,15 @@ import { AdminMembersService } from './admin-members.service';
     AuthModule,
     BookingModule,
     MailModule,
-    TypeOrmModule.forFeature([User, Package, Trainer, ClubEvent, ClubEventRegistration]),
+    TypeOrmModule.forFeature([
+      User,
+      Package,
+      PackageType,
+      Reservation,
+      Trainer,
+      ClubEvent,
+      ClubEventRegistration,
+    ]),
   ],
   controllers: [AdminController, AdminEventsController],
   providers: [RolesGuard, AdminMembersService, AdminEventsService],

@@ -14,6 +14,26 @@ type Member = {
   createdAt: string;
 };
 
+type MemberPackage = {
+  id: string;
+  status: string;
+  remainingSessions: number;
+  expiresAt: string;
+  assignedTrainerId: string | null;
+  assignedTrainerName: string | null;
+  packageType: { id: string; name: string; sessionType: string };
+};
+
+type PackageType = {
+  id: string;
+  name: string;
+  sessionCount: number;
+  price: string;
+  validityDays: number;
+  sessionType: string;
+  active: boolean;
+};
+
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tümü' },
   { value: 'active', label: 'Aktif' },
@@ -29,6 +49,14 @@ export function MembersPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+
+  // Üye detay paneli
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [memberPackages, setMemberPackages] = useState<MemberPackage[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(false);
+  const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
+  const [assigningPackage, setAssigningPackage] = useState(false);
+  const [selectedPackageTypeId, setSelectedPackageTypeId] = useState('');
 
   const load = useCallback(async (status: string, searchTerm: string) => {
     setLoading(true);
@@ -77,6 +105,42 @@ export function MembersPage() {
     }
   }
 
+  async function openMemberDetail(member: Member) {
+    setSelectedMember(member);
+    setLoadingPackages(true);
+    try {
+      const [pkgs, types] = await Promise.all([
+        apiJson<MemberPackage[]>(`/admin/members/${member.id}/packages`),
+        apiJson<PackageType[]>('/admin/package-types'),
+      ]);
+      setMemberPackages(pkgs);
+      setPackageTypes(types.filter((t) => t.active));
+    } catch {
+      setMemberPackages([]);
+    } finally {
+      setLoadingPackages(false);
+    }
+  }
+
+  async function assignPackage() {
+    if (!selectedMember || !selectedPackageTypeId) return;
+    setAssigningPackage(true);
+    try {
+      await apiJson(`/admin/members/${selectedMember.id}/assign-package`, {
+        method: 'POST',
+        body: JSON.stringify({ packageTypeId: selectedPackageTypeId }),
+      });
+      // Reload packages
+      const pkgs = await apiJson<MemberPackage[]>(`/admin/members/${selectedMember.id}/packages`);
+      setMemberPackages(pkgs);
+      setSelectedPackageTypeId('');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Paket atanamadı');
+    } finally {
+      setAssigningPackage(false);
+    }
+  }
+
   function handleStatusChange(val: string) {
     setStatusFilter(val);
     setSearchParams((prev) => {
@@ -100,7 +164,7 @@ export function MembersPage() {
       <div className="dashboard-header">
         <div>
           <h1 className="dashboard-title">Üye Yönetimi</h1>
-          <p className="dashboard-subtitle">Tüm üyeleri görüntüle, onayla veya reddet</p>
+          <p className="dashboard-subtitle">Tüm üyeleri görüntüle, onayla, paket ata</p>
         </div>
       </div>
 
@@ -129,6 +193,94 @@ export function MembersPage() {
 
       {error && <p className="error">{error}</p>}
 
+      {/* Üye Detay Paneli */}
+      {selectedMember && (
+        <div className="card member-detail-panel" style={{ marginBottom: 20 }}>
+          <div className="member-detail-header">
+            <div className="member-avatar">
+              {selectedMember.firstName[0]}
+              {selectedMember.lastName[0]}
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>
+                {selectedMember.firstName} {selectedMember.lastName}
+              </h3>
+              <p className="muted" style={{ margin: 0 }}>
+                {selectedMember.email} {selectedMember.phone && `· ${selectedMember.phone}`}
+              </p>
+            </div>
+            <button
+              className="btn-sm btn-outline"
+              onClick={() => setSelectedMember(null)}
+              style={{ marginLeft: 'auto' }}
+            >
+              ✕ Kapat
+            </button>
+          </div>
+
+          <h4 style={{ marginTop: 16 }}>📦 Paketleri</h4>
+          {loadingPackages ? (
+            <p className="muted">Yükleniyor...</p>
+          ) : memberPackages.length === 0 ? (
+            <p className="muted">Bu üyenin henüz paketi yok.</p>
+          ) : (
+            <div className="packages-list">
+              {memberPackages.map((pkg) => (
+                <div key={pkg.id} className="package-row">
+                  <div className="package-info">
+                    <strong>{pkg.packageType.name}</strong>
+                    <span
+                      className={`status-badge status-${pkg.status === 'active' ? 'active' : pkg.status === 'depleted' ? 'rejected' : 'pending_approval'}`}
+                    >
+                      {pkg.status === 'active'
+                        ? 'Aktif'
+                        : pkg.status === 'depleted'
+                          ? 'Tükendi'
+                          : 'Süresi Doldu'}
+                    </span>
+                  </div>
+                  <div className="package-meta">
+                    <span>🎯 {pkg.remainingSessions} seans kaldı</span>
+                    <span>📅 Son: {pkg.expiresAt}</span>
+                    {pkg.assignedTrainerName && <span>🏋️ {pkg.assignedTrainerName}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Paket Atama */}
+          {packageTypes.length > 0 && (
+            <div className="assign-package-form">
+              <h4>➕ Yeni Paket Ata</h4>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <select
+                  value={selectedPackageTypeId}
+                  onChange={(e) => setSelectedPackageTypeId(e.target.value)}
+                  className="small-select"
+                  style={{ minWidth: 200 }}
+                >
+                  <option value="">Paket seçin...</option>
+                  {packageTypes.map((pt) => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.name} ({pt.sessionCount} seans · ₺
+                      {Number(pt.price).toLocaleString('tr-TR')})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="btn-sm btn-success"
+                  onClick={() => void assignPackage()}
+                  disabled={!selectedPackageTypeId || assigningPackage}
+                >
+                  {assigningPackage ? '...' : 'Ata'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p className="muted">Yükleniyor...</p>
       ) : members.length === 0 ? (
@@ -146,13 +298,17 @@ export function MembersPage() {
                 <th>Telefon</th>
                 <th>Durum</th>
                 <th>Son Giriş</th>
-                <th>Kayıt Tarihi</th>
+                <th>Kayıt</th>
                 <th>İşlemler</th>
               </tr>
             </thead>
             <tbody>
               {members.map((m) => (
-                <tr key={m.id}>
+                <tr
+                  key={m.id}
+                  onClick={() => void openMemberDetail(m)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td>
                     <div className="cell-user">
                       <div className="cell-avatar">
@@ -177,7 +333,7 @@ export function MembersPage() {
                   </td>
                   <td>{m.lastLogin ? new Date(m.lastLogin).toLocaleDateString('tr-TR') : '-'}</td>
                   <td>{new Date(m.createdAt).toLocaleDateString('tr-TR')}</td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {m.accountStatus === 'pending_approval' && (
                       <div className="action-btns">
                         <button
@@ -203,6 +359,14 @@ export function MembersPage() {
                         disabled={actingId !== null}
                       >
                         Tekrar Onayla
+                      </button>
+                    )}
+                    {m.accountStatus === 'active' && (
+                      <button
+                        className="btn-sm btn-outline"
+                        onClick={() => void openMemberDetail(m)}
+                      >
+                        📦 Paketler
                       </button>
                     )}
                   </td>

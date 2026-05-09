@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -186,5 +188,95 @@ export class AdminController {
     @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
   ) {
     return this.bookingService.rejectReservationByAdmin(admin.tenantId, reservationId);
+  }
+
+  // ─── Eğitmen CRUD ────────────────────────────────────────────────────────────
+
+  @Post('trainers')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  createTrainer(@CurrentUser() admin: User, @Body() body: Record<string, unknown>) {
+    return this.adminMembers.createTrainer(admin.tenantId, body as never);
+  }
+
+  @Patch('trainers/:trainerId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updateTrainer(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.adminMembers.updateTrainer(admin.tenantId, trainerId, body);
+  }
+
+  @Delete('trainers/:trainerId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deleteTrainer(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+  ) {
+    return this.adminMembers.deleteTrainer(admin.tenantId, trainerId);
+  }
+
+  @Get('trainers/:trainerId/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getTrainerStats(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+  ) {
+    return this.adminMembers.getTrainerStats(admin.tenantId, trainerId);
+  }
+
+  // ─── Paket Tipi CRUD ─────────────────────────────────────────────────────────
+
+  @Get('package-types')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listPackageTypes(@CurrentUser() admin: User) {
+    return this.adminMembers.listPackageTypes(admin.tenantId);
+  }
+
+  @Post('package-types')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  createPackageType(@CurrentUser() admin: User, @Body() body: Record<string, unknown>) {
+    return this.adminMembers.createPackageType(admin.tenantId, body as never);
+  }
+
+  @Patch('package-types/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updatePackageType(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.adminMembers.updatePackageType(admin.tenantId, id, body);
+  }
+
+  @Delete('package-types/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deletePackageType(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.adminMembers.deletePackageType(admin.tenantId, id);
+  }
+
+  // ─── Üyeye Paket Atama ───────────────────────────────────────────────────────
+
+  @Post('members/:userId/assign-package')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  assignPackageToMember(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { packageTypeId: string; assignedTrainerId?: string },
+  ) {
+    return this.adminMembers.assignPackageToMember(admin.tenantId, userId, body);
   }
 }

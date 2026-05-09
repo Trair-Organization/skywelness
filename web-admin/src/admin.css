@@ -1923,3 +1923,90 @@ button.primary:disabled {
 .admin-main .messages-layout {
   height: calc(100vh - 140px);
 }
+
+/* ─── Trainer Actions ──────────────────────────────────────────────────────── */
+.trainer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-primary-lg {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+.btn-primary-lg:hover {
+  background: var(--accent-hover);
+}
+
+.mini-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mini-stats strong {
+  color: var(--text);
+}
+
+/* ─── Member Detail Panel ──────────────────────────────────────────────────── */
+.member-detail-panel {
+  border-color: var(--accent);
+}
+
+.member-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.packages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.package-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.package-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.package-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.assign-package-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.assign-package-form h4 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
