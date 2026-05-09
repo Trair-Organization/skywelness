@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson } from '../../api/client';
@@ -38,6 +38,7 @@ type ChatRouteParams = {
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<ChatRouteParams, 'Chat'>>();
+  const navigation = useNavigation();
   const { conversationId, otherUser } = route.params;
   const { token, tenant } = useMemberAuth();
   const [messages, setMessages] = useState<MessageRow[]>([]);
@@ -121,6 +122,9 @@ export function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.backTxt}>←</Text>
+          </Pressable>
           <View style={styles.headerAvatar}>
             <Text style={styles.headerInitials}>
               {otherUser.firstName[0]}
@@ -192,6 +196,19 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: premium.glassBorder,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backTxt: {
+    color: premium.text,
+    fontSize: 18,
+    fontWeight: '700',
   },
   headerAvatar: {
     width: 36,

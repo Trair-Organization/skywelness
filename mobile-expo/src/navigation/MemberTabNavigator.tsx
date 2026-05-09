@@ -1,6 +1,9 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, Text } from 'react-native';
+import { apiJson } from '../api/client';
+import { useMemberAuth } from '../auth/MemberAuthContext';
 import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
 import { MemberEventsScreen } from '../screens/member/MemberEventsScreen';
 import {
@@ -28,6 +31,27 @@ function tabIcon(label: string, active: boolean) {
 
 export function MemberTabNavigator() {
   const { t } = useTranslation();
+  const { token, tenant } = useMemberAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    if (!token || !tenant) return;
+    try {
+      const count = await apiJson<number>('/messages/unread-count', {
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      setUnreadCount(typeof count === 'number' ? count : 0);
+    } catch {
+      /* ignore */
+    }
+  }, [token, tenant]);
+
+  useEffect(() => {
+    fetchUnread();
+    const id = setInterval(fetchUnread, 15000);
+    return () => clearInterval(id);
+  }, [fetchUnread]);
 
   return (
     <Tab.Navigator
@@ -111,6 +135,8 @@ export function MemberTabNavigator() {
         options={{
           tabBarLabel: t('tabs.messages'),
           tabBarIcon: ({ focused }) => tabIcon('💬', focused),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 10, fontWeight: '800' },
         }}
       />
       <Tab.Screen

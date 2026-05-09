@@ -1527,6 +1527,15 @@ export function ClubConnectScreen() {
                 >
                   <Text style={styles.modalPrimaryTxt}>Kulube Katil</Text>
                 </Pressable>
+                <Pressable
+                  style={styles.modalContactBtn}
+                  onPress={() => {
+                    setPreviewClub(null);
+                    navigation.navigate('Login');
+                  }}
+                >
+                  <Text style={styles.modalContactBtnTxt}>💬 İletişime Geç</Text>
+                </Pressable>
                 <Pressable style={styles.modalSecondaryBtn} onPress={() => setPreviewClub(null)}>
                   <Text style={styles.modalSecondaryTxt}>{t('common.cancel')}</Text>
                 </Pressable>
@@ -2607,6 +2616,22 @@ const styles = StyleSheet.create({
     color: premium.accentGreen,
     fontSize: 16,
     fontWeight: '800',
+  },
+  modalContactBtn: {
+    width: '100%',
+    minHeight: 44,
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.4)',
+    backgroundColor: 'rgba(56,189,248,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  modalContactBtnTxt: {
+    color: premium.accentBlue,
+    fontSize: 15,
+    fontWeight: '700',
   },
   modalSecondaryBtn: {
     width: '100%',
