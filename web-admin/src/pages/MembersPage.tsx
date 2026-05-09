@@ -159,6 +159,24 @@ export function MembersPage() {
     });
   }
 
+  function exportCSV() {
+    if (members.length === 0) return;
+    const header = 'Ad,Soyad,E-posta,Telefon,Durum,Kayıt Tarihi\n';
+    const csv = members
+      .map(
+        (m) =>
+          `${m.firstName},${m.lastName},${m.email},${m.phone || ''},${m.accountStatus},${new Date(m.createdAt).toLocaleDateString('tr-TR')}`,
+      )
+      .join('\n');
+    const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `uyeler_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="dashboard-page">
       <div className="dashboard-header">
@@ -166,6 +184,9 @@ export function MembersPage() {
           <h1 className="dashboard-title">Üye Yönetimi</h1>
           <p className="dashboard-subtitle">Tüm üyeleri görüntüle, onayla, paket ata</p>
         </div>
+        <button className="btn-sm btn-outline" onClick={() => exportCSV()}>
+          📥 Excel İndir
+        </button>
       </div>
 
       {/* Filtreler */}

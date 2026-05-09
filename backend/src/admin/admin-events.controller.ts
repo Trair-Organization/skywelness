@@ -48,4 +48,12 @@ export class AdminEventsController {
   remove(@CurrentUser() admin: User, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.adminEvents.remove(admin.tenantId, id);
   }
+
+  @Get(':id/participants')
+  listParticipants(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.adminEvents.listParticipants(admin.tenantId, id);
+  }
 }

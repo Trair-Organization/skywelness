@@ -47,6 +47,21 @@ export function EventsPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Katılımcı modal
+  const [participants, setParticipants] = useState<{
+    eventTitle: string;
+    capacity: number;
+    participantCount: number;
+    participants: Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string | null;
+      registeredAt: string;
+    }>;
+  } | null>(null);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coachName, setCoachName] = useState('');
@@ -142,8 +157,62 @@ export function EventsPage() {
     }
   }
 
+  async function loadParticipants(eventId: string) {
+    try {
+      const data = await apiJson<typeof participants>(`/admin/events/${eventId}/participants`);
+      setParticipants(data);
+    } catch {
+      // ignore
+    }
+  }
+
   return (
     <div className="shell">
+      {/* Katılımcı Modal */}
+      {participants && (
+        <div className="modal-overlay" onClick={() => setParticipants(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>👥 {participants.eventTitle}</h3>
+              <button className="modal-close" onClick={() => setParticipants(null)}>
+                ✕
+              </button>
+            </div>
+            <p className="muted">
+              {participants.participantCount} / {participants.capacity} katılımcı
+            </p>
+            {participants.participants.length === 0 ? (
+              <p className="muted">Henüz katılımcı yok.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Ad Soyad</th>
+                    <th>E-posta</th>
+                    <th>Telefon</th>
+                    <th>Kayıt Tarihi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participants.participants.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        <strong>
+                          {p.firstName} {p.lastName}
+                        </strong>
+                      </td>
+                      <td>{p.email}</td>
+                      <td>{p.phone || '-'}</td>
+                      <td>{new Date(p.registeredAt).toLocaleDateString('tr-TR')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
       <header className="topbar">
         <div>
           <h1>{t('eventsPage.title')}</h1>
@@ -306,6 +375,13 @@ export function EventsPage() {
                   <td>{r.capacity}</td>
                   <td>{r.published ? t('eventsPage.yes') : t('eventsPage.no')}</td>
                   <td>
+                    <button
+                      type="button"
+                      className="small"
+                      onClick={() => void loadParticipants(r.id)}
+                    >
+                      👥
+                    </button>
                     <button
                       type="button"
                       className="secondary"

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClubEvent } from '../database/entities/club-event.entity';
+import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { CreateClubEventDto } from './dto/create-club-event.dto';
 import { UpdateClubEventDto } from './dto/update-club-event.dto';
 
@@ -10,6 +11,8 @@ export class AdminEventsService {
   constructor(
     @InjectRepository(ClubEvent)
     private readonly eventsRepo: Repository<ClubEvent>,
+    @InjectRepository(ClubEventRegistration)
+    private readonly registrationsRepo: Repository<ClubEventRegistration>,
   ) {}
 
   async list(tenantId: string) {
@@ -88,5 +91,33 @@ export class AdminEventsService {
       throw new NotFoundException('Event not found');
     }
     return { ok: true as const };
+  }
+
+  /** Etkinlik katılımcı listesi */
+  async listParticipants(tenantId: string, eventId: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId, tenantId } });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const registrations = await this.registrationsRepo.find({
+      where: { clubEventId: eventId },
+      relations: ['user'],
+      order: { createdAt: 'ASC' },
+    });
+
+    return {
+      eventId: event.id,
+      eventTitle: event.title,
+      capacity: event.capacity,
+      participantCount: registrations.length,
+      participants: registrations.map((r) => ({
+        id: r.id,
+        userId: r.userId,
+        firstName: r.user.firstName,
+        lastName: r.user.lastName,
+        email: r.user.email,
+        phone: r.user.phone,
+        registeredAt: r.createdAt,
+      })),
+    };
   }
 }
