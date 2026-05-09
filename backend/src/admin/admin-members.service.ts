@@ -66,6 +66,46 @@ export class AdminMembersService {
       .andWhere('u.createdAt >= :since', { since: thirtyDaysAgo })
       .getCount();
 
+    // Bugünün randevuları
+    const today = new Date().toISOString().slice(0, 10);
+    const todayStart = new Date(`${today}T00:00:00`);
+    const todayEnd = new Date(`${today}T23:59:59`);
+    const todayReservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.trainer', 't')
+      .leftJoinAndSelect('t.user', 'tu')
+      .leftJoinAndSelect('r.user', 'u')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :start', { start: todayStart })
+      .andWhere('r.startTime <= :end', { end: todayEnd })
+      .orderBy('r.startTime', 'ASC')
+      .getMany();
+
+    const todayBookings = todayReservations.map((r) => ({
+      id: r.id,
+      time: r.startTime,
+      status: r.status,
+      sessionType: r.sessionType,
+      trainerName: r.trainer?.user
+        ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+        : null,
+      memberName: r.user ? `${r.user.firstName} ${r.user.lastName}` : null,
+    }));
+
+    // Bu ayki gelir (paket satışları)
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const monthlyRevenue = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.packageType', 'pt')
+      .select('SUM(CAST(pt.price AS DECIMAL))', 'total')
+      .addSelect('COUNT(p.id)', 'count')
+      .where('pt.tenantId = :tenantId', { tenantId })
+      .andWhere('p.createdAt >= :since', { since: startOfMonth })
+      .getRawOne<{ total: string | null; count: string }>();
+
     return {
       totalMembers,
       activeMembers,
@@ -74,6 +114,10 @@ export class AdminMembersService {
       totalEvents,
       upcomingEvents,
       newMembersThisMonth,
+      todayBookings,
+      todayBookingsCount: todayBookings.length,
+      monthlyRevenue: Number(monthlyRevenue?.total || 0),
+      monthlyPackagesSold: Number(monthlyRevenue?.count || 0),
     };
   }
 
@@ -506,7 +550,7 @@ export class AdminMembersService {
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
 
-  /** Eğitmenin belirli tarih aralığındaki müsaitlik kayıtlarını getir */
+  /** Eğitmenin belirli tarih aralığındaki müsaitlik kayıtlarını getir (rezervasyon durumu dahil) */
   async listTrainerSchedule(tenantId: string, trainerId: string, from: string, to: string) {
     const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });
     if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
@@ -515,7 +559,42 @@ export class AdminMembersService {
       where: { trainerId, date: Between(from, to) },
       order: { date: 'ASC', startTime: 'ASC' },
     });
-    return rows;
+
+    // Bu tarih aralığındaki onaylı/bekleyen rezervasyonları getir
+    const reservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .where('r.trainerId = :trainerId', { trainerId })
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :from', { from: new Date(`${from}T00:00:00`) })
+      .andWhere('r.startTime < :to', { to: new Date(`${to}T23:59:59`) })
+      .getMany();
+
+    return rows.map((row) => {
+      // Bu slot'a denk gelen rezervasyon var mı?
+      const slotStart = new Date(`${row.date}T${row.startTime}`);
+      const slotEnd = new Date(`${row.date}T${row.endTime}`);
+      const booking = reservations.find((r) => {
+        return r.startTime >= slotStart && r.startTime < slotEnd;
+      });
+      return {
+        id: row.id,
+        trainerId: row.trainerId,
+        date: row.date,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        available: row.available,
+        booked: !!booking,
+        bookedBy: booking
+          ? {
+              firstName: booking.user?.firstName,
+              lastName: booking.user?.lastName,
+              status: booking.status,
+            }
+          : null,
+      };
+    });
   }
 
   /** Eğitmene müsaitlik bloğu ekle (tek gün, saat aralığı) */

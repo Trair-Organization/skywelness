@@ -35,6 +35,8 @@ type AvailabilityRow = {
   startTime: string;
   endTime: string;
   available: boolean;
+  booked: boolean;
+  bookedBy: { firstName: string; lastName: string; status: string } | null;
 };
 
 const SESSION_TYPE_OPTIONS = [
@@ -556,15 +558,17 @@ export function TrainersManagementPage() {
               <div key={slot.start} className="calendar-row">
                 <div className="calendar-time-cell">{slot.label}</div>
                 {weekDays.map((day) => {
-                  const hasSlot = schedule.some(
+                  const slotData = schedule.find(
                     (s) => s.date === day.date && s.startTime === slot.start,
                   );
+                  const hasSlot = !!slotData;
+                  const isBooked = slotData?.booked || false;
                   const isPopupTarget =
                     cellPopup?.date === day.date && cellPopup?.start === slot.start;
                   return (
                     <div
                       key={`${day.date}-${slot.start}`}
-                      className={`calendar-cell ${hasSlot ? 'calendar-cell-active' : ''} ${isPopupTarget ? 'calendar-cell-selected' : ''}`}
+                      className={`calendar-cell ${hasSlot ? (isBooked ? 'calendar-cell-booked' : 'calendar-cell-active') : ''} ${isPopupTarget ? 'calendar-cell-selected' : ''}`}
                       onClick={() =>
                         setCellPopup(
                           isPopupTarget
@@ -573,22 +577,34 @@ export function TrainersManagementPage() {
                         )
                       }
                     >
-                      {hasSlot && <span className="cell-check">✓</span>}
+                      {isBooked && <span className="cell-booked">●</span>}
+                      {hasSlot && !isBooked && <span className="cell-check">✓</span>}
                       {isPopupTarget && (
                         <div className="cell-popup" onClick={(e) => e.stopPropagation()}>
                           <div className="cell-popup-header">
                             {day.label.slice(0, 3)} {day.dayNum} · {slot.label}
                           </div>
+                          {isBooked && slotData?.bookedBy && (
+                            <div className="cell-popup-booked">
+                              👤 {slotData.bookedBy.firstName} {slotData.bookedBy.lastName}
+                            </div>
+                          )}
                           {hasSlot ? (
-                            <button
-                              className="cell-popup-btn cell-popup-close"
-                              onClick={() => {
-                                void toggleSlot(day.date, slot.start, slot.end);
-                                setCellPopup(null);
-                              }}
-                            >
-                              🔴 Rezervasyona Kapat
-                            </button>
+                            isBooked ? (
+                              <div className="cell-popup-info">
+                                🔵 Randevu alınmış — kapatılamaz
+                              </div>
+                            ) : (
+                              <button
+                                className="cell-popup-btn cell-popup-close"
+                                onClick={() => {
+                                  void toggleSlot(day.date, slot.start, slot.end);
+                                  setCellPopup(null);
+                                }}
+                              >
+                                🔴 Rezervasyona Kapat
+                              </button>
+                            )
                           ) : (
                             <button
                               className="cell-popup-btn cell-popup-open"

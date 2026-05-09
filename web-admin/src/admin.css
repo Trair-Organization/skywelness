@@ -2849,3 +2849,111 @@ button.primary:disabled {
 .cell-popup-close:hover {
   background: rgba(239, 68, 68, 0.2);
 }
+
+/* ─── Booked Calendar Cell ─────────────────────────────────────────────────── */
+.calendar-cell-booked {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.calendar-cell-booked:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.cell-booked {
+  color: #2563eb;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.cell-popup-booked {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 4px;
+}
+
+.cell-popup-info {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 6px;
+}
+
+/* ─── Today's Bookings ─────────────────────────────────────────────────────── */
+.today-bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-booking-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.today-booking-time {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--accent);
+  min-width: 50px;
+}
+
+.today-booking-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.today-booking-member {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.today-booking-trainer {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ─── Revenue Cards ────────────────────────────────────────────────────────── */
+.revenue-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.revenue-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.revenue-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.revenue-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .revenue-cards {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,6 +10,17 @@ type DashboardStats = {
   totalEvents: number;
   upcomingEvents: number;
   newMembersThisMonth: number;
+  todayBookings: Array<{
+    id: string;
+    time: string;
+    status: string;
+    sessionType: string;
+    trainerName: string | null;
+    memberName: string | null;
+  }>;
+  todayBookingsCount: number;
+  monthlyRevenue: number;
+  monthlyPackagesSold: number;
 };
 
 type RecentMember = {
@@ -206,6 +217,57 @@ export function ClubDashboardPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Bugünün Programı */}
+      <div className="dashboard-section">
+        <h2 className="section-title">📅 Bugünün Programı</h2>
+        {stats.todayBookings.length === 0 ? (
+          <p className="muted">Bugün randevu yok.</p>
+        ) : (
+          <div className="today-bookings-list">
+            {stats.todayBookings.map((b) => (
+              <div key={b.id} className="today-booking-row">
+                <div className="today-booking-time">
+                  {new Date(b.time).toLocaleTimeString('tr-TR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </div>
+                <div className="today-booking-info">
+                  <span className="today-booking-member">{b.memberName}</span>
+                  <span className="today-booking-trainer">→ {b.trainerName}</span>
+                </div>
+                <span
+                  className={`status-badge ${b.status === 'confirmed' ? 'status-active' : 'status-pending_approval'}`}
+                >
+                  {b.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
+                  {' · '}
+                  {b.status === 'confirmed' ? 'Onaylı' : 'Bekliyor'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Gelir Özeti */}
+      <div className="dashboard-section">
+        <h2 className="section-title">💰 Bu Ay Gelir Özeti</h2>
+        <div className="revenue-cards">
+          <div className="revenue-card">
+            <span className="revenue-label">Toplam Ciro</span>
+            <span className="revenue-value">₺{stats.monthlyRevenue.toLocaleString('tr-TR')}</span>
+          </div>
+          <div className="revenue-card">
+            <span className="revenue-label">Satılan Paket</span>
+            <span className="revenue-value">{stats.monthlyPackagesSold}</span>
+          </div>
+          <div className="revenue-card">
+            <span className="revenue-label">Bugün Randevu</span>
+            <span className="revenue-value">{stats.todayBookingsCount}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
