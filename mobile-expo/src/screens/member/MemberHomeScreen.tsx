@@ -1262,7 +1262,7 @@ export function MemberHomeScreen() {
             style={({ pressed }) => [styles.svcCard, pressed && styles.svcCardPressed]}
             onPress={() => {
               setHubPlaceholder(null);
-              navigation.navigate('SpecialLessons');
+              navigation.navigate('Discover');
             }}
           >
             <Text style={styles.svcTitle}>{t('home.servicePtTitle')}</Text>

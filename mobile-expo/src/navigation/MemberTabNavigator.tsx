@@ -5,14 +5,8 @@ import { Platform, StyleSheet, Text } from 'react-native';
 import { apiJson } from '../api/client';
 import { useMemberAuth } from '../auth/MemberAuthContext';
 import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
-import { MemberEventsScreen } from '../screens/member/MemberEventsScreen';
-import {
-  MemberMassageScreen,
-  MemberSpecialLessonsScreen,
-} from '../screens/member/MemberServiceHubScreen';
+import { MemberDiscoverScreen } from '../screens/member/MemberDiscoverScreen';
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
-import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
-import { MemberTrainerNetworkScreen } from '../screens/member/MemberTrainerNetworkScreen';
 import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
 import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
@@ -78,56 +72,15 @@ export function MemberTabNavigator() {
         component={MemberHomeScreen}
         options={{
           tabBarLabel: t('tabs.home'),
-          tabBarIcon: ({ focused }) => tabIcon('⌂', focused),
+          tabBarIcon: ({ focused }) => tabIcon('🏠', focused),
         }}
       />
       <Tab.Screen
-        name="Reservations"
-        component={MemberReservationsScreen}
+        name="Discover"
+        component={MemberDiscoverScreen}
         options={{
-          tabBarLabel: t('tabs.reservations'),
-          tabBarIcon: ({ focused }) => tabIcon('◷', focused),
-        }}
-      />
-      <Tab.Screen
-        name="SpecialLessons"
-        component={MemberSpecialLessonsScreen}
-        options={{
-          tabBarLabel: t('tabs.specialLessons'),
-          tabBarIcon: ({ focused }) => tabIcon('◆', focused),
-        }}
-      />
-      <Tab.Screen
-        name="Massage"
-        component={SpaScreen}
-        options={{
-          tabBarLabel: 'Spa',
-          tabBarIcon: ({ focused }) => tabIcon('🧖', focused),
-        }}
-      />
-      <Tab.Screen
-        name="Events"
-        component={MemberEventsScreen}
-        options={{
-          tabBarLabel: t('tabs.events'),
-          tabBarIcon: ({ focused }) => tabIcon('◎', focused),
-        }}
-      />
-      <Tab.Screen
-        name="Notifications"
-        component={MemberNotificationsScreen}
-        options={{
-          // Notifications are opened from the bell button in Home.
-          // Keep this route mounted, but hide it from the bottom tab bar.
-          tabBarButton: () => null,
-        }}
-      />
-      <Tab.Screen
-        name="Network"
-        component={MemberTrainerNetworkScreen}
-        options={{
-          tabBarLabel: t('tabs.network'),
-          tabBarIcon: ({ focused }) => tabIcon('◉', focused),
+          tabBarLabel: 'Keşfet',
+          tabBarIcon: ({ focused }) => tabIcon('🔍', focused),
         }}
       />
       <Tab.Screen
@@ -141,17 +94,11 @@ export function MemberTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Chat"
-        component={ChatScreen}
+        name="Massage"
+        component={SpaScreen}
         options={{
-          tabBarButton: () => null,
-        }}
-      />
-      <Tab.Screen
-        name="Legal"
-        component={LegalScreen}
-        options={{
-          tabBarButton: () => null,
+          tabBarLabel: 'Spa',
+          tabBarIcon: ({ focused }) => tabIcon('🧖', focused),
         }}
       />
       <Tab.Screen
@@ -159,8 +106,16 @@ export function MemberTabNavigator() {
         component={MemberProfileScreen}
         options={{
           tabBarLabel: t('tabs.profile'),
-          tabBarIcon: ({ focused }) => tabIcon('●', focused),
+          tabBarIcon: ({ focused }) => tabIcon('👤', focused),
         }}
+      />
+      {/* Hidden routes (no tab bar button) */}
+      <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="Legal" component={LegalScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen
+        name="Notifications"
+        component={MemberNotificationsScreen}
+        options={{ tabBarButton: () => null }}
       />
     </Tab.Navigator>
   );
@@ -168,13 +123,13 @@ export function MemberTabNavigator() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: -2,
   },
   tabIconActive: {
-    color: '#38bdf8',
+    opacity: 1,
   },
   tabIconInactive: {
-    color: 'rgba(244,247,251,0.35)',
+    opacity: 0.5,
   },
 });
