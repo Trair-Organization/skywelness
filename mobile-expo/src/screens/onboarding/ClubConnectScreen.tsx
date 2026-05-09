@@ -1065,20 +1065,30 @@ export function ClubConnectScreen() {
                   }}
                   style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
                 >
-                  <View style={styles.eventCardApiHeader}>
-                    <Text style={styles.eventCardApiDate}>{dateStr}</Text>
-                    <Text style={styles.eventCardApiTime}>{timeStr}</Text>
-                  </View>
-                  <Text style={styles.eventCardApiTitle} numberOfLines={2}>
-                    {evt.title}
-                  </Text>
-                  {evt.coachName && (
-                    <Text style={styles.eventCardApiCoach}>🏋️ {evt.coachName}</Text>
+                  {evt.imageUrl && (
+                    <Image
+                      source={{ uri: evt.imageUrl }}
+                      style={styles.eventCardApiImage}
+                      resizeMode="cover"
+                    />
                   )}
-                  {evt.clubName && <Text style={styles.eventCardApiClub}>{evt.clubName}</Text>}
-                  <View style={styles.trainerCtaPill}>
-                    <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                    <Text style={styles.trainerCtaPillTxt}>Katılmak İstiyorum</Text>
+                  <View style={styles.eventCardApiBody}>
+                    <View>
+                      <View style={styles.eventCardApiHeader}>
+                        <Text style={styles.eventCardApiDate}>{dateStr}</Text>
+                        <Text style={styles.eventCardApiTime}>{timeStr}</Text>
+                      </View>
+                      <Text style={styles.eventCardApiTitle} numberOfLines={2}>
+                        {evt.title}
+                      </Text>
+                      {evt.coachName && (
+                        <Text style={styles.eventCardApiCoach}>🏋️ {evt.coachName}</Text>
+                      )}
+                    </View>
+                    <View style={styles.trainerCtaPill}>
+                      <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                      <Text style={styles.trainerCtaPillTxt}>Katılmak İstiyorum</Text>
+                    </View>
                   </View>
                 </Pressable>
               );
@@ -2015,38 +2025,43 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 14,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 220,
+    position: 'relative',
   },
   trainerAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    marginTop: 8,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.15)',
   },
   trainerAvatarTxt: {
     color: '#fff',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   trainerName: {
     color: premium.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    marginBottom: 6,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   trainerSpecRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   trainerSpecChip: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -2055,29 +2070,35 @@ const styles = StyleSheet.create({
   },
   trainerSpecTxt: {
     color: premium.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   trainerRatingRow: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-    marginBottom: 4,
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(251,191,36,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   trainerRatingValue: {
     color: '#fbbf24',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
   },
   trainerRatingMeta: {
     color: premium.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
   },
   trainerClub: {
     color: premium.accentBlue,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -2109,13 +2130,25 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   eventCardApi: {
-    width: 180,
-    borderRadius: 16,
+    width: TRAINER_CARD_WIDTH,
+    minHeight: 220,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    padding: 14,
-    gap: 6,
+    backgroundColor: 'rgba(8,16,28,0.7)',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  eventCardApiImage: {
+    width: '100%',
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  eventCardApiBody: {
+    flex: 1,
+    padding: 12,
+    gap: 4,
+    justifyContent: 'space-between',
   },
   eventCardApiHeader: {
     flexDirection: 'row',
@@ -2124,28 +2157,28 @@ const styles = StyleSheet.create({
   },
   eventCardApiDate: {
     color: premium.accentBlue,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   eventCardApiTime: {
     color: premium.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
   eventCardApiTitle: {
     color: premium.text,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 19,
+    lineHeight: 17,
   },
   eventCardApiCoach: {
     color: premium.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
   eventCardApiClub: {
     color: premium.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
   },
   modalRatingRow: {
