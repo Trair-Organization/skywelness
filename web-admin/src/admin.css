@@ -2784,3 +2784,68 @@ button.primary:disabled {
   min-width: 50px;
   text-align: right;
 }
+
+/* ─── Calendar Cell Popup ──────────────────────────────────────────────────── */
+.calendar-cell {
+  position: relative;
+}
+
+.calendar-cell-selected {
+  z-index: 10;
+  box-shadow: 0 0 0 2px var(--accent);
+  border-radius: 4px;
+}
+
+.cell-popup {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 10px 12px;
+  min-width: 170px;
+  z-index: 100;
+  white-space: nowrap;
+}
+
+.cell-popup-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.cell-popup-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.cell-popup-open {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.cell-popup-open:hover {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.cell-popup-close {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.cell-popup-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+}

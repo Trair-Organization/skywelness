@@ -73,6 +73,12 @@ export function TrainersManagementPage() {
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [showBulkForm, setShowBulkForm] = useState(false);
+  const [cellPopup, setCellPopup] = useState<{
+    date: string;
+    start: string;
+    end: string;
+    hasSlot: boolean;
+  } | null>(null);
   const [bulkForm, setBulkForm] = useState({
     startDate: '',
     endDate: '',
@@ -553,14 +559,49 @@ export function TrainersManagementPage() {
                   const hasSlot = schedule.some(
                     (s) => s.date === day.date && s.startTime === slot.start,
                   );
+                  const isPopupTarget =
+                    cellPopup?.date === day.date && cellPopup?.start === slot.start;
                   return (
                     <div
                       key={`${day.date}-${slot.start}`}
-                      className={`calendar-cell ${hasSlot ? 'calendar-cell-active' : ''}`}
-                      onClick={() => void toggleSlot(day.date, slot.start, slot.end)}
-                      title={hasSlot ? 'Kaldır' : 'Ekle'}
+                      className={`calendar-cell ${hasSlot ? 'calendar-cell-active' : ''} ${isPopupTarget ? 'calendar-cell-selected' : ''}`}
+                      onClick={() =>
+                        setCellPopup(
+                          isPopupTarget
+                            ? null
+                            : { date: day.date, start: slot.start, end: slot.end, hasSlot },
+                        )
+                      }
                     >
                       {hasSlot && <span className="cell-check">✓</span>}
+                      {isPopupTarget && (
+                        <div className="cell-popup" onClick={(e) => e.stopPropagation()}>
+                          <div className="cell-popup-header">
+                            {day.label.slice(0, 3)} {day.dayNum} · {slot.label}
+                          </div>
+                          {hasSlot ? (
+                            <button
+                              className="cell-popup-btn cell-popup-close"
+                              onClick={() => {
+                                void toggleSlot(day.date, slot.start, slot.end);
+                                setCellPopup(null);
+                              }}
+                            >
+                              🔴 Rezervasyona Kapat
+                            </button>
+                          ) : (
+                            <button
+                              className="cell-popup-btn cell-popup-open"
+                              onClick={() => {
+                                void toggleSlot(day.date, slot.start, slot.end);
+                                setCellPopup(null);
+                              }}
+                            >
+                              🟢 Rezervasyona Aç
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
