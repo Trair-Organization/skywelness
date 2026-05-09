@@ -97,7 +97,9 @@ export function ScheduleManagementPage() {
   function getWeekRange(offset: number) {
     const now = new Date();
     const monday = new Date(now);
-    monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
+    const dayOfWeek = now.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    monday.setDate(now.getDate() + diffToMonday + offset * 7);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     return {
@@ -110,7 +112,9 @@ export function ScheduleManagementPage() {
   function getWeekDays(offset: number) {
     const now = new Date();
     const monday = new Date(now);
-    monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
+    const dayOfWeek = now.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    monday.setDate(now.getDate() + diffToMonday + offset * 7);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
