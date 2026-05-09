@@ -75,6 +75,7 @@ export class DiscoveryService {
   async listTrainers(limit = 20) {
     const profiles = await this.profilesRepo.find({
       relations: ['user', 'trainer', 'tenant'],
+      where: { tenant: { featured: true } },
       order: { createdAt: 'DESC' },
       take: Math.min(limit, 50),
     });

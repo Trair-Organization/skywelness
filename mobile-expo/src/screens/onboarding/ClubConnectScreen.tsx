@@ -28,8 +28,6 @@ import { persistLanguage } from '../../i18n';
 import { apiJson } from '../../api/client';
 
 const logoLight = require('../../../assets/branding/wellness-club-logo-header.png');
-const owellnessLogo = require('../../../assets/branding/clubs/owellness.png');
-const skylandLogo = require('../../../assets/branding/clubs/skyland.png');
 
 type FeaturedClub = {
   id: string;
@@ -40,37 +38,7 @@ type FeaturedClub = {
   featured?: boolean;
 };
 
-const FEATURED_CLUBS: FeaturedClub[] = [
-  {
-    id: 'o-wellness-sky',
-    name: "O'Wellness Sky",
-    subdomain: 'o-wellness-sky',
-    location: 'İstanbul · Skyland',
-    logo: owellnessLogo,
-    featured: true,
-  },
-  {
-    id: 'o-wellness-dragos',
-    name: "O'Wellness Dragos",
-    subdomain: 'o-wellness-dragos',
-    location: 'İstanbul · Dragos',
-    logo: owellnessLogo,
-  },
-  {
-    id: 'o-wellness-yalikavak',
-    name: "O'Wellness Yalıkavak",
-    subdomain: 'o-wellness-yalikavak',
-    location: 'Bodrum · Yalıkavak',
-    logo: owellnessLogo,
-  },
-  {
-    id: 'skyland-wellness',
-    name: 'Skyland Wellness',
-    subdomain: 'skyland-wellness',
-    location: 'İstanbul · Skyland',
-    logo: skylandLogo,
-  },
-];
+const FEATURED_CLUBS: FeaturedClub[] = [];
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ClubConnect'>;
 
@@ -230,23 +198,7 @@ type Testimonial = {
   meta: string;
 };
 
-const TESTIMONIALS: Testimonial[] = [
-  {
-    quote: '3 ayda 9 kilo verdim. Eğitmenim sayesinde antrenmana gitmek artık keyif.',
-    author: 'Ayşe K.',
-    meta: "O'Wellness Sky · 6 aylık üye",
-  },
-  {
-    quote: 'Rezervasyonu telefondan 10 saniyede yapıyorum. Sıra beklemek tarih oldu.',
-    author: 'Mert D.',
-    meta: 'Skyland Wellness · 1 yıllık üye',
-  },
-  {
-    quote: 'Kulüp değiştirdiğimde tüm geçmişim, paketlerim taşındı. Tek uygulama yetiyor.',
-    author: 'Selin Y.',
-    meta: "O'Wellness Yalıkavak · 4 aylık üye",
-  },
-];
+const TESTIMONIALS: Testimonial[] = [];
 
 const TESTIMONIAL_ROTATE_MS = 6000;
 
@@ -265,78 +217,7 @@ type Trainer = {
   pricePerSession: string;
 };
 
-const TRAINERS: Trainer[] = [
-  {
-    id: 't-burcu',
-    name: 'Burcu A.',
-    specialties: ['Yoga', 'Reformer'],
-    clubName: "O'Wellness Sky",
-    clubSubdomain: 'o-wellness-sky',
-    ratingValue: '4.9',
-    reviewCount: 124,
-    initials: 'BA',
-    accentColor: '#7c3aed',
-    goalId: 'yoga',
-    bio: '12 yıllık yoga ve reformer pilates deneyimi. Yeni başlayanlardan ileri seviyeye birebir program.',
-    pricePerSession: '₺1.200',
-  },
-  {
-    id: 't-emre',
-    name: 'Emre K.',
-    specialties: ['Kuvvet', 'CrossFit'],
-    clubName: 'Skyland Wellness',
-    clubSubdomain: 'skyland-wellness',
-    ratingValue: '4.8',
-    reviewCount: 98,
-    initials: 'EK',
-    accentColor: '#ef4444',
-    goalId: 'strength',
-    bio: 'CrossFit Lvl-2 sertifikalı, sporcu performansı ve kuvvet artışı odaklı çalışıyor.',
-    pricePerSession: '₺1.500',
-  },
-  {
-    id: 't-selin',
-    name: 'Selin D.',
-    specialties: ['Beslenme', 'Form'],
-    clubName: "O'Wellness Dragos",
-    clubSubdomain: 'o-wellness-dragos',
-    ratingValue: '5.0',
-    reviewCount: 156,
-    initials: 'SD',
-    accentColor: '#0ea5e9',
-    goalId: 'fat-loss',
-    bio: 'Diyetisyen + antrenör. 3-6 ay vadeli kilo kontrolü ve metabolik form planları.',
-    pricePerSession: '₺1.350',
-  },
-  {
-    id: 't-mert',
-    name: 'Mert T.',
-    specialties: ['Performans', 'Atletik'],
-    clubName: "O'Wellness Yalıkavak",
-    clubSubdomain: 'o-wellness-yalikavak',
-    ratingValue: '4.9',
-    reviewCount: 87,
-    initials: 'MT',
-    accentColor: '#22c55e',
-    goalId: 'performance',
-    bio: 'Eski milli sporcu. Koşu ekonomisi, kondisyon ve maç-içi performans gelişimi.',
-    pricePerSession: '₺1.450',
-  },
-  {
-    id: 't-zeynep',
-    name: 'Zeynep G.',
-    specialties: ['Pilates', 'Postür'],
-    clubName: 'Skyland Wellness',
-    clubSubdomain: 'skyland-wellness',
-    ratingValue: '4.7',
-    reviewCount: 203,
-    initials: 'ZG',
-    accentColor: '#f59e0b',
-    goalId: 'yoga',
-    bio: 'Mat ve reformer pilates uzmanı. Postür, omurga sağlığı ve hareket kalitesi.',
-    pricePerSession: '₺1.250',
-  },
-];
+const TRAINERS: Trainer[] = [];
 
 const TRAINER_CARD_WIDTH = 184;
 const TRAINER_GAP = 12;
@@ -356,60 +237,7 @@ type EventItem = {
   accentBorder: string;
 };
 
-const EVENTS: EventItem[] = [
-  {
-    id: 'e-sunset-yoga',
-    emoji: '🌅',
-    title: 'Sunset Yoga',
-    when: 'Cuma · 19:00',
-    clubName: "O'Wellness Yalıkavak",
-    capacityLabel: '7 kontenjan',
-    urgent: true,
-    accentBg: 'rgba(124,58,237,0.18)',
-    accentBorder: 'rgba(124,58,237,0.45)',
-  },
-  {
-    id: 'e-hiit',
-    emoji: '🔥',
-    title: 'HIIT Workshop',
-    when: 'Cumartesi · 11:00',
-    clubName: 'Skyland Wellness',
-    capacityLabel: '12 kontenjan',
-    accentBg: 'rgba(239,68,68,0.18)',
-    accentBorder: 'rgba(239,68,68,0.45)',
-  },
-  {
-    id: 'e-nutrition',
-    emoji: '🥗',
-    title: 'Beslenme Semineri',
-    when: 'Pazar · 15:00',
-    clubName: "O'Wellness Sky",
-    capacityLabel: '23 kontenjan',
-    accentBg: 'rgba(34,197,94,0.18)',
-    accentBorder: 'rgba(34,197,94,0.45)',
-  },
-  {
-    id: 'e-reformer',
-    emoji: '🧘',
-    title: 'Reformer Master Class',
-    when: 'Pazartesi · 18:30',
-    clubName: "O'Wellness Dragos",
-    capacityLabel: '4 kontenjan',
-    urgent: true,
-    accentBg: 'rgba(14,165,233,0.18)',
-    accentBorder: 'rgba(14,165,233,0.45)',
-  },
-  {
-    id: 'e-running',
-    emoji: '🏃',
-    title: 'Açık Hava Koşusu',
-    when: 'Cumartesi · 07:00',
-    clubName: "O'Wellness Sky",
-    capacityLabel: 'Sınırsız',
-    accentBg: 'rgba(245,158,11,0.18)',
-    accentBorder: 'rgba(245,158,11,0.45)',
-  },
-];
+const EVENTS: EventItem[] = [];
 
 const EVENT_CARD_WIDTH = SLIDER_CARD_WIDTH;
 const EVENT_GAP = SLIDER_CARD_GAP;
