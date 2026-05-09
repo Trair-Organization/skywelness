@@ -333,6 +333,7 @@ export default {
     events: 'Events',
     notifications: 'Notifications',
     network: 'My Network',
+    messages: 'Messages',
     profile: 'Profile',
     openReservations: 'Open my bookings tab',
   },

@@ -11,6 +11,8 @@ import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
 import { MemberTrainerNetworkScreen } from '../screens/member/MemberTrainerNetworkScreen';
 import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
+import { MessagesScreen } from '../screens/member/MessagesScreen';
+import { ChatScreen } from '../screens/member/ChatScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -100,6 +102,21 @@ export function MemberTabNavigator() {
         options={{
           tabBarLabel: t('tabs.network'),
           tabBarIcon: ({ focused }) => tabIcon('◉', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          tabBarLabel: t('tabs.messages'),
+          tabBarIcon: ({ focused }) => tabIcon('💬', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          tabBarButton: () => null,
         }}
       />
       <Tab.Screen

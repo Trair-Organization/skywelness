@@ -335,6 +335,7 @@ export default {
     events: 'Etkinlikler',
     notifications: 'Bildirimler',
     network: 'Ağım',
+    messages: 'Mesajlar',
     profile: 'Profil',
     openReservations: 'Rezervasyonlarım sekmesi',
   },
