@@ -757,8 +757,8 @@ export class AdminMembersService {
     if (!availability) throw new BadRequestException('Bu saat dilimi müsait değil');
 
     // Zaten dolu mu kontrol et
-    const startDateTime = new Date(`${data.date}T${data.startTime}`);
-    const endDateTime = new Date(`${data.date}T${data.endTime}`);
+    const startDateTime = new Date(`${data.date}T${data.startTime}Z`);
+    const endDateTime = new Date(`${data.date}T${data.endTime}Z`);
     const existingReservation = await this.reservationsRepo.findOne({
       where: {
         trainerId: data.trainerId,
@@ -833,8 +833,8 @@ export class AdminMembersService {
       throw new BadRequestException('Bu rezervasyon taşınamaz');
     }
 
-    const newStart = new Date(`${newDate}T${newStartTime}`);
-    const newEnd = new Date(`${newDate}T${newEndTime}`);
+    const newStart = new Date(`${newDate}T${newStartTime}Z`);
+    const newEnd = new Date(`${newDate}T${newEndTime}Z`);
 
     // Hedef tarihte availability yoksa otomatik oluştur (admin override)
     const existingAvailability = await this.availabilityRepo.findOne({
@@ -894,8 +894,12 @@ export class AdminMembersService {
 
     return rows.map((row) => {
       // Bu slot'a denk gelen rezervasyon var mı?
-      const slotStart = new Date(`${row.date}T${row.startTime}`);
-      const slotEnd = new Date(`${row.date}T${row.endTime}`);
+      const dateStr =
+        typeof row.date === 'string'
+          ? row.date.slice(0, 10)
+          : new Date(row.date).toISOString().slice(0, 10);
+      const slotStart = new Date(`${dateStr}T${row.startTime}Z`);
+      const slotEnd = new Date(`${dateStr}T${row.endTime}Z`);
       const booking = reservations.find((r) => {
         return r.startTime >= slotStart && r.startTime < slotEnd;
       });
