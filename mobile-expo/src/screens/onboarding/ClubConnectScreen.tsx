@@ -1034,52 +1034,57 @@ export function ClubConnectScreen() {
           </View>
         </View>
 
-        <View style={styles.sliderViewport} pointerEvents="box-none">
-          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: eventX }] }]}>
-            {[...EVENTS, ...EVENTS].map((evt, idx) => (
-              <Pressable
-                key={`${evt.id}-${idx}`}
-                onPress={() =>
-                  Alert.alert(
-                    evt.title,
-                    `${evt.when}\n${evt.clubName}\n${evt.capacityLabel}\n\nKayıt akışı yakında.`,
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.eventCard,
-                  { borderColor: evt.accentBorder },
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <View style={[styles.eventCover, { backgroundColor: evt.accentBg }]}>
-                  <Text style={styles.eventEmoji}>{evt.emoji}</Text>
-                  {evt.urgent ? (
-                    <View style={styles.eventUrgentBadge}>
-                      <Text style={styles.eventUrgentTxt}>SON KONTENJAN</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={styles.eventTitle} numberOfLines={1}>
-                  {evt.title}
-                </Text>
-                <View style={styles.eventMetaRow}>
-                  <Text style={styles.eventMetaTxt}>{evt.when}</Text>
-                </View>
-                <Text style={styles.eventClub} numberOfLines={1}>
-                  {evt.clubName}
-                </Text>
-                <View style={styles.eventCapacityRow}>
-                  <Text style={[styles.eventCapacityTxt, evt.urgent && styles.eventCapacityUrgent]}>
-                    {evt.capacityLabel}
+        {apiEvents.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.trainerScrollContent}
+          >
+            {apiEvents.map((evt) => {
+              const eventDate = new Date(evt.startsAt);
+              const dateStr = eventDate.toLocaleDateString('tr-TR', {
+                day: 'numeric',
+                month: 'short',
+              });
+              const timeStr = eventDate.toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              return (
+                <Pressable
+                  key={evt.id}
+                  onPress={() => {
+                    setLeadModal({
+                      visible: true,
+                      source: 'event',
+                      sourceRef: evt.id,
+                      sourceLabel: `${evt.title} — ${dateStr}`,
+                      clubSubdomain: evt.clubSubdomain ?? undefined,
+                      prefillMessage: `${evt.title} etkinliğine katılmak istiyorum.`,
+                    });
+                  }}
+                  style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
+                >
+                  <View style={styles.eventCardApiHeader}>
+                    <Text style={styles.eventCardApiDate}>{dateStr}</Text>
+                    <Text style={styles.eventCardApiTime}>{timeStr}</Text>
+                  </View>
+                  <Text style={styles.eventCardApiTitle} numberOfLines={2}>
+                    {evt.title}
                   </Text>
-                  <Text style={styles.eventCtaArrow}>›</Text>
-                </View>
-              </Pressable>
-            ))}
-          </Animated.View>
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
-        </View>
+                  {evt.coachName && (
+                    <Text style={styles.eventCardApiCoach}>🏋️ {evt.coachName}</Text>
+                  )}
+                  {evt.clubName && <Text style={styles.eventCardApiClub}>{evt.clubName}</Text>}
+                  <View style={styles.trainerCtaPill}>
+                    <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                    <Text style={styles.trainerCtaPillTxt}>Katılmak İstiyorum</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         <View style={styles.sectionHeader}>
           <View>
@@ -1090,30 +1095,49 @@ export function ClubConnectScreen() {
           </View>
         </View>
 
-        <View style={styles.sliderViewport} pointerEvents="box-none">
-          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: trainerX }] }]}>
-            {[...TRAINERS, ...TRAINERS].map((trainer, idx) => (
+        {apiTrainers.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.trainerScrollContent}
+          >
+            {apiTrainers.map((trainer) => (
               <Pressable
-                key={`${trainer.id}-${idx}`}
-                onPress={() => setPreviewTrainer(trainer)}
+                key={trainer.id}
+                onPress={() => {
+                  setLeadModal({
+                    visible: true,
+                    source: 'trainer',
+                    sourceRef: trainer.id,
+                    sourceLabel: `${trainer.name} — ${trainer.clubName}`,
+                    clubSubdomain: trainer.clubSubdomain,
+                    prefillMessage: `${trainer.name} eğitmen hakkında bilgi almak istiyorum.`,
+                  });
+                }}
                 style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
               >
-                <View style={[styles.trainerAvatar, { backgroundColor: trainer.accentColor }]}>
-                  <Text style={styles.trainerAvatarTxt}>{trainer.initials}</Text>
+                <View style={[styles.trainerAvatar, { backgroundColor: '#2563eb' }]}>
+                  <Text style={styles.trainerAvatarTxt}>
+                    {trainer.name
+                      .split(' ')
+                      .map((n: string) => n[0])
+                      .join('')
+                      .slice(0, 2)}
+                  </Text>
                 </View>
                 <Text style={styles.trainerName} numberOfLines={1}>
                   {trainer.name}
                 </Text>
                 <View style={styles.trainerSpecRow}>
-                  {trainer.specialties.map((spec) => (
+                  {trainer.specialties.slice(0, 2).map((spec: string) => (
                     <View key={spec} style={styles.trainerSpecChip}>
                       <Text style={styles.trainerSpecTxt}>{spec}</Text>
                     </View>
                   ))}
                 </View>
                 <View style={styles.trainerRatingRow}>
-                  <Text style={styles.trainerRatingValue}>★ {trainer.ratingValue}</Text>
-                  <Text style={styles.trainerRatingMeta}>· {trainer.reviewCount}</Text>
+                  <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
+                  <Text style={styles.trainerRatingMeta}>· {trainer.totalSessions} seans</Text>
                 </View>
                 <Text style={styles.trainerClub} numberOfLines={1}>
                   {trainer.clubName}
@@ -1124,10 +1148,8 @@ export function ClubConnectScreen() {
                 </View>
               </Pressable>
             ))}
-          </Animated.View>
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
-        </View>
+          </ScrollView>
+        )}
 
         {testimonial && (
           <Animated.View style={[styles.testimonialCard, { opacity: testimonialOpacity }]}>
@@ -2080,6 +2102,51 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
+  },
+  trainerScrollContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingBottom: 8,
+  },
+  eventCardApi: {
+    width: 180,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    padding: 14,
+    gap: 6,
+  },
+  eventCardApiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  eventCardApiDate: {
+    color: premium.accentBlue,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  eventCardApiTime: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  eventCardApiTitle: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  eventCardApiCoach: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  eventCardApiClub: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
   },
   modalRatingRow: {
     flexDirection: 'row',
