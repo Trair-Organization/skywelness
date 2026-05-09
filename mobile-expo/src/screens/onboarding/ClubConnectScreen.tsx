@@ -24,6 +24,7 @@ import { GlassCard } from '../../components/premium/GlassCard';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
 import { persistLanguage } from '../../i18n';
+import { apiJson } from '../../api/client';
 
 const logoLight = require('../../../assets/branding/wellness-club-logo-header.png');
 const owellnessLogo = require('../../../assets/branding/clubs/owellness.png');
@@ -71,6 +72,19 @@ const FEATURED_CLUBS: FeaturedClub[] = [
 ];
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ClubConnect'>;
+
+type PublicCampaign = {
+  id: string;
+  title: string;
+  description: string | null;
+  campaignType: 'massage_package' | 'membership' | 'personal_training' | 'general';
+  discountKind: 'percentage' | 'fixed';
+  discountValue: string;
+  imageUrl: string | null;
+  startsAt: string;
+  endsAt: string;
+  tenant?: { id: string; name: string; subdomain: string };
+};
 
 const SLIDER_CARD_WIDTH = 220;
 const SLIDER_CARD_GAP = 12;
@@ -360,6 +374,8 @@ export function ClubConnectScreen() {
   const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
   const [previewTrainer, setPreviewTrainer] = useState<Trainer | null>(null);
+  const [previewCampaign, setPreviewCampaign] = useState<PublicCampaign | null>(null);
+  const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
   const [headlineIdx, setHeadlineIdx] = useState(0);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
@@ -380,6 +396,13 @@ export function ClubConnectScreen() {
   useEffect(() => {
     Promise.resolve(loadTenantDirectory()).catch(() => {});
   }, [loadTenantDirectory]);
+
+  // Öne çıkan kampanyaları yükle
+  useEffect(() => {
+    apiJson<PublicCampaign[]>('/campaigns/featured?limit=6', { auth: false })
+      .then((rows) => setCampaigns(rows))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     sliderX.setValue(0);
@@ -779,6 +802,149 @@ export function ClubConnectScreen() {
             </ScrollView>
           </View>
         ) : null}
+
+        {/* ═══════════ ÖNE ÇIKAN KAMPANYALAR ═══════════ */}
+        {campaigns.length > 0 && (
+          <View style={styles.campaignSection}>
+            <View style={styles.campaignSectionHeader}>
+              <Text style={styles.campaignSectionEmoji}>🔥</Text>
+              <View style={styles.campaignSectionTextWrap}>
+                <Text style={styles.popularTitle}>Öne Çıkan Kampanyalar</Text>
+                <Text style={styles.popularSubtitle}>Sınırlı süreli fırsatları kaçırma</Text>
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.campaignScrollInner}
+            >
+              {campaigns.map((campaign) => {
+                const isPercentage = campaign.discountKind === 'percentage';
+                const discountLabel = isPercentage
+                  ? `%${campaign.discountValue} İndirim`
+                  : `₺${campaign.discountValue} İndirim`;
+                const typeEmoji =
+                  campaign.campaignType === 'massage_package'
+                    ? '💆'
+                    : campaign.campaignType === 'membership'
+                      ? '🏢'
+                      : campaign.campaignType === 'personal_training'
+                        ? '🏋️'
+                        : '🎁';
+                const endsAt = new Date(campaign.endsAt);
+                const daysLeft = Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / 86400000));
+                const clubName = campaign.tenant?.name ?? '';
+
+                return (
+                  <Pressable
+                    key={campaign.id}
+                    style={({ pressed }) => [
+                      styles.campaignCard,
+                      pressed && styles.campaignCardPressed,
+                    ]}
+                    onPress={() => setPreviewCampaign(campaign)}
+                  >
+                    <View style={styles.campaignCardCover}>
+                      <Text style={styles.campaignCardCoverEmoji}>{typeEmoji}</Text>
+                      <View style={styles.campaignBadge}>
+                        <Text style={styles.campaignBadgeTxt}>{discountLabel}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.campaignCardBody}>
+                      <Text style={styles.campaignCardTitle} numberOfLines={2}>
+                        {campaign.title}
+                      </Text>
+                      {clubName ? (
+                        <Text style={styles.campaignCardClub} numberOfLines={1}>
+                          {clubName}
+                        </Text>
+                      ) : null}
+                      {daysLeft <= 5 && (
+                        <Text style={styles.campaignCardUrgent}>⏰ Son {daysLeft} gün</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Kampanya Detay Modal */}
+        {previewCampaign && (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            onRequestClose={() => setPreviewCampaign(null)}
+          >
+            <Pressable
+              style={styles.campaignModalBackdrop}
+              onPress={() => setPreviewCampaign(null)}
+            >
+              <View style={styles.campaignModalCard}>
+                <View style={styles.campaignModalHeader}>
+                  <Text style={styles.campaignModalEmoji}>
+                    {previewCampaign.campaignType === 'massage_package'
+                      ? '💆'
+                      : previewCampaign.campaignType === 'membership'
+                        ? '🏢'
+                        : previewCampaign.campaignType === 'personal_training'
+                          ? '🏋️'
+                          : '🎁'}
+                  </Text>
+                  <View style={styles.campaignModalBadgeLg}>
+                    <Text style={styles.campaignModalBadgeLgTxt}>
+                      {previewCampaign.discountKind === 'percentage'
+                        ? `%${previewCampaign.discountValue} İNDİRİM`
+                        : `₺${previewCampaign.discountValue} İNDİRİM`}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.campaignModalTitle}>{previewCampaign.title}</Text>
+                {previewCampaign.description && (
+                  <Text style={styles.campaignModalDesc}>{previewCampaign.description}</Text>
+                )}
+                {previewCampaign.tenant?.name && (
+                  <View style={styles.campaignModalClubRow}>
+                    <Text style={styles.campaignModalClubIcon}>🏢</Text>
+                    <Text style={styles.campaignModalClubName}>{previewCampaign.tenant.name}</Text>
+                  </View>
+                )}
+                <View style={styles.campaignModalDates}>
+                  <Text style={styles.campaignModalDateTxt}>
+                    📅 {new Date(previewCampaign.startsAt).toLocaleDateString('tr-TR')} —{' '}
+                    {new Date(previewCampaign.endsAt).toLocaleDateString('tr-TR')}
+                  </Text>
+                </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.campaignModalCta,
+                    pressed && styles.campaignModalCtaPressed,
+                  ]}
+                  onPress={() => {
+                    setPreviewCampaign(null);
+                    if (previewCampaign.tenant?.subdomain) {
+                      navigation.navigate('Register', {
+                        preselectedSubdomain: previewCampaign.tenant.subdomain,
+                      });
+                    } else {
+                      navigation.navigate('Register', {});
+                    }
+                  }}
+                >
+                  <Text style={styles.campaignModalCtaTxt}>Üye Ol & Fırsatı Yakala</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.campaignModalClose}
+                  onPress={() => setPreviewCampaign(null)}
+                >
+                  <Text style={styles.campaignModalCloseTxt}>Kapat</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Modal>
+        )}
 
         <View style={styles.popularHeader}>
           <Text style={styles.popularTitle}>Popüler Kulüpler</Text>
@@ -2241,5 +2407,185 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     fontSize: 14,
     fontWeight: '700',
+  },
+  // ─── Kampanyalar ───────────────────────────────────────────────────────────
+  campaignSection: {
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  campaignSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  campaignSectionEmoji: {
+    fontSize: 22,
+  },
+  campaignSectionTextWrap: {
+    flex: 1,
+  },
+  campaignScrollInner: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  campaignCard: {
+    width: SLIDER_CARD_WIDTH,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.35)',
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    overflow: 'hidden',
+  },
+  campaignCardPressed: {
+    opacity: 0.85,
+    backgroundColor: 'rgba(251,191,36,0.12)',
+  },
+  campaignCardCover: {
+    height: 80,
+    backgroundColor: 'rgba(251,191,36,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  campaignCardCoverEmoji: {
+    fontSize: 32,
+  },
+  campaignBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(251,191,36,0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  campaignBadgeTxt: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fbbf24',
+  },
+  campaignCardBody: {
+    padding: 12,
+    gap: 4,
+  },
+  campaignCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: premium.text,
+    lineHeight: 19,
+  },
+  campaignCardClub: {
+    fontSize: 12,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
+  campaignCardUrgent: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#f87171',
+    marginTop: 2,
+  },
+  // ─── Kampanya Modal ────────────────────────────────────────────────────────
+  campaignModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+  },
+  campaignModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.3)',
+    backgroundColor: 'rgba(5,16,28,0.97)',
+    padding: 24,
+    alignItems: 'center',
+  },
+  campaignModalHeader: {
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  campaignModalEmoji: {
+    fontSize: 44,
+  },
+  campaignModalBadgeLg: {
+    backgroundColor: 'rgba(251,191,36,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.5)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  campaignModalBadgeLgTxt: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fbbf24',
+  },
+  campaignModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: premium.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  campaignModalDesc: {
+    fontSize: 14,
+    color: premium.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  campaignModalClubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  campaignModalClubIcon: {
+    fontSize: 16,
+  },
+  campaignModalClubName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: premium.text,
+  },
+  campaignModalDates: {
+    marginBottom: 16,
+  },
+  campaignModalDateTxt: {
+    fontSize: 13,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
+  campaignModalCta: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(251,191,36,0.1)',
+    marginBottom: 10,
+  },
+  campaignModalCtaPressed: {
+    backgroundColor: 'rgba(251,191,36,0.25)',
+  },
+  campaignModalCtaTxt: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fbbf24',
+  },
+  campaignModalClose: {
+    paddingVertical: 8,
+  },
+  campaignModalCloseTxt: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: premium.textMuted,
   },
 });

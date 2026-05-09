@@ -26,6 +26,17 @@ export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 
   /**
+   * Public: Keşif ekranında gösterilecek öne çıkarılmış kampanyalar.
+   * Sadece platform admin tarafından featured=true yapılmış olanlar döner.
+   */
+  @Get('featured')
+  @SkipThrottle()
+  listFeatured(@Query('limit') limit?: string) {
+    const l = Math.min(Number(limit) || 6, 10);
+    return this.campaignsService.listFeatured(l);
+  }
+
+  /**
    * Public: Tüm platformdaki aktif kampanyalar.
    * Onboarding ekranı ve giriş yapmamış kullanıcılar için.
    */
@@ -92,5 +103,13 @@ export class CampaignsController {
   @HttpCode(204)
   async remove(@CurrentUser() user: User, @Param('id') id: string) {
     await this.campaignsService.remove(user.tenantId, id);
+  }
+
+  /** Platform Admin: Kampanyayı keşif ekranında öne çıkar/kaldır. */
+  @Patch(':id/featured')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  async toggleFeatured(@Param('id') id: string, @Body() body: { featured: boolean }) {
+    return this.campaignsService.setFeatured(id, body.featured);
   }
 }

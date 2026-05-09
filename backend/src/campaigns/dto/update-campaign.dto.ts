@@ -55,4 +55,7 @@ export class UpdateCampaignDto {
   @IsNumber()
   @Min(1)
   maxRedemptions?: number | null;
+
+  @IsOptional()
+  featured?: boolean;
 }

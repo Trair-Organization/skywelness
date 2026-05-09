@@ -73,6 +73,10 @@ export class Campaign {
   @Column({ type: 'int', default: 0, name: 'click_count' })
   clickCount!: number;
 
+  /** Platform admin tarafından keşif ekranında öne çıkarılmış kampanya. */
+  @Column({ type: 'boolean', default: false })
+  featured!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

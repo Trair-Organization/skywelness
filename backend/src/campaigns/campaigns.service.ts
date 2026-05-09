@@ -31,6 +31,22 @@ export class CampaignsService {
     });
   }
 
+  /** Keşif ekranı: Sadece platform admin tarafından öne çıkarılmış kampanyalar. */
+  async listFeatured(limit = 6): Promise<Campaign[]> {
+    const now = new Date();
+    return this.campaignsRepo.find({
+      where: {
+        featured: true,
+        status: 'active',
+        startsAt: LessThanOrEqual(now),
+        endsAt: MoreThanOrEqual(now),
+      },
+      order: { createdAt: 'DESC' },
+      take: Math.min(limit, 10),
+      relations: ['tenant'],
+    });
+  }
+
   /** Tüm platformdaki aktif kampanyalar (onboarding/keşif ekranı için). */
   async listAllActive(limit = 10): Promise<Campaign[]> {
     const now = new Date();
@@ -92,6 +108,7 @@ export class CampaignsService {
     if (dto.startsAt !== undefined) campaign.startsAt = new Date(dto.startsAt);
     if (dto.endsAt !== undefined) campaign.endsAt = new Date(dto.endsAt);
     if (dto.maxRedemptions !== undefined) campaign.maxRedemptions = dto.maxRedemptions;
+    if (dto.featured !== undefined) campaign.featured = dto.featured;
     return this.campaignsRepo.save(campaign);
   }
 
@@ -120,5 +137,15 @@ export class CampaignsService {
       .set({ viewCount: () => '"view_count" + 1' })
       .whereInIds(campaignIds)
       .execute();
+  }
+
+  /** Platform admin: Kampanyayı öne çıkar veya kaldır. */
+  async setFeatured(campaignId: string, featured: boolean): Promise<Campaign> {
+    const campaign = await this.campaignsRepo.findOne({ where: { id: campaignId } });
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+    campaign.featured = featured;
+    return this.campaignsRepo.save(campaign);
   }
 }
