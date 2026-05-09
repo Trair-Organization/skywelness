@@ -12,6 +12,7 @@ import { BookingModule } from './booking/booking.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { EventsModule } from './events/events.module';
+import { MessagingModule } from './messaging/messaging.module';
 import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
@@ -66,6 +67,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     CampaignsModule,
     DiscoveryModule,
     EventsModule,
+    MessagingModule,
     HealthModule,
     ThrottlerModule.forRoot([
       {
