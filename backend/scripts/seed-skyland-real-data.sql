@@ -12,13 +12,13 @@ DELETE FROM "user" WHERE tenant_id = '00000000-0000-4000-8000-000000000002' AND 
 
 -- 1. Grisilda Kola
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000001-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a1000001-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'grisilda@skylandwellness.com', 'grisildakola',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Grisilda', 'Kola', '05412678591', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000001-0000-4000-8000-000000000001', 'a0000001-0000-4000-8000-000000000001',
+VALUES ('10000001-0000-4000-8000-000000000001', 'a1000001-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Fitness, Pilates ve Yoga alanlarında uzmanlaşmış sertifikalı eğitmen. Bütünsel yaklaşımla vücut-zihin dengesini hedefler.',
   '["Fitness", "Pilates", "Yoga"]',
@@ -26,7 +26,7 @@ VALUES ('t0000001-0000-4000-8000-000000000001', 'a0000001-0000-4000-8000-0000000
   4.9, 320);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000001-0000-4000-8000-000000000001', 't0000001-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a1000001-0000-4000-8000-000000000001', '10000001-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Fitness, Pilates ve Yoga alanlarında uzmanlaşmış sertifikalı eğitmen. Bütünsel yaklaşımla vücut-zihin dengesini hedefler.',
   '{"Fitness","Pilates","Yoga"}', 8, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
@@ -34,13 +34,13 @@ VALUES (uuid_generate_v4(), 'a0000001-0000-4000-8000-000000000001', 't0000001-00
 
 -- 2. Baha Çıtır
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000002-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a2000002-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'baha@skylandwellness.com', 'ctrbaha',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Baha', 'Çıtır', '05402613179', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000002-0000-4000-8000-000000000001', 'a0000002-0000-4000-8000-000000000001',
+VALUES ('20000002-0000-4000-8000-000000000001', 'a2000002-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Fitness ve Atletik Performans uzmanı. Fonksiyonel antrenman ve güç geliştirme odaklı programlar.',
   '["Fitness", "Atletik Performans"]',
@@ -48,7 +48,7 @@ VALUES ('t0000002-0000-4000-8000-000000000001', 'a0000002-0000-4000-8000-0000000
   4.8, 450);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000002-0000-4000-8000-000000000001', 't0000002-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a2000002-0000-4000-8000-000000000001', '20000002-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Fitness ve Atletik Performans uzmanı. Fonksiyonel antrenman ve güç geliştirme odaklı programlar.',
   '{"Fitness","Atletik Performans"}', 6, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
@@ -56,13 +56,13 @@ VALUES (uuid_generate_v4(), 'a0000002-0000-4000-8000-000000000001', 't0000002-00
 
 -- 3. Eren Kuyuk
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000003-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a3000003-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'eren@skylandwellness.com', 'merenkyk',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Eren', 'Kuyuk', '05511647469', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000003-0000-4000-8000-000000000001', 'a0000003-0000-4000-8000-000000000001',
+VALUES ('30000003-0000-4000-8000-000000000001', 'a3000003-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Fitness alanında uzman kişisel antrenör. Hedef odaklı programlar ve beslenme danışmanlığı.',
   '["Fitness"]',
@@ -70,7 +70,7 @@ VALUES ('t0000003-0000-4000-8000-000000000001', 'a0000003-0000-4000-8000-0000000
   4.7, 280);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000003-0000-4000-8000-000000000001', 't0000003-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a3000003-0000-4000-8000-000000000001', '30000003-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Fitness alanında uzman kişisel antrenör. Hedef odaklı programlar ve beslenme danışmanlığı.',
   '{"Fitness"}', 5, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
@@ -78,13 +78,13 @@ VALUES (uuid_generate_v4(), 'a0000003-0000-4000-8000-000000000001', 't0000003-00
 
 -- 4. Emirhan Gökmen
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000004-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a4000004-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'emirhan@skylandwellness.com', 'emirhangokman',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Emirhan', 'Gökmen', '05355269644', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000004-0000-4000-8000-000000000001', 'a0000004-0000-4000-8000-000000000001',
+VALUES ('40000004-0000-4000-8000-000000000001', 'a4000004-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Fitness ve Corrective Exercise uzmanı. Postür düzeltme, rehabilitasyon ve fonksiyonel hareket eğitimi.',
   '["Fitness", "Corrective Exercise"]',
@@ -92,7 +92,7 @@ VALUES ('t0000004-0000-4000-8000-000000000001', 'a0000004-0000-4000-8000-0000000
   4.9, 380);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000004-0000-4000-8000-000000000001', 't0000004-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a4000004-0000-4000-8000-000000000001', '40000004-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Fitness ve Corrective Exercise uzmanı. Postür düzeltme, rehabilitasyon ve fonksiyonel hareket eğitimi.',
   '{"Fitness","Corrective Exercise"}', 7, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
@@ -104,13 +104,13 @@ VALUES (uuid_generate_v4(), 'a0000004-0000-4000-8000-000000000001', 't0000004-00
 
 -- 5. Barış Tanrıverdi
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000005-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a5000005-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'baris.t@skylandwellness.com', 'btanriverdiler',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Barış', 'Tanrıverdi', '05346121096', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000005-0000-4000-8000-000000000001', 'a0000005-0000-4000-8000-000000000001',
+VALUES ('50000005-0000-4000-8000-000000000001', 'a5000005-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Kickboks ve Boks antrenörü. Teknik gelişim, kondisyon ve dövüş sporları eğitimi.',
   '["Kickboks", "Boks"]',
@@ -118,7 +118,7 @@ VALUES ('t0000005-0000-4000-8000-000000000001', 'a0000005-0000-4000-8000-0000000
   4.8, 520);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000005-0000-4000-8000-000000000001', 't0000005-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a5000005-0000-4000-8000-000000000001', '50000005-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Kickboks ve Boks antrenörü. Teknik gelişim, kondisyon ve dövüş sporları eğitimi.',
   '{"Kickboks","Boks"}', 10, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
@@ -126,13 +126,13 @@ VALUES (uuid_generate_v4(), 'a0000005-0000-4000-8000-000000000001', 't0000005-00
 
 -- 6. Yaşar Mirran
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000006-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a6000006-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'yasar@skylandwellness.com', 'yashar_mrn',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Yaşar', 'Mirran', '05012786650', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000006-0000-4000-8000-000000000001', 'a0000006-0000-4000-8000-000000000001',
+VALUES ('60000006-0000-4000-8000-000000000001', 'a6000006-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Kickboks ve Boks koçu. Yüksek tempolu antrenmanlar ve teknik mükemmellik odaklı çalışmalar.',
   '["Kickboks", "Boks"]',
@@ -140,7 +140,7 @@ VALUES ('t0000006-0000-4000-8000-000000000001', 'a0000006-0000-4000-8000-0000000
   4.7, 410);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000006-0000-4000-8000-000000000001', 't0000006-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a6000006-0000-4000-8000-000000000001', '60000006-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Kickboks ve Boks koçu. Yüksek tempolu antrenmanlar ve teknik mükemmellik odaklı çalışmalar.',
   '{"Kickboks","Boks"}', 8, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
@@ -148,13 +148,13 @@ VALUES (uuid_generate_v4(), 'a0000006-0000-4000-8000-000000000001', 't0000006-00
 
 -- 7. Barış Aktaş
 INSERT INTO "user" (id, tenant_id, email, username, password_hash, first_name, last_name, phone, role, account_status)
-VALUES ('a0000007-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+VALUES ('a7000007-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
   'baris.a@skylandwellness.com', 'barisaktass11',
   '$2b$12$LJ3a4FqGJ8K0X5v5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5',
   'Barış', 'Aktaş', '05365654662', 'trainer', 'active');
 
 INSERT INTO trainer (id, user_id, tenant_id, bio, specializations, offers_session_types, avg_rating, total_sessions)
-VALUES ('t0000007-0000-4000-8000-000000000001', 'a0000007-0000-4000-8000-000000000001',
+VALUES ('70000007-0000-4000-8000-000000000001', 'a7000007-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   'Kickboks, Boks ve Fitness antrenörü. Dövüş sporları tekniği ile fonksiyonel fitness birleştiren programlar.',
   '["Kickboks", "Boks", "Fitness"]',
@@ -162,7 +162,7 @@ VALUES ('t0000007-0000-4000-8000-000000000001', 'a0000007-0000-4000-8000-0000000
   4.8, 350);
 
 INSERT INTO trainer_profile (id, user_id, trainer_id, tenant_id, city, bio, specialties, experience_years, photo_url, pricing_note, social_links)
-VALUES (uuid_generate_v4(), 'a0000007-0000-4000-8000-000000000001', 't0000007-0000-4000-8000-000000000001',
+VALUES (uuid_generate_v4(), 'a7000007-0000-4000-8000-000000000001', '70000007-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002', 'İstanbul',
   'Kickboks, Boks ve Fitness antrenörü. Dövüş sporları tekniği ile fonksiyonel fitness birleştiren programlar.',
   '{"Kickboks","Boks","Fitness"}', 9, NULL, 'Seans başı ve paket seçenekleri mevcuttur.',
