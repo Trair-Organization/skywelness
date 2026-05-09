@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
@@ -44,6 +45,7 @@ function AppRoutes() {
         <Route path="/members/pending" element={<PendingMembersPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
+        <Route path="/messages" element={<MessagesPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboardPage />} />
@@ -52,11 +54,13 @@ function AppRoutes() {
         <Route path="/super-admin/trainers" element={<SuperAdminTrainersPage />} />
         <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
         <Route path="/super-admin/discovery" element={<DiscoveryManagementPage />} />
+        <Route path="/super-admin/messages" element={<MessagesPage />} />
         <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
         <Route path="/trainer/students" element={<TrainerStudentsPage />} />
+        <Route path="/trainer/messages" element={<MessagesPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
