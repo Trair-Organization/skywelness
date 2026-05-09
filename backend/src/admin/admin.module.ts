@@ -4,11 +4,13 @@ import { AuthModule } from '../auth/auth.module';
 import { BookingModule } from '../booking/booking.module';
 import { MailModule } from '../mail/mail.module';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
+import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { AdminController } from './admin.controller';
@@ -27,6 +29,8 @@ import { AdminMembersService } from './admin-members.service';
       PackageType,
       Reservation,
       Trainer,
+      Availability,
+      SpaTherapist,
       ClubEvent,
       ClubEventRegistration,
     ]),
