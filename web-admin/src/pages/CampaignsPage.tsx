@@ -199,9 +199,12 @@ export function CampaignsPage() {
   };
 
   return (
-    <div className="shell">
-      <div className="page-header">
-        <h1>🔥 Kampanyalar</h1>
+    <div className="dashboard-page">
+      <div className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">🔥 Kampanyalar</h1>
+          <p className="dashboard-subtitle">Üyelerinize özel teklifler oluşturun</p>
+        </div>
         <button
           className="primary"
           onClick={() => {

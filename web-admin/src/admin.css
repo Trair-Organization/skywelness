@@ -3098,3 +3098,103 @@ button.primary:disabled {
   align-items: center;
   gap: 3px;
 }
+
+/* ─── Leads Cards ──────────────────────────────────────────────────────────── */
+.leads-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lead-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.15s;
+}
+
+.lead-card:hover {
+  border-color: var(--accent);
+}
+
+.lead-card-new {
+  border-left: 3px solid #3b82f6;
+}
+
+.lead-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.lead-person {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lead-person strong {
+  font-size: 1rem;
+}
+
+.lead-phone {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lead-email {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.lead-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.lead-source {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.lead-source-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.lead-message {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.lead-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lead-status-select {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.lead-date {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: auto;
+}
