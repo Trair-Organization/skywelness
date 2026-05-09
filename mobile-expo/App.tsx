@@ -3,6 +3,8 @@ import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MemberAuthProvider } from './src/auth/MemberAuthContext';
+import { OfflineBanner } from './src/components/premium/OfflineBanner';
+import { ToastProvider } from './src/components/premium/Toast';
 import { loadStoredLanguage } from './src/i18n';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ensurePushNotificationsEnabled } from './src/notifications/push';
@@ -33,10 +35,13 @@ function App() {
   return (
     <GestureHandlerRootView style={styles.flex}>
       <SafeAreaProvider>
-        <MemberAuthProvider>
-          <StatusBar barStyle="light-content" />
-          <RootNavigator />
-        </MemberAuthProvider>
+        <ToastProvider>
+          <MemberAuthProvider>
+            <StatusBar barStyle="light-content" />
+            <OfflineBanner />
+            <RootNavigator />
+          </MemberAuthProvider>
+        </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

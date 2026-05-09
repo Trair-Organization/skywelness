@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,7 +21,10 @@ import { apiJson, ApiError } from '../../api/client';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
+import { EmptyState } from '../../components/premium/EmptyState';
 import { PremiumInput } from '../../components/premium/PremiumInput';
+import { SkeletonCard, SkeletonHorizontalCards } from '../../components/premium/Skeleton';
+import { showToast } from '../../components/premium/Toast';
 import { premium } from '../../theme/premiumTheme';
 import type { MemberTabParamList } from '../../navigation/memberTabTypes';
 
@@ -210,6 +214,8 @@ export function MemberHomeScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<MemberTabParamList>>();
   const { token, tenant, user } = useMemberAuth();
 
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [packages, setPackages] = useState<MyPackageRow[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [loadingPackages, setLoadingPackages] = useState(false);
@@ -308,11 +314,28 @@ export function MemberHomeScreen() {
 
   useEffect(() => {
     if (token && tenant) {
-      loadPackages().catch(() => {});
-      loadReservations().catch(() => {});
-      loadTrainers().catch(() => {});
+      Promise.all([
+        loadPackages().catch(() => {}),
+        loadReservations().catch(() => {}),
+        loadTrainers().catch(() => {}),
+      ]).finally(() => setInitialLoad(false));
     }
   }, [token, tenant, loadPackages, loadReservations, loadTrainers]);
+
+  const onRefresh = useCallback(async () => {
+    if (!token || !tenant) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadPackages().catch(() => {}),
+        loadReservations().catch(() => {}),
+        loadTrainers().catch(() => {}),
+      ]);
+      showToast(t('home.refreshed'), 'success', 1500);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [token, tenant, loadPackages, loadReservations, loadTrainers, t]);
 
   const loadAvailability = useCallback(async () => {
     if (!token || !tenant) {
@@ -671,6 +694,14 @@ export function MemberHomeScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={premium.accentBlue}
+            colors={[premium.accentBlue]}
+          />
+        }
       >
         <View style={styles.hero}>
           <View style={styles.heroRow}>

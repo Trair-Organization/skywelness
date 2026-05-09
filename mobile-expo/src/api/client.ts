@@ -1,4 +1,5 @@
 import { getApiBaseUrls } from '../config';
+import { loadMemberSession, saveMemberSession, clearMemberSession } from '../auth/sessionStorage';
 
 export class ApiError extends Error {
   status: number;
@@ -21,16 +22,85 @@ function parseMessage(body: unknown): string {
   return 'İstek başarısız';
 }
 
+// Token refresh lock — aynı anda birden fazla refresh isteği gönderilmesini önler.
+let refreshPromise: Promise<string | null> | null = null;
+
+async function attemptTokenRefresh(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const session = await loadMemberSession();
+      if (!session?.refreshToken) {
+        await clearMemberSession();
+        return null;
+      }
+
+      const bases = getApiBaseUrls();
+      const url = `${bases[0]}/auth/refresh`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      });
+
+      if (!res.ok) {
+        await clearMemberSession();
+        return null;
+      }
+
+      const data = (await res.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+        user?: unknown;
+        tenantSubdomain?: string;
+      };
+      if (!data.accessToken || !data.refreshToken) {
+        await clearMemberSession();
+        return null;
+      }
+
+      // Session'ı güncelle — mevcut tenant/user bilgisini koru, sadece tokenları yenile
+      const tenantInfo = session.tenantJson ? JSON.parse(session.tenantJson) : null;
+      const userInfo = session.userJson ? JSON.parse(session.userJson) : data.user;
+      if (tenantInfo && userInfo) {
+        await saveMemberSession({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          tenantSubdomain: session.tenantSubdomain,
+          tenant: tenantInfo,
+          user: userInfo,
+        });
+      }
+
+      return data.accessToken;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 export async function apiJson<T>(
   path: string,
   init: RequestInit & {
     auth?: boolean;
     token?: string | null;
-    /** When set, sends `X-Tenant-Subdomain` (must match JWT tenant if authenticated). */
     tenantSubdomain?: string | null;
+    /** true ise 401'de token refresh denenmez (sonsuz döngü önleme). */
+    _skipRefresh?: boolean;
   } = {},
 ): Promise<T> {
-  const { auth: attachAuth = true, token = null, tenantSubdomain = null, ...rest } = init;
+  const {
+    auth: attachAuth = true,
+    token = null,
+    tenantSubdomain = null,
+    _skipRefresh = false,
+    ...rest
+  } = init;
   const bases = path.startsWith('http') ? [''] : getApiBaseUrls();
   let lastError: unknown = null;
 
@@ -60,16 +130,22 @@ export async function apiJson<T>(
         }
       }
       if (!res.ok) {
+        // 401 ve token varsa → refresh dene
+        if (res.status === 401 && attachAuth && token && !_skipRefresh) {
+          const newToken = await attemptTokenRefresh();
+          if (newToken) {
+            // Yeni token ile tekrar dene
+            return apiJson<T>(path, { ...init, token: newToken, _skipRefresh: true });
+          }
+        }
         throw new ApiError(parseMessage(body), res.status, body);
       }
       return body as T;
     } catch (e) {
       lastError = e;
-      // HTTP cevabı geldiyse fallback denemeden hatayı yukarı ver.
       if (e instanceof ApiError) {
         throw e;
       }
-      // Network seviyesinde hata ise bir sonraki base URL'i dene.
       continue;
     }
   }

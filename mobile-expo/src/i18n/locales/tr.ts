@@ -48,6 +48,16 @@ export default {
     heroEvents: 'Aktif Etkinlikler',
     upcomingEventsTitle: 'Yaklaşan Etkinlikler',
     ourTrainersTitle: 'Antrenörlerimiz',
+    refreshed: 'Veriler güncellendi',
+    noPackages: 'Henüz aktif paketiniz yok',
+    noPackagesDesc:
+      'Paket satın almak için kulüp resepsiyonuna başvurun veya paket talebi gönderin.',
+    noTrainers: 'Antrenör bulunamadı',
+    noTrainersDesc: 'Kulübünüzde henüz kayıtlı antrenör yok.',
+    noEvents: 'Yaklaşan etkinlik yok',
+    noEventsDesc: 'Yeni etkinlikler eklendiğinde burada görünecek.',
+    noReservations: 'Henüz rezervasyonunuz yok',
+    noReservationsDesc: 'İlk seansınızı planlamak için bir antrenör ve saat seçin.',
     noUpcomingEvents:
       'Yaklaşan yayınlanmış etkinlik yok. Kulüp yönetimi etkinlik eklediğinde burada görünür.',
   },
