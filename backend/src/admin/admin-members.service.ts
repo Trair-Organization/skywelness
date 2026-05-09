@@ -848,6 +848,7 @@ export class AdminMembersService {
           trainerName: '',
           newDate: newStart.toLocaleDateString('tr-TR'),
           newTime: newStartTime.slice(0, 5),
+          reservationId: reservationId,
         })
         .catch(() => {});
     }
