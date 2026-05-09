@@ -52,7 +52,7 @@ const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
   return {
     start: `${h.toString().padStart(2, '0')}:00`,
     end: `${(h + 1).toString().padStart(2, '0')}:00`,
-    label: `${h.toString().padStart(2, '0')}:00`,
+    label: `${h.toString().padStart(2, '0')}:00-${(h + 1).toString().padStart(2, '0')}:00`,
   };
 });
 
