@@ -325,32 +325,38 @@ export function ClubConnectScreen() {
   }, [sliderX]);
 
   useEffect(() => {
+    if (apiTrainers.length === 0) return;
+    const trackWidth = TRAINER_STEP * apiTrainers.length;
+    const duration = 8000 * apiTrainers.length;
     trainerX.setValue(0);
     const animation = Animated.loop(
       Animated.timing(trainerX, {
-        toValue: -TRAINER_TRACK_WIDTH,
-        duration: TRAINER_DURATION_MS,
+        toValue: -trackWidth,
+        duration,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
     );
     animation.start();
     return () => animation.stop();
-  }, [trainerX]);
+  }, [trainerX, apiTrainers.length]);
 
   useEffect(() => {
+    if (apiEvents.length === 0) return;
+    const trackWidth = TRAINER_STEP * apiEvents.length;
+    const duration = 8000 * apiEvents.length;
     eventX.setValue(0);
     const animation = Animated.loop(
       Animated.timing(eventX, {
-        toValue: -EVENT_TRACK_WIDTH,
-        duration: EVENT_DURATION_MS,
+        toValue: -trackWidth,
+        duration,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
     );
     animation.start();
     return () => animation.stop();
-  }, [eventX]);
+  }, [eventX, apiEvents.length]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -978,67 +984,63 @@ export function ClubConnectScreen() {
         </View>
 
         {apiEvents.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.trainerScrollContent}
-            snapToInterval={196}
-            decelerationRate="fast"
-          >
-            {apiEvents.map((evt) => {
-              const eventDate = new Date(evt.startsAt);
-              const dateStr = eventDate.toLocaleDateString('tr-TR', {
-                day: 'numeric',
-                month: 'short',
-              });
-              const timeStr = eventDate.toLocaleTimeString('tr-TR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              });
-              return (
-                <Pressable
-                  key={evt.id}
-                  onPress={() => {
-                    setLeadModal({
-                      visible: true,
-                      source: 'event',
-                      sourceRef: evt.id,
-                      sourceLabel: `${evt.title} — ${dateStr}`,
-                      clubSubdomain: evt.clubSubdomain ?? undefined,
-                      prefillMessage: `${evt.title} etkinliğine katılmak istiyorum.`,
-                    });
-                  }}
-                  style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
-                >
-                  {evt.imageUrl && (
-                    <Image
-                      source={{ uri: evt.imageUrl }}
-                      style={styles.eventCardApiImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <View style={styles.eventCardApiBody}>
-                    <View>
-                      <View style={styles.eventCardApiHeader}>
-                        <Text style={styles.eventCardApiDate}>{dateStr}</Text>
-                        <Text style={styles.eventCardApiTime}>{timeStr}</Text>
+          <View style={styles.sliderViewport} pointerEvents="box-none">
+            <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: eventX }] }]}>
+              {[...apiEvents, ...apiEvents].map((evt, idx) => {
+                const eventDate = new Date(evt.startsAt);
+                const dateStr = eventDate.toLocaleDateString('tr-TR', {
+                  day: 'numeric',
+                  month: 'short',
+                });
+                const timeStr = eventDate.toLocaleTimeString('tr-TR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+                return (
+                  <Pressable
+                    key={`${evt.id}-${idx}`}
+                    onPress={() => {
+                      setLeadModal({
+                        visible: true,
+                        source: 'event',
+                        sourceRef: evt.id,
+                        sourceLabel: `${evt.title} — ${dateStr}`,
+                        clubSubdomain: evt.clubSubdomain ?? undefined,
+                        prefillMessage: `${evt.title} etkinliğine katılmak istiyorum.`,
+                      });
+                    }}
+                    style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
+                  >
+                    {evt.imageUrl && (
+                      <Image
+                        source={{ uri: evt.imageUrl }}
+                        style={styles.eventCardApiImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View style={styles.eventCardApiBody}>
+                      <View>
+                        <View style={styles.eventCardApiHeader}>
+                          <Text style={styles.eventCardApiDate}>{dateStr}</Text>
+                          <Text style={styles.eventCardApiTime}>{timeStr}</Text>
+                        </View>
+                        <Text style={styles.eventCardApiTitle} numberOfLines={2}>
+                          {evt.title}
+                        </Text>
+                        {evt.coachName && (
+                          <Text style={styles.eventCardApiCoach}>🏋️ {evt.coachName}</Text>
+                        )}
                       </View>
-                      <Text style={styles.eventCardApiTitle} numberOfLines={2}>
-                        {evt.title}
-                      </Text>
-                      {evt.coachName && (
-                        <Text style={styles.eventCardApiCoach}>🏋️ {evt.coachName}</Text>
-                      )}
+                      <View style={styles.trainerCtaPill}>
+                        <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                        <Text style={styles.trainerCtaPillTxt}>Katıl</Text>
+                      </View>
                     </View>
-                    <View style={styles.trainerCtaPill}>
-                      <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                      <Text style={styles.trainerCtaPillTxt}>Katıl</Text>
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                  </Pressable>
+                );
+              })}
+            </Animated.View>
+          </View>
         )}
 
         <View style={styles.sectionHeader}>
@@ -1051,63 +1053,59 @@ export function ClubConnectScreen() {
         </View>
 
         {apiTrainers.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.trainerScrollContent}
-            snapToInterval={196}
-            decelerationRate="fast"
-          >
-            {apiTrainers.map((trainer) => (
-              <Pressable
-                key={trainer.id}
-                onPress={() => {
-                  setLeadModal({
-                    visible: true,
-                    source: 'trainer',
-                    sourceRef: trainer.id,
-                    sourceLabel: `${trainer.name} — ${trainer.clubName}`,
-                    clubSubdomain: trainer.clubSubdomain,
-                    prefillMessage: `${trainer.name} eğitmen hakkında bilgi almak istiyorum.`,
-                  });
-                }}
-                style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
-              >
-                <View style={[styles.trainerAvatar, { backgroundColor: '#2563eb' }]}>
-                  <Text style={styles.trainerAvatarTxt}>
-                    {trainer.name
-                      .split(' ')
-                      .map((n: string) => n[0])
-                      .join('')
-                      .slice(0, 2)}
+          <View style={styles.sliderViewport} pointerEvents="box-none">
+            <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: trainerX }] }]}>
+              {[...apiTrainers, ...apiTrainers].map((trainer, idx) => (
+                <Pressable
+                  key={`${trainer.id}-${idx}`}
+                  onPress={() => {
+                    setLeadModal({
+                      visible: true,
+                      source: 'trainer',
+                      sourceRef: trainer.id,
+                      sourceLabel: `${trainer.name} — ${trainer.clubName}`,
+                      clubSubdomain: trainer.clubSubdomain,
+                      prefillMessage: `${trainer.name} eğitmen hakkında bilgi almak istiyorum.`,
+                    });
+                  }}
+                  style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
+                >
+                  <View style={[styles.trainerAvatar, { backgroundColor: '#2563eb' }]}>
+                    <Text style={styles.trainerAvatarTxt}>
+                      {trainer.name
+                        .split(' ')
+                        .map((n: string) => n[0])
+                        .join('')
+                        .slice(0, 2)}
+                    </Text>
+                  </View>
+                  <Text style={styles.trainerName} numberOfLines={1}>
+                    {trainer.name}
                   </Text>
-                </View>
-                <Text style={styles.trainerName} numberOfLines={1}>
-                  {trainer.name}
-                </Text>
-                <View style={styles.trainerSpecRow}>
-                  {trainer.specialties.slice(0, 2).map((spec: string) => (
-                    <View key={spec} style={styles.trainerSpecChip}>
-                      <Text style={styles.trainerSpecTxt}>{spec}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.trainerRatingRow}>
-                  <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
-                </View>
-                <View style={styles.trainerSessionsBadge}>
-                  <Text style={styles.trainerSessionsTxt}>{trainer.totalSessions} seans</Text>
-                </View>
-                <Text style={styles.trainerClub} numberOfLines={1}>
-                  {trainer.clubName}
-                </Text>
-                <View style={styles.trainerCtaPill}>
-                  <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                  <Text style={styles.trainerCtaPillTxt}>İletişime Geç</Text>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
+                  <View style={styles.trainerSpecRow}>
+                    {trainer.specialties.slice(0, 2).map((spec: string) => (
+                      <View key={spec} style={styles.trainerSpecChip}>
+                        <Text style={styles.trainerSpecTxt}>{spec}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.trainerRatingRow}>
+                    <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
+                  </View>
+                  <View style={styles.trainerSessionsBadge}>
+                    <Text style={styles.trainerSessionsTxt}>{trainer.totalSessions} seans</Text>
+                  </View>
+                  <Text style={styles.trainerClub} numberOfLines={1}>
+                    {trainer.clubName}
+                  </Text>
+                  <View style={styles.trainerCtaPill}>
+                    <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                    <Text style={styles.trainerCtaPillTxt}>İletişime Geç</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </Animated.View>
+          </View>
         )}
 
         {testimonial && (
