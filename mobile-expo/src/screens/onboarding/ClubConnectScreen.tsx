@@ -80,9 +80,14 @@ type PublicCampaign = {
   campaignType: 'massage_package' | 'membership' | 'personal_training' | 'general';
   discountKind: 'percentage' | 'fixed';
   discountValue: string;
+  originalPrice: string | null;
+  discountedPrice: string | null;
+  terms: string | null;
   imageUrl: string | null;
   startsAt: string;
   endsAt: string;
+  maxRedemptions: number | null;
+  redemptionCount: number;
   tenant?: { id: string; name: string; subdomain: string };
 };
 
@@ -869,11 +874,26 @@ export function ClubConnectScreen() {
                       <Text style={styles.campaignCardTitle} numberOfLines={2}>
                         {campaign.title}
                       </Text>
+                      {(campaign.originalPrice || campaign.discountedPrice) && (
+                        <View style={styles.campaignPriceRow}>
+                          {campaign.originalPrice && (
+                            <Text style={styles.campaignOldPrice}>₺{campaign.originalPrice}</Text>
+                          )}
+                          {campaign.discountedPrice && (
+                            <Text style={styles.campaignNewPrice}>₺{campaign.discountedPrice}</Text>
+                          )}
+                        </View>
+                      )}
                       {clubName ? (
                         <Text style={styles.campaignCardClub} numberOfLines={1}>
                           {clubName}
                         </Text>
                       ) : null}
+                      {campaign.maxRedemptions && campaign.maxRedemptions > 0 && (
+                        <Text style={styles.campaignCardQuota}>
+                          Son {campaign.maxRedemptions - (campaign.redemptionCount ?? 0)} kişi
+                        </Text>
+                      )}
                       {daysLeft <= 5 && (
                         <Text style={styles.campaignCardUrgent}>⏰ Son {daysLeft} gün</Text>
                       )}
@@ -919,6 +939,23 @@ export function ClubConnectScreen() {
                 <Text style={styles.campaignModalTitle}>{previewCampaign.title}</Text>
                 {previewCampaign.description && (
                   <Text style={styles.campaignModalDesc}>{previewCampaign.description}</Text>
+                )}
+                {(previewCampaign.originalPrice || previewCampaign.discountedPrice) && (
+                  <View style={styles.campaignModalPriceBlock}>
+                    {previewCampaign.originalPrice && (
+                      <Text style={styles.campaignModalOldPrice}>
+                        ₺{previewCampaign.originalPrice}
+                      </Text>
+                    )}
+                    {previewCampaign.discountedPrice && (
+                      <Text style={styles.campaignModalNewPrice}>
+                        ₺{previewCampaign.discountedPrice}
+                      </Text>
+                    )}
+                  </View>
+                )}
+                {previewCampaign.terms && (
+                  <Text style={styles.campaignModalTerms}>📋 {previewCampaign.terms}</Text>
                 )}
                 {previewCampaign.tenant?.name && (
                   <View style={styles.campaignModalClubRow}>
@@ -2531,6 +2568,28 @@ const styles = StyleSheet.create({
     color: '#f87171',
     marginTop: 2,
   },
+  campaignPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  campaignOldPrice: {
+    fontSize: 12,
+    color: premium.textMuted,
+    textDecorationLine: 'line-through',
+    fontWeight: '600',
+  },
+  campaignNewPrice: {
+    fontSize: 14,
+    color: '#34d399',
+    fontWeight: '800',
+  },
+  campaignCardQuota: {
+    fontSize: 11,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
   // ─── Kampanya Modal ────────────────────────────────────────────────────────
   campaignModalBackdrop: {
     flex: 1,
@@ -2583,6 +2642,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 12,
+  },
+  campaignModalPriceBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  campaignModalOldPrice: {
+    fontSize: 18,
+    color: premium.textMuted,
+    textDecorationLine: 'line-through',
+    fontWeight: '600',
+  },
+  campaignModalNewPrice: {
+    fontSize: 24,
+    color: '#34d399',
+    fontWeight: '900',
+  },
+  campaignModalTerms: {
+    fontSize: 12,
+    color: premium.textMuted,
+    textAlign: 'center',
+    lineHeight: 17,
+    marginBottom: 12,
+    fontStyle: 'italic',
   },
   campaignModalClubRow: {
     flexDirection: 'row',

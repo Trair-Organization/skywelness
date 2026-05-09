@@ -40,6 +40,20 @@ export class UpdateCampaignDto {
   imageUrl?: string | null;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  originalPrice?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discountedPrice?: number | null;
+
+  @IsOptional()
+  @IsString()
+  terms?: string | null;
+
+  @IsOptional()
   @IsIn(['everyone', 'new_members', 'existing_members'])
   audience?: 'everyone' | 'new_members' | 'existing_members';
 

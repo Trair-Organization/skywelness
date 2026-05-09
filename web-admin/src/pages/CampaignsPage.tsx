@@ -10,6 +10,10 @@ type Campaign = {
   status: string;
   discountKind: string;
   discountValue: string;
+  originalPrice: string | null;
+  discountedPrice: string | null;
+  terms: string | null;
+  imageUrl: string | null;
   audience: string;
   startsAt: string;
   endsAt: string;
@@ -45,6 +49,9 @@ export function CampaignsPage() {
     campaignType: 'general',
     discountKind: 'percentage',
     discountValue: '',
+    originalPrice: '',
+    discountedPrice: '',
+    terms: '',
     audience: 'everyone',
     startsAt: '',
     endsAt: '',
@@ -52,6 +59,7 @@ export function CampaignsPage() {
     imageUrl: '',
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
@@ -80,6 +88,9 @@ export function CampaignsPage() {
       campaignType: 'general',
       discountKind: 'percentage',
       discountValue: '',
+      originalPrice: '',
+      discountedPrice: '',
+      terms: '',
       audience: 'everyone',
       startsAt: '',
       endsAt: '',
@@ -96,14 +107,43 @@ export function CampaignsPage() {
       campaignType: c.campaignType,
       discountKind: c.discountKind,
       discountValue: c.discountValue,
+      originalPrice: c.originalPrice ?? '',
+      discountedPrice: c.discountedPrice ?? '',
+      terms: c.terms ?? '',
       audience: c.audience,
       startsAt: c.startsAt.slice(0, 16),
       endsAt: c.endsAt.slice(0, 16),
       maxRedemptions: c.maxRedemptions?.toString() ?? '',
-      imageUrl: '',
+      imageUrl: c.imageUrl ?? '',
     });
     setEditId(c.id);
     setShowForm(true);
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(
+        (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3100/api/v1') +
+          '/auth/upload-image',
+        { method: 'POST', body: formData },
+      );
+      if (!res.ok) throw new Error('Upload failed');
+      const body = (await res.json()) as { url?: string };
+      if (body.url) {
+        const baseUrl = (
+          import.meta.env.VITE_API_BASE_URL || 'http://localhost:3100/api/v1'
+        ).replace('/api/v1', '');
+        const fullUrl = body.url.startsWith('http') ? body.url : `${baseUrl}${body.url}`;
+        setForm((prev) => ({ ...prev, imageUrl: fullUrl }));
+      }
+    } catch {
+      alert('Görsel yüklenemedi');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,6 +156,9 @@ export function CampaignsPage() {
         campaignType: form.campaignType,
         discountKind: form.discountKind,
         discountValue: Number(form.discountValue),
+        originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
+        discountedPrice: form.discountedPrice ? Number(form.discountedPrice) : undefined,
+        terms: form.terms || undefined,
         audience: form.audience,
         startsAt: new Date(form.startsAt).toISOString(),
         endsAt: new Date(form.endsAt).toISOString(),
@@ -224,6 +267,59 @@ export function CampaignsPage() {
                 min={0}
                 step="0.01"
               />
+            </label>
+            <label>
+              Güncel Fiyat (₺)
+              <input
+                type="number"
+                value={form.originalPrice}
+                onChange={(e) => setForm({ ...form, originalPrice: e.target.value })}
+                min={0}
+                step="0.01"
+                placeholder="Örn: 5000"
+              />
+            </label>
+            <label>
+              İndirimli Fiyat (₺)
+              <input
+                type="number"
+                value={form.discountedPrice}
+                onChange={(e) => setForm({ ...form, discountedPrice: e.target.value })}
+                min={0}
+                step="0.01"
+                placeholder="Örn: 3500"
+              />
+            </label>
+            <label>
+              Kampanya Koşulları
+              <textarea
+                value={form.terms}
+                onChange={(e) => setForm({ ...form, terms: e.target.value })}
+                rows={2}
+                placeholder="Örn: Minimum 8 seans alımında geçerlidir"
+              />
+            </label>
+            <label>
+              Kampanya Görseli
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                  disabled={uploading}
+                />
+                {uploading && <span className="muted">Yükleniyor...</span>}
+              </div>
+              {form.imageUrl && (
+                <img
+                  src={form.imageUrl}
+                  alt="Kampanya görseli"
+                  style={{ marginTop: 8, maxHeight: 80, borderRadius: 8 }}
+                />
+              )}
             </label>
             <label>
               Hedef Kitle

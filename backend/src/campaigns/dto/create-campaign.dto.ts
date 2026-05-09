@@ -36,6 +36,20 @@ export class CreateCampaignDto {
   imageUrl?: string;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  originalPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discountedPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  terms?: string;
+
+  @IsOptional()
   @IsIn(['everyone', 'new_members', 'existing_members'])
   audience?: 'everyone' | 'new_members' | 'existing_members';
 

@@ -100,9 +100,14 @@ type CampaignRow = {
   campaignType: 'massage_package' | 'membership' | 'personal_training' | 'general';
   discountKind: 'percentage' | 'fixed';
   discountValue: string;
+  originalPrice: string | null;
+  discountedPrice: string | null;
+  terms: string | null;
   imageUrl: string | null;
   startsAt: string;
   endsAt: string;
+  maxRedemptions: number | null;
+  redemptionCount: number;
   tenant?: { name: string; subdomain: string };
 };
 
@@ -849,6 +854,21 @@ export function MemberHomeScreen() {
                       <Text style={styles.campaignTitle} numberOfLines={2}>
                         {campaign.title}
                       </Text>
+                      {(campaign.originalPrice || campaign.discountedPrice) && (
+                        <View style={styles.campaignPriceRow}>
+                          {campaign.originalPrice && (
+                            <Text style={styles.campaignOldPrice}>₺{campaign.originalPrice}</Text>
+                          )}
+                          {campaign.discountedPrice && (
+                            <Text style={styles.campaignNewPrice}>₺{campaign.discountedPrice}</Text>
+                          )}
+                        </View>
+                      )}
+                      {campaign.maxRedemptions && campaign.maxRedemptions > 0 && (
+                        <Text style={styles.campaignQuota}>
+                          Kalan: {campaign.maxRedemptions - campaign.redemptionCount} kişi
+                        </Text>
+                      )}
                       {daysLeft <= 3 && (
                         <Text style={styles.campaignUrgent}>Son {daysLeft} gün!</Text>
                       )}
@@ -1903,5 +1923,26 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: premium.danger,
+  },
+  campaignPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  campaignOldPrice: {
+    fontSize: 11,
+    color: premium.textMuted,
+    textDecorationLine: 'line-through',
+    fontWeight: '600',
+  },
+  campaignNewPrice: {
+    fontSize: 13,
+    color: premium.accentGreen,
+    fontWeight: '800',
+  },
+  campaignQuota: {
+    fontSize: 10,
+    color: premium.textMuted,
+    fontWeight: '600',
   },
 });

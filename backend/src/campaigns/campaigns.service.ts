@@ -80,6 +80,9 @@ export class CampaignsService {
       status: dto.status ?? 'active',
       discountKind: dto.discountKind,
       discountValue: String(dto.discountValue),
+      originalPrice: dto.originalPrice != null ? String(dto.originalPrice) : null,
+      discountedPrice: dto.discountedPrice != null ? String(dto.discountedPrice) : null,
+      terms: dto.terms?.trim() || null,
       imageUrl: dto.imageUrl?.trim() || null,
       audience: dto.audience ?? 'everyone',
       startsAt: new Date(dto.startsAt),
@@ -103,6 +106,11 @@ export class CampaignsService {
     if (dto.status !== undefined) campaign.status = dto.status;
     if (dto.discountKind !== undefined) campaign.discountKind = dto.discountKind;
     if (dto.discountValue !== undefined) campaign.discountValue = String(dto.discountValue);
+    if (dto.originalPrice !== undefined)
+      campaign.originalPrice = dto.originalPrice != null ? String(dto.originalPrice) : null;
+    if (dto.discountedPrice !== undefined)
+      campaign.discountedPrice = dto.discountedPrice != null ? String(dto.discountedPrice) : null;
+    if (dto.terms !== undefined) campaign.terms = dto.terms?.trim() || null;
     if (dto.imageUrl !== undefined) campaign.imageUrl = dto.imageUrl?.trim() || null;
     if (dto.audience !== undefined) campaign.audience = dto.audience;
     if (dto.startsAt !== undefined) campaign.startsAt = new Date(dto.startsAt);

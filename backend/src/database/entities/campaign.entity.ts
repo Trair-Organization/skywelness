@@ -47,6 +47,18 @@ export class Campaign {
   @Column({ type: 'numeric', precision: 10, scale: 2, name: 'discount_value' })
   discountValue!: string;
 
+  /** Orijinal fiyat (TL). Üstü çizili gösterilir. */
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true, name: 'original_price' })
+  originalPrice!: string | null;
+
+  /** İndirimli fiyat (TL). Büyük ve vurgulu gösterilir. */
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true, name: 'discounted_price' })
+  discountedPrice!: string | null;
+
+  /** Kampanya koşulları / kısa açıklama (örn: "Min 8 seans alımında geçerli"). */
+  @Column({ type: 'text', nullable: true })
+  terms!: string | null;
+
   @Column({ type: 'varchar', length: 2048, nullable: true, name: 'image_url' })
   imageUrl!: string | null;
 
