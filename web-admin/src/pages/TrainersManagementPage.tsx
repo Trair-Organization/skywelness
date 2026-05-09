@@ -708,7 +708,9 @@ export function TrainersManagementPage() {
                         <span className="cell-check-past">✓</span>
                       )}
                       {!isDisabled && isBooked && <span className="cell-booked">●</span>}
-                      {!isDisabled && hasSlot && !isBooked && <span className="cell-check">✓</span>}
+                      {!isDisabled && hasSlot && !isBooked && (
+                        <span className="cell-check">Müsait</span>
+                      )}
                       {isPopupTarget && !isDisabled && (
                         <div className="cell-popup" onClick={(e) => e.stopPropagation()}>
                           <div className="cell-popup-header">
