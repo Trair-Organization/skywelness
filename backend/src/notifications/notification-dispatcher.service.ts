@@ -41,9 +41,9 @@ export class NotificationDispatcher {
 <p style="margin:0 0 16px;">${CLUB_NAME} ailesine hoş geldiniz! Üyeliğiniz başarıyla onaylanmıştır.</p>
 <div style="margin:20px 0;padding:18px;background:rgba(34,197,94,0.1);border-radius:12px;border:1px solid rgba(34,197,94,0.3);">
   <p style="margin:0;font-weight:700;color:#22c55e;">✅ Hesabınız Aktif</p>
-  <p style="margin:8px 0 0;color:#e2e8f0;font-size:14px;">Artık randevu alabilir, etkinliklere katılabilir ve spa hizmetlerimizden yararlanabilirsiniz.</p>
+  <p style="margin:8px 0 0;color:#374151;font-size:14px;">Artık randevu alabilir, etkinliklere katılabilir ve spa hizmetlerimizden yararlanabilirsiniz.</p>
 </div>
-<p style="margin:16px 0 0;font-size:14px;color:#94a3b8;">Sorularınız için bize ulaşmaktan çekinmeyin.</p>`,
+<p style="margin:16px 0 0;font-size:14px;color:#6b7280;">Sorularınız için bize ulaşmaktan çekinmeyin.</p>`,
     });
     await this.mail['send']({
       to: [user.email],
@@ -91,13 +91,13 @@ export class NotificationDispatcher {
 <p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(params.member.firstName)}</strong>,</p>
 <p style="margin:0 0 16px;">Randevunuz başarıyla oluşturulmuştur.</p>
 <div style="margin:20px 0;padding:18px;background:rgba(59,130,246,0.1);border-radius:12px;border:1px solid rgba(59,130,246,0.3);">
-  <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">${escapeHtml(typeLabel)}</p>
-  <p style="margin:0 0 4px;font-weight:700;color:#f8fafc;font-size:16px;">🏋️ ${escapeHtml(params.trainerName)}</p>
-  <p style="margin:8px 0 0;color:#cbd5e1;">📅 ${escapeHtml(params.date)}</p>
-  <p style="margin:4px 0 0;color:#fbbf24;font-weight:700;font-size:18px;">🕐 ${escapeHtml(params.time)}</p>
+  <p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">${escapeHtml(typeLabel)}</p>
+  <p style="margin:0 0 4px;font-weight:700;color:#1f2937;font-size:16px;">🏋️ ${escapeHtml(params.trainerName)}</p>
+  <p style="margin:8px 0 0;color:#6b7280;">📅 ${escapeHtml(params.date)}</p>
+  <p style="margin:4px 0 0;color:#d97706;font-weight:700;font-size:18px;">🕐 ${escapeHtml(params.time)}</p>
 </div>
 ${ticketBtn}
-<p style="margin:16px 0 0;font-size:13px;color:#94a3b8;">Lütfen randevu saatinden 10 dakika önce kulüpte olunuz.</p>`,
+<p style="margin:16px 0 0;font-size:13px;color:#6b7280;">Lütfen randevu saatinden 10 dakika önce kulüpte olunuz.</p>`,
     });
     await this.mail['send']({
       to: [params.member.email],
@@ -133,10 +133,10 @@ ${ticketBtn}
 <p style="margin:0 0 16px;">Aşağıdaki randevunuz iptal edilmiştir.</p>
 <div style="margin:20px 0;padding:18px;background:rgba(239,68,68,0.1);border-radius:12px;border:1px solid rgba(239,68,68,0.3);">
   <p style="margin:0;font-weight:700;color:#ef4444;">❌ İptal Edildi</p>
-  <p style="margin:8px 0 0;color:#e2e8f0;">📅 ${escapeHtml(params.date)} · 🕐 ${escapeHtml(params.time)}</p>
-  ${params.trainerName ? `<p style="margin:4px 0 0;color:#cbd5e1;">🏋️ ${escapeHtml(params.trainerName)}</p>` : ''}
+  <p style="margin:8px 0 0;color:#374151;">📅 ${escapeHtml(params.date)} · 🕐 ${escapeHtml(params.time)}</p>
+  ${params.trainerName ? `<p style="margin:4px 0 0;color:#6b7280;">🏋️ ${escapeHtml(params.trainerName)}</p>` : ''}
 </div>
-<p style="margin:16px 0 0;font-size:14px;color:#94a3b8;">Yeni randevu almak için uygulamamızı kullanabilirsiniz.</p>`,
+<p style="margin:16px 0 0;font-size:14px;color:#6b7280;">Yeni randevu almak için uygulamamızı kullanabilirsiniz.</p>`,
     });
     await this.mail['send']({
       to: [params.member.email],
@@ -183,8 +183,8 @@ ${ticketBtn}
 <p style="margin:0 0 16px;">Randevunuz yeni bir tarihe taşınmıştır.</p>
 <div style="margin:20px 0;padding:18px;background:rgba(245,158,11,0.1);border-radius:12px;border:1px solid rgba(245,158,11,0.3);">
   <p style="margin:0 0 8px;font-weight:700;color:#f59e0b;">🔄 Güncellendi</p>
-  <p style="margin:0;color:#f8fafc;font-size:16px;font-weight:700;">📅 ${escapeHtml(params.newDate)} · 🕐 ${escapeHtml(params.newTime)}</p>
-  ${params.trainerName ? `<p style="margin:8px 0 0;color:#cbd5e1;">🏋️ ${escapeHtml(params.trainerName)}</p>` : ''}
+  <p style="margin:0;color:#1f2937;font-size:16px;font-weight:700;">📅 ${escapeHtml(params.newDate)} · 🕐 ${escapeHtml(params.newTime)}</p>
+  ${params.trainerName ? `<p style="margin:8px 0 0;color:#6b7280;">🏋️ ${escapeHtml(params.trainerName)}</p>` : ''}
 </div>
 ${ticketBtn}`,
     });
@@ -216,9 +216,9 @@ ${ticketBtn}`,
 <p style="margin:0 0 16px;">Yeni bir paket hesabınıza tanımlanmıştır.</p>
 <div style="margin:20px 0;padding:18px;background:rgba(34,197,94,0.1);border-radius:12px;border:1px solid rgba(34,197,94,0.3);">
   <p style="margin:0;font-weight:700;color:#22c55e;font-size:16px;">📦 ${escapeHtml(packageName)}</p>
-  <p style="margin:8px 0 0;color:#e2e8f0;font-size:14px;">Paketiniz aktif edilmiştir. Randevu alarak seanslarınıza başlayabilirsiniz.</p>
+  <p style="margin:8px 0 0;color:#374151;font-size:14px;">Paketiniz aktif edilmiştir. Randevu alarak seanslarınıza başlayabilirsiniz.</p>
 </div>
-<p style="margin:16px 0 0;font-size:13px;color:#94a3b8;">İyi seanslar dileriz!</p>`,
+<p style="margin:16px 0 0;font-size:13px;color:#6b7280;">İyi seanslar dileriz!</p>`,
     });
     await this.mail['send']({
       to: [member.email],

@@ -836,6 +836,21 @@ export class AdminMembersService {
     const newStart = new Date(`${newDate}T${newStartTime}`);
     const newEnd = new Date(`${newDate}T${newEndTime}`);
 
+    // Hedef tarihte availability yoksa otomatik oluştur (admin override)
+    const existingAvailability = await this.availabilityRepo.findOne({
+      where: { trainerId: reservation.trainerId, date: newDate, startTime: newStartTime },
+    });
+    if (!existingAvailability) {
+      const newAvailability = this.availabilityRepo.create({
+        trainerId: reservation.trainerId,
+        date: newDate,
+        startTime: newStartTime,
+        endTime: newEndTime,
+        available: true,
+      });
+      await this.availabilityRepo.save(newAvailability);
+    }
+
     reservation.startTime = newStart;
     reservation.endTime = newEnd;
     await this.reservationsRepo.save(reservation);
