@@ -9,7 +9,7 @@ import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
-import { MemberAccountStatus, UserRole } from '../database/enums';
+import { MemberAccountStatus, ReservationStatus, SessionType, UserRole } from '../database/enums';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -252,6 +252,148 @@ export class AdminMembersService {
         sessionType: p.packageType.sessionType,
       },
     }));
+  }
+
+  /** Üye detay bilgisi (profil + paketler + son randevular) */
+  async getMemberDetail(tenantId: string, userId: string) {
+    const member = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!member) throw new NotFoundException('Üye bulunamadı');
+
+    // Paketleri
+    const packages = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.packageType', 'pt')
+      .leftJoinAndSelect('p.assignedTrainer', 'tr')
+      .leftJoinAndSelect('tr.user', 'trUser')
+      .where('p.userId = :userId', { userId })
+      .andWhere('pt.tenantId = :tenantId', { tenantId })
+      .orderBy('p.createdAt', 'DESC')
+      .getMany();
+
+    // Son randevular
+    const reservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.trainer', 't')
+      .leftJoinAndSelect('t.user', 'tu')
+      .where('r.userId = :userId', { userId })
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .orderBy('r.startTime', 'DESC')
+      .take(20)
+      .getMany();
+
+    return {
+      id: member.id,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      phone: member.phone,
+      photoUrl: member.photoUrl,
+      accountStatus: member.accountStatus,
+      lastLogin: member.lastLogin,
+      createdAt: member.createdAt,
+      packages: packages.map((p) => ({
+        id: p.id,
+        status: p.status,
+        remainingSessions: p.remainingSessions,
+        expiresAt: p.expiresAt,
+        assignedTrainerName: p.assignedTrainer
+          ? `${p.assignedTrainer.user?.firstName ?? ''} ${p.assignedTrainer.user?.lastName ?? ''}`.trim()
+          : null,
+        packageType: { name: p.packageType.name, sessionType: p.packageType.sessionType },
+      })),
+      reservations: reservations.map((r) => ({
+        id: r.id,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        status: r.status,
+        sessionType: r.sessionType,
+        trainerName: r.trainer?.user
+          ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+          : null,
+      })),
+    };
+  }
+
+  /** Son aktiviteler (yeni üyeler, randevular, paket satışları) */
+  async getRecentActivity(tenantId: string) {
+    const activities: Array<{ type: string; message: string; time: string }> = [];
+
+    // Son 7 günde kayıt olan üyeler
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const newMembers = await this.usersRepo
+      .createQueryBuilder('u')
+      .where('u.tenantId = :tenantId', { tenantId })
+      .andWhere('u.role = :role', { role: UserRole.MEMBER })
+      .andWhere('u.createdAt >= :since', { since: sevenDaysAgo })
+      .orderBy('u.createdAt', 'DESC')
+      .take(10)
+      .getMany();
+
+    for (const m of newMembers) {
+      activities.push({
+        type: 'new_member',
+        message: `👤 ${m.firstName} ${m.lastName} üye oldu`,
+        time: m.createdAt.toISOString(),
+      });
+    }
+
+    // Son 7 günde oluşturulan randevular
+    const recentReservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .leftJoinAndSelect('r.trainer', 't')
+      .leftJoinAndSelect('t.user', 'tu')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.createdAt >= :since', { since: sevenDaysAgo })
+      .orderBy('r.createdAt', 'DESC')
+      .take(10)
+      .getMany();
+
+    for (const r of recentReservations) {
+      const memberName = r.user ? `${r.user.firstName} ${r.user.lastName}` : 'Bilinmeyen';
+      const trainerName = r.trainer?.user
+        ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+        : '';
+      const typeLabel = r.sessionType === SessionType.PERSONAL_TRAINING ? 'PT' : 'Masaj';
+      const statusLabel =
+        r.status === ReservationStatus.CONFIRMED
+          ? 'Onaylı'
+          : r.status === ReservationStatus.PENDING
+            ? 'Bekliyor'
+            : r.status;
+      activities.push({
+        type: 'reservation',
+        message: `📅 ${memberName} → ${trainerName} (${typeLabel}) — ${statusLabel}`,
+        time: r.createdAt.toISOString(),
+      });
+    }
+
+    // Son 7 günde satılan paketler
+    const recentPackages = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.packageType', 'pt')
+      .innerJoinAndSelect('p.user', 'u')
+      .where('pt.tenantId = :tenantId', { tenantId })
+      .andWhere('p.createdAt >= :since', { since: sevenDaysAgo })
+      .orderBy('p.createdAt', 'DESC')
+      .take(10)
+      .getMany();
+
+    for (const p of recentPackages) {
+      activities.push({
+        type: 'package',
+        message: `📦 ${p.user.firstName} ${p.user.lastName} — ${p.packageType.name} paketi satıldı`,
+        time: p.createdAt.toISOString(),
+      });
+    }
+
+    // Zamana göre sırala
+    activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    return activities.slice(0, 20);
   }
 
   async assignPackageTrainer(

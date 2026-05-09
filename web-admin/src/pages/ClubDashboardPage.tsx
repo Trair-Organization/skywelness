@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 
+function timeAgo(iso: string) {
+  const now = Date.now();
+  const diff = now - new Date(iso).getTime();
+  if (diff < 60000) return 'Şimdi';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} dk önce`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} saat önce`;
+  return `${Math.floor(diff / 86400000)} gün önce`;
+}
+
 type DashboardStats = {
   totalMembers: number;
   activeMembers: number;
@@ -32,21 +41,30 @@ type RecentMember = {
   createdAt: string;
 };
 
+type ActivityItem = {
+  type: string;
+  message: string;
+  time: string;
+};
+
 export function ClubDashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentMembers, setRecentMembers] = useState<RecentMember[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, members] = await Promise.all([
+      const [s, members, acts] = await Promise.all([
         apiJson<DashboardStats>('/admin/stats'),
         apiJson<RecentMember[]>('/admin/members?status=all'),
+        apiJson<ActivityItem[]>('/admin/activity'),
       ]);
       setStats(s);
       setRecentMembers(members.slice(0, 5));
+      setActivities(acts);
     } catch {
       // ignore
     } finally {
@@ -269,6 +287,21 @@ export function ClubDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Aktivite Akışı */}
+      {activities.length > 0 && (
+        <div className="dashboard-section">
+          <h2 className="section-title">🔔 Son Aktiviteler</h2>
+          <div className="activity-feed">
+            {activities.map((a, i) => (
+              <div key={i} className="activity-row">
+                <span className="activity-message">{a.message}</span>
+                <span className="activity-time">{timeAgo(a.time)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

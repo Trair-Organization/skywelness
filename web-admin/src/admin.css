@@ -3005,3 +3005,33 @@ button.primary:disabled {
 .modal-close:hover {
   color: var(--text);
 }
+
+/* ─── Activity Feed ────────────────────────────────────────────────────────── */
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.activity-message {
+  font-size: 0.85rem;
+  color: var(--text);
+  flex: 1;
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}

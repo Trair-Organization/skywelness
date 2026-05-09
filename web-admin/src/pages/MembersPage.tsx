@@ -53,6 +53,16 @@ export function MembersPage() {
   // Üye detay paneli
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberPackages, setMemberPackages] = useState<MemberPackage[]>([]);
+  const [memberReservations, setMemberReservations] = useState<
+    Array<{
+      id: string;
+      startTime: string;
+      endTime: string;
+      status: string;
+      sessionType: string;
+      trainerName: string | null;
+    }>
+  >([]);
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
   const [assigningPackage, setAssigningPackage] = useState(false);
@@ -109,14 +119,26 @@ export function MembersPage() {
     setSelectedMember(member);
     setLoadingPackages(true);
     try {
-      const [pkgs, types] = await Promise.all([
-        apiJson<MemberPackage[]>(`/admin/members/${member.id}/packages`),
+      const [detail, types] = await Promise.all([
+        apiJson<{
+          packages: MemberPackage[];
+          reservations: Array<{
+            id: string;
+            startTime: string;
+            endTime: string;
+            status: string;
+            sessionType: string;
+            trainerName: string | null;
+          }>;
+        }>(`/admin/members/${member.id}/detail`),
         apiJson<PackageType[]>('/admin/package-types'),
       ]);
-      setMemberPackages(pkgs);
+      setMemberPackages(detail.packages);
+      setMemberReservations(detail.reservations);
       setPackageTypes(types.filter((t) => t.active));
     } catch {
       setMemberPackages([]);
+      setMemberReservations([]);
     } finally {
       setLoadingPackages(false);
     }
@@ -296,6 +318,43 @@ export function MembersPage() {
                 >
                   {assigningPackage ? '...' : 'Ata'}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Geçmiş Randevular */}
+          {memberReservations.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <h4>📅 Son Randevular</h4>
+              <div className="packages-list">
+                {memberReservations.slice(0, 10).map((r) => (
+                  <div key={r.id} className="package-row">
+                    <div className="package-info">
+                      <strong>
+                        {new Date(r.startTime).toLocaleDateString('tr-TR')}{' '}
+                        {new Date(r.startTime).toLocaleTimeString('tr-TR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </strong>
+                      <span
+                        className={`status-badge ${r.status === 'completed' ? 'status-active' : r.status === 'confirmed' ? 'badge-blue' : r.status === 'cancelled' ? 'status-rejected' : 'status-pending_approval'}`}
+                      >
+                        {r.status === 'completed'
+                          ? 'Tamamlandı'
+                          : r.status === 'confirmed'
+                            ? 'Onaylı'
+                            : r.status === 'cancelled'
+                              ? 'İptal'
+                              : 'Bekliyor'}
+                      </span>
+                    </div>
+                    <div className="package-meta">
+                      <span>{r.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}</span>
+                      {r.trainerName && <span>→ {r.trainerName}</span>}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

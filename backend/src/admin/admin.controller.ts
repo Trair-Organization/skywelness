@@ -129,6 +129,24 @@ export class AdminController {
     return this.adminMembers.listMemberPackages(admin.tenantId, userId);
   }
 
+  @Get('members/:userId/detail')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getMemberDetail(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.adminMembers.getMemberDetail(admin.tenantId, userId);
+  }
+
+  /** Son aktiviteler (bildirim akışı) */
+  @Get('activity')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getRecentActivity(@CurrentUser() admin: User) {
+    return this.adminMembers.getRecentActivity(admin.tenantId);
+  }
+
   @Post('members/:userId/packages/:packageId/assign-trainer')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
