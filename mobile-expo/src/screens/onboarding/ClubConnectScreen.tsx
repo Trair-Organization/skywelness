@@ -982,6 +982,8 @@ export function ClubConnectScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.trainerScrollContent}
+            snapToInterval={196}
+            decelerationRate="fast"
           >
             {apiEvents.map((evt) => {
               const eventDate = new Date(evt.startsAt);
@@ -1053,6 +1055,8 @@ export function ClubConnectScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.trainerScrollContent}
+            snapToInterval={196}
+            decelerationRate="fast"
           >
             {apiTrainers.map((trainer) => (
               <Pressable
