@@ -968,9 +968,31 @@ export function ClubConnectScreen() {
                         </Text>
                       )}
                     </View>
-                    <View style={styles.trainerCtaPill}>
-                      <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                      <Text style={styles.trainerCtaPillTxt}>{t('onboarding.clubCardCta')}</Text>
+                    <View style={styles.clubCardCtas}>
+                      <Pressable
+                        style={styles.clubCardCtaJoin}
+                        onPress={() => {
+                          navigation.navigate('Register', { preselectedSubdomain: club.subdomain });
+                        }}
+                      >
+                        <Text style={styles.clubCardCtaJoinTxt}>Kulübe Katıl</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.trainerCtaPill}
+                        onPress={() => {
+                          setLeadModal({
+                            visible: true,
+                            source: 'club',
+                            sourceRef: club.id,
+                            sourceLabel: club.name,
+                            clubSubdomain: club.subdomain,
+                            prefillMessage: `${club.name} hakkında bilgi almak istiyorum.`,
+                          });
+                        }}
+                      >
+                        <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                        <Text style={styles.trainerCtaPillTxt}>{t('onboarding.clubCardCta')}</Text>
+                      </Pressable>
                     </View>
                   </View>
                 </Pressable>
@@ -2145,6 +2167,23 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     fontSize: 9,
     fontWeight: '600',
+  },
+  clubCardCtas: {
+    gap: 6,
+    marginTop: 4,
+  },
+  clubCardCtaJoin: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.5)',
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  clubCardCtaJoinTxt: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '800',
   },
   eventCardApi: {
     width: TRAINER_CARD_WIDTH,
