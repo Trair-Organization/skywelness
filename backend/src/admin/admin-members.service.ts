@@ -10,7 +10,7 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { MemberAccountStatus, ReservationStatus, SessionType, UserRole } from '../database/enums';
-import { MailService } from '../mail/mail.service';
+import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
 import { SmsService } from '../notifications/sms.service';
 import * as bcrypt from 'bcrypt';
 
@@ -33,8 +33,8 @@ export class AdminMembersService {
     private readonly spaTherapistsRepo: Repository<SpaTherapist>,
     @InjectRepository(ClubEvent)
     private readonly eventsRepo: Repository<ClubEvent>,
-    private readonly mailService: MailService,
     private readonly smsService: SmsService,
+    private readonly notifier: NotificationDispatcher,
   ) {}
 
   /** Dashboard istatistikleri */
@@ -208,10 +208,8 @@ export class AdminMembersService {
     }
     await this.usersRepo.update({ id: userId }, { accountStatus: MemberAccountStatus.ACTIVE });
 
-    // Bildirimler (fire & forget)
-    if (user.phone) {
-      void this.smsService.sendMemberApproved(user.phone, user.firstName).catch(() => {});
-    }
+    // Bildirimler
+    void this.notifier.memberApproved(user).catch(() => {});
 
     return { ok: true as const };
   }
@@ -699,9 +697,7 @@ export class AdminMembersService {
     await this.packagesRepo.save(pkg);
 
     // Üyeye bildirim
-    if (member.phone) {
-      void this.smsService.sendPackageAssigned(member.phone, pt.name).catch(() => {});
-    }
+    void this.notifier.packageAssignedToMember(member, pt.name).catch(() => {});
 
     return { ok: true as const, packageId: pkg.id };
   }
@@ -733,23 +729,8 @@ export class AdminMembersService {
         minute: '2-digit',
       });
 
-      if (reservation.user.phone) {
-        void this.smsService
-          .sendReservationCancelled(reservation.user.phone, date, time)
-          .catch(() => {});
-      }
-
-      void this.mailService
-        .sendReservationCancelled({
-          to: reservation.user.email,
-          memberFirstName: reservation.user.firstName,
-          clubName: 'Skyland Wellness Club',
-          trainerName: '',
-          sessionType: reservation.sessionType,
-          startTime: reservation.startTime,
-          endTime: reservation.endTime,
-          remainingSessions: 0,
-        })
+      void this.notifier
+        .reservationCancelledForMember({ member: reservation.user, trainerName: '', date, time })
         .catch(() => {});
     }
 
@@ -803,19 +784,30 @@ export class AdminMembersService {
     });
     await this.reservationsRepo.save(reservation);
 
-    // SMS bildirim
-    if (member.phone) {
-      const dateStr = startDateTime.toLocaleDateString('tr-TR');
-      const timeStr = data.startTime.slice(0, 5);
-      void this.smsService
-        .sendReservationConfirmed(
-          member.phone,
-          `${trainer.user?.firstName ?? ''} ${trainer.user?.lastName ?? ''}`.trim(),
-          dateStr,
-          timeStr,
-        )
-        .catch(() => {});
-    }
+    // Bildirimler
+    const trainerName = `${trainer.user?.firstName ?? ''} ${trainer.user?.lastName ?? ''}`.trim();
+    const dateStr = startDateTime.toLocaleDateString('tr-TR');
+    const timeStr = data.startTime.slice(0, 5);
+
+    void this.notifier
+      .reservationCreatedForMember({
+        member,
+        trainerName,
+        date: dateStr,
+        time: timeStr,
+        sessionType: 'personal_training',
+      })
+      .catch(() => {});
+
+    void this.notifier
+      .newBookingForTrainer({
+        trainerUserId: trainer.userId,
+        trainerPhone: null,
+        memberName: `${member.firstName} ${member.lastName}`,
+        date: dateStr,
+        time: timeStr,
+      })
+      .catch(() => {});
 
     return { ok: true as const, reservationId: reservation.id };
   }
@@ -847,14 +839,15 @@ export class AdminMembersService {
     reservation.endTime = newEnd;
     await this.reservationsRepo.save(reservation);
 
-    // SMS bildirim
-    if (reservation.user?.phone) {
-      const dateStr = newStart.toLocaleDateString('tr-TR');
-      void this.smsService
-        .send(
-          reservation.user.phone,
-          `Randevunuz ${dateStr} ${newStartTime.slice(0, 5)} olarak guncellendi. Skyland Wellness`,
-        )
+    // Bildirimler
+    if (reservation.user) {
+      void this.notifier
+        .reservationRescheduledForMember({
+          member: reservation.user,
+          trainerName: '',
+          newDate: newStart.toLocaleDateString('tr-TR'),
+          newTime: newStartTime.slice(0, 5),
+        })
         .catch(() => {});
     }
 
