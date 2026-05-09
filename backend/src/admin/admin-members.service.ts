@@ -796,6 +796,7 @@ export class AdminMembersService {
         date: dateStr,
         time: timeStr,
         sessionType: 'personal_training',
+        reservationId: reservation.id,
       })
       .catch(() => {});
 

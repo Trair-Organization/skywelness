@@ -15,6 +15,7 @@ import { EventsModule } from './events/events.module';
 import { LeadsModule } from './leads/leads.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { SpaModule } from './spa/spa.module';
+import { TicketModule } from './ticket/ticket.module';
 import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
@@ -72,6 +73,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     LeadsModule,
     MessagingModule,
     SpaModule,
+    TicketModule,
     HealthModule,
     ThrottlerModule.forRoot([
       {

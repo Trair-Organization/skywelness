@@ -32,6 +32,7 @@ export class NotificationDispatcher {
     date: string;
     time: string;
     sessionType: string;
+    reservationId?: string;
   }) {
     const typeLabel = params.sessionType === 'personal_training' ? 'PT' : 'Masaj';
     const title = '📅 Randevunuz Oluşturuldu';
@@ -43,6 +44,7 @@ export class NotificationDispatcher {
         params.trainerName,
         params.date,
         params.time,
+        params.reservationId,
       );
     this.logger.log(`[NOTIFY] reservationCreated → ${params.member.email}`);
   }

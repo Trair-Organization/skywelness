@@ -128,8 +128,17 @@ export class SmsService {
 
   // ─── Hazır Mesaj Şablonları ─────────────────────────────────────────────────
 
-  async sendReservationConfirmed(phone: string, trainerName: string, date: string, time: string) {
-    const msg = `Sayin uyemiz, ${date} tarihinde saat ${time} icin ${trainerName} ile randevunuz olusturulmustur. Iyi seanslar dileriz. Skyland Wellness Club | 0212 XXX XX XX`;
+  async sendReservationConfirmed(
+    phone: string,
+    trainerName: string,
+    date: string,
+    time: string,
+    ticketId?: string,
+  ) {
+    const ticketLink = ticketId
+      ? ` Biletiniz: https://www.wellnessclub.tech/api/v1/ticket/${ticketId}`
+      : '';
+    const msg = `Sayin uyemiz, ${date} tarihinde saat ${time} icin ${trainerName} ile randevunuz olusturulmustur. Iyi seanslar dileriz.${ticketLink} Skyland Wellness Club`;
     return this.send(phone, msg);
   }
 
@@ -158,8 +167,12 @@ export class SmsService {
     newDate: string,
     newTime: string,
     trainerName: string,
+    ticketId?: string,
   ) {
-    const msg = `Sayin uyemiz, randevunuz ${newDate} saat ${newTime} olarak guncellenmistir. Egitmen: ${trainerName}. Skyland Wellness Club`;
+    const ticketLink = ticketId
+      ? ` Guncellenmis biletiniz: https://www.wellnessclub.tech/api/v1/ticket/${ticketId}`
+      : '';
+    const msg = `Sayin uyemiz, randevunuz guncellenmistir. Yeni tarih: ${newDate}, Saat: ${newTime}, Egitmen: ${trainerName}.${ticketLink} Skyland Wellness Club`;
     return this.send(phone, msg);
   }
 }
