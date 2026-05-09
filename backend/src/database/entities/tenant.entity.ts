@@ -19,6 +19,42 @@ export class Tenant {
   @Column({ type: 'varchar', length: 100 })
   subdomain!: string;
 
+  @Column({ type: 'text', nullable: true })
+  description!: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  location!: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true, name: 'logo_url' })
+  logoUrl!: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true, name: 'cover_image_url' })
+  coverImageUrl!: string | null;
+
+  @Column('text', { array: true, default: '{}' })
+  services!: string[];
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'price_range' })
+  priceRange!: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  featured!: boolean;
+
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  phone!: string | null;
+
+  @Column({ type: 'varchar', length: 320, nullable: true })
+  email!: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  website!: string | null;
+
+  @Column({ type: 'numeric', precision: 3, scale: 2, default: 0, name: 'avg_rating' })
+  avgRating!: string;
+
+  @Column({ type: 'int', default: 0, name: 'review_count' })
+  reviewCount!: number;
+
   @Column({ type: 'jsonb', default: {} })
   branding!: Record<string, unknown>;
 

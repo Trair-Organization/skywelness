@@ -5,6 +5,7 @@ import { AuthProvider } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
+import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
         <Route path="/super-admin/trainers" element={<SuperAdminTrainersPage />} />
         <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+        <Route path="/super-admin/discovery" element={<DiscoveryManagementPage />} />
         <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>

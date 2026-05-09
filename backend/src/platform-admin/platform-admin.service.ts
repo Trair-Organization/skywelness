@@ -129,6 +129,17 @@ export class PlatformAdminService {
     if (nextName) {
       tenant.name = nextName;
     }
+    // Marketplace fields
+    if (dto.description !== undefined) tenant.description = dto.description?.trim() || null;
+    if (dto.location !== undefined) tenant.location = dto.location?.trim() || null;
+    if (dto.logoUrl !== undefined) tenant.logoUrl = dto.logoUrl?.trim() || null;
+    if (dto.coverImageUrl !== undefined) tenant.coverImageUrl = dto.coverImageUrl?.trim() || null;
+    if (dto.services !== undefined) tenant.services = dto.services;
+    if (dto.priceRange !== undefined) tenant.priceRange = dto.priceRange?.trim() || null;
+    if (dto.featured !== undefined) tenant.featured = dto.featured;
+    if (dto.phone !== undefined) tenant.phone = dto.phone?.trim() || null;
+    if (dto.email !== undefined) tenant.email = dto.email?.trim() || null;
+    if (dto.website !== undefined) tenant.website = dto.website?.trim() || null;
     tenant.settings = nextSettings;
     await this.tenantsRepo.save(tenant);
     await this.logAction({

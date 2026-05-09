@@ -29,15 +29,18 @@ export class TenantsService {
   async listPublicDirectory(limit = 50) {
     const take = Math.min(100, Math.max(1, limit));
     const rows = await this.tenantsRepo.find({
-      select: ['id', 'name', 'subdomain', 'branding'],
-      order: { name: 'ASC' },
+      order: { featured: 'DESC', name: 'ASC' },
       take,
     });
     return rows.map((t) => ({
       id: t.id,
       name: t.name,
       subdomain: t.subdomain,
-      logoUrl: this.extractLogoUrl(t.branding),
+      logoUrl: t.logoUrl ?? this.extractLogoUrl(t.branding),
+      location: t.location,
+      description: t.description,
+      services: t.services ?? [],
+      featured: t.featured,
     }));
   }
 

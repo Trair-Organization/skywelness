@@ -10,6 +10,7 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BookingModule } from './booking/booking.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { DiscoveryModule } from './discovery/discovery.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
@@ -63,6 +64,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     PlatformAdminModule,
     BookingModule,
     CampaignsModule,
+    DiscoveryModule,
     EventsModule,
     HealthModule,
     ThrottlerModule.forRoot([
