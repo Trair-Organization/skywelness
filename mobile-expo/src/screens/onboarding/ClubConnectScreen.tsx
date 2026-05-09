@@ -379,6 +379,7 @@ export function ClubConnectScreen() {
   const [headlineIdx, setHeadlineIdx] = useState(0);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
+  const [goalsOpen, setGoalsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
   const sliderX = useRef(new Animated.Value(0)).current;
@@ -586,45 +587,59 @@ export function ClubConnectScreen() {
           <Text style={styles.slogan}>{t('onboarding.ecosystemSlogan')}</Text>
         </View>
 
-        <View style={styles.statsRow}>
-          {SOCIAL_STATS.map((stat) => (
-            <View key={stat.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-
         <View style={styles.goalsBlock}>
-          <Text style={styles.goalsTitle}>Hedefin ne?</Text>
-          <Text style={styles.goalsSubtitle}>
-            Sana en uygun kulüp ve eğitmenleri öne çıkaralım.
-          </Text>
-          <View style={styles.goalsGrid}>
-            {GOALS.map((goal) => {
-              const active = selectedGoal === goal.id;
-              return (
-                <Pressable
-                  key={goal.id}
-                  onPress={() => setSelectedGoal(active ? null : goal.id)}
-                  style={({ pressed }) => [
-                    styles.goalChip,
-                    active && styles.goalChipActive,
-                    pressed && styles.goalChipPressed,
-                  ]}
-                >
-                  <Text style={styles.goalIcon}>{goal.icon}</Text>
-                  <View style={styles.goalTextWrap}>
-                    <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>
-                      {goal.label}
-                    </Text>
-                    <Text style={styles.goalHint}>{goal.hint}</Text>
-                  </View>
-                  {active ? <Text style={styles.goalCheck}>✓</Text> : null}
-                </Pressable>
-              );
-            })}
-          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.goalsDropdownBtn,
+              pressed && styles.goalsDropdownBtnPressed,
+              selectedGoal && styles.goalsDropdownBtnActive,
+            ]}
+            onPress={() => setGoalsOpen((v) => !v)}
+          >
+            <Text style={styles.goalsDropdownIcon}>
+              {selectedGoal ? (GOALS.find((g) => g.id === selectedGoal)?.icon ?? '🎯') : '🎯'}
+            </Text>
+            <View style={styles.goalsDropdownTextWrap}>
+              <Text style={styles.goalsTitle}>Hedefin ne?</Text>
+              <Text style={styles.goalsSubtitle}>
+                {selectedGoal
+                  ? (GOALS.find((g) => g.id === selectedGoal)?.label ?? '')
+                  : 'Sana uygun kulüp ve eğitmenleri öne çıkaralım'}
+              </Text>
+            </View>
+            <Text style={styles.goalsDropdownArrow}>{goalsOpen ? '▲' : '▼'}</Text>
+          </Pressable>
+
+          {goalsOpen && (
+            <View style={styles.goalsGrid}>
+              {GOALS.map((goal) => {
+                const active = selectedGoal === goal.id;
+                return (
+                  <Pressable
+                    key={goal.id}
+                    onPress={() => {
+                      setSelectedGoal(active ? null : goal.id);
+                      setGoalsOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.goalChip,
+                      active && styles.goalChipActive,
+                      pressed && styles.goalChipPressed,
+                    ]}
+                  >
+                    <Text style={styles.goalIcon}>{goal.icon}</Text>
+                    <View style={styles.goalTextWrap}>
+                      <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>
+                        {goal.label}
+                      </Text>
+                      <Text style={styles.goalHint}>{goal.hint}</Text>
+                    </View>
+                    {active ? <Text style={styles.goalCheck}>✓</Text> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
           {selectedGoal ? (
             <View style={styles.searchBlock}>
@@ -1482,6 +1497,35 @@ const styles = StyleSheet.create({
   },
   goalsBlock: {
     marginBottom: 18,
+  },
+  goalsDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    borderRadius: premium.radiusMd,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  goalsDropdownBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  goalsDropdownBtnActive: {
+    borderColor: 'rgba(56,189,248,0.4)',
+    backgroundColor: 'rgba(56,189,248,0.06)',
+  },
+  goalsDropdownIcon: {
+    fontSize: 22,
+  },
+  goalsDropdownTextWrap: {
+    flex: 1,
+  },
+  goalsDropdownArrow: {
+    color: premium.textMuted,
+    fontSize: 12,
   },
   goalsTitle: {
     fontSize: 18,
