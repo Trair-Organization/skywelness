@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { AdminLayout } from '../components/AdminLayout';
 
 type ProtectedRouteProps = {
   allowedRoles?: string[];
@@ -45,5 +46,9 @@ export function ProtectedRoute({
     );
   }
 
-  return <Outlet />;
+  return (
+    <AdminLayout>
+      <Outlet />
+    </AdminLayout>
+  );
 }
