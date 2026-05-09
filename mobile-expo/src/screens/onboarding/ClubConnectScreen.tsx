@@ -1090,7 +1090,9 @@ export function ClubConnectScreen() {
                 </View>
                 <View style={styles.trainerRatingRow}>
                   <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
-                  <Text style={styles.trainerRatingMeta}>· {trainer.totalSessions} seans</Text>
+                </View>
+                <View style={styles.trainerSessionsBadge}>
+                  <Text style={styles.trainerSessionsTxt}>{trainer.totalSessions} seans</Text>
                 </View>
                 <Text style={styles.trainerClub} numberOfLines={1}>
                   {trainer.clubName}
@@ -2038,6 +2040,20 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     fontSize: 9,
     fontWeight: '600',
+  },
+  trainerSessionsBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  trainerSessionsTxt: {
+    color: premium.accentBlue,
+    fontSize: 10,
+    fontWeight: '800',
   },
   trainerClub: {
     color: premium.accentBlue,
