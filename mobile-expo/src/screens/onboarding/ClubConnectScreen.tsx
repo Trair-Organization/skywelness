@@ -91,6 +91,50 @@ type PublicCampaign = {
   tenant?: { id: string; name: string; subdomain: string };
 };
 
+type DiscoveryClub = {
+  id: string;
+  name: string;
+  subdomain: string;
+  description: string | null;
+  location: string | null;
+  logoUrl: string | null;
+  coverImageUrl: string | null;
+  services: string[];
+  priceRange: string | null;
+  featured: boolean;
+  avgRating: string;
+  reviewCount: number;
+};
+
+type DiscoveryTrainer = {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  city: string;
+  bio: string;
+  specialties: string[];
+  experienceYears: number | null;
+  pricingNote: string | null;
+  avgRating: string;
+  totalSessions: number;
+  clubName: string;
+  clubSubdomain: string;
+};
+
+type DiscoveryEvent = {
+  id: string;
+  title: string;
+  description: string | null;
+  coachName: string | null;
+  location: string | null;
+  imageUrl: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  capacity: number;
+  clubName: string | null;
+  clubSubdomain: string | null;
+};
+
 const SLIDER_CARD_WIDTH = 220;
 const SLIDER_CARD_GAP = 12;
 const SLIDER_STEP = SLIDER_CARD_WIDTH + SLIDER_CARD_GAP;
@@ -407,6 +451,23 @@ export function ClubConnectScreen() {
   useEffect(() => {
     apiJson<PublicCampaign[]>('/campaigns/featured?limit=6', { auth: false })
       .then((rows) => setCampaigns(rows))
+      .catch(() => {});
+  }, []);
+
+  // Discovery API: Kulüpler, eğitmenler, etkinlikler
+  const [apiClubs, setApiClubs] = useState<DiscoveryClub[]>([]);
+  const [apiTrainers, setApiTrainers] = useState<DiscoveryTrainer[]>([]);
+  const [apiEvents, setApiEvents] = useState<DiscoveryEvent[]>([]);
+
+  useEffect(() => {
+    apiJson<DiscoveryClub[]>('/discovery/clubs?limit=20', { auth: false })
+      .then((rows) => setApiClubs(rows))
+      .catch(() => {});
+    apiJson<DiscoveryTrainer[]>('/discovery/trainers?limit=20', { auth: false })
+      .then((rows) => setApiTrainers(rows))
+      .catch(() => {});
+    apiJson<DiscoveryEvent[]>('/discovery/events?limit=10', { auth: false })
+      .then((rows) => setApiEvents(rows))
       .catch(() => {});
   }, []);
 
@@ -1005,53 +1066,115 @@ export function ClubConnectScreen() {
 
         <View style={styles.sliderViewport} pointerEvents="box-none">
           <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: sliderX }] }]}>
-            {[...FEATURED_CLUBS, ...FEATURED_CLUBS].map((club, idx) => {
-              const directoryMatch = tenantDirectory.find(
-                (row) => row.subdomain === club.subdomain,
-              );
-              const handlePress = () => {
-                setPreviewClub(
-                  directoryMatch ?? {
-                    id: club.id,
-                    name: club.name,
-                    subdomain: club.subdomain,
-                    logoUrl: null,
-                  },
-                );
-              };
-              return (
-                <Pressable
-                  key={`${club.id}-${idx}`}
-                  onPress={handlePress}
-                  style={({ pressed }) => [
-                    styles.clubCard,
-                    club.featured && styles.clubCardFeatured,
-                    pressed && styles.clubCardPressed,
-                  ]}
-                >
-                  {club.featured ? (
-                    <View style={styles.featuredRibbon}>
-                      <Text style={styles.featuredRibbonTxt}>
-                        {t('onboarding.clubCardFeaturedBadge')}
+            {apiClubs.length > 0
+              ? [...apiClubs, ...apiClubs].map((club, idx) => {
+                  const handlePress = () => {
+                    setPreviewClub({
+                      id: club.id,
+                      name: club.name,
+                      subdomain: club.subdomain,
+                      logoUrl: club.logoUrl,
+                    });
+                  };
+                  return (
+                    <Pressable
+                      key={`api-${club.id}-${idx}`}
+                      onPress={handlePress}
+                      style={({ pressed }) => [
+                        styles.clubCard,
+                        club.featured && styles.clubCardFeatured,
+                        pressed && styles.clubCardPressed,
+                      ]}
+                    >
+                      {club.featured ? (
+                        <View style={styles.featuredRibbon}>
+                          <Text style={styles.featuredRibbonTxt}>
+                            {t('onboarding.clubCardFeaturedBadge')}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.clubLogoWrap}>
+                        {club.logoUrl ? (
+                          <Image
+                            source={{ uri: club.logoUrl }}
+                            style={styles.clubLogoImage}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Text style={styles.clubLogoFallback}>
+                            {club.name.slice(0, 2).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={styles.clubName} numberOfLines={2}>
+                        {club.name}
                       </Text>
-                    </View>
-                  ) : null}
-                  <View style={styles.clubLogoWrap}>
-                    <Image source={club.logo} style={styles.clubLogoImage} resizeMode="contain" />
-                  </View>
-                  <Text style={styles.clubName} numberOfLines={2}>
-                    {club.name}
-                  </Text>
-                  <Text style={styles.clubLocation} numberOfLines={1}>
-                    {club.location}
-                  </Text>
-                  <View style={styles.clubCtaRow}>
-                    <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
-                    <Text style={styles.clubCtaArrow}>›</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+                      <Text style={styles.clubLocation} numberOfLines={1}>
+                        {club.location ?? club.subdomain}
+                      </Text>
+                      {club.services.length > 0 && (
+                        <Text style={styles.clubServices} numberOfLines={1}>
+                          {club.services.slice(0, 3).join(' · ')}
+                        </Text>
+                      )}
+                      <View style={styles.clubCtaRow}>
+                        <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
+                        <Text style={styles.clubCtaArrow}>›</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })
+              : [...FEATURED_CLUBS, ...FEATURED_CLUBS].map((club, idx) => {
+                  const directoryMatch = tenantDirectory.find(
+                    (row) => row.subdomain === club.subdomain,
+                  );
+                  const handlePress = () => {
+                    setPreviewClub(
+                      directoryMatch ?? {
+                        id: club.id,
+                        name: club.name,
+                        subdomain: club.subdomain,
+                        logoUrl: null,
+                      },
+                    );
+                  };
+                  return (
+                    <Pressable
+                      key={`${club.id}-${idx}`}
+                      onPress={handlePress}
+                      style={({ pressed }) => [
+                        styles.clubCard,
+                        club.featured && styles.clubCardFeatured,
+                        pressed && styles.clubCardPressed,
+                      ]}
+                    >
+                      {club.featured ? (
+                        <View style={styles.featuredRibbon}>
+                          <Text style={styles.featuredRibbonTxt}>
+                            {t('onboarding.clubCardFeaturedBadge')}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.clubLogoWrap}>
+                        <Image
+                          source={club.logo}
+                          style={styles.clubLogoImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.clubName} numberOfLines={2}>
+                        {club.name}
+                      </Text>
+                      <Text style={styles.clubLocation} numberOfLines={1}>
+                        {club.location}
+                      </Text>
+                      <View style={styles.clubCtaRow}>
+                        <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
+                        <Text style={styles.clubCtaArrow}>›</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
           </Animated.View>
           <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
           <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
@@ -1923,6 +2046,17 @@ const styles = StyleSheet.create({
   clubLogoImage: {
     width: '100%',
     height: '100%',
+  },
+  clubLogoFallback: {
+    color: premium.accentBlue,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  clubServices: {
+    color: premium.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 2,
   },
   clubName: {
     color: premium.text,
