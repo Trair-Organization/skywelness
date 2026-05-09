@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { BookingModule } from '../booking/booking.module';
 import { MailModule } from '../mail/mail.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
@@ -23,6 +24,7 @@ import { AdminMembersService } from './admin-members.service';
     AuthModule,
     BookingModule,
     MailModule,
+    NotificationsModule,
     TypeOrmModule.forFeature([
       User,
       Package,

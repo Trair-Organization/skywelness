@@ -10,6 +10,8 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { MemberAccountStatus, ReservationStatus, SessionType, UserRole } from '../database/enums';
+import { MailService } from '../mail/mail.service';
+import { SmsService } from '../notifications/sms.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -31,6 +33,8 @@ export class AdminMembersService {
     private readonly spaTherapistsRepo: Repository<SpaTherapist>,
     @InjectRepository(ClubEvent)
     private readonly eventsRepo: Repository<ClubEvent>,
+    private readonly mailService: MailService,
+    private readonly smsService: SmsService,
   ) {}
 
   /** Dashboard istatistikleri */
@@ -203,6 +207,12 @@ export class AdminMembersService {
       throw new BadRequestException('Member is not awaiting approval');
     }
     await this.usersRepo.update({ id: userId }, { accountStatus: MemberAccountStatus.ACTIVE });
+
+    // Bildirimler (fire & forget)
+    if (user.phone) {
+      void this.smsService.sendMemberApproved(user.phone, user.firstName).catch(() => {});
+    }
+
     return { ok: true as const };
   }
 
@@ -687,6 +697,12 @@ export class AdminMembersService {
       status: 'active' as never,
     });
     await this.packagesRepo.save(pkg);
+
+    // Üyeye bildirim
+    if (member.phone) {
+      void this.smsService.sendPackageAssigned(member.phone, pt.name).catch(() => {});
+    }
+
     return { ok: true as const, packageId: pkg.id };
   }
 
@@ -708,6 +724,35 @@ export class AdminMembersService {
     reservation.status = ReservationStatus.CANCELLED;
     reservation.cancelledAt = new Date();
     await this.reservationsRepo.save(reservation);
+
+    // Üyeye bildirim gönder
+    if (reservation.user) {
+      const date = reservation.startTime.toLocaleDateString('tr-TR');
+      const time = reservation.startTime.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      if (reservation.user.phone) {
+        void this.smsService
+          .sendReservationCancelled(reservation.user.phone, date, time)
+          .catch(() => {});
+      }
+
+      void this.mailService
+        .sendReservationCancelled({
+          to: reservation.user.email,
+          memberFirstName: reservation.user.firstName,
+          clubName: 'Skyland Wellness Club',
+          trainerName: '',
+          sessionType: reservation.sessionType,
+          startTime: reservation.startTime,
+          endTime: reservation.endTime,
+          remainingSessions: 0,
+        })
+        .catch(() => {});
+    }
+
     return { ok: true as const, cancelledReservationId: reservationId };
   }
 
