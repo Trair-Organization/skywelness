@@ -909,121 +909,64 @@ export function ClubConnectScreen() {
           <Text style={styles.popularSubtitle}>{t('onboarding.clubShowcaseSubtitle')}</Text>
         </View>
 
-        <View style={styles.sliderViewport} pointerEvents="box-none">
-          <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: sliderX }] }]}>
-            {apiClubs.length > 0
-              ? apiClubs.map((club, idx) => {
-                  const handlePress = () => {
-                    setPreviewClub({
-                      id: club.id,
-                      name: club.name,
-                      subdomain: club.subdomain,
-                      logoUrl: club.logoUrl,
-                    });
-                  };
-                  return (
-                    <Pressable
-                      key={`api-${club.id}-${idx}`}
-                      onPress={handlePress}
-                      style={({ pressed }) => [
-                        styles.clubCard,
-                        club.featured && styles.clubCardFeatured,
-                        pressed && styles.clubCardPressed,
-                      ]}
-                    >
-                      {club.featured ? (
-                        <View style={styles.featuredRibbon}>
-                          <Text style={styles.featuredRibbonTxt}>
-                            {t('onboarding.clubCardFeaturedBadge')}
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View style={styles.clubLogoWrap}>
-                        {club.logoUrl ? (
-                          <Image
-                            source={{ uri: club.logoUrl }}
-                            style={styles.clubLogoImage}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <Text style={styles.clubLogoFallback}>
-                            {club.name.slice(0, 2).toUpperCase()}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={styles.clubName} numberOfLines={2}>
+        {apiClubs.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.trainerScrollContent}
+          >
+            {apiClubs.map((club) => {
+              const handlePress = () => {
+                setPreviewClub({
+                  id: club.id,
+                  name: club.name,
+                  subdomain: club.subdomain,
+                  logoUrl: club.logoUrl,
+                });
+              };
+              return (
+                <Pressable
+                  key={club.id}
+                  onPress={handlePress}
+                  style={({ pressed }) => [styles.clubCardNew, pressed && styles.cardPressed]}
+                >
+                  <View style={styles.clubCardLogoArea}>
+                    {club.logoUrl ? (
+                      <Image
+                        source={{ uri: club.logoUrl }}
+                        style={styles.clubCardLogoImg}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Text style={styles.clubLogoFallback}>
+                        {club.name.slice(0, 2).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.clubCardBody}>
+                    <View>
+                      <Text style={styles.clubCardName} numberOfLines={2}>
                         {club.name}
                       </Text>
-                      <Text style={styles.clubLocation} numberOfLines={1}>
-                        {club.location ?? club.subdomain}
+                      <Text style={styles.clubCardLocation} numberOfLines={1}>
+                        {club.location ?? ''}
                       </Text>
                       {club.services.length > 0 && (
-                        <Text style={styles.clubServices} numberOfLines={1}>
+                        <Text style={styles.clubCardServices} numberOfLines={1}>
                           {club.services.slice(0, 3).join(' · ')}
                         </Text>
                       )}
-                      <View style={styles.clubCtaRow}>
-                        <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
-                        <Text style={styles.clubCtaArrow}>›</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })
-              : [...FEATURED_CLUBS, ...FEATURED_CLUBS].map((club, idx) => {
-                  const directoryMatch = tenantDirectory.find(
-                    (row) => row.subdomain === club.subdomain,
-                  );
-                  const handlePress = () => {
-                    setPreviewClub(
-                      directoryMatch ?? {
-                        id: club.id,
-                        name: club.name,
-                        subdomain: club.subdomain,
-                        logoUrl: null,
-                      },
-                    );
-                  };
-                  return (
-                    <Pressable
-                      key={`${club.id}-${idx}`}
-                      onPress={handlePress}
-                      style={({ pressed }) => [
-                        styles.clubCard,
-                        club.featured && styles.clubCardFeatured,
-                        pressed && styles.clubCardPressed,
-                      ]}
-                    >
-                      {club.featured ? (
-                        <View style={styles.featuredRibbon}>
-                          <Text style={styles.featuredRibbonTxt}>
-                            {t('onboarding.clubCardFeaturedBadge')}
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View style={styles.clubLogoWrap}>
-                        <Image
-                          source={club.logo}
-                          style={styles.clubLogoImage}
-                          resizeMode="contain"
-                        />
-                      </View>
-                      <Text style={styles.clubName} numberOfLines={2}>
-                        {club.name}
-                      </Text>
-                      <Text style={styles.clubLocation} numberOfLines={1}>
-                        {club.location}
-                      </Text>
-                      <View style={styles.clubCtaRow}>
-                        <Text style={styles.clubCtaTxt}>{t('onboarding.clubCardCta')}</Text>
-                        <Text style={styles.clubCtaArrow}>›</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-          </Animated.View>
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeLeft]} />
-          <View pointerEvents="none" style={[styles.sliderFade, styles.sliderFadeRight]} />
-        </View>
+                    </View>
+                    <View style={styles.trainerCtaPill}>
+                      <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                      <Text style={styles.trainerCtaPillTxt}>{t('onboarding.clubCardCta')}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         <View style={styles.sectionHeader}>
           <View>
@@ -2128,6 +2071,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
     paddingBottom: 8,
+  },
+  clubCardNew: {
+    width: TRAINER_CARD_WIDTH,
+    minHeight: 220,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.3)',
+    backgroundColor: 'rgba(8,16,28,0.85)',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  clubCardLogoArea: {
+    width: '100%',
+    height: 90,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  clubCardLogoImg: {
+    width: '90%',
+    height: '80%',
+  },
+  clubCardBody: {
+    flex: 1,
+    padding: 12,
+    gap: 4,
+    justifyContent: 'space-between',
+  },
+  clubCardName: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  clubCardLocation: {
+    color: premium.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  clubCardServices: {
+    color: premium.textMuted,
+    fontSize: 9,
+    fontWeight: '600',
   },
   eventCardApi: {
     width: TRAINER_CARD_WIDTH,
