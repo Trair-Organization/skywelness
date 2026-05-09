@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
-import { UserRole } from '../database/enums';
+import { SessionType, UserRole } from '../database/enums';
+import { MailService } from '../mail/mail.service';
 import { PushService } from './push.service';
 import { SmsService } from './sms.service';
 
@@ -13,6 +14,7 @@ export class NotificationDispatcher {
   constructor(
     private readonly push: PushService,
     private readonly sms: SmsService,
+    private readonly mail: MailService,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
@@ -46,6 +48,23 @@ export class NotificationDispatcher {
         params.time,
         params.reservationId,
       );
+    // Mail
+    await this.mail
+      .sendReservationConfirmed({
+        to: params.member.email,
+        memberFirstName: params.member.firstName,
+        clubName: 'Skyland Wellness Club',
+        trainerName: params.trainerName,
+        sessionType:
+          params.sessionType === 'personal_training'
+            ? SessionType.PERSONAL_TRAINING
+            : SessionType.MASSAGE,
+        startTime: new Date(),
+        endTime: new Date(),
+        packageTypeName: typeLabel,
+        remainingSessions: 0,
+      })
+      .catch((e) => this.logger.error(`Mail failed: ${e}`));
     this.logger.log(`[NOTIFY] reservationCreated → ${params.member.email}`);
   }
 
