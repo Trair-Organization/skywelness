@@ -2712,3 +2712,75 @@ button.primary:disabled {
 .btn-back:hover {
   text-decoration: underline;
 }
+
+/* ─── Therapist Mini Working Hours Display ─────────────────────────────────── */
+.wh-mini-display {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.wh-mini-cell {
+  width: 28px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.wh-mini-cell.wh-mini-open {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Therapist Schedule Edit Grid */
+.therapist-schedule-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.schedule-day-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.schedule-day-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  min-width: 85px;
+  color: var(--text);
+}
+
+.schedule-day-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  min-width: 120px;
+}
+
+.schedule-day-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.schedule-day-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
