@@ -30,6 +30,34 @@ export class AdminController {
     private readonly mailService: MailService,
   ) {}
 
+  /** Dashboard istatistikleri */
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getStats(@CurrentUser() admin: User) {
+    return this.adminMembers.getDashboardStats(admin.tenantId);
+  }
+
+  /** Tüm üyeleri listele */
+  @Get('members')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listAllMembers(
+    @CurrentUser() admin: User,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.adminMembers.listAllMembers(admin.tenantId, status, search);
+  }
+
+  /** Eğitmenleri listele */
+  @Get('trainers')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTrainers(@CurrentUser() admin: User) {
+    return this.adminMembers.listTrainers(admin.tenantId);
+  }
+
   /** Diagnostic: probe the active mail transport (SMTP verify). */
   @Get('mail/health')
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -8,6 +8,9 @@ import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { LeadsPage } from './pages/LeadsPage';
+import { MembersPage } from './pages/MembersPage';
+import { TrainersManagementPage } from './pages/TrainersManagementPage';
+import { SpaManagementPage } from './pages/SpaManagementPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
@@ -43,7 +46,10 @@ function AppRoutes() {
         <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/club/cafe-orders" element={<ClubCafeOrdersPage />} />
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
+        <Route path="/members" element={<MembersPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
+        <Route path="/trainers" element={<TrainersManagementPage />} />
+        <Route path="/spa" element={<SpaManagementPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/messages" element={<MessagesPage />} />

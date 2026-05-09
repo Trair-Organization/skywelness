@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Package } from '../database/entities/package.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
+import { ClubEvent } from '../database/entities/club-event.entity';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 
 @Injectable()
@@ -15,7 +16,112 @@ export class AdminMembersService {
     private readonly packagesRepo: Repository<Package>,
     @InjectRepository(Trainer)
     private readonly trainersRepo: Repository<Trainer>,
+    @InjectRepository(ClubEvent)
+    private readonly eventsRepo: Repository<ClubEvent>,
   ) {}
+
+  /** Dashboard istatistikleri */
+  async getDashboardStats(tenantId: string) {
+    const totalMembers = await this.usersRepo.count({
+      where: { tenantId, role: UserRole.MEMBER },
+    });
+    const activeMembers = await this.usersRepo.count({
+      where: { tenantId, role: UserRole.MEMBER, accountStatus: MemberAccountStatus.ACTIVE },
+    });
+    const pendingMembers = await this.usersRepo.count({
+      where: {
+        tenantId,
+        role: UserRole.MEMBER,
+        accountStatus: MemberAccountStatus.PENDING_APPROVAL,
+      },
+    });
+    const totalTrainers = await this.trainersRepo.count({ where: { tenantId } });
+    const totalEvents = await this.eventsRepo.count({ where: { tenantId } });
+    const upcomingEvents = await this.eventsRepo
+      .createQueryBuilder('e')
+      .where('e.tenantId = :tenantId', { tenantId })
+      .andWhere('e.startsAt > NOW()')
+      .getCount();
+
+    // Son 30 günde kayıt olan üyeler
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const newMembersThisMonth = await this.usersRepo
+      .createQueryBuilder('u')
+      .where('u.tenantId = :tenantId', { tenantId })
+      .andWhere('u.role = :role', { role: UserRole.MEMBER })
+      .andWhere('u.createdAt >= :since', { since: thirtyDaysAgo })
+      .getCount();
+
+    return {
+      totalMembers,
+      activeMembers,
+      pendingMembers,
+      totalTrainers,
+      totalEvents,
+      upcomingEvents,
+      newMembersThisMonth,
+    };
+  }
+
+  /** Tüm üyeleri listele (filtreleme destekli) */
+  async listAllMembers(tenantId: string, status?: string, search?: string) {
+    const qb = this.usersRepo
+      .createQueryBuilder('u')
+      .where('u.tenantId = :tenantId', { tenantId })
+      .andWhere('u.role = :role', { role: UserRole.MEMBER });
+
+    if (status && status !== 'all') {
+      qb.andWhere('u.accountStatus = :status', { status });
+    }
+    if (search) {
+      qb.andWhere(
+        '(LOWER(u.firstName) LIKE :s OR LOWER(u.lastName) LIKE :s OR LOWER(u.email) LIKE :s)',
+        { s: `%${search.toLowerCase()}%` },
+      );
+    }
+
+    qb.select([
+      'u.id',
+      'u.email',
+      'u.firstName',
+      'u.lastName',
+      'u.phone',
+      'u.photoUrl',
+      'u.accountStatus',
+      'u.lastLogin',
+      'u.createdAt',
+    ]);
+    qb.orderBy('u.createdAt', 'DESC');
+    qb.take(200);
+
+    return qb.getMany();
+  }
+
+  /** Eğitmenleri listele */
+  async listTrainers(tenantId: string) {
+    const trainers = await this.trainersRepo.find({
+      where: { tenantId },
+      relations: ['user'],
+      order: { createdAt: 'ASC' },
+    });
+    return trainers.map((t) => ({
+      id: t.id,
+      userId: t.userId,
+      firstName: t.user.firstName,
+      lastName: t.user.lastName,
+      email: t.user.email,
+      phone: t.user.phone,
+      photoUrl: t.photoUrl,
+      bio: t.bio,
+      specializations: t.specializations,
+      certifications: t.certifications,
+      offersSessionTypes: t.offersSessionTypes,
+      avgRating: t.avgRating,
+      totalSessions: t.totalSessions,
+      createdAt: t.createdAt,
+    }));
+  }
 
   async listPendingMembers(tenantId: string) {
     return this.usersRepo.find({

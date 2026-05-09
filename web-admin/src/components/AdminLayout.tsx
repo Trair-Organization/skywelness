@@ -5,14 +5,15 @@ type NavItem = { path: string; icon: string; label: string };
 
 const CLUB_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
-  { path: '/members/pending', icon: '👥', label: 'Üyeler' },
+  { path: '/members', icon: '👥', label: 'Üyeler' },
+  { path: '/trainers', icon: '🏋️', label: 'Eğitmenler' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
-  { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
+  { path: '/spa', icon: '🧖', label: 'Spa & Wellness' },
   { path: '/leads', icon: '📋', label: 'Gelen Talepler' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
-  { path: '/club/reservation-requests', icon: '📝', label: 'Rezervasyonlar' },
+  { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
+  { path: '/club/reservation-requests', icon: '📝', label: 'PT Rezervasyonları' },
   { path: '/club/cafe-orders', icon: '☕', label: 'Cafe Siparişleri' },
-  { path: '/club/insights', icon: '📈', label: 'İstatistikler' },
 ];
 
 const PLATFORM_NAV: NavItem[] = [

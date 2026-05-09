@@ -1,89 +1,212 @@
-import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
-import { setAdminLanguage } from '../i18n';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { apiJson } from '../lib/api';
+
+type DashboardStats = {
+  totalMembers: number;
+  activeMembers: number;
+  pendingMembers: number;
+  totalTrainers: number;
+  totalEvents: number;
+  upcomingEvents: number;
+  newMembersThisMonth: number;
+};
+
+type RecentMember = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  accountStatus: string;
+  createdAt: string;
+};
 
 export function ClubDashboardPage() {
-  const { t, i18n } = useTranslation();
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentMembers, setRecentMembers] = useState<RecentMember[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function signOut() {
-    logout();
-    navigate('/login', { replace: true });
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [s, members] = await Promise.all([
+        apiJson<DashboardStats>('/admin/stats'),
+        apiJson<RecentMember[]>('/admin/members?status=all'),
+      ]);
+      setStats(s);
+      setRecentMembers(members.slice(0, 5));
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void load();
+    });
+  }, [load]);
+
+  if (loading || !stats) {
+    return (
+      <div className="dashboard-page">
+        <p className="muted">Yükleniyor...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="shell">
-      <header className="topbar">
+    <div className="dashboard-page">
+      <div className="dashboard-header">
         <div>
-          <h1>{t('clubDashboard.title')}</h1>
-          <p className="muted">
-            {user?.firstName} {user?.lastName} · {user?.email}
-          </p>
+          <h1 className="dashboard-title">Dashboard</h1>
+          <p className="dashboard-subtitle">Skyland Wellness Club yönetim paneli</p>
         </div>
-        <div className="topbarActions">
-          <div className="langBar inline">
-            <button
-              type="button"
-              className={i18n.language === 'tr' ? 'langActive' : 'secondary'}
-              onClick={() => setAdminLanguage('tr')}
-            >
-              {t('lang.tr')}
-            </button>
-            <button
-              type="button"
-              className={i18n.language === 'en' ? 'langActive' : 'secondary'}
-              onClick={() => setAdminLanguage('en')}
-            >
-              {t('lang.en')}
-            </button>
+        <button className="btn-refresh" onClick={() => void load()}>
+          🔄 Yenile
+        </button>
+      </div>
+
+      {/* İstatistik Kartları */}
+      <div className="stats-grid">
+        <div className="stat-card" onClick={() => navigate('/members')}>
+          <div className="stat-icon">👥</div>
+          <div className="stat-content">
+            <span className="stat-value">{stats.totalMembers}</span>
+            <span className="stat-label">Toplam Üye</span>
           </div>
-          <button type="button" className="secondary" onClick={signOut}>
-            {t('dashboard.signOut')}
+          <div className="stat-badge stat-badge-blue">{stats.activeMembers} aktif</div>
+        </div>
+
+        <div
+          className="stat-card stat-card-warning"
+          onClick={() => navigate('/members?status=pending_approval')}
+        >
+          <div className="stat-icon">⏳</div>
+          <div className="stat-content">
+            <span className="stat-value">{stats.pendingMembers}</span>
+            <span className="stat-label">Onay Bekleyen</span>
+          </div>
+          {stats.pendingMembers > 0 && (
+            <div className="stat-badge stat-badge-orange">Aksiyon gerekli</div>
+          )}
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/trainers')}>
+          <div className="stat-icon">🏋️</div>
+          <div className="stat-content">
+            <span className="stat-value">{stats.totalTrainers}</span>
+            <span className="stat-label">Eğitmen</span>
+          </div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/events')}>
+          <div className="stat-icon">📅</div>
+          <div className="stat-content">
+            <span className="stat-value">{stats.upcomingEvents}</span>
+            <span className="stat-label">Yaklaşan Etkinlik</span>
+          </div>
+          <div className="stat-badge stat-badge-green">{stats.totalEvents} toplam</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">📈</div>
+          <div className="stat-content">
+            <span className="stat-value">{stats.newMembersThisMonth}</span>
+            <span className="stat-label">Bu Ay Yeni Üye</span>
+          </div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/spa')}>
+          <div className="stat-icon">🧖</div>
+          <div className="stat-content">
+            <span className="stat-value">Spa</span>
+            <span className="stat-label">Spa & Wellness</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Hızlı Erişim */}
+      <div className="dashboard-section">
+        <h2 className="section-title">Hızlı Erişim</h2>
+        <div className="quick-actions">
+          <button
+            className="quick-action-btn"
+            onClick={() => navigate('/members?status=pending_approval')}
+          >
+            <span className="qa-icon">✅</span>
+            <span>Üye Onayları</span>
+            {stats.pendingMembers > 0 && <span className="qa-badge">{stats.pendingMembers}</span>}
+          </button>
+          <button className="quick-action-btn" onClick={() => navigate('/events')}>
+            <span className="qa-icon">➕</span>
+            <span>Etkinlik Oluştur</span>
+          </button>
+          <button className="quick-action-btn" onClick={() => navigate('/leads')}>
+            <span className="qa-icon">📋</span>
+            <span>Gelen Talepler</span>
+          </button>
+          <button className="quick-action-btn" onClick={() => navigate('/messages')}>
+            <span className="qa-icon">💬</span>
+            <span>Mesajlar</span>
+          </button>
+          <button className="quick-action-btn" onClick={() => navigate('/spa')}>
+            <span className="qa-icon">🧖</span>
+            <span>Spa Yönetimi</span>
+          </button>
+          <button
+            className="quick-action-btn"
+            onClick={() => navigate('/club/reservation-requests')}
+          >
+            <span className="qa-icon">📝</span>
+            <span>Rezervasyonlar</span>
           </button>
         </div>
-      </header>
+      </div>
 
-      <section className="card">
-        <h2>{t('clubDashboard.members')}</h2>
-        <p className="muted">{t('clubDashboard.membersDesc')}</p>
-        <Link className="link" to="/members/pending">
-          {t('dashboard.pendingMembersLink')}
-        </Link>
-      </section>
-
-      <section className="card">
-        <h2>{t('clubDashboard.events')}</h2>
-        <p className="muted">{t('clubDashboard.eventsDesc')}</p>
-        <Link className="link" to="/events">
-          {t('dashboard.eventsLink')}
-        </Link>
-      </section>
-
-      <section className="card">
-        <h2>{t('clubDashboard.reports')}</h2>
-        <p className="muted">{t('clubDashboard.reportsDesc')}</p>
-        <Link className="link" to="/club/insights">
-          {t('clubDashboard.reportsLink')}
-        </Link>
-      </section>
-
-      <section className="card">
-        <h2>SkyCafe</h2>
-        <p className="muted">Uyelerin verdigi cafe siparislerini buradan takip edin.</p>
-        <Link className="link" to="/club/cafe-orders">
-          Siparisleri Gor
-        </Link>
-      </section>
-
-      <section className="card">
-        <h2>Masaj Talep Onayı</h2>
-        <p className="muted">Mobil uygulamadan gelen masaj rezervasyon taleplerini onaylayın.</p>
-        <Link className="link" to="/club/reservation-requests">
-          Talepleri Yönet
-        </Link>
-      </section>
+      {/* Son Kayıt Olan Üyeler */}
+      <div className="dashboard-section">
+        <div className="section-header">
+          <h2 className="section-title">Son Kayıt Olan Üyeler</h2>
+          <button className="btn-link" onClick={() => navigate('/members')}>
+            Tümünü Gör →
+          </button>
+        </div>
+        {recentMembers.length === 0 ? (
+          <p className="muted">Henüz üye yok.</p>
+        ) : (
+          <div className="recent-members-list">
+            {recentMembers.map((m) => (
+              <div key={m.id} className="recent-member-row">
+                <div className="member-avatar">
+                  {m.firstName[0]}
+                  {m.lastName[0]}
+                </div>
+                <div className="member-info">
+                  <span className="member-name">
+                    {m.firstName} {m.lastName}
+                  </span>
+                  <span className="member-email">{m.email}</span>
+                </div>
+                <div className="member-meta">
+                  <span className={`status-badge status-${m.accountStatus}`}>
+                    {m.accountStatus === 'active'
+                      ? 'Aktif'
+                      : m.accountStatus === 'pending_approval'
+                        ? 'Bekliyor'
+                        : 'Reddedildi'}
+                  </span>
+                  <span className="member-date">
+                    {new Date(m.createdAt).toLocaleDateString('tr-TR')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
