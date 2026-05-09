@@ -4,6 +4,7 @@ import i18n from './i18n';
 import { AuthProvider } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { EventsPage } from './pages/EventsPage';
+import { CampaignsPage } from './pages/CampaignsPage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
         <Route path="/events" element={<EventsPage />} />
+        <Route path="/campaigns" element={<CampaignsPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboardPage />} />

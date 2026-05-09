@@ -9,6 +9,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BookingModule } from './booking/booking.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
@@ -61,6 +62,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     AdminModule,
     PlatformAdminModule,
     BookingModule,
+    CampaignsModule,
     EventsModule,
     HealthModule,
     ThrottlerModule.forRoot([

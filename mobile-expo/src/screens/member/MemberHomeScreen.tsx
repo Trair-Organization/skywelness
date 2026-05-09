@@ -92,6 +92,20 @@ type CafeProduct = {
   price: number;
 };
 
+type CampaignRow = {
+  id: string;
+  tenantId: string;
+  title: string;
+  description: string | null;
+  campaignType: 'massage_package' | 'membership' | 'personal_training' | 'general';
+  discountKind: 'percentage' | 'fixed';
+  discountValue: string;
+  imageUrl: string | null;
+  startsAt: string;
+  endsAt: string;
+  tenant?: { name: string; subdomain: string };
+};
+
 type CafeOrderRow = {
   id: string;
   status: 'pending' | 'cancelled' | 'completed';
@@ -250,6 +264,26 @@ export function MemberHomeScreen() {
   const [cafePhone, setCafePhone] = useState('');
   const [cafePaymentMethod, setCafePaymentMethod] = useState<'cash' | 'card'>('cash');
 
+  // --- Campaigns ---
+  const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+
+  const loadCampaigns = useCallback(async () => {
+    if (!token || !tenant) return;
+    setLoadingCampaigns(true);
+    try {
+      const rows = await apiJson<CampaignRow[]>('/campaigns?limit=6', {
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      setCampaigns(rows);
+    } catch {
+      // Kampanyalar yüklenemezse sessizce devam et
+    } finally {
+      setLoadingCampaigns(false);
+    }
+  }, [token, tenant]);
+
   const loadPackages = useCallback(async () => {
     if (!token || !tenant) {
       return;
@@ -318,9 +352,10 @@ export function MemberHomeScreen() {
         loadPackages().catch(() => {}),
         loadReservations().catch(() => {}),
         loadTrainers().catch(() => {}),
+        loadCampaigns().catch(() => {}),
       ]).finally(() => setInitialLoad(false));
     }
-  }, [token, tenant, loadPackages, loadReservations, loadTrainers]);
+  }, [token, tenant, loadPackages, loadReservations, loadTrainers, loadCampaigns]);
 
   const onRefresh = useCallback(async () => {
     if (!token || !tenant) return;
@@ -330,12 +365,13 @@ export function MemberHomeScreen() {
         loadPackages().catch(() => {}),
         loadReservations().catch(() => {}),
         loadTrainers().catch(() => {}),
+        loadCampaigns().catch(() => {}),
       ]);
       showToast(t('home.refreshed'), 'success', 1500);
     } finally {
       setRefreshing(false);
     }
-  }, [token, tenant, loadPackages, loadReservations, loadTrainers, t]);
+  }, [token, tenant, loadPackages, loadReservations, loadTrainers, loadCampaigns, t]);
 
   const loadAvailability = useCallback(async () => {
     if (!token || !tenant) {
@@ -761,6 +797,68 @@ export function MemberHomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* ═══════════ KAMPANYALAR ═══════════ */}
+        {campaigns.length > 0 && (
+          <View style={styles.campaignSection}>
+            <View style={styles.campaignHeader}>
+              <Text style={styles.campaignIcon}>🔥</Text>
+              <View>
+                <Text style={styles.eventsSectionTitle}>Kampanyalar</Text>
+                <Text style={styles.campaignSubtitle}>Kulübünüzün özel teklifleri</Text>
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.eventsRailInner}
+            >
+              {campaigns.map((campaign) => {
+                const isPercentage = campaign.discountKind === 'percentage';
+                const discountLabel = isPercentage
+                  ? `%${campaign.discountValue} İndirim`
+                  : `₺${campaign.discountValue} İndirim`;
+                const typeEmoji =
+                  campaign.campaignType === 'massage_package'
+                    ? '💆'
+                    : campaign.campaignType === 'membership'
+                      ? '🏢'
+                      : campaign.campaignType === 'personal_training'
+                        ? '🏋️'
+                        : '🎁';
+                const endsAt = new Date(campaign.endsAt);
+                const daysLeft = Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / 86400000));
+
+                return (
+                  <View key={campaign.id} style={styles.campaignCard}>
+                    {campaign.imageUrl ? (
+                      <Image
+                        source={{ uri: campaign.imageUrl }}
+                        style={styles.campaignImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.campaignImage, styles.campaignImagePh]}>
+                        <Text style={styles.campaignImageEmoji}>{typeEmoji}</Text>
+                      </View>
+                    )}
+                    <View style={styles.campaignCardBody}>
+                      <View style={styles.campaignBadge}>
+                        <Text style={styles.campaignBadgeTxt}>{discountLabel}</Text>
+                      </View>
+                      <Text style={styles.campaignTitle} numberOfLines={2}>
+                        {campaign.title}
+                      </Text>
+                      {daysLeft <= 3 && (
+                        <Text style={styles.campaignUrgent}>Son {daysLeft} gün!</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         <Text style={styles.eventsSectionTitle}>Bugunun Musait Masaj Saatleri</Text>
         {loadingMassageSlots ? (
@@ -1737,5 +1835,73 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 12,
+  },
+  // ─── Campaigns ─────────────────────────────────────────────────────────────
+  campaignSection: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  campaignHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  campaignIcon: {
+    fontSize: 20,
+  },
+  campaignSubtitle: {
+    fontSize: 11,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
+  campaignCard: {
+    width: 130,
+    marginRight: 8,
+    borderRadius: premium.radiusMd,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.3)',
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    overflow: 'hidden',
+  },
+  campaignImage: {
+    width: '100%',
+    height: 60,
+    backgroundColor: 'rgba(251,191,36,0.12)',
+  },
+  campaignImagePh: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  campaignImageEmoji: {
+    fontSize: 24,
+  },
+  campaignCardBody: {
+    padding: 8,
+    gap: 4,
+  },
+  campaignBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(251,191,36,0.2)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  campaignBadgeTxt: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fbbf24',
+  },
+  campaignTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: premium.text,
+    lineHeight: 15,
+  },
+  campaignUrgent: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: premium.danger,
   },
 });
