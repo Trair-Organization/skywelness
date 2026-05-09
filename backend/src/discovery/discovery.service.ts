@@ -24,7 +24,13 @@ export class DiscoveryService {
       take: Math.min(limit, 50),
     });
     return rows
-      .filter((t) => !t.subdomain.startsWith('coach-') && t.subdomain !== 'independent-hub')
+      .filter(
+        (t) =>
+          !t.subdomain.startsWith('coach-') &&
+          !t.subdomain.startsWith('e2e') &&
+          t.subdomain !== 'independent-hub' &&
+          t.subdomain !== 'demo',
+      )
       .map((t) => ({
         id: t.id,
         name: t.name,

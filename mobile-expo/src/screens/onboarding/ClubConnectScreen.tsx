@@ -823,8 +823,8 @@ export function ClubConnectScreen() {
                       {trainer.clubName}
                     </Text>
                     <View style={styles.trainerCtaPill}>
-                      <Text style={styles.trainerCtaPillIcon}>🥇</Text>
-                      <Text style={styles.trainerCtaPillTxt}>Özel ders al</Text>
+                      <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                      <Text style={styles.trainerCtaPillTxt}>İletişime Geç</Text>
                     </View>
                   </Pressable>
                 );
@@ -1285,8 +1285,8 @@ export function ClubConnectScreen() {
                   {trainer.clubName}
                 </Text>
                 <View style={styles.trainerCtaPill}>
-                  <Text style={styles.trainerCtaPillIcon}>🥇</Text>
-                  <Text style={styles.trainerCtaPillTxt}>Özel ders al</Text>
+                  <Text style={styles.trainerCtaPillIcon}>💬</Text>
+                  <Text style={styles.trainerCtaPillTxt}>İletişime Geç</Text>
                 </View>
               </Pressable>
             ))}
@@ -1439,13 +1439,17 @@ export function ClubConnectScreen() {
                     const trainer = previewTrainer;
                     if (!trainer) return;
                     setPreviewTrainer(null);
-                    navigation.navigate('Register', {
-                      preselectedSubdomain: trainer.clubSubdomain,
-                      preselectedGoal: trainer.goalId,
+                    setLeadModal({
+                      visible: true,
+                      source: 'trainer',
+                      sourceRef: trainer.id,
+                      sourceLabel: `${trainer.name} — ${trainer.clubName}`,
+                      clubSubdomain: trainer.clubSubdomain,
+                      prefillMessage: `${trainer.name} eğitmen hakkında bilgi almak istiyorum.`,
                     });
                   }}
                 >
-                  <Text style={styles.modalPrimaryLessonTxt}>Üye olup özel ders al</Text>
+                  <Text style={styles.modalPrimaryLessonTxt}>💬 İletişime Geç</Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [
