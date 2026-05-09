@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ApiError, apiJson } from '../lib/api';
 
 type ReservationRequest = {
@@ -48,62 +47,64 @@ export function ClubReservationRequestsPage() {
   }
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <h1>Masaj Rezervasyon Talepleri</h1>
-        <div className="topbarActions">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void load()}
-            disabled={loading}
-          >
-            {loading ? 'Yükleniyor...' : 'Yenile'}
-          </button>
-          <Link className="secondary" to="/club/dashboard">
-            Panele Dön
-          </Link>
+    <div className="dashboard-page">
+      <div className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">Masaj Rezervasyon Talepleri</h1>
+          <p className="dashboard-subtitle">
+            Mobil uygulamadan gelen masaj randevu taleplerini yönetin
+          </p>
         </div>
-      </header>
+        <button className="btn-sm btn-outline" onClick={() => void load()} disabled={loading}>
+          {loading ? 'Yükleniyor...' : '🔄 Yenile'}
+        </button>
+      </div>
       {error ? <p className="error">{error}</p> : null}
-      <section className="card">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Masöz</th>
-              <th>Başlangıç</th>
-              <th>Bitiş</th>
-              <th>Durum</th>
-              <th>İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>
-                  {row.trainer.user.firstName} {row.trainer.user.lastName}
-                </td>
-                <td>{new Date(row.startTime).toLocaleString('tr-TR')}</td>
-                <td>{new Date(row.endTime).toLocaleString('tr-TR')}</td>
-                <td>{row.status}</td>
-                <td style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" className="link" onClick={() => void approve(row.id)}>
-                    Onayla
-                  </button>
-                  <button type="button" className="secondary" onClick={() => void reject(row.id)}>
-                    Reddet
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 ? (
+      {rows.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">📝</span>
+          <p>Bekleyen talep yok</p>
+        </div>
+      ) : (
+        <div className="members-table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={5}>Bekleyen talep yok.</td>
+                <th>Masöz</th>
+                <th>Başlangıç</th>
+                <th>Bitiş</th>
+                <th>Durum</th>
+                <th>İşlem</th>
               </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    {row.trainer.user.firstName} {row.trainer.user.lastName}
+                  </td>
+                  <td>{new Date(row.startTime).toLocaleString('tr-TR')}</td>
+                  <td>{new Date(row.endTime).toLocaleString('tr-TR')}</td>
+                  <td>{row.status}</td>
+                  <td style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="link" onClick={() => void approve(row.id)}>
+                      Onayla
+                    </button>
+                    <button type="button" className="secondary" onClick={() => void reject(row.id)}>
+                      Reddet
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>Bekleyen talep yok.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

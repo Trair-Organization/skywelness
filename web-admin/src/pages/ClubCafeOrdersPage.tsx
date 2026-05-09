@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ApiError, apiJson } from '../lib/api';
 
 type CafeOrderItem = {
@@ -61,70 +60,70 @@ export function ClubCafeOrdersPage() {
   }
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <h1>SkyCafe Siparisleri</h1>
-        <div className="topbarActions">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void load()}
-            disabled={loading}
-          >
-            {loading ? 'Yukleniyor...' : 'Yenile'}
-          </button>
-          <Link className="secondary" to="/club/dashboard">
-            Panele Don
-          </Link>
+    <div className="dashboard-page">
+      <div className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">☕ SkyCafe Siparişleri</h1>
+          <p className="dashboard-subtitle">Üyelerin verdiği cafe siparişlerini takip edin</p>
         </div>
-      </header>
+        <button className="btn-sm btn-outline" onClick={() => void load()} disabled={loading}>
+          {loading ? 'Yükleniyor...' : '🔄 Yenile'}
+        </button>
+      </div>
 
       {error ? <p className="error">{error}</p> : null}
-      <section className="card">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Tarih</th>
-              <th>Uye</th>
-              <th>Adres</th>
-              <th>Odeme</th>
-              <th>Tutar</th>
-              <th>Durum</th>
-              <th>Urunler</th>
-              <th>Islem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{new Date(row.createdAt).toLocaleString('tr-TR')}</td>
-                <td>
-                  {row.customerName}
-                  <br />
-                  <span className="muted">{row.phoneNumber}</span>
-                </td>
-                <td>
-                  {row.blockLabel} / {row.apartmentLabel}
-                </td>
-                <td>{row.paymentMethod === 'cash' ? 'Nakit' : 'Kart'}</td>
-                <td>{formatMoney(row.totalAmount)}</td>
-                <td>{row.status}</td>
-                <td>{row.items.map((item) => `${item.title} x${item.quantity}`).join(', ')}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={row.status !== 'pending'}
-                    onClick={() => void cancelOrder(row.id)}
-                  >
-                    Iptal Et
-                  </button>
-                </td>
+      {rows.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">☕</span>
+          <p>Henüz sipariş yok</p>
+        </div>
+      ) : (
+        <div className="members-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Uye</th>
+                <th>Adres</th>
+                <th>Odeme</th>
+                <th>Tutar</th>
+                <th>Durum</th>
+                <th>Urunler</th>
+                <th>Islem</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>{new Date(row.createdAt).toLocaleString('tr-TR')}</td>
+                  <td>
+                    {row.customerName}
+                    <br />
+                    <span className="muted">{row.phoneNumber}</span>
+                  </td>
+                  <td>
+                    {row.blockLabel} / {row.apartmentLabel}
+                  </td>
+                  <td>{row.paymentMethod === 'cash' ? 'Nakit' : 'Kart'}</td>
+                  <td>{formatMoney(row.totalAmount)}</td>
+                  <td>{row.status}</td>
+                  <td>{row.items.map((item) => `${item.title} x${item.quantity}`).join(', ')}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={row.status !== 'pending'}
+                      onClick={() => void cancelOrder(row.id)}
+                    >
+                      Iptal Et
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
