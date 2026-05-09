@@ -337,7 +337,9 @@ export function TrainersManagementPage() {
 
   async function toggleSlot(date: string, startTime: string, endTime: string) {
     if (!scheduleTrainer) return;
-    const existing = schedule.find((s) => s.date === date && s.startTime === startTime);
+    const existing = schedule.find(
+      (s) => s.date.slice(0, 10) === date && s.startTime.slice(0, 5) === startTime,
+    );
     if (existing) {
       await apiJson(`/admin/trainers/${scheduleTrainer.id}/schedule/${existing.id}`, {
         method: 'DELETE',
@@ -597,7 +599,8 @@ export function TrainersManagementPage() {
                   const isDisabled = isPastDay || isPastSlot;
 
                   const slotData = schedule.find(
-                    (s) => s.date === day.date && s.startTime === slot.start,
+                    (s) =>
+                      s.date.slice(0, 10) === day.date && s.startTime.slice(0, 5) === slot.start,
                   );
                   const hasSlot = !!slotData;
                   const isBooked = slotData?.booked || false;
