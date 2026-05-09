@@ -2683,3 +2683,32 @@ button.primary:disabled {
     overflow-x: auto;
   }
 }
+
+/* ─── Schedule Button on Trainer Card ──────────────────────────────────────── */
+.btn-sm.btn-schedule {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  font-weight: 700;
+}
+
+.btn-sm.btn-schedule:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: var(--accent);
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.btn-back:hover {
+  text-decoration: underline;
+}

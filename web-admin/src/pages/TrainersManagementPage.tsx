@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson, ApiError } from '../lib/api';
+import { apiBaseUrl } from '../lib/config';
 
 type TrainerRow = {
   id: string;
@@ -28,22 +29,64 @@ type TrainerStats = {
   avgRating: string;
 };
 
+type AvailabilityRow = {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  available: boolean;
+};
+
 const SESSION_TYPE_OPTIONS = [
   { value: 'personal_training', label: 'Personal Training' },
   { value: 'massage', label: 'Masaj' },
 ];
 
+const DAYS_LABELS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+const WEEKDAY_NUMS = [1, 2, 3, 4, 5, 6, 0];
+
+const TIME_SLOTS = Array.from({ length: 14 }, (_, i) => {
+  const h = 8 + i;
+  return {
+    start: `${h.toString().padStart(2, '0')}:00`,
+    end: `${(h + 1).toString().padStart(2, '0')}:00`,
+    label: `${h.toString().padStart(2, '0')}:00`,
+  };
+});
+
+type ViewMode = 'list' | 'schedule';
+
 export function TrainersManagementPage() {
   const [trainers, setTrainers] = useState<TrainerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Ajanda state
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [scheduleTrainer, setScheduleTrainer] = useState<TrainerRow | null>(null);
+  const [schedule, setSchedule] = useState<AvailabilityRow[]>([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [showBulkForm, setShowBulkForm] = useState(false);
+  const [bulkForm, setBulkForm] = useState({
+    startDate: '',
+    endDate: '',
+    weekdays: [1, 2, 3, 4, 5] as number[],
+    startTime: '09:00',
+    endTime: '18:00',
+    slotDuration: 60,
+  });
+  const [bulkSaving, setBulkSaving] = useState(false);
+
+  // Stats
   const [selectedStats, setSelectedStats] = useState<{ id: string; stats: TrainerStats } | null>(
     null,
   );
-  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -77,6 +120,7 @@ export function TrainersManagementPage() {
     });
   }, [load]);
 
+  // ─── Form İşlemleri ───────────────────────────────────────────────────────────
   function resetForm() {
     setForm({
       firstName: '',
@@ -112,20 +156,29 @@ export function TrainersManagementPage() {
 
   async function handleImageUpload(file: File) {
     setUploading(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3100/api/v1';
-      const res = await fetch(`${baseUrl}/auth/upload-image`, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
+      const base = apiBaseUrl();
+      const res = await fetch(`${base}/auth/upload-image`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(errBody || 'Upload failed');
+      }
       const body = (await res.json()) as { url?: string };
       if (body.url) {
-        const serverBase = baseUrl.replace('/api/v1', '');
+        const serverBase = base.replace('/api/v1', '');
         const fullUrl = body.url.startsWith('http') ? body.url : `${serverBase}${body.url}`;
         setForm((prev) => ({ ...prev, photoUrl: fullUrl }));
+        setSuccess('✅ Fotoğraf yüklendi');
+        setTimeout(() => setSuccess(null), 2000);
       }
-    } catch {
-      alert('Fotoğraf yüklenemedi');
+    } catch (e) {
+      setError(`Fotoğraf yüklenemedi: ${e instanceof Error ? e.message : 'Bilinmeyen hata'}`);
     } finally {
       setUploading(false);
     }
@@ -163,6 +216,7 @@ export function TrainersManagementPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
+        setSuccess('✅ Eğitmen güncellendi');
       } else {
         if (!form.password) {
           setError('Şifre zorunludur');
@@ -170,10 +224,12 @@ export function TrainersManagementPage() {
           return;
         }
         await apiJson('/admin/trainers', { method: 'POST', body: JSON.stringify(payload) });
+        setSuccess('✅ Eğitmen eklendi');
       }
       setShowForm(false);
       resetForm();
       await load();
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Hata oluştu');
     } finally {
@@ -186,6 +242,8 @@ export function TrainersManagementPage() {
     try {
       await apiJson(`/admin/trainers/${id}`, { method: 'DELETE' });
       await load();
+      setSuccess('✅ Eğitmen silindi');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Silme başarısız');
     }
@@ -194,20 +252,337 @@ export function TrainersManagementPage() {
   async function loadStats(trainerId: string) {
     try {
       const stats = await apiJson<TrainerStats>(`/admin/trainers/${trainerId}/stats`);
-      setSelectedStats({ id: trainerId, stats });
+      setSelectedStats((prev) => (prev?.id === trainerId ? null : { id: trainerId, stats }));
     } catch {
-      // ignore
+      /* ignore */
     }
   }
 
+  // ─── Ajanda İşlemleri ─────────────────────────────────────────────────────────
+  function openSchedule(t: TrainerRow) {
+    setScheduleTrainer(t);
+    setViewMode('schedule');
+    setWeekOffset(0);
+    void loadTrainerSchedule(t.id, 0);
+  }
+
+  function closeSchedule() {
+    setViewMode('list');
+    setScheduleTrainer(null);
+    setSchedule([]);
+  }
+
+  function getWeekRange(offset: number) {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return {
+      from: monday.toISOString().slice(0, 10),
+      to: sunday.toISOString().slice(0, 10),
+      label: `${monday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${sunday.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`,
+    };
+  }
+
+  function getWeekDays(offset: number) {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return { date: d.toISOString().slice(0, 10), label: DAYS_LABELS[i], dayNum: d.getDate() };
+    });
+  }
+
+  async function loadTrainerSchedule(trainerId: string, offset: number) {
+    setLoadingSchedule(true);
+    const { from, to } = getWeekRange(offset);
+    try {
+      const data = await apiJson<AvailabilityRow[]>(
+        `/admin/trainers/${trainerId}/schedule?from=${from}&to=${to}`,
+      );
+      setSchedule(data);
+    } catch {
+      setSchedule([]);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  }
+
+  function changeWeek(dir: number) {
+    const next = weekOffset + dir;
+    setWeekOffset(next);
+    if (scheduleTrainer) void loadTrainerSchedule(scheduleTrainer.id, next);
+  }
+
+  async function toggleSlot(date: string, startTime: string, endTime: string) {
+    if (!scheduleTrainer) return;
+    const existing = schedule.find((s) => s.date === date && s.startTime === startTime);
+    if (existing) {
+      await apiJson(`/admin/trainers/${scheduleTrainer.id}/schedule/${existing.id}`, {
+        method: 'DELETE',
+      });
+    } else {
+      await apiJson(`/admin/trainers/${scheduleTrainer.id}/schedule`, {
+        method: 'POST',
+        body: JSON.stringify({ date, startTime, endTime }),
+      });
+    }
+    void loadTrainerSchedule(scheduleTrainer.id, weekOffset);
+  }
+
+  async function clearDay(date: string) {
+    if (!scheduleTrainer) return;
+    if (!confirm(`${date} tarihindeki tüm saatleri silmek istiyor musunuz?`)) return;
+    await apiJson(`/admin/trainers/${scheduleTrainer.id}/schedule-day?date=${date}`, {
+      method: 'DELETE',
+    });
+    void loadTrainerSchedule(scheduleTrainer.id, weekOffset);
+  }
+
+  async function bulkAdd() {
+    if (!scheduleTrainer) return;
+    setBulkSaving(true);
+    try {
+      const startH = parseInt(bulkForm.startTime.split(':')[0]);
+      const endH = parseInt(bulkForm.endTime.split(':')[0]);
+      let totalCreated = 0;
+      for (let h = startH; h < endH; h += bulkForm.slotDuration / 60) {
+        const slotStart = `${Math.floor(h).toString().padStart(2, '0')}:00`;
+        const slotEnd = `${Math.floor(h + bulkForm.slotDuration / 60)
+          .toString()
+          .padStart(2, '0')}:00`;
+        const res = await apiJson<{ created: number }>(
+          `/admin/trainers/${scheduleTrainer.id}/schedule/bulk`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ ...bulkForm, startTime: slotStart, endTime: slotEnd }),
+          },
+        );
+        totalCreated += res.created;
+      }
+      setSuccess(`✅ ${totalCreated} saat dilimi oluşturuldu`);
+      setShowBulkForm(false);
+      void loadTrainerSchedule(scheduleTrainer.id, weekOffset);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Hata');
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  const weekRange = getWeekRange(weekOffset);
+  const weekDays = getWeekDays(weekOffset);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  // ─── AJANDA GÖRÜNÜMÜ ──────────────────────────────────────────────────────────
+  if (viewMode === 'schedule' && scheduleTrainer) {
+    return (
+      <div className="dashboard-page">
+        <div className="dashboard-header">
+          <div>
+            <button className="btn-back" onClick={closeSchedule}>
+              ← Eğitmenlere Dön
+            </button>
+            <h1 className="dashboard-title">
+              {scheduleTrainer.firstName} {scheduleTrainer.lastName} — Ajanda
+            </h1>
+            <p className="dashboard-subtitle">
+              Müsait saatleri belirleyin. Hücrelere tıklayarak ekle/kaldır.
+            </p>
+          </div>
+          <button className="btn-primary-lg" onClick={() => setShowBulkForm(true)}>
+            📋 Haftalık Program Oluştur
+          </button>
+        </div>
+
+        {error && <p className="error">{error}</p>}
+        {success && <p className="success-msg">{success}</p>}
+
+        {/* Toplu Program Formu */}
+        {showBulkForm && (
+          <div className="bulk-form-card">
+            <div className="bulk-form-header">
+              <h4>📋 Toplu Çalışma Programı Oluştur</h4>
+              <p className="muted">
+                Tarih aralığı ve günleri seçin, otomatik saat dilimleri oluşturulsun.
+              </p>
+            </div>
+            <div className="form-grid">
+              <label>
+                Başlangıç Tarihi *{' '}
+                <input
+                  type="date"
+                  value={bulkForm.startDate}
+                  onChange={(e) => setBulkForm({ ...bulkForm, startDate: e.target.value })}
+                />
+              </label>
+              <label>
+                Bitiş Tarihi *{' '}
+                <input
+                  type="date"
+                  value={bulkForm.endDate}
+                  onChange={(e) => setBulkForm({ ...bulkForm, endDate: e.target.value })}
+                />
+              </label>
+              <label>
+                İlk Saat{' '}
+                <input
+                  type="time"
+                  value={bulkForm.startTime}
+                  onChange={(e) => setBulkForm({ ...bulkForm, startTime: e.target.value })}
+                />
+              </label>
+              <label>
+                Son Saat{' '}
+                <input
+                  type="time"
+                  value={bulkForm.endTime}
+                  onChange={(e) => setBulkForm({ ...bulkForm, endTime: e.target.value })}
+                />
+              </label>
+              <label>
+                Seans Süresi
+                <select
+                  value={bulkForm.slotDuration}
+                  onChange={(e) =>
+                    setBulkForm({ ...bulkForm, slotDuration: Number(e.target.value) })
+                  }
+                >
+                  <option value={60}>1 Saat</option>
+                  <option value={90}>1.5 Saat</option>
+                  <option value={120}>2 Saat</option>
+                </select>
+              </label>
+              <label style={{ gridColumn: '1 / -1' }}>
+                Çalışma Günleri
+                <div className="weekday-selector">
+                  {DAYS_LABELS.map((day, i) => (
+                    <label
+                      key={i}
+                      className={`weekday-chip ${bulkForm.weekdays.includes(WEEKDAY_NUMS[i]) ? 'weekday-chip-active' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={bulkForm.weekdays.includes(WEEKDAY_NUMS[i])}
+                        onChange={(e) => {
+                          const num = WEEKDAY_NUMS[i];
+                          setBulkForm({
+                            ...bulkForm,
+                            weekdays: e.target.checked
+                              ? [...bulkForm.weekdays, num]
+                              : bulkForm.weekdays.filter((w) => w !== num),
+                          });
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                      {day.slice(0, 3)}
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <div className="form-actions">
+                <button
+                  className="primary"
+                  onClick={() => void bulkAdd()}
+                  disabled={bulkSaving || !bulkForm.startDate || !bulkForm.endDate}
+                >
+                  {bulkSaving ? '⏳ Oluşturuluyor...' : '✓ Program Oluştur'}
+                </button>
+                <button className="secondary" onClick={() => setShowBulkForm(false)}>
+                  İptal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Hafta Navigasyonu */}
+        <div className="week-nav">
+          <button className="btn-sm btn-outline" onClick={() => changeWeek(-1)}>
+            ‹ Önceki
+          </button>
+          <span className="week-label">{weekRange.label}</span>
+          <button className="btn-sm btn-outline" onClick={() => changeWeek(1)}>
+            Sonraki ›
+          </button>
+          <button
+            className="btn-sm btn-outline"
+            onClick={() => {
+              setWeekOffset(0);
+              void loadTrainerSchedule(scheduleTrainer.id, 0);
+            }}
+          >
+            Bugün
+          </button>
+        </div>
+
+        {/* Takvim Grid */}
+        {loadingSchedule ? (
+          <p className="muted">Yükleniyor...</p>
+        ) : (
+          <div className="calendar-grid">
+            <div className="calendar-header-row">
+              <div className="calendar-time-col">Saat</div>
+              {weekDays.map((day) => (
+                <div key={day.date} className="calendar-day-col">
+                  <span className="cal-day-name">{day.label.slice(0, 3)}</span>
+                  <span className="cal-day-num">{day.dayNum}</span>
+                  {schedule.filter((s) => s.date === day.date).length > 0 && (
+                    <button
+                      className="cal-clear-btn"
+                      onClick={() => void clearDay(day.date)}
+                      title="Günü temizle"
+                    >
+                      🗑
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {TIME_SLOTS.map((slot) => (
+              <div key={slot.start} className="calendar-row">
+                <div className="calendar-time-cell">{slot.label}</div>
+                {weekDays.map((day) => {
+                  const hasSlot = schedule.some(
+                    (s) => s.date === day.date && s.startTime === slot.start,
+                  );
+                  return (
+                    <div
+                      key={`${day.date}-${slot.start}`}
+                      className={`calendar-cell ${hasSlot ? 'calendar-cell-active' : ''}`}
+                      onClick={() => void toggleSlot(day.date, slot.start, slot.end)}
+                      title={hasSlot ? 'Kaldır' : 'Ekle'}
+                    >
+                      {hasSlot && <span className="cell-check">✓</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="muted" style={{ marginTop: 12, fontSize: '0.8rem' }}>
+          💡 Yeşil ✓ = müsait saat. Tıklayarak ekle/kaldır. Kullanıcılar sadece yeşil saatlere
+          randevu alabilir.
+        </p>
+      </div>
+    );
+  }
+
+  // ─── LİSTE GÖRÜNÜMÜ ──────────────────────────────────────────────────────────
   return (
     <div className="dashboard-page">
       <div className="dashboard-header">
         <div>
           <h1 className="dashboard-title">Eğitmen Yönetimi</h1>
-          <p className="dashboard-subtitle">
-            Eğitmenleri ekle, düzenle, sil ve performanslarını takip et
-          </p>
+          <p className="dashboard-subtitle">Eğitmenleri ekle, düzenle, ajandalarını yönet</p>
         </div>
         <button
           className="btn-primary-lg"
@@ -221,14 +596,15 @@ export function TrainersManagementPage() {
       </div>
 
       {error && <p className="error">{error}</p>}
+      {success && <p className="success-msg">{success}</p>}
 
-      {/* Eğitmen Ekleme/Düzenleme Formu */}
+      {/* Form */}
       {showForm && (
         <div className="card" style={{ marginBottom: 24 }}>
           <h3>{editId ? '✏️ Eğitmen Düzenle' : '➕ Yeni Eğitmen Ekle'}</h3>
           <form onSubmit={(e) => void handleSubmit(e)} className="form-grid">
             <label>
-              Ad *
+              Ad *{' '}
               <input
                 value={form.firstName}
                 onChange={(e) => setForm({ ...form, firstName: e.target.value })}
@@ -236,7 +612,7 @@ export function TrainersManagementPage() {
               />
             </label>
             <label>
-              Soyad *
+              Soyad *{' '}
               <input
                 value={form.lastName}
                 onChange={(e) => setForm({ ...form, lastName: e.target.value })}
@@ -244,7 +620,7 @@ export function TrainersManagementPage() {
               />
             </label>
             <label>
-              E-posta *
+              E-posta *{' '}
               <input
                 type="email"
                 value={form.email}
@@ -254,7 +630,7 @@ export function TrainersManagementPage() {
               />
             </label>
             <label>
-              Telefon
+              Telefon{' '}
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -263,7 +639,7 @@ export function TrainersManagementPage() {
             </label>
             {!editId && (
               <label>
-                Şifre *
+                Şifre *{' '}
                 <input
                   type="password"
                   value={form.password}
@@ -274,16 +650,16 @@ export function TrainersManagementPage() {
               </label>
             )}
             <label>
-              Biyografi
+              Biyografi{' '}
               <textarea
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 rows={2}
-                placeholder="Eğitmen hakkında kısa bilgi..."
+                placeholder="Eğitmen hakkında..."
               />
             </label>
             <label>
-              Uzmanlık Alanları (virgülle ayırın)
+              Uzmanlık Alanları{' '}
               <input
                 value={form.specializations}
                 onChange={(e) => setForm({ ...form, specializations: e.target.value })}
@@ -291,11 +667,11 @@ export function TrainersManagementPage() {
               />
             </label>
             <label>
-              Sertifikalar (virgülle ayırın)
+              Sertifikalar{' '}
               <input
                 value={form.certifications}
                 onChange={(e) => setForm({ ...form, certifications: e.target.value })}
-                placeholder="ACE, NASM, Pilates Mat"
+                placeholder="ACE, NASM"
               />
             </label>
             <label>
@@ -329,22 +705,20 @@ export function TrainersManagementPage() {
             </label>
             <label>
               Fotoğraf
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void handleImageUpload(f);
-                  }}
-                  disabled={uploading}
-                />
-                {uploading && <span className="muted">Yükleniyor...</span>}
-              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleImageUpload(f);
+                }}
+                disabled={uploading}
+              />
+              {uploading && <span className="muted">⏳ Yükleniyor...</span>}
               {form.photoUrl && (
                 <img
                   src={form.photoUrl}
-                  alt="Eğitmen"
+                  alt=""
                   style={{ marginTop: 8, maxHeight: 60, borderRadius: 8 }}
                 />
               )}
@@ -368,7 +742,7 @@ export function TrainersManagementPage() {
         </div>
       )}
 
-      {/* Eğitmen Listesi */}
+      {/* Eğitmen Kartları */}
       {loading ? (
         <p className="muted">Yükleniyor...</p>
       ) : trainers.length === 0 ? (
@@ -430,7 +804,7 @@ export function TrainersManagementPage() {
               {/* İstatistikler */}
               {selectedStats?.id === t.id && (
                 <div className="trainer-detail-panel">
-                  <h4>📈 Performans İstatistikleri</h4>
+                  <h4>📈 Performans</h4>
                   <div className="mini-stats">
                     <span>
                       ✅ Tamamlanan: <strong>{selectedStats.stats.completedSessions}</strong>
@@ -450,6 +824,9 @@ export function TrainersManagementPage() {
 
               {/* Aksiyon Butonları */}
               <div className="trainer-actions">
+                <button className="btn-sm btn-schedule" onClick={() => openSchedule(t)}>
+                  🗓️ Ajanda
+                </button>
                 <button className="btn-sm btn-outline" onClick={() => void loadStats(t.id)}>
                   📊 İstatistik
                 </button>
@@ -457,7 +834,7 @@ export function TrainersManagementPage() {
                   ✏️ Düzenle
                 </button>
                 <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>
-                  🗑 Sil
+                  🗑
                 </button>
               </div>
             </div>
