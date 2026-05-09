@@ -1,17 +1,17 @@
 :root {
-  --bg: #0f1115;
-  --surface: #181b21;
-  --text: #e6e8ec;
-  --muted: #9aa3ad;
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --text: #1a1d23;
+  --muted: #6b7280;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
-  --danger: #f87171;
-  --border: #2a2f38;
+  --danger: #ef4444;
+  --border: #e5e7eb;
   --radius: 10px;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface);
 }
 
 * {
@@ -532,7 +532,7 @@ a.secondary:hover {
   padding: 8px 0;
 }
 .messages-chat {
-  background: var(--bg);
+  background: var(--surface);
   display: flex;
   flex-direction: column;
 }
@@ -685,7 +685,7 @@ a.secondary:hover {
 }
 .chat-input-bar input {
   flex: 1;
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 10px 16px;
@@ -725,11 +725,11 @@ a.secondary:hover {
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--surface);
 }
 .admin-sidebar {
   width: 260px;
-  background: #0d1117;
+  background: #ffffff;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
