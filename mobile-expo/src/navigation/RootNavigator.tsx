@@ -3,6 +3,7 @@ import { NavigationContainer, useNavigationContainerRef } from '@react-navigatio
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useMemberAuth } from '../auth/MemberAuthContext';
 import { AnimatedSplash } from '../components/premium/AnimatedSplash';
+import { IntroWalkthroughScreen, hasSeenIntro } from '../screens/onboarding/IntroWalkthroughScreen';
 import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
 import { RegistrationTypeScreen } from '../screens/onboarding/RegistrationTypeScreen';
 import { CorporateEntryScreen } from '../screens/onboarding/CorporateEntryScreen';
@@ -21,16 +22,36 @@ export function RootNavigator() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [navReady, setNavReady] = useState(false);
   const [splashMinDone, setSplashMinDone] = useState(false);
+  const [introChecked, setIntroChecked] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
   const lastTargetRef = useRef<string | null>(null);
-  const showSplash = !authReady || !splashMinDone;
+  const showSplash = !authReady || !splashMinDone || !introChecked;
 
   useEffect(() => {
     const timer = setTimeout(() => setSplashMinDone(true), 2600);
     return () => clearTimeout(timer);
   }, []);
 
+  // Check if intro has been seen
   useEffect(() => {
-    if (!authReady || !navReady || !navigationRef.isReady()) {
+    hasSeenIntro()
+      .then((seen) => {
+        setShowIntro(!seen);
+        setIntroChecked(true);
+      })
+      .catch(() => setIntroChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (!authReady || !navReady || !introChecked || !navigationRef.isReady()) {
+      return;
+    }
+    // If intro hasn't been seen, show it first
+    if (showIntro) {
+      if (lastTargetRef.current !== 'Intro') {
+        lastTargetRef.current = 'Intro';
+        navigationRef.reset({ index: 0, routes: [{ name: 'Intro' }] });
+      }
       return;
     }
     let target: keyof RootStackParamList = 'ClubConnect';
@@ -43,7 +64,7 @@ export function RootNavigator() {
     }
     lastTargetRef.current = target;
     navigationRef.reset({ index: 0, routes: [{ name: target }] });
-  }, [authReady, navReady, user, token, tenant, navigationRef]);
+  }, [authReady, navReady, introChecked, showIntro, user, token, tenant, navigationRef]);
 
   if (showSplash) {
     return <AnimatedSplash />;
@@ -58,6 +79,7 @@ export function RootNavigator() {
           contentStyle: { backgroundColor: '#050810' },
         }}
       >
+        <Stack.Screen name="Intro" component={IntroWalkthroughScreen} />
         <Stack.Screen name="ClubConnect" component={ClubConnectScreen} />
         <Stack.Screen name="RegistrationType" component={RegistrationTypeScreen} />
         <Stack.Screen name="CorporateEntry" component={CorporateEntryScreen} />

@@ -139,6 +139,17 @@ export default {
     rejectedTitle: 'Üyelik reddedildi',
     rejectedBody:
       'Üyeliğiniz kulüp tarafından reddedildi. Yanlış olduğunu düşünüyorsanız kulübünüzle iletişime geçin.',
+    approved: 'Üyeliğiniz onaylandı! 🎉',
+    stillPending: 'Henüz onay bekleniyor...',
+    pendingEstimate:
+      'Onay süresi genellikle 1-24 saat arasındadır. Kulüp yoğunluğuna göre değişebilir.',
+    whatHappens: 'Sonraki adımlar',
+    step1: 'Kulüp yöneticisi başvurunuzu inceliyor',
+    step2: 'Onaylandığında bildirim alacaksınız',
+    step3: 'Uygulama otomatik olarak ana ekrana geçecek',
+    checkNow: 'Durumu kontrol et',
+    checking: 'Kontrol ediliyor...',
+    contactHint: 'Acil bir durumda kulüp resepsiyonunu arayabilir veya e-posta gönderebilirsiniz.',
   },
   onboarding: {
     clubHeadline: 'Wellness Club’a hoş geldiniz',
@@ -255,6 +266,26 @@ export default {
     photoUploading: 'Fotoğraf yükleniyor...',
     photoChange: 'Profil fotoğrafını değiştir',
     photoUploadFailed: 'Profil fotoğrafı yüklenemedi.',
+    photoUploaded: 'Fotoğraf yüklendi',
+    // Stepper
+    stepProfile: 'Profil Bilgileri',
+    stepProfileDesc: 'Fotoğrafını ekle, adını ve kullanıcı adını belirle.',
+    stepClub: 'Kulüp Seçimi',
+    stepClubDesc: 'Üye olmak istediğin kulübü seç. Bu adımı atlayabilirsin.',
+    stepAccount: 'Hesap Bilgileri',
+    stepAccountDesc: 'İletişim bilgilerini ve şifreni belirle.',
+    next: 'Devam',
+    skipClub: 'Kulüpsüz devam',
+    fixErrors: 'Lütfen hataları düzeltin',
+    // Inline validation
+    emailRequired: 'E-posta adresi gerekli',
+    emailInvalid: 'Geçerli bir e-posta adresi girin',
+    phoneInvalid: 'Geçerli bir telefon numarası girin',
+    passwordRequired: 'Şifre gerekli',
+    // Password strength
+    strengthWeak: 'Zayıf',
+    strengthMedium: 'Orta',
+    strengthStrong: 'Güçlü',
   },
   trainerRegister: {
     cta: 'Eğitmen olarak kayıt ol',

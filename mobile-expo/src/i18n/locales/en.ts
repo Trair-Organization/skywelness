@@ -138,6 +138,16 @@ export default {
     rejectedTitle: 'Membership rejected',
     rejectedBody:
       'Your membership was rejected by the club. Please contact your club if you believe this is a mistake.',
+    approved: 'Your membership is approved! 🎉',
+    stillPending: 'Still awaiting approval...',
+    pendingEstimate: 'Approval usually takes 1-24 hours depending on club availability.',
+    whatHappens: 'What happens next',
+    step1: 'Club admin is reviewing your application',
+    step2: 'You will receive a notification when approved',
+    step3: 'The app will automatically navigate to the home screen',
+    checkNow: 'Check status',
+    checking: 'Checking...',
+    contactHint: 'For urgent matters, you can call or email the club reception directly.',
   },
   onboarding: {
     clubHeadline: 'Welcome to Wellness Club',
@@ -253,6 +263,26 @@ export default {
     photoUploading: 'Uploading photo...',
     photoChange: 'Change profile photo',
     photoUploadFailed: 'Profile photo upload failed.',
+    photoUploaded: 'Photo uploaded',
+    // Stepper
+    stepProfile: 'Profile Info',
+    stepProfileDesc: 'Add your photo, name and choose a username.',
+    stepClub: 'Club Selection',
+    stepClubDesc: 'Select the club you want to join. You can skip this step.',
+    stepAccount: 'Account Details',
+    stepAccountDesc: 'Set your contact info and password.',
+    next: 'Continue',
+    skipClub: 'Continue without club',
+    fixErrors: 'Please fix the errors',
+    // Inline validation
+    emailRequired: 'Email is required',
+    emailInvalid: 'Enter a valid email address',
+    phoneInvalid: 'Enter a valid phone number',
+    passwordRequired: 'Password is required',
+    // Password strength
+    strengthWeak: 'Weak',
+    strengthMedium: 'Medium',
+    strengthStrong: 'Strong',
   },
   trainerRegister: {
     cta: 'Register as trainer',
