@@ -219,6 +219,36 @@ export class AdminController {
     return this.adminMembers.cancelReservationByAdmin(admin.tenantId, reservationId);
   }
 
+  /** Admin üye adına randevu oluşturur */
+  @Post('reservations/create')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  createReservationByAdmin(
+    @CurrentUser() admin: User,
+    @Body()
+    body: { trainerId: string; userId: string; date: string; startTime: string; endTime: string },
+  ) {
+    return this.adminMembers.createReservationByAdmin(admin.tenantId, body);
+  }
+
+  /** Admin rezervasyonu başka tarihe taşır */
+  @Post('reservations/:reservationId/reschedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  rescheduleReservation(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+    @Body() body: { newDate: string; newStartTime: string; newEndTime: string },
+  ) {
+    return this.adminMembers.rescheduleReservation(
+      admin.tenantId,
+      reservationId,
+      body.newDate,
+      body.newStartTime,
+      body.newEndTime,
+    );
+  }
+
   // ─── Eğitmen CRUD ────────────────────────────────────────────────────────────
 
   @Post('trainers')

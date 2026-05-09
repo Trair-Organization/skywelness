@@ -756,6 +756,111 @@ export class AdminMembersService {
     return { ok: true as const, cancelledReservationId: reservationId };
   }
 
+  /** Admin üye adına randevu oluşturur (telefonda arayan üye için) */
+  async createReservationByAdmin(
+    tenantId: string,
+    data: { trainerId: string; userId: string; date: string; startTime: string; endTime: string },
+  ) {
+    const trainer = await this.trainersRepo.findOne({ where: { id: data.trainerId, tenantId } });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    const member = await this.usersRepo.findOne({
+      where: { id: data.userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!member) throw new NotFoundException('Üye bulunamadı');
+
+    // Availability kaydını bul
+    const availability = await this.availabilityRepo.findOne({
+      where: { trainerId: data.trainerId, date: data.date, startTime: data.startTime },
+    });
+    if (!availability) throw new BadRequestException('Bu saat dilimi müsait değil');
+
+    // Zaten dolu mu kontrol et
+    const startDateTime = new Date(`${data.date}T${data.startTime}`);
+    const endDateTime = new Date(`${data.date}T${data.endTime}`);
+    const existingReservation = await this.reservationsRepo.findOne({
+      where: {
+        trainerId: data.trainerId,
+        tenantId,
+        startTime: startDateTime,
+        status: ReservationStatus.CONFIRMED,
+      },
+    });
+    if (existingReservation) throw new BadRequestException('Bu saat zaten dolu');
+
+    // Rezervasyon oluştur (paket olmadan, admin tarafından)
+    const reservation = this.reservationsRepo.create({
+      userId: data.userId,
+      trainerId: data.trainerId,
+      tenantId,
+      sessionType: 'personal_training' as never,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      status: ReservationStatus.CONFIRMED,
+      notes: 'Admin tarafından oluşturuldu',
+      timeSlotId: null as never,
+      packageId: null as never,
+    });
+    await this.reservationsRepo.save(reservation);
+
+    // SMS bildirim
+    if (member.phone) {
+      const dateStr = startDateTime.toLocaleDateString('tr-TR');
+      const timeStr = data.startTime.slice(0, 5);
+      void this.smsService
+        .sendReservationConfirmed(
+          member.phone,
+          `${trainer.user?.firstName ?? ''} ${trainer.user?.lastName ?? ''}`.trim(),
+          dateStr,
+          timeStr,
+        )
+        .catch(() => {});
+    }
+
+    return { ok: true as const, reservationId: reservation.id };
+  }
+
+  /** Admin rezervasyonu başka tarihe taşır */
+  async rescheduleReservation(
+    tenantId: string,
+    reservationId: string,
+    newDate: string,
+    newStartTime: string,
+    newEndTime: string,
+  ) {
+    const reservation = await this.reservationsRepo.findOne({
+      where: { id: reservationId, tenantId },
+      relations: ['user'],
+    });
+    if (!reservation) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (
+      reservation.status === ReservationStatus.CANCELLED ||
+      reservation.status === ReservationStatus.COMPLETED
+    ) {
+      throw new BadRequestException('Bu rezervasyon taşınamaz');
+    }
+
+    const newStart = new Date(`${newDate}T${newStartTime}`);
+    const newEnd = new Date(`${newDate}T${newEndTime}`);
+
+    reservation.startTime = newStart;
+    reservation.endTime = newEnd;
+    await this.reservationsRepo.save(reservation);
+
+    // SMS bildirim
+    if (reservation.user?.phone) {
+      const dateStr = newStart.toLocaleDateString('tr-TR');
+      void this.smsService
+        .send(
+          reservation.user.phone,
+          `Randevunuz ${dateStr} ${newStartTime.slice(0, 5)} olarak guncellendi. Skyland Wellness`,
+        )
+        .catch(() => {});
+    }
+
+    return { ok: true as const };
+  }
+
   /** Eğitmenin belirli tarih aralığındaki müsaitlik kayıtlarını getir (rezervasyon durumu dahil) */
   async listTrainerSchedule(tenantId: string, trainerId: string, from: string, to: string) {
     const trainer = await this.trainersRepo.findOne({ where: { id: trainerId, tenantId } });

@@ -3396,3 +3396,22 @@ button.primary:disabled {
     display: none;
   }
 }
+
+/* ─── Additional Popup Buttons ─────────────────────────────────────────────── */
+.cell-popup-book {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.cell-popup-book:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.cell-popup-reschedule {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.cell-popup-reschedule:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
