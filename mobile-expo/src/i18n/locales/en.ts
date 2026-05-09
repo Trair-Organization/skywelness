@@ -165,7 +165,7 @@ export default {
     trustSecure: 'Secure digital platform',
     clubCardBadge: 'Premium Club',
     clubCardFeaturedBadge: 'Featured Club',
-    clubCardCta: 'Connect to club',
+    clubCardCta: 'Get in Touch',
     primaryCta: 'Choose my club',
     continue: 'Continue',
     welcomeBack: 'Welcome back',

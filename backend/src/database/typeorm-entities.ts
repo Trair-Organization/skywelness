@@ -1,5 +1,6 @@
 import { Campaign } from './entities/campaign.entity';
 import { Conversation } from './entities/conversation.entity';
+import { Lead } from './entities/lead.entity';
 import { Message } from './entities/message.entity';
 import { ClubEvent } from './entities/club-event.entity';
 import { ClubEventRegistration } from './entities/club-event-registration.entity';
@@ -33,6 +34,7 @@ export const typeOrmEntities = [
   Tenant,
   Campaign,
   Conversation,
+  Lead,
   Message,
   CafeOrder,
   ClubEvent,

@@ -21,6 +21,7 @@ import { useMemberAuth } from '../../auth/MemberAuthContext';
 import type { TenantListRow } from '../../auth/memberAuthTypes';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
+import { LeadCaptureModal } from '../../components/premium/LeadCaptureModal';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
 import { persistLanguage } from '../../i18n';
@@ -425,6 +426,14 @@ export function ClubConnectScreen() {
   const [previewTrainer, setPreviewTrainer] = useState<Trainer | null>(null);
   const [previewCampaign, setPreviewCampaign] = useState<PublicCampaign | null>(null);
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
+  const [leadModal, setLeadModal] = useState<{
+    visible: boolean;
+    source: 'club' | 'trainer' | 'campaign' | 'event';
+    sourceRef?: string;
+    sourceLabel?: string;
+    clubSubdomain?: string;
+    prefillMessage?: string;
+  }>({ visible: false, source: 'club' });
   const [headlineIdx, setHeadlineIdx] = useState(0);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<Goal['id'] | null>(null);
@@ -1036,17 +1045,19 @@ export function ClubConnectScreen() {
                     pressed && styles.campaignModalCtaPressed,
                   ]}
                   onPress={() => {
+                    const camp = previewCampaign;
                     setPreviewCampaign(null);
-                    if (previewCampaign.tenant?.subdomain) {
-                      navigation.navigate('Register', {
-                        preselectedSubdomain: previewCampaign.tenant.subdomain,
-                      });
-                    } else {
-                      navigation.navigate('Register', {});
-                    }
+                    setLeadModal({
+                      visible: true,
+                      source: 'campaign',
+                      sourceRef: camp.id,
+                      sourceLabel: camp.title,
+                      clubSubdomain: camp.tenant?.subdomain,
+                      prefillMessage: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
+                    });
                   }}
                 >
-                  <Text style={styles.campaignModalCtaTxt}>Üye Ol & Fırsatı Yakala</Text>
+                  <Text style={styles.campaignModalCtaTxt}>💬 İletişime Geç</Text>
                 </Pressable>
                 <Pressable
                   style={styles.campaignModalClose}
@@ -1517,6 +1528,23 @@ export function ClubConnectScreen() {
                 <Pressable
                   style={styles.modalPrimaryBtn}
                   onPress={() => {
+                    const club = previewClub;
+                    setPreviewClub(null);
+                    setLeadModal({
+                      visible: true,
+                      source: 'club',
+                      sourceRef: club?.id,
+                      sourceLabel: club?.name,
+                      clubSubdomain: club?.subdomain,
+                      prefillMessage: `${club?.name} hakkında bilgi almak istiyorum.`,
+                    });
+                  }}
+                >
+                  <Text style={styles.modalPrimaryTxt}>💬 İletişime Geç</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.modalSecondaryBtn}
+                  onPress={() => {
                     const subdomain = previewClub?.subdomain;
                     setPreviewClub(null);
                     navigation.navigate('Register', {
@@ -1525,16 +1553,7 @@ export function ClubConnectScreen() {
                     });
                   }}
                 >
-                  <Text style={styles.modalPrimaryTxt}>Kulube Katil</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.modalContactBtn}
-                  onPress={() => {
-                    setPreviewClub(null);
-                    navigation.navigate('Login');
-                  }}
-                >
-                  <Text style={styles.modalContactBtnTxt}>💬 İletişime Geç</Text>
+                  <Text style={styles.modalSecondaryTxt}>Üye Ol</Text>
                 </Pressable>
                 <Pressable style={styles.modalSecondaryBtn} onPress={() => setPreviewClub(null)}>
                   <Text style={styles.modalSecondaryTxt}>{t('common.cancel')}</Text>
@@ -1544,6 +1563,16 @@ export function ClubConnectScreen() {
           </View>
         </View>
       </Modal>
+
+      <LeadCaptureModal
+        visible={leadModal.visible}
+        onClose={() => setLeadModal((prev) => ({ ...prev, visible: false }))}
+        source={leadModal.source}
+        sourceRef={leadModal.sourceRef}
+        sourceLabel={leadModal.sourceLabel}
+        clubSubdomain={leadModal.clubSubdomain}
+        prefillMessage={leadModal.prefillMessage}
+      />
     </GradientBackground>
   );
 }

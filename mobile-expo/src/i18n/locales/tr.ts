@@ -167,7 +167,7 @@ export default {
     trustSecure: 'Güvenli dijital altyapı',
     clubCardBadge: 'Premium Club',
     clubCardFeaturedBadge: 'Featured Club',
-    clubCardCta: 'Kulübe bağlan',
+    clubCardCta: 'İletişime Geç',
     primaryCta: 'Kulübümü seç',
     continue: 'Devam',
     welcomeBack: 'Tekrar hoş geldiniz',
