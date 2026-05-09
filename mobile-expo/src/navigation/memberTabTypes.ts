@@ -11,5 +11,6 @@ export type MemberTabParamList = {
     conversationId: string;
     otherUser: { id: string; firstName: string; lastName: string; photoUrl: string | null };
   };
+  Legal: { type: 'privacy' | 'terms' };
   Profile: undefined;
 };

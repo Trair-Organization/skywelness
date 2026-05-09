@@ -13,6 +13,7 @@ import { MemberTrainerNetworkScreen } from '../screens/member/MemberTrainerNetwo
 import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
 import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
+import { LegalScreen } from '../screens/member/LegalScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -115,6 +116,13 @@ export function MemberTabNavigator() {
       <Tab.Screen
         name="Chat"
         component={ChatScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="Legal"
+        component={LegalScreen}
         options={{
           tabBarButton: () => null,
         }}

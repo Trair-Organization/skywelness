@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
@@ -10,6 +12,7 @@ import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
 import { persistLanguage } from '../../i18n';
 import { premium } from '../../theme/premiumTheme';
+import type { MemberTabParamList } from '../../navigation/memberTabTypes';
 
 const TAB_BAR_PAD = 72;
 
@@ -17,6 +20,7 @@ export function MemberProfileScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user, tenant, logout, deleteAccount, updateProfile } = useMemberAuth();
+  const navigation = useNavigation<BottomTabNavigationProp<MemberTabParamList>>();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -47,11 +51,11 @@ export function MemberProfileScreen() {
   };
 
   const openPrivacy = () => {
-    Alert.alert(t('profile.privacyTitle'), t('profile.privacyBody'));
+    navigation.navigate('Legal', { type: 'privacy' });
   };
 
   const openTerms = () => {
-    Alert.alert(t('profile.termsTitle'), t('profile.termsBody'));
+    navigation.navigate('Legal', { type: 'terms' });
   };
 
   const uploadPhoto = async () => {
