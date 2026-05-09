@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { showImagePickerAlert } from '../../utils/imagePicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
-import { getApiBaseUrl } from '../../config';
+
 import { apiJson, ApiError } from '../../api/client';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
@@ -75,68 +75,18 @@ export function CorporateEntryScreen() {
     }
   };
 
-  const pickAndUploadLogo = async (source: 'camera' | 'gallery') => {
-    const pick =
-      source === 'camera'
-        ? await launchCamera({
-            mediaType: 'photo',
-            cameraType: 'back',
-            saveToPhotos: false,
-          })
-        : await launchImageLibrary({
-            mediaType: 'photo',
-            selectionLimit: 1,
-            includeBase64: false,
-          });
-    const asset = pick.assets?.[0];
-    if (!asset?.uri) {
-      return;
-    }
-    setUploadingLogo(true);
-    try {
-      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
-      const form = new FormData();
-      form.append('file', {
-        uri: asset.uri,
-        name: asset.fileName ?? `partner-${Date.now()}.jpg`,
-        type: asset.type ?? 'image/jpeg',
-      } as never);
-      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!res.ok) {
-        throw new Error('upload_failed');
-      }
-      const body = (await res.json()) as { url?: string };
-      if (!body.url) {
-        throw new Error('upload_failed');
-      }
-      const absolute = body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`;
-      setLogoUrl(absolute);
-    } catch {
-      Alert.alert(t('register.section'), t('registration.partnerLogoUploadFailed'));
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
-
   const uploadLogo = () => {
-    Alert.alert(t('common.chooseSource'), '', [
-      {
-        text: t('common.camera'),
-        onPress: () => {
-          pickAndUploadLogo('camera').catch(() => {});
-        },
+    setUploadingLogo(true);
+    showImagePickerAlert(
+      (url) => {
+        setLogoUrl(url);
+        setUploadingLogo(false);
       },
-      {
-        text: t('common.gallery'),
-        onPress: () => {
-          pickAndUploadLogo('gallery').catch(() => {});
-        },
+      () => {
+        setUploadingLogo(false);
+        Alert.alert(t('register.section'), t('registration.partnerLogoUploadFailed'));
       },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    );
   };
 
   return (

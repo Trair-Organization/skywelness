@@ -13,7 +13,6 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -21,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { apiJson } from '../../api/client';
-import { getApiBaseUrl } from '../../config';
+import { showImagePickerAlert } from '../../utils/imagePicker';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -189,54 +188,20 @@ export function RegisterScreen() {
   }, [showSuccessModal, successAnim]);
 
   // --- Photo upload ---
-  const pickAndUpload = async (source: 'camera' | 'gallery') => {
-    const pick =
-      source === 'camera'
-        ? await launchCamera({ mediaType: 'photo', cameraType: 'front', saveToPhotos: false })
-        : await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 });
-    const asset = pick.assets?.[0];
-    if (!asset?.uri) return;
-    setUploadingPhoto(true);
-    try {
-      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
-      const form = new FormData();
-      form.append('file', {
-        uri: asset.uri,
-        name: asset.fileName ?? `member-${Date.now()}.jpg`,
-        type: asset.type ?? 'image/jpeg',
-      } as never);
-      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!res.ok) throw new Error('upload_failed');
-      const body = (await res.json()) as { url?: string };
-      if (!body.url) throw new Error('upload_failed');
-      setPhotoUrl(body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`);
-      showToast(t('register.photoUploaded'), 'success', 2000);
-    } catch {
-      showToast(t('register.photoUploadFailed'), 'error');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
+  // --- Photo upload ---
   const uploadPhoto = () => {
-    Alert.alert(t('common.chooseSource'), '', [
-      {
-        text: t('common.camera'),
-        onPress: () => {
-          pickAndUpload('camera').catch(() => {});
-        },
+    setUploadingPhoto(true);
+    showImagePickerAlert(
+      (url) => {
+        setPhotoUrl(url);
+        setUploadingPhoto(false);
+        showToast(t('register.photoUploaded'), 'success', 2000);
       },
-      {
-        text: t('common.gallery'),
-        onPress: () => {
-          pickAndUpload('gallery').catch(() => {});
-        },
+      () => {
+        setUploadingPhoto(false);
+        showToast(t('register.photoUploadFailed'), 'error');
       },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    );
   };
 
   // --- Navigation ---

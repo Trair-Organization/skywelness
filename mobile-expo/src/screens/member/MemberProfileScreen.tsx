@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
-import { getApiBaseUrl } from '../../config';
+import { showImagePickerAlert } from '../../utils/imagePicker';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -58,43 +57,18 @@ export function MemberProfileScreen() {
     navigation.navigate('Legal', { type: 'terms' });
   };
 
-  const uploadPhoto = async () => {
-    const pick = await launchImageLibrary({
-      mediaType: 'photo',
-      selectionLimit: 1,
-      includeBase64: false,
-    });
-    const asset = pick.assets?.[0];
-    if (!asset?.uri) {
-      return;
-    }
+  const uploadPhoto = () => {
     setUploadingPhoto(true);
-    try {
-      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
-      const form = new FormData();
-      form.append('file', {
-        uri: asset.uri,
-        name: asset.fileName ?? `profile-${Date.now()}.jpg`,
-        type: asset.type ?? 'image/jpeg',
-      } as never);
-      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!res.ok) {
-        throw new Error('upload_failed');
-      }
-      const body = (await res.json()) as { url?: string };
-      if (!body.url) {
-        throw new Error('upload_failed');
-      }
-      const absolute = body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`;
-      setPhotoUrl(absolute);
-    } catch {
-      Alert.alert(t('profile.updateTitle'), t('profile.photoUploadFailed'));
-    } finally {
-      setUploadingPhoto(false);
-    }
+    showImagePickerAlert(
+      (url) => {
+        setPhotoUrl(url);
+        setUploadingPhoto(false);
+      },
+      () => {
+        setUploadingPhoto(false);
+        Alert.alert(t('profile.updateTitle'), t('profile.photoUploadFailed'));
+      },
+    );
   };
 
   return (
@@ -116,7 +90,7 @@ export function MemberProfileScreen() {
           <Pressable
             style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
             onPress={() => {
-              uploadPhoto().catch(() => {});
+              uploadPhoto();
             }}
             disabled={uploadingPhoto}
           >

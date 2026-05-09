@@ -9,13 +9,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { showImagePickerAlert } from '../../utils/imagePicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson, ApiError } from '../../api/client';
-import { getApiBaseUrl } from '../../config';
+
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -178,68 +178,18 @@ export function TrainerRegisterScreen() {
     }
   };
 
-  const pickAndUploadPhoto = async (source: 'camera' | 'gallery') => {
-    const pick =
-      source === 'camera'
-        ? await launchCamera({
-            mediaType: 'photo',
-            cameraType: 'front',
-            saveToPhotos: false,
-          })
-        : await launchImageLibrary({
-            mediaType: 'photo',
-            selectionLimit: 1,
-            includeBase64: false,
-          });
-    const asset = pick.assets?.[0];
-    if (!asset?.uri) {
-      return;
-    }
-    setUploadingPhoto(true);
-    try {
-      const apiRoot = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
-      const form = new FormData();
-      form.append('file', {
-        uri: asset.uri,
-        name: asset.fileName ?? `trainer-${Date.now()}.jpg`,
-        type: asset.type ?? 'image/jpeg',
-      } as never);
-      const res = await fetch(`${apiRoot}/api/v1/auth/upload-image`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!res.ok) {
-        throw new Error('upload_failed');
-      }
-      const body = (await res.json()) as { url?: string };
-      if (!body.url) {
-        throw new Error('upload_failed');
-      }
-      const absolute = body.url.startsWith('http') ? body.url : `${apiRoot}${body.url}`;
-      setPhotoUrl(absolute);
-    } catch {
-      Alert.alert(t('register.section'), t('trainerRegister.photoUploadFailed'));
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
   const uploadPhoto = () => {
-    Alert.alert(t('common.chooseSource'), '', [
-      {
-        text: t('common.camera'),
-        onPress: () => {
-          pickAndUploadPhoto('camera').catch(() => {});
-        },
+    setUploadingPhoto(true);
+    showImagePickerAlert(
+      (url) => {
+        setPhotoUrl(url);
+        setUploadingPhoto(false);
       },
-      {
-        text: t('common.gallery'),
-        onPress: () => {
-          pickAndUploadPhoto('gallery').catch(() => {});
-        },
+      () => {
+        setUploadingPhoto(false);
+        Alert.alert(t('register.section'), t('trainerRegister.photoUploadFailed'));
       },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    );
   };
 
   return (
