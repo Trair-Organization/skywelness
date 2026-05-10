@@ -367,47 +367,45 @@ export function SpaScreen() {
                 </View>
               )}
               {remaining === 0 && (
-                <>
-                  <Text style={styles.noPackageHint}>
-                    Randevu almak için aktif bir masaj paketiniz olmalıdır.
-                  </Text>
-                  <Pressable
-                    style={styles.requestPackageBtn}
-                    onPress={() => {
-                      Alert.alert(
-                        'Paket Talebi',
-                        'Kulübünüze masaj paketi talebi göndermek istiyor musunuz?\n\nKulüp yetkilisi talebinizi değerlendirecektir.',
-                        [
-                          { text: 'Vazgeç', style: 'cancel' },
-                          {
-                            text: 'Talep Gönder',
-                            onPress: async () => {
-                              try {
-                                await apiJson('/package-requests', {
-                                  ...opts,
-                                  method: 'POST',
-                                  body: JSON.stringify({ sessionType: 'massage' }),
-                                });
-                                Alert.alert(
-                                  '✅ Talep Gönderildi',
-                                  'Kulüp yetkiliniz en kısa sürede sizinle iletişime geçecektir.',
-                                );
-                              } catch (e) {
-                                Alert.alert(
-                                  'Hata',
-                                  e instanceof ApiError ? e.message : 'Talep gönderilemedi',
-                                );
-                              }
-                            },
-                          },
-                        ],
-                      );
-                    }}
-                  >
-                    <Text style={styles.requestPackageBtnText}>📦 Paket Talep Et</Text>
-                  </Pressable>
-                </>
+                <Text style={styles.noPackageHint}>
+                  Randevu almak için aktif bir masaj paketiniz olmalıdır.
+                </Text>
               )}
+              <Pressable
+                style={styles.requestPackageBtn}
+                onPress={() => {
+                  Alert.alert(
+                    'Paket Talebi',
+                    'Kulübünüze masaj paketi talebi göndermek istiyor musunuz?\n\nKulüp yetkilisi talebinizi değerlendirecektir.',
+                    [
+                      { text: 'Vazgeç', style: 'cancel' },
+                      {
+                        text: 'Talep Gönder',
+                        onPress: async () => {
+                          try {
+                            await apiJson('/package-requests', {
+                              ...opts,
+                              method: 'POST',
+                              body: JSON.stringify({ sessionType: 'massage' }),
+                            });
+                            Alert.alert(
+                              '✅ Talep Gönderildi',
+                              'Kulüp yetkiliniz en kısa sürede sizinle iletişime geçecektir.',
+                            );
+                          } catch (e) {
+                            Alert.alert(
+                              'Hata',
+                              e instanceof ApiError ? e.message : 'Talep gönderilemedi',
+                            );
+                          }
+                        },
+                      },
+                    ],
+                  );
+                }}
+              >
+                <Text style={styles.requestPackageBtnText}>📦 Paket Talep Et</Text>
+              </Pressable>
             </View>
             <ProgressRing remaining={remaining} total={Math.max(remaining, maxSessions)} />
           </View>
