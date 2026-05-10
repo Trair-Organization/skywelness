@@ -42,6 +42,13 @@ export function MemberProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+  // Username validation
+  const [usernameStatus, setUsernameStatus] = useState<
+    'idle' | 'checking' | 'available' | 'taken' | 'too_short'
+  >('idle');
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const usernameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Stats
   const [ptRemaining, setPtRemaining] = useState<number | null>(null);
   const [spaRemaining, setSpaRemaining] = useState<number | null>(null);
@@ -69,6 +76,45 @@ export function MemberProfileScreen() {
       void loadStats();
     }, [loadStats]),
   );
+
+  const checkUsername = useCallback(
+    (value: string) => {
+      if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+
+      const normalized = value.trim().toLocaleLowerCase('tr-TR');
+      // If same as current username, no need to check
+      if (normalized === (user?.username ?? '').toLocaleLowerCase('tr-TR')) {
+        setUsernameStatus('idle');
+        setUsernameSuggestions([]);
+        return;
+      }
+      if (normalized.length < 3) {
+        setUsernameStatus('too_short');
+        setUsernameSuggestions([]);
+        return;
+      }
+      setUsernameStatus('checking');
+      usernameTimerRef.current = setTimeout(async () => {
+        if (!token || !tenant) return;
+        try {
+          const res = await apiJson<{ available: boolean; reason: string; suggestions: string[] }>(
+            `/auth/username-availability?username=${encodeURIComponent(normalized)}&tenantSubdomain=${tenant.subdomain}`,
+            { token, tenantSubdomain: tenant.subdomain },
+          );
+          setUsernameStatus(res.available ? 'available' : 'taken');
+          setUsernameSuggestions(res.suggestions ?? []);
+        } catch {
+          setUsernameStatus('idle');
+        }
+      }, 500);
+    },
+    [token, tenant, user],
+  );
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    checkUsername(value);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -116,12 +162,17 @@ export function MemberProfileScreen() {
       Alert.alert(t('profile.updateTitle'), t('profile.updateValidation'));
       return;
     }
+    if (usernameStatus === 'taken' || usernameStatus === 'too_short') {
+      Alert.alert('Kullanıcı Adı', 'Lütfen uygun bir kullanıcı adı seçin.');
+      return;
+    }
     setSaving(true);
     updateProfile({ firstName, lastName, email, username, phone, photoUrl })
       .then((ok) => {
         if (ok) {
           Alert.alert(t('profile.updateTitle'), t('profile.updateOk'));
           setShowEditForm(false);
+          setUsernameStatus('idle');
         }
       })
       .finally(() => setSaving(false));
@@ -129,7 +180,7 @@ export function MemberProfileScreen() {
 
   const editMaxHeight = editAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 700],
+    outputRange: [0, 800],
   });
   const editOpacity = editAnim.interpolate({
     inputRange: [0, 0.3, 1],
@@ -209,8 +260,45 @@ export function MemberProfileScreen() {
             <PremiumInput
               label={t('register.usernameLabel')}
               value={username}
-              onChangeText={setUsername}
+              onChangeText={handleUsernameChange}
             />
+            {/* Username validation feedback */}
+            {usernameStatus !== 'idle' && (
+              <View style={styles.usernameStatus}>
+                {usernameStatus === 'checking' && (
+                  <Text style={styles.usernameChecking}>⏳ Kontrol ediliyor...</Text>
+                )}
+                {usernameStatus === 'available' && (
+                  <Text style={styles.usernameAvailable}>✅ Kullanıcı adı uygun</Text>
+                )}
+                {usernameStatus === 'taken' && (
+                  <View>
+                    <Text style={styles.usernameTaken}>❌ Bu kullanıcı adı alınmış</Text>
+                    {usernameSuggestions.length > 0 && (
+                      <View style={styles.suggestionsRow}>
+                        <Text style={styles.suggestionsLabel}>Öneriler:</Text>
+                        {usernameSuggestions.slice(0, 3).map((s) => (
+                          <Pressable
+                            key={s}
+                            style={styles.suggestionChip}
+                            onPress={() => {
+                              setUsername(s);
+                              setUsernameStatus('available');
+                              setUsernameSuggestions([]);
+                            }}
+                          >
+                            <Text style={styles.suggestionChipTxt}>{s}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+                {usernameStatus === 'too_short' && (
+                  <Text style={styles.usernameTaken}>❌ En az 3 karakter olmalı</Text>
+                )}
+              </View>
+            )}
             <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
 
             <Pressable
@@ -538,6 +626,53 @@ const styles = StyleSheet.create({
   },
   btnDisabled: {
     opacity: 0.5,
+  },
+
+  /* ─── Username Validation ─── */
+  usernameStatus: {
+    marginTop: -4,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  usernameChecking: {
+    fontSize: 12,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
+  usernameAvailable: {
+    fontSize: 12,
+    color: premium.accentGreen,
+    fontWeight: '700',
+  },
+  usernameTaken: {
+    fontSize: 12,
+    color: '#ef4444',
+    fontWeight: '700',
+  },
+  suggestionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  suggestionsLabel: {
+    fontSize: 11,
+    color: premium.textMuted,
+    fontWeight: '600',
+  },
+  suggestionChip: {
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  suggestionChipTxt: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.accentBlue,
   },
 
   /* ─── Stats ─── */
