@@ -331,7 +331,13 @@ export class BookingService {
   async approvePackageRequest(
     tenantId: string,
     requestId: string,
-    data: { packageTypeId: string; assignedTrainerId?: string | null; note?: string },
+    data: {
+      packageTypeId: string;
+      assignedTrainerId?: string | null;
+      note?: string;
+      paymentStatus?: string;
+      paymentMethod?: string;
+    },
   ) {
     const request = await this.packageRequestsRepo.findOne({
       where: { id: requestId, tenantId },
@@ -371,8 +377,12 @@ export class BookingService {
 
     // Talebi güncelle
     request.status = 'approved';
+    request.approvedAt = new Date();
+    request.assignedPackageId = pkg.id;
+    request.paymentStatus = data.paymentStatus ?? 'paid';
+    request.paymentMethod = data.paymentMethod ?? null;
     if (data.note) {
-      request.message = `${request.message ?? ''}\n[Admin notu: ${data.note}]`.trim();
+      request.adminNote = data.note;
     }
     await this.packageRequestsRepo.save(request);
 
@@ -400,6 +410,36 @@ export class BookingService {
       packageTypeName: packageType.name,
       sessionCount: packageType.sessionCount,
     };
+  }
+
+  /** Admin: Talep durumunu güncelle (pipeline). */
+  async updatePackageRequestStatus(
+    tenantId: string,
+    requestId: string,
+    data: {
+      status?: string;
+      adminNote?: string;
+      paymentStatus?: string;
+      paymentMethod?: string;
+    },
+  ) {
+    const request = await this.packageRequestsRepo.findOne({
+      where: { id: requestId, tenantId },
+    });
+    if (!request) throw new NotFoundException('Talep bulunamadı');
+
+    if (data.status) {
+      request.status = data.status;
+      if (data.status === 'contacted' && !request.contactedAt) {
+        request.contactedAt = new Date();
+      }
+    }
+    if (data.adminNote !== undefined) request.adminNote = data.adminNote;
+    if (data.paymentStatus) request.paymentStatus = data.paymentStatus;
+    if (data.paymentMethod !== undefined) request.paymentMethod = data.paymentMethod;
+
+    await this.packageRequestsRepo.save(request);
+    return { ok: true as const };
   }
 
   /** Admin: Paket talebini reddet. */

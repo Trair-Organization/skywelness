@@ -45,6 +45,24 @@ export class PackageRequest {
   @Column({ type: 'varchar', length: 24, default: 'pending' })
   status!: string;
 
+  @Column({ type: 'text', nullable: true, name: 'admin_note' })
+  adminNote!: string | null;
+
+  @Column({ type: 'varchar', length: 24, default: 'pending', name: 'payment_status' })
+  paymentStatus!: string;
+
+  @Column({ type: 'varchar', length: 24, nullable: true, name: 'payment_method' })
+  paymentMethod!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'contacted_at' })
+  contactedAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'approved_at' })
+  approvedAt!: Date | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'assigned_package_id' })
+  assignedPackageId!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 }
