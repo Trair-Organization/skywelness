@@ -1089,7 +1089,7 @@ export class AdminMembersService {
     const bookings = await this.reservationsRepo
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.user', 'u')
-      .where('r.trainerId IS NULL')
+      .where('r.spaTherapistId = :therapistId', { therapistId })
       .andWhere('r.tenantId = :tenantId', { tenantId })
       .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
       .andWhere('r.startTime >= :from', { from: new Date(`${from}T00:00:00Z`) })
@@ -1229,6 +1229,7 @@ export class AdminMembersService {
     const reservation = this.reservationsRepo.create({
       userId: data.userId,
       trainerId: null as never,
+      spaTherapistId: data.therapistId,
       tenantId,
       sessionType: SessionType.MASSAGE,
       startTime: startDateTime,

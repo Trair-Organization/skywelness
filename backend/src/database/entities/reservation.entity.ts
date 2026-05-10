@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { ReservationStatus, SessionType } from '../enums';
 import { Package } from './package.entity';
+import { SpaTherapist } from './spa-therapist.entity';
 import { Tenant } from './tenant.entity';
 import { TimeSlot } from './time-slot.entity';
 import { Trainer } from './trainer.entity';
@@ -19,6 +20,7 @@ import { User } from './user.entity';
 @Entity({ name: 'reservation' })
 @Index(['tenantId', 'userId', 'startTime'])
 @Index(['tenantId', 'trainerId', 'startTime'])
+@Index(['tenantId', 'spaTherapistId', 'startTime'])
 export class Reservation {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -30,24 +32,31 @@ export class Reservation {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'uuid', name: 'trainer_id' })
+  @Column({ type: 'uuid', name: 'trainer_id', nullable: true })
   trainerId!: string;
 
-  @ManyToOne(() => Trainer, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Trainer, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'trainer_id' })
   trainer!: Trainer;
 
-  @Column({ type: 'uuid', name: 'package_id' })
+  @Column({ type: 'uuid', name: 'spa_therapist_id', nullable: true })
+  spaTherapistId!: string | null;
+
+  @ManyToOne(() => SpaTherapist, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'spa_therapist_id' })
+  spaTherapist!: SpaTherapist | null;
+
+  @Column({ type: 'uuid', name: 'package_id', nullable: true })
   packageId!: string;
 
-  @ManyToOne(() => Package, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Package, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'package_id' })
   package!: Package;
 
-  @Column({ type: 'uuid', name: 'time_slot_id' })
+  @Column({ type: 'uuid', name: 'time_slot_id', nullable: true })
   timeSlotId!: string;
 
-  @ManyToOne(() => TimeSlot, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => TimeSlot, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'time_slot_id' })
   timeSlot!: TimeSlot;
 
