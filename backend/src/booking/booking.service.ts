@@ -51,18 +51,27 @@ export type MemberReservationView = {
   trainer: {
     id: string;
     user: { firstName: string; lastName: string };
-  };
+  } | null;
   timeSlot: {
     id: string;
     startTime: Date;
     endTime: Date;
-  };
+  } | null;
   package: {
     id: string;
     remainingSessions: number;
     status: PackageStatus;
     packageTypeName: string;
-  };
+  } | null;
+  spaTherapist: {
+    id: string;
+    name: string;
+  } | null;
+  spaService: {
+    id: string;
+    name: string;
+    durationMinutes: number;
+  } | null;
 };
 
 @Injectable()
@@ -471,7 +480,13 @@ export class BookingService {
       where,
       order: { startTime: 'DESC' },
       take: Math.min(Math.max(limit, 1), 100),
-      relations: { trainer: { user: true }, timeSlot: true, package: { packageType: true } },
+      relations: {
+        trainer: { user: true },
+        timeSlot: true,
+        package: { packageType: true },
+        spaTherapist: true,
+        spaService: true,
+      },
     });
     return rows.map((r) => this.toReservationResponse(r));
   }
@@ -970,7 +985,9 @@ export class BookingService {
       select: ['name'],
     });
     const clubName = tenant?.name ?? 'Kulüp';
-    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const trainerName =
+      `${res.trainer?.user?.firstName ?? ''} ${res.trainer?.user?.lastName ?? ''}`.trim() ||
+      'Eğitmen';
     const { locale, timeZone } = this.getMailFormatting();
     const { dateLine, timeLine } = formatDateRange(
       new Date(res.startTime),
@@ -1001,8 +1018,8 @@ export class BookingService {
       sessionType: res.sessionType,
       startTime: new Date(res.startTime),
       endTime: new Date(res.endTime),
-      packageTypeName: res.package.packageTypeName,
-      remainingSessions: res.package.remainingSessions,
+      packageTypeName: res.package?.packageTypeName ?? '',
+      remainingSessions: res.package?.remainingSessions ?? 0,
     });
   }
 
@@ -1010,7 +1027,9 @@ export class BookingService {
     member: User,
     res: Pick<MemberReservationView, 'id' | 'startTime' | 'endTime' | 'trainer'>,
   ): Promise<void> {
-    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const trainerName =
+      `${res.trainer?.user?.firstName ?? ''} ${res.trainer?.user?.lastName ?? ''}`.trim() ||
+      'Eğitmen';
     const { locale, timeZone } = this.getMailFormatting();
     const { dateLine, timeLine } = formatDateRange(
       new Date(res.startTime),
@@ -1037,7 +1056,9 @@ export class BookingService {
     member: User,
     res: Pick<MemberReservationView, 'id' | 'startTime' | 'endTime' | 'trainer' | 'package'>,
   ): Promise<void> {
-    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const trainerName =
+      `${res.trainer?.user?.firstName ?? ''} ${res.trainer?.user?.lastName ?? ''}`.trim() ||
+      'Eğitmen';
     const { locale, timeZone } = this.getMailFormatting();
     const { dateLine, timeLine } = formatDateRange(
       new Date(res.startTime),
@@ -1066,7 +1087,7 @@ export class BookingService {
       sessionType: SessionType.MASSAGE,
       startTime: new Date(res.startTime),
       endTime: new Date(res.endTime),
-      remainingSessions: res.package.remainingSessions,
+      remainingSessions: res.package?.remainingSessions ?? 0,
     });
   }
 
@@ -1077,8 +1098,8 @@ export class BookingService {
       sessionType: SessionType;
       startTime: Date;
       endTime: Date;
-      trainer: { user: { firstName: string; lastName: string } };
-      package: { remainingSessions: number };
+      trainer: { user: { firstName: string; lastName: string } } | null;
+      package: { remainingSessions: number } | null;
     },
   ): Promise<void> {
     const tenant = await this.tenantsRepo.findOne({
@@ -1086,7 +1107,9 @@ export class BookingService {
       select: ['name'],
     });
     const clubName = tenant?.name ?? 'Kulüp';
-    const trainerName = `${res.trainer.user.firstName} ${res.trainer.user.lastName}`.trim();
+    const trainerName =
+      `${res.trainer?.user?.firstName ?? ''} ${res.trainer?.user?.lastName ?? ''}`.trim() ||
+      'Eğitmen';
     const { locale, timeZone } = this.getMailFormatting();
     const { dateLine, timeLine } = formatDateRange(
       new Date(res.startTime),
@@ -1117,7 +1140,7 @@ export class BookingService {
       sessionType: res.sessionType,
       startTime: new Date(res.startTime),
       endTime: new Date(res.endTime),
-      remainingSessions: res.package.remainingSessions,
+      remainingSessions: res.package?.remainingSessions ?? 0,
     });
   }
 
@@ -1132,24 +1155,38 @@ export class BookingService {
       notes: r.notes,
       version: r.version,
       cancelledAt: r.cancelledAt,
-      trainer: {
-        id: r.trainer.id,
-        user: {
-          firstName: r.trainer.user.firstName,
-          lastName: r.trainer.user.lastName,
-        },
-      },
-      timeSlot: {
-        id: r.timeSlot.id,
-        startTime: r.timeSlot.startTime,
-        endTime: r.timeSlot.endTime,
-      },
-      package: {
-        id: r.package.id,
-        remainingSessions: r.package.remainingSessions,
-        status: r.package.status,
-        packageTypeName: r.package.packageType.name,
-      },
+      trainer: r.trainer
+        ? {
+            id: r.trainer.id,
+            user: {
+              firstName: r.trainer.user?.firstName ?? '',
+              lastName: r.trainer.user?.lastName ?? '',
+            },
+          }
+        : null,
+      timeSlot: r.timeSlot
+        ? {
+            id: r.timeSlot.id,
+            startTime: r.timeSlot.startTime,
+            endTime: r.timeSlot.endTime,
+          }
+        : null,
+      package: r.package
+        ? {
+            id: r.package.id,
+            remainingSessions: r.package.remainingSessions,
+            status: r.package.status,
+            packageTypeName: r.package.packageType?.name ?? '',
+          }
+        : null,
+      spaTherapist: r.spaTherapist ? { id: r.spaTherapist.id, name: r.spaTherapist.name } : null,
+      spaService: r.spaService
+        ? {
+            id: r.spaService.id,
+            name: r.spaService.name,
+            durationMinutes: r.spaService.durationMinutes,
+          }
+        : null,
     };
   }
 
