@@ -3684,3 +3684,50 @@ button.primary:disabled {
   gap: 6px;
   align-items: center;
 }
+
+/* ─── Sales Pipeline Board ─────────────────────────────────────────────────── */
+.pipeline-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.pipeline-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  min-height: 200px;
+}
+.pipeline-col-title {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.pipeline-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.pipeline-card-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.pipeline-card-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.pipeline-card-msg {
+  font-size: 0.78rem;
+  margin-top: 6px;
+  font-style: italic;
+  color: var(--muted);
+}
+.pipeline-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}

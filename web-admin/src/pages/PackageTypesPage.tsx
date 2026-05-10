@@ -317,7 +317,7 @@ export function PackageTypesPage() {
         </>
       )}
 
-      {/* ═══ GELEN TALEPLER TAB ═══ */}
+      {/* ═══ GELEN TALEPLER — SATIŞ PİPELINE ═══ */}
       {activeTab === 'requests' && (
         <>
           {loading ? (
@@ -331,141 +331,129 @@ export function PackageTypesPage() {
               </p>
             </div>
           ) : (
-            <div className="members-table-wrapper">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Üye</th>
-                    <th>Telefon</th>
-                    <th>Tür</th>
-                    <th>Mesaj</th>
-                    <th>Durum</th>
-                    <th>Tarih</th>
-                    <th>İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <strong>
+            <div className="pipeline-board">
+              {(['pending', 'contacted', 'approved', 'rejected'] as const).map((col) => {
+                const colConfig = {
+                  pending: { title: '🆕 Yeni Talepler', color: 'var(--accent)' },
+                  contacted: { title: '📞 İletişime Geçildi', color: '#f59e0b' },
+                  approved: { title: '✅ Tamamlanan', color: '#22c55e' },
+                  rejected: { title: '❌ Kaybedilen', color: '#ef4444' },
+                }[col];
+                const colRequests =
+                  col === 'contacted'
+                    ? requests.filter(
+                        (r) => r.status === 'contacted' || r.status === 'payment_pending',
+                      )
+                    : requests.filter((r) => r.status === col);
+                return (
+                  <div key={col} className="pipeline-col">
+                    <h4 className="pipeline-col-title" style={{ color: colConfig.color }}>
+                      {colConfig.title} ({colRequests.length})
+                    </h4>
+                    {colRequests.map((r) => (
+                      <div key={r.id} className="pipeline-card">
+                        <div className="pipeline-card-name">
                           {r.user.firstName} {r.user.lastName}
-                        </strong>
-                        <br />
-                        <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-                          {r.user.email}
-                        </span>
-                      </td>
-                      <td>
-                        {r.user.phone ? (
-                          <a href={`tel:${r.user.phone}`} style={{ color: 'var(--accent)' }}>
-                            📞 {r.user.phone}
-                          </a>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td>
-                        <span className="service-category">
-                          {r.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
-                        </span>
-                      </td>
-                      <td style={{ maxWidth: 200, fontSize: '0.85rem' }}>{r.message || '—'}</td>
-                      <td>
-                        <span
-                          className={`service-status ${r.status === 'pending' ? 'active' : 'inactive'}`}
-                        >
-                          {r.status === 'pending'
-                            ? '🆕 Yeni'
-                            : r.status === 'approved'
-                              ? '✅ Onaylandı'
-                              : '❌ Reddedildi'}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                        {new Date(r.createdAt).toLocaleDateString('tr-TR', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-                      <td>
-                        {r.status === 'pending' && (
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        </div>
+                        <div className="pipeline-card-meta">
+                          {r.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'} ·{' '}
+                          {new Date(r.createdAt).toLocaleDateString('tr-TR', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </div>
+                        {r.message && <div className="pipeline-card-msg">{r.message}</div>}
+                        {(col === 'pending' || col === 'contacted') && (
+                          <div className="pipeline-card-actions">
+                            {r.user.phone && (
+                              <a
+                                href={`tel:${r.user.phone}`}
+                                className="btn-sm btn-outline"
+                                style={{ textDecoration: 'none' }}
+                              >
+                                📞
+                              </a>
+                            )}
+                            {col === 'pending' && (
+                              <button
+                                className="btn-sm btn-outline"
+                                onClick={() => {
+                                  void apiJson(`/admin/package-requests/${r.id}`, {
+                                    method: 'PATCH',
+                                    body: JSON.stringify({ status: 'contacted' }),
+                                  }).then(() => load());
+                                }}
+                              >
+                                📞 Geçildi
+                              </button>
+                            )}
+                            {col === 'contacted' && (
+                              <button
+                                className="btn-sm btn-outline"
+                                onClick={() => {
+                                  const note = prompt('Not ekle:');
+                                  if (!note) return;
+                                  void apiJson(`/admin/package-requests/${r.id}`, {
+                                    method: 'PATCH',
+                                    body: JSON.stringify({ adminNote: note }),
+                                  }).then(() => load());
+                                }}
+                              >
+                                📝 Not
+                              </button>
+                            )}
                             <button
                               className="btn-sm btn-outline"
                               style={{ color: '#22c55e', borderColor: '#22c55e' }}
                               onClick={() => {
-                                const packageTypeId = prompt(
-                                  "Atanacak paket tipinin ID'sini girin (veya boş bırakıp varsayılanı kullanın):",
-                                );
-                                if (packageTypeId === null) return;
-                                const selectedPt =
-                                  types.find(
-                                    (t) =>
-                                      t.id === packageTypeId ||
-                                      t.name
-                                        .toLowerCase()
-                                        .includes((packageTypeId || '').toLowerCase()),
-                                  ) || types.find((t) => t.sessionType === r.sessionType);
-                                if (!selectedPt) {
-                                  alert(
-                                    'Uygun paket tipi bulunamadı. Önce Paket Tipleri tabından ekleyin.',
-                                  );
+                                const pt =
+                                  types.find((t) => t.sessionType === r.sessionType) || types[0];
+                                if (!pt) {
+                                  alert('Paket tipi yok');
                                   return;
                                 }
-                                void (async () => {
-                                  try {
-                                    await apiJson(`/admin/package-requests/${r.id}/approve`, {
-                                      method: 'POST',
-                                      body: JSON.stringify({ packageTypeId: selectedPt.id }),
-                                    });
-                                    alert(
-                                      `✅ ${r.user.firstName} ${r.user.lastName} üyesine "${selectedPt.name}" paketi atandı.`,
-                                    );
-                                    await load();
-                                  } catch (e) {
-                                    alert(e instanceof ApiError ? e.message : 'Hata');
-                                  }
-                                })();
+                                void apiJson(`/admin/package-requests/${r.id}/approve`, {
+                                  method: 'POST',
+                                  body: JSON.stringify({
+                                    packageTypeId: pt.id,
+                                    paymentStatus: 'paid',
+                                    paymentMethod: 'nakit',
+                                  }),
+                                })
+                                  .then(() => {
+                                    alert(`✅ ${pt.name} atandı`);
+                                    return load();
+                                  })
+                                  .catch((e: unknown) =>
+                                    alert(e instanceof ApiError ? e.message : 'Hata'),
+                                  );
                               }}
                             >
-                              ✅ Paketi Ata
+                              ✅ Ata
                             </button>
                             <button
                               className="btn-sm btn-danger"
                               onClick={() => {
-                                const reason = prompt('Red sebebi (opsiyonel):');
-                                if (reason === null) return;
-                                void (async () => {
-                                  try {
-                                    await apiJson(`/admin/package-requests/${r.id}/reject`, {
-                                      method: 'POST',
-                                      body: JSON.stringify({ reason: reason || undefined }),
-                                    });
-                                    alert('❌ Talep reddedildi.');
-                                    await load();
-                                  } catch (e) {
-                                    alert(e instanceof ApiError ? e.message : 'Hata');
-                                  }
-                                })();
+                                void apiJson(`/admin/package-requests/${r.id}/reject`, {
+                                  method: 'POST',
+                                  body: JSON.stringify({}),
+                                }).then(() => load());
                               }}
                             >
-                              ❌ Reddet
+                              ❌
                             </button>
                           </div>
                         )}
-                        {r.status !== 'pending' && (
-                          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-                            İşlem tamamlandı
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    ))}
+                    {colRequests.length === 0 && (
+                      <p className="muted" style={{ fontSize: '0.82rem', textAlign: 'center' }}>
+                        —
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
