@@ -12,6 +12,7 @@ import { apiJson } from '../lib/api';
 import {
   clearStoredToken,
   readStoredToken,
+  writeStoredRefreshToken,
   writeStoredTenantSubdomain,
   writeStoredToken,
 } from './storage';
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password, tenantSubdomain: sub }),
     });
     writeStoredToken(res.accessToken);
+    if (res.refreshToken) writeStoredRefreshToken(res.refreshToken);
     writeStoredTenantSubdomain(sub);
     setToken(res.accessToken);
     setUser(res.user);
