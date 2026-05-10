@@ -37,6 +37,37 @@ export class SpaController {
     return this.spaService.listPackages(user.tenantId);
   }
 
+  /** Üye: Belirli bir tarih için müsait masaj slotları. */
+  @Get('available-slots')
+  @UseGuards(JwtAuthGuard)
+  getAvailableSlots(@Query('date') date: string) {
+    if (!date) {
+      throw new Error('date query parameter is required');
+    }
+    return this.spaService.getAvailableSlots(date);
+  }
+
+  /** Üye: Masaj paketi bakiyesi. */
+  @Get('my-package-balance')
+  @UseGuards(JwtAuthGuard)
+  getMyPackageBalance(@CurrentUser() user: User) {
+    return this.spaService.getMyPackageBalance(user.id);
+  }
+
+  /** Üye: Müsait slot'u rezerve et. */
+  @Post('book-slot')
+  @UseGuards(JwtAuthGuard)
+  bookSlot(@CurrentUser() user: User, @Body() body: { availabilityId: string; serviceId: string }) {
+    return this.spaService.bookSlot(user.id, user.tenantId, body.availabilityId, body.serviceId);
+  }
+
+  /** Üye: Spa rezervasyonunu iptal et (3 saat kuralı). */
+  @Post('cancel/:reservationId')
+  @UseGuards(JwtAuthGuard)
+  cancelSpaReservation(@CurrentUser() user: User, @Param('reservationId') reservationId: string) {
+    return this.spaService.cancelSpaReservation(user.id, reservationId);
+  }
+
   /** Üye: Rezervasyon oluştur. */
   @Post('bookings')
   @UseGuards(JwtAuthGuard)

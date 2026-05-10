@@ -3,6 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { Availability } from '../database/entities/availability.entity';
+import { Package } from '../database/entities/package.entity';
+import { Reservation } from '../database/entities/reservation.entity';
 import { SpaBooking } from '../database/entities/spa-booking.entity';
 import { SpaPackage } from '../database/entities/spa-package.entity';
 import { SpaReview } from '../database/entities/spa-review.entity';
@@ -24,6 +27,9 @@ import { SpaServiceService } from './spa.service';
       SpaReview,
       Tenant,
       User,
+      Availability,
+      Reservation,
+      Package,
     ]),
     AuthModule,
     NotificationsModule,

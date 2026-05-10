@@ -1,12 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { Availability } from '../database/entities/availability.entity';
+import { Package } from '../database/entities/package.entity';
+import { Reservation } from '../database/entities/reservation.entity';
 import { SpaBooking } from '../database/entities/spa-booking.entity';
 import { SpaPackage } from '../database/entities/spa-package.entity';
 import { SpaReview } from '../database/entities/spa-review.entity';
 import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Tenant } from '../database/entities/tenant.entity';
+import { PackageStatus, ReservationStatus, SessionType } from '../database/enums';
 import { PushService } from '../notifications/push.service';
 
 @Injectable()
@@ -18,6 +22,9 @@ export class SpaServiceService {
     @InjectRepository(SpaBooking) private readonly bookingsRepo: Repository<SpaBooking>,
     @InjectRepository(SpaReview) private readonly reviewsRepo: Repository<SpaReview>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
+    @InjectRepository(Availability) private readonly availabilityRepo: Repository<Availability>,
+    @InjectRepository(Reservation) private readonly reservationsRepo: Repository<Reservation>,
+    @InjectRepository(Package) private readonly memberPackagesRepo: Repository<Package>,
     private readonly pushService: PushService,
   ) {}
 
@@ -265,5 +272,221 @@ export class SpaServiceService {
       ],
       order: { sortOrder: 'ASC' },
     });
+  }
+
+  // ─── Member Slot Booking (Availability-based) ──────────────────────────────
+
+  /** Üye: Belirli bir tarih için müsait masaj slotları. */
+  async getAvailableSlots(date: string) {
+    // Get all available slots for spa therapists on the given date
+    const slots = await this.availabilityRepo.find({
+      where: {
+        date,
+        available: true,
+      },
+      relations: ['spaTherapist'],
+    });
+
+    // Filter only slots that have a spaTherapistId
+    const spaSlots = slots.filter((s) => s.spaTherapistId !== null && s.spaTherapist !== null);
+
+    // For each slot, check if there's already a confirmed/pending reservation
+    const availableSlots: Array<{
+      availabilityId: string;
+      therapistId: string;
+      therapistName: string;
+      therapistPhoto: string | null;
+      startTime: string;
+      endTime: string;
+    }> = [];
+
+    for (const slot of spaSlots) {
+      // Build the full timestamp for the slot's start time on the given date
+      const slotStart = new Date(`${date}T${slot.startTime}`);
+
+      const existingReservation = await this.reservationsRepo.findOne({
+        where: {
+          spaTherapistId: slot.spaTherapistId!,
+          startTime: slotStart,
+          status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        },
+      });
+
+      if (!existingReservation) {
+        availableSlots.push({
+          availabilityId: slot.id,
+          therapistId: slot.spaTherapistId!,
+          therapistName: slot.spaTherapist!.name,
+          therapistPhoto: slot.spaTherapist!.photoUrl ?? null,
+          startTime: slot.startTime.slice(0, 5),
+          endTime: slot.endTime.slice(0, 5),
+        });
+      }
+    }
+
+    return {
+      date,
+      slots: availableSlots,
+    };
+  }
+
+  /** Üye: Masaj paketi bakiyesi. */
+  async getMyPackageBalance(userId: string) {
+    const packages = await this.memberPackagesRepo.find({
+      where: {
+        userId,
+        status: PackageStatus.ACTIVE,
+      },
+      relations: ['packageType'],
+    });
+
+    const massagePackages = packages.filter(
+      (p) => p.packageType && p.packageType.sessionType === SessionType.MASSAGE,
+    );
+
+    const remainingSessions = massagePackages.reduce((sum, p) => sum + p.remainingSessions, 0);
+
+    return {
+      remainingSessions,
+      packages: massagePackages.map((p) => ({
+        id: p.id,
+        packageTypeName: p.packageType.name,
+        remainingSessions: p.remainingSessions,
+        expiresAt: p.expiresAt,
+        status: p.status,
+      })),
+    };
+  }
+
+  /** Üye: Müsait slot'u rezerve et. */
+  async bookSlot(userId: string, tenantId: string, availabilityId: string, serviceId: string) {
+    // 1. Validate availability exists and is for today or future
+    const availability = await this.availabilityRepo.findOne({
+      where: { id: availabilityId, available: true },
+      relations: ['spaTherapist'],
+    });
+    if (!availability) {
+      throw new NotFoundException('Availability slot not found or not available');
+    }
+    if (!availability.spaTherapistId) {
+      throw new BadRequestException('This slot is not for a spa therapist');
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (availability.date < today) {
+      throw new BadRequestException('Cannot book a slot in the past');
+    }
+
+    // 2. Validate no existing confirmed/pending reservation for that therapist+time
+    const slotStart = new Date(`${availability.date}T${availability.startTime}`);
+    const slotEnd = new Date(`${availability.date}T${availability.endTime}`);
+
+    const existingReservation = await this.reservationsRepo.findOne({
+      where: {
+        spaTherapistId: availability.spaTherapistId,
+        startTime: slotStart,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+      },
+    });
+    if (existingReservation) {
+      throw new BadRequestException('This slot is already booked');
+    }
+
+    // 3. Check member has active massage package with remainingSessions > 0
+    const packages = await this.memberPackagesRepo.find({
+      where: {
+        userId,
+        status: PackageStatus.ACTIVE,
+      },
+      relations: ['packageType'],
+    });
+
+    const massagePackage = packages.find(
+      (p) =>
+        p.packageType &&
+        p.packageType.sessionType === SessionType.MASSAGE &&
+        p.remainingSessions > 0 &&
+        p.expiresAt >= today,
+    );
+    if (!massagePackage) {
+      throw new BadRequestException('No active massage package with remaining sessions');
+    }
+
+    // 4. Deduct 1 session from the package
+    massagePackage.remainingSessions -= 1;
+    if (massagePackage.remainingSessions === 0) {
+      massagePackage.status = PackageStatus.DEPLETED;
+    }
+    await this.memberPackagesRepo.save(massagePackage);
+
+    // 5. Create a Reservation record
+    const reservation = this.reservationsRepo.create({
+      userId,
+      tenantId,
+      spaTherapistId: availability.spaTherapistId,
+      spaServiceId: serviceId,
+      packageId: massagePackage.id,
+      sessionType: SessionType.MASSAGE,
+      startTime: slotStart,
+      endTime: slotEnd,
+      status: ReservationStatus.CONFIRMED,
+      notes: null,
+      cancelledAt: null,
+    });
+    const saved = await this.reservationsRepo.save(reservation);
+
+    return saved;
+  }
+
+  /** Üye: Spa rezervasyonunu iptal et (3 saat kuralı). */
+  async cancelSpaReservation(userId: string, reservationId: string) {
+    const reservation = await this.reservationsRepo.findOne({
+      where: { id: reservationId, userId },
+    });
+    if (!reservation) {
+      throw new NotFoundException('Reservation not found');
+    }
+    if (reservation.status === ReservationStatus.CANCELLED) {
+      throw new BadRequestException('Reservation is already cancelled');
+    }
+    if (
+      reservation.status !== ReservationStatus.CONFIRMED &&
+      reservation.status !== ReservationStatus.PENDING
+    ) {
+      throw new BadRequestException('Reservation cannot be cancelled');
+    }
+
+    const now = new Date();
+    const startTime = new Date(reservation.startTime);
+    const diffMs = startTime.getTime() - now.getTime();
+    const threeHoursMs = 3 * 60 * 60 * 1000;
+
+    let refunded = false;
+
+    // Cancel the reservation
+    reservation.status = ReservationStatus.CANCELLED;
+    reservation.cancelledAt = now;
+    await this.reservationsRepo.save(reservation);
+
+    // If more than 3 hours before start → refund 1 session
+    if (diffMs > threeHoursMs && reservation.packageId) {
+      const pkg = await this.memberPackagesRepo.findOne({
+        where: { id: reservation.packageId },
+      });
+      if (pkg) {
+        pkg.remainingSessions += 1;
+        if (pkg.status === PackageStatus.DEPLETED && pkg.remainingSessions > 0) {
+          pkg.status = PackageStatus.ACTIVE;
+        }
+        await this.memberPackagesRepo.save(pkg);
+        refunded = true;
+      }
+    }
+
+    const message = refunded
+      ? 'Reservation cancelled. 1 session refunded to your package.'
+      : 'Reservation cancelled. No refund (less than 3 hours before start).';
+
+    return { refunded, message };
   }
 }

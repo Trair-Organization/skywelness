@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
+import { Availability } from '../database/entities/availability.entity';
 import { AppNotification } from '../database/entities/notification.entity';
 import { CafeOrder } from '../database/entities/cafe-order.entity';
 import { PackageRequest } from '../database/entities/package-request.entity';
@@ -18,6 +19,8 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { BookingCatalogController } from './booking-catalog.controller';
 import { BookingService } from './booking.service';
 import { MemberPackagesController } from './member-packages.controller';
+import { PtMemberController } from './pt-member.controller';
+import { PtMemberService } from './pt-member.service';
 import { ReservationsController } from './reservations.controller';
 import { TrainerNetworkController } from './trainer-network.controller';
 import { PackageRequestsController } from './package-requests.controller';
@@ -41,6 +44,7 @@ import { CafeOrdersService } from './cafe-orders.service';
       CafeOrder,
       TrainerMemberLink,
       TrainerMemberNote,
+      Availability,
     ]),
     AuthModule,
     MailModule,
@@ -54,8 +58,9 @@ import { CafeOrdersService } from './cafe-orders.service';
     TrainerNetworkController,
     NotificationsController,
     CafeOrdersController,
+    PtMemberController,
   ],
-  providers: [BookingService, CafeOrdersService, RolesGuard],
+  providers: [BookingService, CafeOrdersService, PtMemberService, RolesGuard],
   exports: [CafeOrdersService, BookingService],
 })
 export class BookingModule {}
