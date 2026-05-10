@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,8 @@ export function MemberProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, tenant, logout, deleteAccount, updateProfile } = useMemberAuth();
   const navigation = useNavigation<BottomTabNavigationProp<MemberTabParamList>>();
+
+  const [showEditForm, setShowEditForm] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,17 +47,10 @@ export function MemberProfileScreen() {
     return null;
   }
 
-  const openPolicies = () => {
-    Alert.alert(t('home.policiesCta'), t('home.policiesBody'));
-  };
-
-  const openPrivacy = () => {
-    navigation.navigate('Legal', { type: 'privacy' });
-  };
-
-  const openTerms = () => {
-    navigation.navigate('Legal', { type: 'terms' });
-  };
+  const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.username || '—';
+  const initials =
+    `${(user.firstName ?? '')[0] ?? ''}${(user.lastName ?? '')[0] ?? ''}`.toUpperCase() || '?';
+  const roleBadgeLabel = user.role === 'admin' ? 'Admin' : 'Üye';
 
   const uploadPhoto = () => {
     setUploadingPhoto(true);
@@ -71,6 +66,22 @@ export function MemberProfileScreen() {
     );
   };
 
+  const handleSave = () => {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !username.trim()) {
+      Alert.alert(t('profile.updateTitle'), t('profile.updateValidation'));
+      return;
+    }
+    setSaving(true);
+    updateProfile({ firstName, lastName, email, username, phone, photoUrl })
+      .then((ok) => {
+        if (ok) {
+          Alert.alert(t('profile.updateTitle'), t('profile.updateOk'));
+          setShowEditForm(false);
+        }
+      })
+      .finally(() => setSaving(false));
+  };
+
   return (
     <GradientBackground>
       <ScrollView
@@ -81,78 +92,138 @@ export function MemberProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.screenTitle}>{t('tabs.profile')}</Text>
-        <Text style={styles.screenSub}>{t('profile.subtitle')}</Text>
-
-        <GlassCard style={styles.card}>
-          <Text style={styles.cardTitle}>{t('profile.editTitle')}</Text>
-          <Text style={styles.cardLineMuted}>{t('profile.editBody')}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
-            onPress={() => {
-              uploadPhoto();
-            }}
-            disabled={uploadingPhoto}
-          >
-            <Text style={styles.photoBtnTxt}>
-              {uploadingPhoto
-                ? t('profile.photoUploading')
-                : photoUrl
-                  ? t('profile.photoChange')
-                  : t('profile.photoUpload')}
-            </Text>
+        {/* ─── Profile Header ─── */}
+        <GlassCard style={styles.headerCard}>
+          <Pressable style={styles.settingsIcon} onPress={() => setShowEditForm((v) => !v)}>
+            <Text style={styles.settingsIconText}>⚙️</Text>
           </Pressable>
-          {photoUrl ? <Text style={styles.photoLine}>{photoUrl}</Text> : null}
-          <PremiumInput
-            label={t('register.firstName')}
-            value={firstName}
-            onChangeText={setFirstName}
-          />
-          <PremiumInput
-            label={t('register.lastName')}
-            value={lastName}
-            onChangeText={setLastName}
-          />
-          <PremiumInput label={t('login.emailLabel')} value={email} onChangeText={setEmail} />
-          <PremiumInput
-            label={t('register.usernameLabel')}
-            value={username}
-            onChangeText={setUsername}
-          />
-          <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
-          <Text style={styles.cardLine}>{t('session.role', { role: user.role })}</Text>
-          <Text style={styles.cardLineMuted}>
-            {tenant.name} · {tenant.subdomain}
-          </Text>
+
+          <View style={styles.avatarContainer}>
+            {photoUrl ? (
+              <Image source={{ uri: photoUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+            <Pressable
+              style={styles.avatarCameraOverlay}
+              onPress={uploadPhoto}
+              disabled={uploadingPhoto}
+            >
+              <Text style={styles.avatarCameraIcon}>📷</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.profileName}>{fullName}</Text>
+          <Text style={styles.profileEmail}>{user.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{roleBadgeLabel}</Text>
+          </View>
+        </GlassCard>
+
+        {/* ─── Quick Stats ─── */}
+        <View style={styles.statsRow}>
+          <GlassCard style={styles.statCard}>
+            <Text style={styles.statValue}>—</Text>
+            <Text style={styles.statLabel}>Kalan PT</Text>
+          </GlassCard>
+          <GlassCard style={styles.statCard}>
+            <Text style={styles.statValue}>—</Text>
+            <Text style={styles.statLabel}>Kalan Masaj</Text>
+          </GlassCard>
+          <GlassCard style={styles.statCard}>
+            <Text style={styles.statValue}>—</Text>
+            <Text style={styles.statLabel}>Üyelik</Text>
+          </GlassCard>
+        </View>
+
+        {/* ─── Quick Access ─── */}
+        <GlassCard style={styles.quickAccessCard}>
           <Pressable
-            style={({ pressed }) => [
-              styles.btnPrimary,
-              pressed && styles.btnPrimaryPressed,
-              saving && styles.btnDisabled,
-            ]}
-            disabled={saving}
-            onPress={() => {
-              if (!firstName.trim() || !lastName.trim() || !email.trim() || !username.trim()) {
-                Alert.alert(t('profile.updateTitle'), t('profile.updateValidation'));
-                return;
-              }
-              setSaving(true);
-              updateProfile({ firstName, lastName, email, username, phone, photoUrl })
-                .then((ok) => {
-                  if (ok) {
-                    Alert.alert(t('profile.updateTitle'), t('profile.updateOk'));
-                  }
-                })
-                .finally(() => setSaving(false));
-            }}
+            style={styles.quickAccessItem}
+            onPress={() => navigation.navigate('Reservations')}
           >
-            <Text style={styles.btnPrimaryTxt}>
-              {saving ? t('profile.saving') : t('profile.save')}
-            </Text>
+            <Text style={styles.quickAccessIcon}>📅</Text>
+            <Text style={styles.quickAccessText}>Rezervasyonlarım</Text>
+            <Text style={styles.quickAccessArrow}>›</Text>
+          </Pressable>
+          <Pressable style={styles.quickAccessItem} onPress={() => navigation.navigate('Messages')}>
+            <Text style={styles.quickAccessIcon}>💬</Text>
+            <Text style={styles.quickAccessText}>Mesajlarım</Text>
+            <Text style={styles.quickAccessArrow}>›</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.quickAccessItem, { borderBottomWidth: 0 }]}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <Text style={styles.quickAccessIcon}>🔔</Text>
+            <Text style={styles.quickAccessText}>Bildirimlerim</Text>
+            <Text style={styles.quickAccessArrow}>›</Text>
           </Pressable>
         </GlassCard>
 
-        <GlassCard style={styles.card}>
+        {/* ─── Edit Form (collapsible) ─── */}
+        {showEditForm && (
+          <GlassCard style={styles.editCard}>
+            <View style={styles.editHeader}>
+              <Text style={styles.cardTitle}>{t('profile.editTitle')}</Text>
+              <Pressable onPress={() => setShowEditForm(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.cardLineMuted}>{t('profile.editBody')}</Text>
+
+            <Pressable
+              style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
+              onPress={uploadPhoto}
+              disabled={uploadingPhoto}
+            >
+              <Text style={styles.photoBtnTxt}>
+                {uploadingPhoto
+                  ? t('profile.photoUploading')
+                  : photoUrl
+                    ? t('profile.photoChange')
+                    : t('profile.photoUpload')}
+              </Text>
+            </Pressable>
+
+            <PremiumInput
+              label={t('register.firstName')}
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+            <PremiumInput
+              label={t('register.lastName')}
+              value={lastName}
+              onChangeText={setLastName}
+            />
+            <PremiumInput label={t('login.emailLabel')} value={email} onChangeText={setEmail} />
+            <PremiumInput
+              label={t('register.usernameLabel')}
+              value={username}
+              onChangeText={setUsername}
+            />
+            <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.btnPrimary,
+                pressed && styles.btnPrimaryPressed,
+                saving && styles.btnDisabled,
+              ]}
+              disabled={saving}
+              onPress={handleSave}
+            >
+              <Text style={styles.btnPrimaryTxt}>
+                {saving ? t('profile.saving') : t('profile.save')}
+              </Text>
+            </Pressable>
+          </GlassCard>
+        )}
+
+        {/* ─── Settings ─── */}
+        <GlassCard style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t('lang.label')}</Text>
           <View style={styles.langSeg}>
             <Pressable
@@ -178,53 +249,28 @@ export function MemberProfileScreen() {
               </Text>
             </Pressable>
           </View>
-        </GlassCard>
 
-        <GlassCard style={styles.card}>
-          <Text style={styles.cardTitle}>Hızlı Erişim</Text>
+          <View style={styles.settingsDivider} />
+
           <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={() => navigation.navigate('Reservations')}
+            style={styles.quickAccessItem}
+            onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
           >
-            <Text style={styles.btnOutlineTxt}>📅 Rezervasyonlarım</Text>
+            <Text style={styles.quickAccessIcon}>🔒</Text>
+            <Text style={styles.quickAccessText}>{t('profile.privacyTitle')}</Text>
+            <Text style={styles.quickAccessArrow}>›</Text>
           </Pressable>
           <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={() => navigation.navigate('Messages')}
+            style={[styles.quickAccessItem, { borderBottomWidth: 0 }]}
+            onPress={() => navigation.navigate('Legal', { type: 'terms' })}
           >
-            <Text style={styles.btnOutlineTxt}>💬 Mesajlarım</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={() => navigation.navigate('Notifications')}
-          >
-            <Text style={styles.btnOutlineTxt}>🔔 Bildirimlerim</Text>
+            <Text style={styles.quickAccessIcon}>📄</Text>
+            <Text style={styles.quickAccessText}>{t('profile.termsTitle')}</Text>
+            <Text style={styles.quickAccessArrow}>›</Text>
           </Pressable>
         </GlassCard>
 
-        <GlassCard style={styles.card}>
-          <Text style={styles.cardTitle}>{t('profile.contractsTitle')}</Text>
-          <Text style={styles.muted}>{t('profile.contractsBody')}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={openPrivacy}
-          >
-            <Text style={styles.btnOutlineTxt}>{t('profile.privacyTitle')}</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={openTerms}
-          >
-            <Text style={styles.btnOutlineTxt}>{t('profile.termsTitle')}</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
-            onPress={openPolicies}
-          >
-            <Text style={styles.btnOutlineTxt}>{t('home.policiesCta')}</Text>
-          </Pressable>
-        </GlassCard>
-
+        {/* ─── Bottom Actions ─── */}
         <Pressable
           style={({ pressed }) => [styles.btnDanger, pressed && styles.btnDangerPressed]}
           onPress={() => {
@@ -266,30 +312,161 @@ const styles = StyleSheet.create({
     width: '100%',
     flexGrow: 1,
   },
-  screenTitle: {
-    fontSize: 24,
+
+  /* ─── Header ─── */
+  headerCard: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    marginBottom: 12,
+    position: 'relative',
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: premium.accentBlue,
+  },
+  avatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: premium.accentBlue,
+  },
+  avatarInitials: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: premium.accentBlue,
+  },
+  avatarCameraOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: premium.accentBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCameraIcon: {
+    fontSize: 14,
+    color: '#fff',
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: premium.text,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: premium.textMuted,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  roleBadge: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(56,189,248,0.12)',
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: premium.accentBlue,
+    textTransform: 'uppercase',
+  },
+  settingsIcon: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    padding: 8,
+    zIndex: 1,
+  },
+  settingsIconText: {
+    fontSize: 22,
+  },
+
+  /* ─── Stats ─── */
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  statValue: {
+    fontSize: 20,
     fontWeight: '800',
     color: premium.text,
     marginBottom: 4,
   },
-  screenSub: {
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: premium.textMuted,
+  },
+
+  /* ─── Quick Access ─── */
+  quickAccessCard: {
+    marginBottom: 12,
+  },
+  quickAccessItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(148,163,184,0.1)',
+  },
+  quickAccessIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  quickAccessText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: premium.text,
+    flex: 1,
+  },
+  quickAccessArrow: {
     fontSize: 14,
     color: premium.textMuted,
-    marginBottom: 16,
   },
-  card: {
+
+  /* ─── Edit Form ─── */
+  editCard: {
     marginBottom: 12,
+  },
+  editHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  closeBtn: {
+    fontSize: 18,
+    color: premium.textMuted,
+    padding: 4,
   },
   cardTitle: {
     fontSize: 17,
     fontWeight: '800',
     color: premium.text,
     marginBottom: 8,
-  },
-  cardLine: {
-    fontSize: 15,
-    color: premium.text,
-    marginBottom: 4,
   },
   cardLineMuted: {
     fontSize: 13,
@@ -313,16 +490,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
-  photoLine: {
-    color: premium.textMuted,
-    fontSize: 11,
-    marginBottom: 10,
-  },
-  muted: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: premium.textMuted,
+
+  /* ─── Settings ─── */
+  settingsCard: {
     marginBottom: 12,
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: 'rgba(148,163,184,0.1)',
+    marginVertical: 12,
   },
   langSeg: {
     flexDirection: 'row',
@@ -348,57 +524,8 @@ const styles = StyleSheet.create({
   langTxtOn: {
     color: premium.text,
   },
-  btnOutline: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: premium.radiusSm,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    marginBottom: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  btnOutlinePressed: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  btnOutlineTxt: {
-    color: premium.accentBlue,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  btnGhost: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: premium.radiusSm,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    marginTop: 8,
-  },
-  btnGhostPressed: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  btnGhostTxt: {
-    color: premium.textMuted,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  btnDanger: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: premium.radiusSm,
-    borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.6)',
-    backgroundColor: 'rgba(248,113,113,0.2)',
-    marginTop: 8,
-  },
-  btnDangerPressed: {
-    backgroundColor: 'rgba(248,113,113,0.3)',
-  },
-  btnDangerTxt: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 15,
-  },
+
+  /* ─── Buttons ─── */
   btnPrimary: {
     backgroundColor: 'rgba(56,189,248,0.35)',
     borderWidth: 1,
@@ -418,5 +545,39 @@ const styles = StyleSheet.create({
   },
   btnDisabled: {
     opacity: 0.6,
+  },
+  btnDanger: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.6)',
+    backgroundColor: 'rgba(248,113,113,0.2)',
+    marginTop: 8,
+  },
+  btnDangerPressed: {
+    backgroundColor: 'rgba(248,113,113,0.3)',
+  },
+  btnDangerTxt: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  btnGhost: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: premium.radiusSm,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    marginTop: 8,
+  },
+  btnGhostPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  btnGhostTxt: {
+    color: premium.textMuted,
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

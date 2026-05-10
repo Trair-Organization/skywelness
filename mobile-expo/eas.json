@@ -8,7 +8,8 @@
       "distribution": "store",
       "ios": {
         "resourceClass": "m-medium",
-        "autoIncrement": true
+        "autoIncrement": true,
+        "credentialsSource": "remote"
       }
     }
   },
