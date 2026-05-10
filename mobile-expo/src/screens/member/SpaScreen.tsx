@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -55,10 +57,19 @@ type MyReservation = {
   trainer?: { user: { firstName: string; lastName: string } } | null;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 const TAB_BAR_PAD = 100;
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+const CATEGORY_ICONS: Record<string, string> = {
+  relax: '🧘',
+  therapy: '💆',
+  recovery: '🔄',
+  sport: '🏋️',
+  premium: '👑',
+  cold: '🧊',
+};
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -69,18 +80,91 @@ function addDays(d: string, n: number) {
 }
 function dayLabel(d: string) {
   const dt = new Date(`${d}T12:00:00`);
-  const day = dt.toLocaleDateString('tr-TR', { weekday: 'short' });
-  const num = dt.getDate();
-  return { day, num };
+  return {
+    day: dt.toLocaleDateString('tr-TR', { weekday: 'short' }),
+    num: dt.getDate(),
+    month: dt.toLocaleDateString('tr-TR', { month: 'short' }),
+  };
 }
 function canRefund(startTime: string): boolean {
   return new Date(startTime).getTime() - Date.now() > THREE_HOURS_MS;
+}
+function hoursUntil(startTime: string): number {
+  return Math.max(0, Math.round((new Date(startTime).getTime() - Date.now()) / 3600000));
+}
+
+// ─── Circular Progress Ring ───────────────────────────────────────────────────
+function ProgressRing({
+  remaining,
+  total,
+  size = 72,
+}: {
+  remaining: number;
+  total: number;
+  size?: number;
+}) {
+  const strokeWidth = 6;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = total > 0 ? remaining / total : 0;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Background circle */}
+      <View
+        style={{
+          position: 'absolute',
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: strokeWidth,
+          borderColor: 'rgba(148,163,184,0.15)',
+        }}
+      />
+      {/* Progress circle (simplified — full circle colored portion) */}
+      <View
+        style={{
+          position: 'absolute',
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: strokeWidth,
+          borderColor: remaining > 0 ? premium.accentGreen : premium.danger,
+          borderTopColor:
+            progress >= 0.25
+              ? remaining > 0
+                ? premium.accentGreen
+                : premium.danger
+              : 'transparent',
+          borderRightColor:
+            progress >= 0.5
+              ? remaining > 0
+                ? premium.accentGreen
+                : premium.danger
+              : 'transparent',
+          borderBottomColor:
+            progress >= 0.75
+              ? remaining > 0
+                ? premium.accentGreen
+                : premium.danger
+              : 'transparent',
+          borderLeftColor:
+            progress >= 1 ? (remaining > 0 ? premium.accentGreen : premium.danger) : 'transparent',
+          transform: [{ rotate: '-90deg' }],
+        }}
+      />
+      <Text style={{ fontSize: 20, fontWeight: '900', color: premium.text }}>{remaining}</Text>
+      <Text style={{ fontSize: 9, color: premium.textMuted, marginTop: -2 }}>kalan</Text>
+    </View>
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function SpaScreen() {
   const insets = useSafeAreaInsets();
   const { token, tenant } = useMemberAuth();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -95,13 +179,22 @@ export function SpaScreen() {
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [booking, setBooking] = useState(false);
 
-  // Collapsible sections
+  // Sections
   const [showServices, setShowServices] = useState(false);
+  const [showTherapists, setShowTherapists] = useState(false);
 
   const opts = useMemo(
     () => ({ token: token ?? undefined, tenantSubdomain: tenant?.subdomain }),
     [token, tenant],
   );
+
+  const totalSessions = useMemo(() => {
+    if (!balance?.packages.length) return 0;
+    return (
+      balance.packages.reduce((s, p) => s + p.remainingSessions, 0) +
+      (balance.remainingSessions - balance.packages.reduce((s, p) => s + p.remainingSessions, 0))
+    );
+  }, [balance]);
 
   const loadData = useCallback(async () => {
     if (!token || !tenant) return;
@@ -115,7 +208,6 @@ export function SpaScreen() {
       setSlots(slotsRes.slots);
       setBalance(balanceRes);
       setServices(servicesRes);
-      // Filter only spa reservations (confirmed/pending)
       setMyReservations(
         reservationsRes.filter(
           (r) =>
@@ -136,7 +228,8 @@ export function SpaScreen() {
     useCallback(() => {
       setLoading(true);
       void loadData();
-    }, [loadData]),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }, [loadData, fadeAnim]),
   );
 
   useEffect(() => {
@@ -155,7 +248,10 @@ export function SpaScreen() {
           serviceId: selectedServiceId,
         }),
       });
-      Alert.alert('✅ Randevu Oluşturuldu', 'Masaj randevunuz onaylandı. İyi seanslar!');
+      Alert.alert(
+        '✅ Randevu Onaylandı',
+        `${bookingSlot.therapistName} ile randevunuz oluşturuldu.\n\n⏰ İptal için en az 3 saat öncesinden işlem yapmanız gerekmektedir.`,
+      );
       setBookingSlot(null);
       setSelectedServiceId('');
       void loadData();
@@ -168,18 +264,27 @@ export function SpaScreen() {
 
   async function handleCancel(reservationId: string, startTime: string) {
     const willRefund = canRefund(startTime);
+    const hours = hoursUntil(startTime);
     const msg = willRefund
-      ? 'Randevunuz iptal edilecek ve 1 seans paketinize iade edilecek.'
-      : '⚠️ Randevu başlangıcına 3 saatten az kaldığı için iptal edebilirsiniz ancak seans hakkınız iade edilmeyecektir.';
+      ? `Randevunuz iptal edilecek ve 1 seans hakkınız paketinize iade edilecektir.\n\nRandevuya ${hours} saat var.`
+      : `⚠️ DİKKAT: Randevu başlangıcına ${hours} saatten az kaldığı için iptal edebilirsiniz ancak seans hakkınız iade edilmeyecektir.\n\n1 masaj hakkınız kullanılmış sayılacaktır.`;
     Alert.alert('Randevu İptali', msg, [
       { text: 'Vazgeç', style: 'cancel' },
       {
-        text: willRefund ? 'İptal Et (İade)' : 'İptal Et (Hak Yanar)',
+        text: willRefund ? 'İptal Et' : 'Yine de İptal Et',
         style: 'destructive',
         onPress: async () => {
           try {
-            await apiJson(`/spa/cancel/${reservationId}`, { ...opts, method: 'POST' });
-            Alert.alert('✅', willRefund ? 'İptal edildi, 1 seans iade edildi.' : 'İptal edildi.');
+            const res = await apiJson<{ refunded: boolean; message: string }>(
+              `/spa/cancel/${reservationId}`,
+              { ...opts, method: 'POST' },
+            );
+            Alert.alert(
+              res.refunded ? '✅ İptal Edildi' : '⚠️ İptal Edildi',
+              res.refunded
+                ? '1 seans hakkınız paketinize iade edildi.'
+                : 'Seans hakkınız iade edilmedi (3 saat kuralı).',
+            );
             void loadData();
           } catch (e) {
             Alert.alert('Hata', e instanceof ApiError ? e.message : 'İptal başarısız');
@@ -199,22 +304,28 @@ export function SpaScreen() {
     });
   }, []);
 
+  // ─── Loading ────────────────────────────────────────────────────────────────
   if (loading && !refreshing) {
     return (
       <GradientBackground>
-        <View style={[styles.center, { paddingTop: insets.top + 60 }]}>
+        <View style={[styles.center, { paddingTop: insets.top + 100 }]}>
           <ActivityIndicator size="large" color={premium.accentBlue} />
+          <Text style={styles.loadingText}>Spa yükleniyor...</Text>
         </View>
       </GradientBackground>
     );
   }
 
+  const remaining = balance?.remainingSessions ?? 0;
+  const maxSessions = remaining + 5; // approximate for ring visual
+
   return (
     <GradientBackground>
-      <ScrollView
+      <Animated.ScrollView
+        style={{ opacity: fadeAnim }}
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_PAD },
+          { paddingTop: insets.top, paddingBottom: insets.bottom + TAB_BAR_PAD },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -228,45 +339,61 @@ export function SpaScreen() {
           />
         }
       >
-        {/* Header */}
-        <Text style={styles.title}>💆 Spa & Masaj</Text>
-        <Text style={styles.subtitle}>Müsait saatleri seç, hemen randevu al</Text>
-
-        {/* Package Balance */}
-        <GlassCard style={styles.balanceCard}>
-          <View style={styles.balanceRow}>
-            <View>
-              <Text style={styles.balanceLabel}>Kalan Masaj Hakkı</Text>
-              <Text style={styles.balanceValue}>{balance?.remainingSessions ?? 0}</Text>
-            </View>
-            <View style={styles.balanceBadge}>
-              <Text style={styles.balanceBadgeText}>
-                {(balance?.remainingSessions ?? 0) > 0 ? '✅ Aktif' : '❌ Paket Yok'}
-              </Text>
+        {/* ═══ Hero Banner ═══ */}
+        <View style={styles.hero}>
+          <View style={styles.heroGradient}>
+            <Text style={styles.heroEmoji}>💆‍♀️</Text>
+            <View style={styles.heroTextBlock}>
+              <Text style={styles.heroTitle}>Spa & Masaj</Text>
+              <Text style={styles.heroSub}>Kendinize vakit ayırın, hemen randevu alın</Text>
             </View>
           </View>
-          {(balance?.remainingSessions ?? 0) === 0 && (
-            <Text style={styles.noPackageHint}>
-              Masaj randevusu almak için aktif bir paketiniz olmalıdır. Kulüp resepsiyonundan paket
-              satın alabilirsiniz.
+        </View>
+
+        {/* ═══ Package Balance Card ═══ */}
+        <GlassCard style={styles.balanceCard}>
+          <View style={styles.balanceRow}>
+            <View style={styles.balanceLeft}>
+              <Text style={styles.balanceLabel}>Masaj Paketim</Text>
+              {remaining > 0 ? (
+                <View style={styles.balanceStatusRow}>
+                  <View style={styles.activeDot} />
+                  <Text style={styles.activeText}>Aktif Paket</Text>
+                </View>
+              ) : (
+                <View style={styles.balanceStatusRow}>
+                  <View style={[styles.activeDot, { backgroundColor: premium.danger }]} />
+                  <Text style={[styles.activeText, { color: premium.danger }]}>Paket Yok</Text>
+                </View>
+              )}
+              {remaining === 0 && (
+                <Text style={styles.noPackageHint}>
+                  Randevu almak için kulüp resepsiyonundan masaj paketi satın alın.
+                </Text>
+              )}
+            </View>
+            <ProgressRing remaining={remaining} total={Math.max(remaining, maxSessions)} />
+          </View>
+          <View style={styles.ruleBox}>
+            <Text style={styles.ruleIcon}>⏰</Text>
+            <Text style={styles.ruleText}>
+              3 saat öncesine kadar ücretsiz iptal. 3 saatten az kala iptal ederseniz seans hakkınız
+              kullanılmış sayılır.
             </Text>
-          )}
-          <Text style={styles.cancelRule}>
-            ⏰ İptal kuralı: Randevu başlangıcından en az 3 saat önce iptal ederseniz hakkınız iade
-            edilir. 3 saatten az kala iptal ederseniz hakkınız kullanılmış sayılır.
-          </Text>
+          </View>
         </GlassCard>
 
-        {/* Date Strip */}
-        <View style={styles.dateStrip}>
+        {/* ═══ Date Strip ═══ */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateStripContainer}
+          style={styles.dateStripScroll}
+        >
           {dateStrip.map((d) => (
             <Pressable
               key={d.date}
-              style={[
-                styles.dateChip,
-                d.date === selectedDate && styles.dateChipActive,
-                d.isToday && styles.dateChipToday,
-              ]}
+              style={[styles.dateChip, d.date === selectedDate && styles.dateChipActive]}
               onPress={() => setSelectedDate(d.date)}
             >
               <Text
@@ -279,32 +406,35 @@ export function SpaScreen() {
               >
                 {d.num}
               </Text>
+              {d.isToday && <View style={styles.todayDot} />}
             </Pressable>
           ))}
+        </ScrollView>
+
+        {/* ═══ Available Slots ═══ */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Müsait Saatler</Text>
+          <Text style={styles.sectionBadge}>{slots.length} slot</Text>
         </View>
 
-        {/* Available Slots */}
-        <Text style={styles.sectionTitle}>
-          Müsait Saatler ·{' '}
-          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('tr-TR', {
-            day: 'numeric',
-            month: 'long',
-          })}
-        </Text>
         {slots.length === 0 ? (
           <GlassCard style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Bu tarihte müsait saat bulunmuyor.</Text>
+            <Text style={styles.emptyEmoji}>🙅‍♀️</Text>
+            <Text style={styles.emptyTitle}>Müsait saat yok</Text>
+            <Text style={styles.emptyDesc}>
+              Bu tarihte açık masaj saati bulunmuyor. Başka bir gün deneyin.
+            </Text>
           </GlassCard>
         ) : (
-          slots.map((slot) => (
+          slots.map((slot, idx) => (
             <Pressable
               key={slot.availabilityId}
               style={({ pressed }) => [styles.slotCard, pressed && styles.slotCardPressed]}
               onPress={() => {
-                if ((balance?.remainingSessions ?? 0) === 0) {
+                if (remaining === 0) {
                   Alert.alert(
                     'Paket Gerekli',
-                    'Masaj randevusu almak için aktif bir masaj paketiniz olmalıdır. Lütfen kulüp resepsiyonuyla iletişime geçin.',
+                    'Masaj randevusu almak için aktif bir masaj paketiniz olmalıdır.\n\nKulüp resepsiyonundan paket satın alabilirsiniz.',
                   );
                   return;
                 }
@@ -312,33 +442,53 @@ export function SpaScreen() {
                 setSelectedServiceId('');
               }}
             >
-              <View style={styles.slotLeft}>
+              {/* Therapist Avatar */}
+              <View style={styles.slotAvatar}>
+                {slot.therapistPhoto ? (
+                  <Image source={{ uri: slot.therapistPhoto }} style={styles.slotAvatarImg} />
+                ) : (
+                  <View style={styles.slotAvatarFallback}>
+                    <Text style={styles.slotAvatarLetter}>
+                      {slot.therapistName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {/* Slot Info */}
+              <View style={styles.slotInfo}>
                 <Text style={styles.slotTime}>
                   {slot.startTime} - {slot.endTime}
                 </Text>
-                <Text style={styles.slotTherapist}>💆 {slot.therapistName}</Text>
+                <Text style={styles.slotTherapist}>{slot.therapistName}</Text>
               </View>
-              <View style={styles.slotRight}>
-                <Text style={styles.slotCta}>Randevu Al →</Text>
+              {/* CTA */}
+              <View style={styles.slotCta}>
+                <Text style={styles.slotCtaText}>Randevu Al</Text>
+                <Text style={styles.slotCtaArrow}>→</Text>
               </View>
             </Pressable>
           ))
         )}
 
-        {/* My Upcoming Reservations */}
+        {/* ═══ My Upcoming Reservations ═══ */}
         {myReservations.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Yaklaşan Randevularım</Text>
+          <View style={{ marginTop: 28 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Yaklaşan Randevularım</Text>
+              <Text style={styles.sectionBadge}>{myReservations.length}</Text>
+            </View>
             {myReservations.map((r) => {
               const refundable = canRefund(r.startTime);
+              const hours = hoursUntil(r.startTime);
               return (
                 <GlassCard key={r.id} style={styles.resCard}>
-                  <View style={styles.resRow}>
+                  <View style={styles.resTop}>
                     <View>
                       <Text style={styles.resTime}>
+                        📅{' '}
                         {new Date(r.startTime).toLocaleDateString('tr-TR', {
                           day: 'numeric',
-                          month: 'short',
+                          month: 'long',
                         })}{' '}
                         ·{' '}
                         {new Date(r.startTime).toLocaleTimeString('tr-TR', {
@@ -355,52 +505,94 @@ export function SpaScreen() {
                       style={[styles.cancelBtn, !refundable && styles.cancelBtnWarn]}
                       onPress={() => void handleCancel(r.id, r.startTime)}
                     >
-                      <Text style={styles.cancelBtnText}>{refundable ? 'İptal' : 'İptal ⚠️'}</Text>
+                      <Text style={[styles.cancelBtnText, !refundable && styles.cancelBtnTextWarn]}>
+                        İptal
+                      </Text>
                     </Pressable>
                   </View>
-                  {!refundable && (
-                    <Text style={styles.warnText}>
-                      ⚠️ 3 saatten az kaldı — iptal ederseniz hakkınız iade edilmez
+                  <View style={[styles.resTimeBadge, !refundable && styles.resTimeBadgeWarn]}>
+                    <Text
+                      style={[styles.resTimeBadgeText, !refundable && styles.resTimeBadgeTextWarn]}
+                    >
+                      {refundable
+                        ? `✅ ${hours} saat sonra · Ücretsiz iptal hakkınız var`
+                        : `⚠️ ${hours} saat sonra · İptal ederseniz hakkınız yanar`}
                     </Text>
-                  )}
+                  </View>
                 </GlassCard>
               );
             })}
-          </>
+          </View>
         )}
 
-        {/* Services Collapsible */}
+        {/* ═══ Services Section (Collapsible) ═══ */}
         <Pressable style={styles.collapseHeader} onPress={() => setShowServices(!showServices)}>
-          <Text style={styles.collapseTitle}>
-            {showServices ? '▼' : '▶'} Hizmetlerimiz ({services.length})
-          </Text>
+          <Text style={styles.collapseTitle}>{showServices ? '▼' : '▶'} Hizmetlerimiz</Text>
+          <View style={styles.collapseBadge}>
+            <Text style={styles.collapseBadgeText}>{services.length}</Text>
+          </View>
         </Pressable>
-        {showServices &&
-          services.map((s) => (
-            <GlassCard key={s.id} style={styles.serviceCard}>
-              <Text style={styles.serviceName}>{s.name}</Text>
-              <Text style={styles.serviceMeta}>
-                {s.durationMinutes} dk · {s.price} ₺ · {s.category}
-              </Text>
-              {s.description && <Text style={styles.serviceDesc}>{s.description}</Text>}
-            </GlassCard>
-          ))}
-      </ScrollView>
+        {showServices && (
+          <View style={styles.servicesGrid}>
+            {services.map((s) => (
+              <GlassCard key={s.id} style={styles.serviceCard}>
+                <View style={styles.serviceTop}>
+                  <Text style={styles.serviceIcon}>{CATEGORY_ICONS[s.category] ?? '💆'}</Text>
+                  <View style={styles.servicePriceBadge}>
+                    <Text style={styles.servicePriceText}>{s.price} ₺</Text>
+                  </View>
+                </View>
+                <Text style={styles.serviceName}>{s.name}</Text>
+                <Text style={styles.serviceDuration}>{s.durationMinutes} dakika</Text>
+                {s.description && (
+                  <Text style={styles.serviceDesc} numberOfLines={2}>
+                    {s.description}
+                  </Text>
+                )}
+              </GlassCard>
+            ))}
+          </View>
+        )}
+      </Animated.ScrollView>
 
-      {/* Booking Modal */}
+      {/* ═══ Booking Modal (Bottom Sheet) ═══ */}
       <Modal visible={!!bookingSlot} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Masaj Randevusu</Text>
+          <Pressable style={styles.modalBackdrop} onPress={() => setBookingSlot(null)} />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Randevu Oluştur</Text>
             {bookingSlot && (
               <>
-                <Text style={styles.modalSub}>
-                  {selectedDate} · {bookingSlot.startTime}-{bookingSlot.endTime} ·{' '}
-                  {bookingSlot.therapistName}
-                </Text>
+                <View style={styles.modalSlotInfo}>
+                  <View style={styles.modalSlotAvatar}>
+                    {bookingSlot.therapistPhoto ? (
+                      <Image
+                        source={{ uri: bookingSlot.therapistPhoto }}
+                        style={styles.modalSlotAvatarImg}
+                      />
+                    ) : (
+                      <View style={styles.modalSlotAvatarFallback}>
+                        <Text style={styles.modalSlotAvatarLetter}>
+                          {bookingSlot.therapistName.charAt(0)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View>
+                    <Text style={styles.modalSlotName}>{bookingSlot.therapistName}</Text>
+                    <Text style={styles.modalSlotTime}>
+                      {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'long',
+                      })}{' '}
+                      · {bookingSlot.startTime} - {bookingSlot.endTime}
+                    </Text>
+                  </View>
+                </View>
 
-                <Text style={styles.modalLabel}>Hizmet Seçin *</Text>
-                <View style={styles.serviceList}>
+                <Text style={styles.modalLabel}>Hizmet Seçin</Text>
+                <ScrollView style={styles.serviceListScroll} showsVerticalScrollIndicator={false}>
                   {services.map((s) => (
                     <Pressable
                       key={s.id}
@@ -410,33 +602,54 @@ export function SpaScreen() {
                       ]}
                       onPress={() => setSelectedServiceId(s.id)}
                     >
+                      <View style={styles.serviceOptionLeft}>
+                        <Text style={styles.serviceOptionIcon}>
+                          {CATEGORY_ICONS[s.category] ?? '💆'}
+                        </Text>
+                        <View>
+                          <Text
+                            style={[
+                              styles.serviceOptionText,
+                              selectedServiceId === s.id && styles.serviceOptionTextActive,
+                            ]}
+                          >
+                            {s.name}
+                          </Text>
+                          <Text style={styles.serviceOptionMeta}>{s.durationMinutes} dk</Text>
+                        </View>
+                      </View>
                       <Text
                         style={[
-                          styles.serviceOptionText,
-                          selectedServiceId === s.id && styles.serviceOptionTextActive,
+                          styles.serviceOptionPrice,
+                          selectedServiceId === s.id && styles.serviceOptionPriceActive,
                         ]}
                       >
-                        {s.name}
-                      </Text>
-                      <Text style={styles.serviceOptionMeta}>
-                        {s.durationMinutes} dk · {s.price} ₺
+                        {s.price} ₺
                       </Text>
                     </Pressable>
                   ))}
+                </ScrollView>
+
+                <View style={styles.modalNote}>
+                  <Text style={styles.modalNoteText}>
+                    ⏰ Randevu başlangıcından 3 saat öncesine kadar ücretsiz iptal edebilirsiniz.
+                  </Text>
                 </View>
 
                 <View style={styles.modalActions}>
                   <Pressable
-                    style={[styles.modalBtn, styles.modalBtnPrimary]}
+                    style={[
+                      styles.modalBtnPrimary,
+                      (!selectedServiceId || booking) && styles.modalBtnDisabled,
+                    ]}
                     onPress={() => void handleBook()}
                     disabled={!selectedServiceId || booking}
                   >
-                    <Text style={styles.modalBtnPrimaryText}>{booking ? '⏳...' : '✓ Onayla'}</Text>
+                    <Text style={styles.modalBtnPrimaryText}>
+                      {booking ? '⏳ Oluşturuluyor...' : '✓ Randevuyu Onayla'}
+                    </Text>
                   </Pressable>
-                  <Pressable
-                    style={[styles.modalBtn, styles.modalBtnSecondary]}
-                    onPress={() => setBookingSlot(null)}
-                  >
+                  <Pressable style={styles.modalBtnSecondary} onPress={() => setBookingSlot(null)}>
                     <Text style={styles.modalBtnSecondaryText}>Vazgeç</Text>
                   </Pressable>
                 </View>
@@ -452,138 +665,294 @@ export function SpaScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: premium.textMuted, marginTop: 12, fontSize: 14 },
   scroll: { paddingHorizontal: 20, maxWidth: 480, alignSelf: 'center', width: '100%' },
-  title: { fontSize: 26, fontWeight: '800', color: premium.text, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: premium.textMuted, marginBottom: 16 },
+
+  // Hero
+  hero: { marginBottom: 20, marginTop: 8 },
+  heroGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(56,189,248,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+    borderRadius: premium.radiusLg,
+    padding: 20,
+  },
+  heroEmoji: { fontSize: 44, marginRight: 16 },
+  heroTextBlock: { flex: 1 },
+  heroTitle: { fontSize: 24, fontWeight: '900', color: premium.text },
+  heroSub: { fontSize: 13, color: premium.textMuted, marginTop: 4, lineHeight: 18 },
 
   // Balance
-  balanceCard: { marginBottom: 16 },
+  balanceCard: { marginBottom: 20 },
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  balanceLabel: { fontSize: 13, color: premium.textMuted, marginBottom: 4 },
-  balanceValue: { fontSize: 36, fontWeight: '900', color: premium.accentBlue },
-  balanceBadge: {
-    backgroundColor: 'rgba(34,197,94,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  balanceBadgeText: { fontSize: 12, fontWeight: '700', color: '#22c55e' },
-  noPackageHint: { fontSize: 12, color: '#f59e0b', marginTop: 10, lineHeight: 18 },
-  cancelRule: {
-    fontSize: 11,
-    color: premium.textMuted,
-    marginTop: 12,
-    lineHeight: 16,
+  balanceLeft: { flex: 1, marginRight: 16 },
+  balanceLabel: { fontSize: 16, fontWeight: '700', color: premium.text, marginBottom: 6 },
+  balanceStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: premium.accentGreen },
+  activeText: { fontSize: 13, fontWeight: '600', color: premium.accentGreen },
+  noPackageHint: { fontSize: 12, color: '#f59e0b', marginTop: 8, lineHeight: 17 },
+  ruleBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 14,
+    paddingTop: 12,
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(148,163,184,0.2)',
-    paddingTop: 10,
+    borderTopColor: 'rgba(148,163,184,0.15)',
+    gap: 8,
   },
+  ruleIcon: { fontSize: 16 },
+  ruleText: { flex: 1, fontSize: 12, color: premium.textMuted, lineHeight: 17 },
 
   // Date strip
-  dateStrip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
+  dateStripScroll: { marginBottom: 20 },
+  dateStripContainer: { gap: 8, paddingHorizontal: 2 },
   dateChip: {
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: 'rgba(148,163,184,0.08)',
-    minWidth: 44,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(148,163,184,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.1)',
+    minWidth: 50,
   },
-  dateChipActive: { backgroundColor: premium.accentBlue },
-  dateChipToday: { borderWidth: 1, borderColor: premium.accentBlue },
-  dateChipDay: { fontSize: 11, color: premium.textMuted, fontWeight: '600' },
+  dateChipActive: {
+    backgroundColor: premium.accentBlue,
+    borderColor: premium.accentBlue,
+  },
+  dateChipDay: {
+    fontSize: 11,
+    color: premium.textMuted,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
   dateChipDayActive: { color: '#fff' },
-  dateChipNum: { fontSize: 16, fontWeight: '800', color: premium.text, marginTop: 2 },
+  dateChipNum: { fontSize: 18, fontWeight: '900', color: premium.text, marginTop: 2 },
   dateChipNumActive: { color: '#fff' },
+  todayDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: premium.accentGreen,
+    marginTop: 4,
+  },
 
   // Section
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: premium.text, marginBottom: 10 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: premium.text },
+  sectionBadge: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: premium.accentBlue,
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
 
   // Slots
   slotCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(148,163,184,0.06)',
+    backgroundColor: 'rgba(148,163,184,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.15)',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 8,
+    borderColor: 'rgba(148,163,184,0.12)',
+    borderRadius: premium.radiusMd,
+    padding: 14,
+    marginBottom: 10,
   },
-  slotCardPressed: { backgroundColor: 'rgba(56,189,248,0.1)' },
-  slotLeft: {},
+  slotCardPressed: { backgroundColor: 'rgba(56,189,248,0.08)', borderColor: premium.accentBlue },
+  slotAvatar: { marginRight: 12 },
+  slotAvatarImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(56,189,248,0.3)',
+  },
+  slotAvatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(56,189,248,0.3)',
+  },
+  slotAvatarLetter: { fontSize: 18, fontWeight: '800', color: premium.accentBlue },
+  slotInfo: { flex: 1 },
   slotTime: { fontSize: 16, fontWeight: '800', color: premium.text },
-  slotTherapist: { fontSize: 13, color: premium.textMuted, marginTop: 3 },
-  slotRight: {},
-  slotCta: { fontSize: 13, fontWeight: '700', color: premium.accentBlue },
+  slotTherapist: { fontSize: 13, color: premium.textMuted, marginTop: 2 },
+  slotCta: { alignItems: 'flex-end' },
+  slotCtaText: { fontSize: 12, fontWeight: '700', color: premium.accentBlue },
+  slotCtaArrow: { fontSize: 18, color: premium.accentBlue, marginTop: 2 },
 
   // Empty
-  emptyCard: { paddingVertical: 24 },
-  emptyText: { fontSize: 14, color: premium.textMuted, textAlign: 'center' },
+  emptyCard: { alignItems: 'center', paddingVertical: 32 },
+  emptyEmoji: { fontSize: 40, marginBottom: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: premium.text },
+  emptyDesc: {
+    fontSize: 13,
+    color: premium.textMuted,
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
+  },
 
   // Reservations
-  resCard: { marginBottom: 8 },
-  resRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  resCard: { marginBottom: 10 },
+  resTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   resTime: { fontSize: 14, fontWeight: '700', color: premium.text },
-  resDetail: { fontSize: 12, color: premium.textMuted, marginTop: 3 },
+  resDetail: { fontSize: 12, color: premium.textMuted, marginTop: 4 },
   cancelBtn: {
-    backgroundColor: 'rgba(239,68,68,0.12)',
+    backgroundColor: 'rgba(239,68,68,0.1)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
   },
-  cancelBtnWarn: { backgroundColor: 'rgba(245,158,11,0.15)' },
+  cancelBtnWarn: { backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.3)' },
   cancelBtnText: { fontSize: 12, fontWeight: '700', color: '#ef4444' },
-  warnText: { fontSize: 11, color: '#f59e0b', marginTop: 8 },
+  cancelBtnTextWarn: { color: '#f59e0b' },
+  resTimeBadge: {
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(34,197,94,0.08)',
+  },
+  resTimeBadgeWarn: { backgroundColor: 'rgba(245,158,11,0.08)' },
+  resTimeBadgeText: { fontSize: 11, color: premium.accentGreen, fontWeight: '600' },
+  resTimeBadgeTextWarn: { color: '#f59e0b' },
 
   // Collapsible
-  collapseHeader: { paddingVertical: 14, marginTop: 20 },
-  collapseTitle: { fontSize: 15, fontWeight: '700', color: premium.text },
+  collapseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 24,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(148,163,184,0.15)',
+    gap: 8,
+  },
+  collapseTitle: { fontSize: 16, fontWeight: '700', color: premium.text, flex: 1 },
+  collapseBadge: {
+    backgroundColor: 'rgba(148,163,184,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  collapseBadgeText: { fontSize: 11, fontWeight: '700', color: premium.textMuted },
 
-  // Service cards
-  serviceCard: { marginBottom: 8 },
+  // Services grid
+  servicesGrid: { gap: 10 },
+  serviceCard: { padding: 16 },
+  serviceTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  serviceIcon: { fontSize: 28 },
+  servicePriceBadge: {
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  servicePriceText: { fontSize: 13, fontWeight: '800', color: premium.accentBlue },
   serviceName: { fontSize: 15, fontWeight: '700', color: premium.text },
-  serviceMeta: { fontSize: 12, color: premium.accentBlue, marginTop: 3 },
+  serviceDuration: { fontSize: 12, color: premium.textMuted, marginTop: 3 },
   serviceDesc: { fontSize: 12, color: premium.textMuted, marginTop: 6, lineHeight: 17 },
 
   // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
   modalContent: {
     backgroundColor: '#0f172a',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: premium.text, marginBottom: 4 },
-  modalSub: { fontSize: 13, color: premium.textMuted, marginBottom: 16 },
-  modalLabel: { fontSize: 13, color: premium.textMuted, marginBottom: 8, fontWeight: '600' },
-  serviceList: { marginBottom: 16 },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(148,163,184,0.3)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 22, fontWeight: '900', color: premium.text, marginBottom: 16 },
+  modalSlotInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 12 },
+  modalSlotAvatar: {},
+  modalSlotAvatarImg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: premium.accentBlue,
+  },
+  modalSlotAvatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSlotAvatarLetter: { fontSize: 20, fontWeight: '800', color: premium.accentBlue },
+  modalSlotName: { fontSize: 16, fontWeight: '700', color: premium.text },
+  modalSlotTime: { fontSize: 13, color: premium.textMuted, marginTop: 2 },
+  modalLabel: { fontSize: 14, fontWeight: '700', color: premium.text, marginBottom: 10 },
+  serviceListScroll: { maxHeight: 240 },
   serviceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.2)',
+    borderColor: 'rgba(148,163,184,0.15)',
     marginBottom: 8,
   },
-  serviceOptionActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.1)' },
+  serviceOptionActive: {
+    borderColor: premium.accentBlue,
+    backgroundColor: 'rgba(56,189,248,0.08)',
+  },
+  serviceOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  serviceOptionIcon: { fontSize: 22 },
   serviceOptionText: { fontSize: 14, fontWeight: '700', color: premium.text },
   serviceOptionTextActive: { color: premium.accentBlue },
-  serviceOptionMeta: { fontSize: 12, color: premium.textMuted, marginTop: 3 },
-  modalActions: { flexDirection: 'row', gap: 10 },
-  modalBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  modalBtnPrimary: { backgroundColor: premium.accentBlue },
-  modalBtnPrimaryText: { fontSize: 15, fontWeight: '800', color: '#fff' },
-  modalBtnSecondary: { backgroundColor: 'rgba(148,163,184,0.12)' },
-  modalBtnSecondaryText: { fontSize: 15, fontWeight: '700', color: premium.textMuted },
+  serviceOptionMeta: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  serviceOptionPrice: { fontSize: 14, fontWeight: '800', color: premium.textMuted },
+  serviceOptionPriceActive: { color: premium.accentBlue },
+  modalNote: {
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  modalNoteText: { fontSize: 12, color: '#f59e0b', lineHeight: 17 },
+  modalActions: { gap: 10 },
+  modalBtnPrimary: {
+    backgroundColor: premium.accentBlue,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  modalBtnDisabled: { opacity: 0.4 },
+  modalBtnPrimaryText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  modalBtnSecondary: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(148,163,184,0.08)',
+  },
+  modalBtnSecondaryText: { fontSize: 15, fontWeight: '600', color: premium.textMuted },
 });
