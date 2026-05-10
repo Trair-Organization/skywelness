@@ -502,28 +502,19 @@ export function PtScreen() {
           </View>
         )}
 
-        {/* ═══ 4. Eğitmenlerimiz (always visible, no collapse) ═══ */}
+        {/* ═══ 4. Eğitmenlerimiz (always visible) ═══ */}
         <View style={styles.servicesSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Eğitmenlerimiz</Text>
-            <Text style={styles.sectionBadge}>{services.length}</Text>
+            <Text style={styles.sectionBadge}>{allTrainers.length}</Text>
           </View>
           <View style={styles.servicesGrid}>
-            {services.map((s) => (
-              <GlassCard key={s.id} style={styles.serviceCard}>
+            {allTrainers.map((t) => (
+              <GlassCard key={t.id} style={styles.serviceCard}>
                 <View style={styles.serviceTop}>
-                  <Text style={styles.serviceIcon}>{CATEGORY_ICONS[s.category] ?? '💆'}</Text>
-                  <View style={styles.servicePriceBadge}>
-                    <Text style={styles.servicePriceText}>{s.price} ₺</Text>
-                  </View>
+                  <Text style={styles.serviceIcon}>🏋️</Text>
                 </View>
-                <Text style={styles.serviceName}>{s.name}</Text>
-                <Text style={styles.serviceDuration}>{s.durationMinutes} dakika</Text>
-                {s.description && (
-                  <Text style={styles.serviceDesc} numberOfLines={2}>
-                    {s.description}
-                  </Text>
-                )}
+                <Text style={styles.serviceName}>{t.name}</Text>
               </GlassCard>
             ))}
           </View>
