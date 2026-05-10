@@ -181,6 +181,7 @@ export function PtScreen() {
 
   // Trainer filter
   const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
+  const [allTrainers, setAllTrainers] = useState<Array<{ id: string; name: string }>>([]);
 
   const opts = useMemo(
     () => ({ token: token ?? undefined, tenantSubdomain: tenant?.subdomain }),
@@ -195,16 +196,10 @@ export function PtScreen() {
     );
   }, [balance]);
 
-  // Unique trainers from slots for filter chips
+  // Unique trainers from API (all registered trainers in the club)
   const uniqueTrainers = useMemo(() => {
-    const map = new Map<string, string>();
-    slots.forEach((s) => {
-      if (!map.has(s.trainerId)) {
-        map.set(s.trainerId, s.trainerName);
-      }
-    });
-    return Array.from(map, ([id, name]) => ({ id, name }));
-  }, [slots]);
+    return allTrainers.map((t) => ({ id: t.id, name: t.name }));
+  }, [allTrainers]);
 
   // Filtered slots based on selected trainer
   const filteredSlots = useMemo(() => {
@@ -218,12 +213,21 @@ export function PtScreen() {
       const [slotsRes, balanceRes, servicesRes, reservationsRes] = await Promise.all([
         apiJson<{ date: string; slots: Slot[] }>(`/pt/available-slots?date=${selectedDate}`, opts),
         apiJson<PackageBalance>('/pt/my-package-balance', opts),
-        apiJson<ServiceRow[]>('/trainers', opts),
+        apiJson<Array<{ id: string; user: { firstName: string; lastName: string } }>>(
+          '/trainers',
+          opts,
+        ),
         apiJson<MyReservation[]>('/reservations?limit=20', opts),
       ]);
       setSlots(slotsRes.slots);
       setBalance(balanceRes);
-      setServices(servicesRes);
+      setServices(servicesRes as unknown as ServiceRow[]);
+      setAllTrainers(
+        servicesRes.map((t) => ({
+          id: t.id,
+          name: `${t.user.firstName} ${t.user.lastName}`.trim(),
+        })),
+      );
       setMyReservations(
         reservationsRes.filter(
           (r) =>

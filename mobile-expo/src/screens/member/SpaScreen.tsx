@@ -196,6 +196,7 @@ export function SpaScreen() {
 
   // Therapist filter
   const [selectedTherapistId, setSelectedTherapistId] = useState<string | null>(null);
+  const [allTherapists, setAllTherapists] = useState<Array<{ id: string; name: string }>>([]);
 
   // Dropdown states
   const [showServicesDropdown, setShowServicesDropdown] = useState(false);
@@ -215,16 +216,10 @@ export function SpaScreen() {
     );
   }, [balance]);
 
-  // Unique therapists from slots for filter chips
+  // Unique therapists from API (all registered therapists in the club)
   const uniqueTherapists = useMemo(() => {
-    const map = new Map<string, string>();
-    slots.forEach((s) => {
-      if (!map.has(s.therapistId)) {
-        map.set(s.therapistId, s.therapistName);
-      }
-    });
-    return Array.from(map, ([id, name]) => ({ id, name }));
-  }, [slots]);
+    return allTherapists.map((t) => ({ id: t.id, name: t.name }));
+  }, [allTherapists]);
 
   // Filtered slots based on selected therapist
   const filteredSlots = useMemo(() => {
@@ -235,15 +230,22 @@ export function SpaScreen() {
   const loadData = useCallback(async () => {
     if (!token || !tenant) return;
     try {
-      const [slotsRes, balanceRes, servicesRes, reservationsRes] = await Promise.all([
-        apiJson<{ date: string; slots: Slot[] }>(`/spa/available-slots?date=${selectedDate}`, opts),
-        apiJson<PackageBalance>('/spa/my-package-balance', opts),
-        apiJson<ServiceRow[]>('/spa/services', opts),
-        apiJson<MyReservation[]>('/reservations?limit=20', opts),
-      ]);
+      const [slotsRes, balanceRes, servicesRes, reservationsRes, therapistsRes] = await Promise.all(
+        [
+          apiJson<{ date: string; slots: Slot[] }>(
+            `/spa/available-slots?date=${selectedDate}`,
+            opts,
+          ),
+          apiJson<PackageBalance>('/spa/my-package-balance', opts),
+          apiJson<ServiceRow[]>('/spa/services', opts),
+          apiJson<MyReservation[]>('/reservations?limit=20', opts),
+          apiJson<Array<{ id: string; name: string }>>('/spa/therapists', opts),
+        ],
+      );
       setSlots(slotsRes.slots);
       setBalance(balanceRes);
       setServices(servicesRes);
+      setAllTherapists(therapistsRes);
       setMyReservations(
         reservationsRes.filter(
           (r) =>
