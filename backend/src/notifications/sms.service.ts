@@ -84,19 +84,17 @@ export class SmsService {
   private normalizePhone(phone: string): string | null {
     // Boşlukları ve tire/parantezleri kaldır
     const cleaned = phone.replace(/[\s\-()]/g, '');
-    // Netgsm Türk numaraları için 10 haneli formatı tercih eder (ülke kodu olmadan).
-    // Safely'de de çalışan format: "5321646788"
-    if (cleaned.startsWith('+90') && cleaned.length === 13) {
-      return cleaned.slice(3); // +90532... → 532...
-    }
-    if (cleaned.startsWith('90') && cleaned.length === 12) {
-      return cleaned.slice(2); // 90532... → 532...
-    }
+    // 05XX... → 905XX...
     if (cleaned.startsWith('05') && cleaned.length === 11) {
-      return cleaned.slice(1); // 0532... → 532...
+      return '9' + cleaned;
     }
-    if (cleaned.startsWith('5') && cleaned.length === 10) {
-      return cleaned; // 532... zaten doğru
+    // +905XX... → 905XX...
+    if (cleaned.startsWith('+90') && cleaned.length === 13) {
+      return cleaned.slice(1);
+    }
+    // 905XX... zaten doğru
+    if (cleaned.startsWith('90') && cleaned.length === 12) {
+      return cleaned;
     }
     return null;
   }
@@ -112,39 +110,20 @@ export class SmsService {
       gsmno: phone,
       message: message,
       msgheader: this.netgsmHeader,
+      dil: 'TR',
     });
 
     const res = await fetch(`${url}?${params.toString()}`);
-    const text = (await res.text()).trim();
-    const firstTwo = text.split(/\s+/)[0] ?? '';
+    const text = await res.text();
 
-    // Netgsm yanıt kodları:
-    // 00 <bulk_id> → başarılı
-    // 20 → boş mesaj, 30 → yanlış kullanıcı/şifre, 40 → başlık tanımsız,
-    // 50 → ip izni yok, 60 → uygulama pasif, 70 → parametre hatası,
-    // 80 → limit aşıldı, 85 → mükerrer, 100 → sistem hatası
-    if (firstTwo === '00') {
-      const bulkId = text.substring(2).trim();
-      this.logger.log(
-        `Netgsm OK → ${phone} · bulk_id=${bulkId || '(none)'} · "${message.slice(0, 40)}..."`,
-      );
+    // Netgsm başarılı yanıt: "00" veya "01" ile başlar
+    if (text.startsWith('00') || text.startsWith('01')) {
+      this.logger.log(`SMS sent to ${phone}: ${message.slice(0, 40)}...`);
       return { ok: true };
     }
 
-    const errorMap: Record<string, string> = {
-      '20': 'Mesaj içeriği boş ya da 1530 karakteri aşıyor',
-      '30': 'Geçersiz kullanıcı adı / şifre / API erişimi kapalı',
-      '40': `Mesaj başlığı "${this.netgsmHeader}" sistemde tanımlı değil`,
-      '50': 'Gönderim yapılan IP adresi yetkili değil',
-      '60': 'Üyelik/API aktif değil',
-      '70': 'Parametre hatası (gsmno/header formatı)',
-      '80': 'SMS limiti aşıldı',
-      '85': 'Mükerrer gönderim engeli',
-      '100': 'Netgsm sistem hatası',
-    };
-    const friendly = errorMap[firstTwo] ?? `Bilinmeyen yanıt: ${text}`;
-    this.logger.error(`Netgsm FAIL → ${phone} · code=${firstTwo} · ${friendly} · raw="${text}"`);
-    return { ok: false, error: `Netgsm(${firstTwo}): ${friendly}` };
+    this.logger.error(`Netgsm error: ${text}`);
+    return { ok: false, error: `Netgsm: ${text}` };
   }
 
   // ─── Hazır Mesaj Şablonları ─────────────────────────────────────────────────
