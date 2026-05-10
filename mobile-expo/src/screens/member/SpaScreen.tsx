@@ -179,6 +179,20 @@ export function SpaScreen() {
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [booking, setBooking] = useState(false);
 
+  // Package request modal
+  const [packageRequestModal, setPackageRequestModal] = useState(false);
+  const [packageTypes, setPackageTypes] = useState<
+    Array<{
+      id: string;
+      name: string;
+      sessionCount: number;
+      price: string;
+      validityDays: number;
+    }>
+  >([]);
+  const [selectedPackageTypeId, setSelectedPackageTypeId] = useState('');
+  const [requestingPackage, setRequestingPackage] = useState(false);
+
   // Sections
   const [showServices, setShowServices] = useState(false);
   const [showTherapists, setShowTherapists] = useState(false);
@@ -373,35 +387,23 @@ export function SpaScreen() {
               )}
               <Pressable
                 style={styles.requestPackageBtn}
-                onPress={() => {
-                  Alert.alert(
-                    'Paket Talebi',
-                    'Kulübünüze masaj paketi talebi göndermek istiyor musunuz?\n\nKulüp yetkilisi talebinizi değerlendirecektir.',
-                    [
-                      { text: 'Vazgeç', style: 'cancel' },
-                      {
-                        text: 'Talep Gönder',
-                        onPress: async () => {
-                          try {
-                            await apiJson('/package-requests', {
-                              ...opts,
-                              method: 'POST',
-                              body: JSON.stringify({ sessionType: 'massage' }),
-                            });
-                            Alert.alert(
-                              '✅ Talep Gönderildi',
-                              'Kulüp yetkiliniz en kısa sürede sizinle iletişime geçecektir.',
-                            );
-                          } catch (e) {
-                            Alert.alert(
-                              'Hata',
-                              e instanceof ApiError ? e.message : 'Talep gönderilemedi',
-                            );
-                          }
-                        },
-                      },
-                    ],
-                  );
+                onPress={async () => {
+                  try {
+                    const types = await apiJson<
+                      Array<{
+                        id: string;
+                        name: string;
+                        sessionCount: number;
+                        price: string;
+                        validityDays: number;
+                      }>
+                    >('/spa/package-types', opts);
+                    setPackageTypes(types);
+                    setSelectedPackageTypeId('');
+                    setPackageRequestModal(true);
+                  } catch {
+                    Alert.alert('Hata', 'Paket listesi yüklenemedi');
+                  }
                 }}
               >
                 <Text style={styles.requestPackageBtnText}>📦 Paket Talep Et</Text>
@@ -693,6 +695,108 @@ export function SpaScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ═══ Package Request Modal ═══ */}
+      <Modal visible={packageRequestModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setPackageRequestModal(false)} />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>📦 Paket Talep Et</Text>
+            <Text style={styles.modalSub}>
+              Almak istediğiniz paketi seçin. Kulüp yetkilisi talebinizi değerlendirecektir.
+            </Text>
+
+            <ScrollView style={styles.serviceListScroll} showsVerticalScrollIndicator={false}>
+              {packageTypes.map((pt) => (
+                <Pressable
+                  key={pt.id}
+                  style={[
+                    styles.serviceOption,
+                    selectedPackageTypeId === pt.id && styles.serviceOptionActive,
+                  ]}
+                  onPress={() => setSelectedPackageTypeId(pt.id)}
+                >
+                  <View style={styles.serviceOptionLeft}>
+                    <Text style={styles.serviceOptionIcon}>📦</Text>
+                    <View>
+                      <Text
+                        style={[
+                          styles.serviceOptionText,
+                          selectedPackageTypeId === pt.id && styles.serviceOptionTextActive,
+                        ]}
+                      >
+                        {pt.name}
+                      </Text>
+                      <Text style={styles.serviceOptionMeta}>
+                        {pt.sessionCount} seans · {pt.validityDays} gün geçerli
+                      </Text>
+                    </View>
+                  </View>
+                  <Text
+                    style={[
+                      styles.serviceOptionPrice,
+                      selectedPackageTypeId === pt.id && styles.serviceOptionPriceActive,
+                    ]}
+                  >
+                    {pt.price} ₺
+                  </Text>
+                </Pressable>
+              ))}
+              {packageTypes.length === 0 && (
+                <Text style={{ color: premium.textMuted, textAlign: 'center', padding: 20 }}>
+                  Henüz satın alınabilir paket tanımlanmamış.
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[
+                  styles.modalBtnPrimary,
+                  (!selectedPackageTypeId || requestingPackage) && styles.modalBtnDisabled,
+                ]}
+                disabled={!selectedPackageTypeId || requestingPackage}
+                onPress={async () => {
+                  setRequestingPackage(true);
+                  try {
+                    const selected = packageTypes.find((p) => p.id === selectedPackageTypeId);
+                    await apiJson('/package-requests', {
+                      ...opts,
+                      method: 'POST',
+                      body: JSON.stringify({
+                        sessionType: 'massage',
+                        message: selected
+                          ? `${selected.name} (${selected.sessionCount} seans) talep ediyorum`
+                          : undefined,
+                      }),
+                    });
+                    setPackageRequestModal(false);
+                    Alert.alert(
+                      '✅ Talep Gönderildi',
+                      'Kulüp yetkiliniz en kısa sürede sizinle iletişime geçecektir.',
+                    );
+                  } catch (e) {
+                    Alert.alert('Hata', e instanceof ApiError ? e.message : 'Talep gönderilemedi');
+                  } finally {
+                    setRequestingPackage(false);
+                  }
+                }}
+              >
+                <Text style={styles.modalBtnPrimaryText}>
+                  {requestingPackage ? '⏳ Gönderiliyor...' : 'Talep Gönder'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalBtnSecondary}
+                onPress={() => setPackageRequestModal(false)}
+              >
+                <Text style={styles.modalBtnSecondaryText}>Vazgeç</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -933,7 +1037,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 16,
   },
-  modalTitle: { fontSize: 22, fontWeight: '900', color: premium.text, marginBottom: 16 },
+  modalTitle: { fontSize: 22, fontWeight: '900', color: premium.text, marginBottom: 4 },
+  modalSub: { fontSize: 13, color: premium.textMuted, marginBottom: 16, lineHeight: 18 },
   modalSlotInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 12 },
   modalSlotAvatar: {},
   modalSlotAvatarImg: {

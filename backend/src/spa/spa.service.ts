@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Availability } from '../database/entities/availability.entity';
 import { Package } from '../database/entities/package.entity';
+import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { SpaBooking } from '../database/entities/spa-booking.entity';
 import { SpaPackage } from '../database/entities/spa-package.entity';
@@ -25,6 +26,7 @@ export class SpaServiceService {
     @InjectRepository(Availability) private readonly availabilityRepo: Repository<Availability>,
     @InjectRepository(Reservation) private readonly reservationsRepo: Repository<Reservation>,
     @InjectRepository(Package) private readonly memberPackagesRepo: Repository<Package>,
+    @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     private readonly pushService: PushService,
   ) {}
 
@@ -275,6 +277,14 @@ export class SpaServiceService {
   }
 
   // ─── Member Slot Booking (Availability-based) ──────────────────────────────
+
+  /** Üye: Satın alınabilir masaj paket tipleri (aktif olanlar). */
+  async listPackageTypes(tenantId: string) {
+    return this.packageTypesRepo.find({
+      where: { tenantId, active: true, sessionType: SessionType.MASSAGE },
+      order: { sessionCount: 'ASC' },
+    });
+  }
 
   /** Üye: Belirli bir tarih için müsait masaj slotları. */
   async getAvailableSlots(date: string) {

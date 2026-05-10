@@ -47,6 +47,13 @@ export class SpaController {
     return this.spaService.getAvailableSlots(date);
   }
 
+  /** Üye: Satın alınabilir masaj paket tipleri. */
+  @Get('package-types')
+  @UseGuards(JwtAuthGuard)
+  listPackageTypes(@CurrentUser() user: User) {
+    return this.spaService.listPackageTypes(user.tenantId);
+  }
+
   /** Üye: Masaj paketi bakiyesi. */
   @Get('my-package-balance')
   @UseGuards(JwtAuthGuard)
