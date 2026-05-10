@@ -341,6 +341,7 @@ export function PackageTypesPage() {
                     <th>Mesaj</th>
                     <th>Durum</th>
                     <th>Tarih</th>
+                    <th>İşlem</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -355,31 +356,111 @@ export function PackageTypesPage() {
                           {r.user.email}
                         </span>
                       </td>
-                      <td>{r.user.phone || '—'}</td>
+                      <td>
+                        {r.user.phone ? (
+                          <a href={`tel:${r.user.phone}`} style={{ color: 'var(--accent)' }}>
+                            📞 {r.user.phone}
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td>
                         <span className="service-category">
                           {r.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
                         </span>
                       </td>
-                      <td style={{ maxWidth: 200 }}>{r.message || '—'}</td>
+                      <td style={{ maxWidth: 200, fontSize: '0.85rem' }}>{r.message || '—'}</td>
                       <td>
                         <span
                           className={`service-status ${r.status === 'pending' ? 'active' : 'inactive'}`}
                         >
                           {r.status === 'pending'
-                            ? '⏳ Bekliyor'
+                            ? '🆕 Yeni'
                             : r.status === 'approved'
                               ? '✅ Onaylandı'
                               : '❌ Reddedildi'}
                         </span>
                       </td>
-                      <td style={{ fontSize: '0.85rem' }}>
+                      <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                         {new Date(r.createdAt).toLocaleDateString('tr-TR', {
                           day: 'numeric',
                           month: 'short',
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
+                      </td>
+                      <td>
+                        {r.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              className="btn-sm btn-outline"
+                              style={{ color: '#22c55e', borderColor: '#22c55e' }}
+                              onClick={() => {
+                                const packageTypeId = prompt(
+                                  "Atanacak paket tipinin ID'sini girin (veya boş bırakıp varsayılanı kullanın):",
+                                );
+                                if (packageTypeId === null) return;
+                                const selectedPt =
+                                  types.find(
+                                    (t) =>
+                                      t.id === packageTypeId ||
+                                      t.name
+                                        .toLowerCase()
+                                        .includes((packageTypeId || '').toLowerCase()),
+                                  ) || types.find((t) => t.sessionType === r.sessionType);
+                                if (!selectedPt) {
+                                  alert(
+                                    'Uygun paket tipi bulunamadı. Önce Paket Tipleri tabından ekleyin.',
+                                  );
+                                  return;
+                                }
+                                void (async () => {
+                                  try {
+                                    await apiJson(`/admin/package-requests/${r.id}/approve`, {
+                                      method: 'POST',
+                                      body: JSON.stringify({ packageTypeId: selectedPt.id }),
+                                    });
+                                    alert(
+                                      `✅ ${r.user.firstName} ${r.user.lastName} üyesine "${selectedPt.name}" paketi atandı.`,
+                                    );
+                                    await load();
+                                  } catch (e) {
+                                    alert(e instanceof ApiError ? e.message : 'Hata');
+                                  }
+                                })();
+                              }}
+                            >
+                              ✅ Paketi Ata
+                            </button>
+                            <button
+                              className="btn-sm btn-danger"
+                              onClick={() => {
+                                const reason = prompt('Red sebebi (opsiyonel):');
+                                if (reason === null) return;
+                                void (async () => {
+                                  try {
+                                    await apiJson(`/admin/package-requests/${r.id}/reject`, {
+                                      method: 'POST',
+                                      body: JSON.stringify({ reason: reason || undefined }),
+                                    });
+                                    alert('❌ Talep reddedildi.');
+                                    await load();
+                                  } catch (e) {
+                                    alert(e instanceof ApiError ? e.message : 'Hata');
+                                  }
+                                })();
+                              }}
+                            >
+                              ❌ Reddet
+                            </button>
+                          </div>
+                        )}
+                        {r.status !== 'pending' && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                            İşlem tamamlandı
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

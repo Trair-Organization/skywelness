@@ -327,6 +327,118 @@ export class BookingService {
     });
   }
 
+  /** Admin: Paket talebini onayla ve üyeye paket ata. */
+  async approvePackageRequest(
+    tenantId: string,
+    requestId: string,
+    data: { packageTypeId: string; assignedTrainerId?: string | null; note?: string },
+  ) {
+    const request = await this.packageRequestsRepo.findOne({
+      where: { id: requestId, tenantId },
+      relations: ['user'],
+    });
+    if (!request) throw new NotFoundException('Talep bulunamadı');
+    if (request.status !== 'pending') {
+      throw new BadRequestException('Bu talep zaten işlenmiş');
+    }
+
+    // Paket tipini doğrula
+    const packageType = (await this.packagesRepo.manager
+      .getRepository('PackageType')
+      .findOne({ where: { id: data.packageTypeId, tenantId, active: true } })) as {
+      id: string;
+      name: string;
+      sessionCount: number;
+      validityDays: number;
+      sessionType: string;
+    } | null;
+    if (!packageType) throw new NotFoundException('Paket tipi bulunamadı');
+
+    // Geçerlilik tarihi hesapla
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + packageType.validityDays);
+
+    // Paket oluştur
+    const pkg = this.packagesRepo.create({
+      userId: request.userId,
+      packageTypeId: packageType.id,
+      remainingSessions: packageType.sessionCount,
+      expiresAt: expiresAt.toISOString().slice(0, 10),
+      assignedTrainerId: data.assignedTrainerId || null,
+      status: 'active' as never,
+    });
+    await this.packagesRepo.save(pkg);
+
+    // Talebi güncelle
+    request.status = 'approved';
+    if (data.note) {
+      request.message = `${request.message ?? ''}\n[Admin notu: ${data.note}]`.trim();
+    }
+    await this.packageRequestsRepo.save(request);
+
+    // Üyeye bildirim
+    if (request.user) {
+      // Push bildirim
+      const title = '📦 Paketiniz Tanımlandı';
+      const body = `${packageType.name} (${packageType.sessionCount} seans) paketiniz aktif edildi. Artık randevu alabilirsiniz!`;
+      await this.notificationsRepo.save(
+        this.notificationsRepo.create({
+          userId: request.userId,
+          type: 'package' as never,
+          title,
+          body,
+          data: { packageId: pkg.id },
+          isRead: false,
+          readAt: null,
+        }),
+      );
+    }
+
+    return {
+      ok: true as const,
+      packageId: pkg.id,
+      packageTypeName: packageType.name,
+      sessionCount: packageType.sessionCount,
+    };
+  }
+
+  /** Admin: Paket talebini reddet. */
+  async rejectPackageRequest(tenantId: string, requestId: string, reason?: string) {
+    const request = await this.packageRequestsRepo.findOne({
+      where: { id: requestId, tenantId },
+      relations: ['user'],
+    });
+    if (!request) throw new NotFoundException('Talep bulunamadı');
+    if (request.status !== 'pending') {
+      throw new BadRequestException('Bu talep zaten işlenmiş');
+    }
+
+    request.status = 'rejected';
+    if (reason) {
+      request.message = `${request.message ?? ''}\n[Red sebebi: ${reason}]`.trim();
+    }
+    await this.packageRequestsRepo.save(request);
+
+    // Üyeye bildirim
+    if (request.user) {
+      await this.notificationsRepo.save(
+        this.notificationsRepo.create({
+          userId: request.userId,
+          type: 'package' as never,
+          title: '📦 Paket Talebi Sonucu',
+          body: reason
+            ? `Talebiniz reddedildi. Sebep: ${reason}`
+            : 'Talebiniz reddedildi. Detaylar için kulüple iletişime geçin.',
+          data: { requestId },
+          isRead: false,
+          readAt: null,
+        }),
+      );
+    }
+
+    return { ok: true as const };
+  }
+
   async createPackageRequest(user: User, dto: CreatePackageRequestDto) {
     if (user.role !== UserRole.MEMBER) {
       throw new ForbiddenException('Only members can request packages');

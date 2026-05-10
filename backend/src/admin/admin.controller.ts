@@ -195,6 +195,28 @@ export class AdminController {
     return this.bookingService.listPackageRequests(admin.tenantId);
   }
 
+  @Post('package-requests/:requestId/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  approvePackageRequest(
+    @CurrentUser() admin: User,
+    @Param('requestId', new ParseUUIDPipe({ version: '4' })) requestId: string,
+    @Body() body: { packageTypeId: string; assignedTrainerId?: string; note?: string },
+  ) {
+    return this.bookingService.approvePackageRequest(admin.tenantId, requestId, body);
+  }
+
+  @Post('package-requests/:requestId/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  rejectPackageRequest(
+    @CurrentUser() admin: User,
+    @Param('requestId', new ParseUUIDPipe({ version: '4' })) requestId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.bookingService.rejectPackageRequest(admin.tenantId, requestId, body.reason);
+  }
+
   @Post('reservation-requests/:reservationId/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
