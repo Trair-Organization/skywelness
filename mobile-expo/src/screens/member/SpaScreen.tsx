@@ -171,6 +171,7 @@ export function SpaScreen() {
   const [balance, setBalance] = useState<PackageBalance | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
+  const [pastReservations, setPastReservations] = useState<MyReservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -193,9 +194,8 @@ export function SpaScreen() {
   const [selectedPackageTypeId, setSelectedPackageTypeId] = useState('');
   const [requestingPackage, setRequestingPackage] = useState(false);
 
-  // Sections
-  const [showServices, setShowServices] = useState(false);
-  const [showTherapists, setShowTherapists] = useState(false);
+  // Therapist filter
+  const [selectedTherapistId, setSelectedTherapistId] = useState<string | null>(null);
 
   const opts = useMemo(
     () => ({ token: token ?? undefined, tenantSubdomain: tenant?.subdomain }),
@@ -209,6 +209,23 @@ export function SpaScreen() {
       (balance.remainingSessions - balance.packages.reduce((s, p) => s + p.remainingSessions, 0))
     );
   }, [balance]);
+
+  // Unique therapists from slots for filter chips
+  const uniqueTherapists = useMemo(() => {
+    const map = new Map<string, string>();
+    slots.forEach((s) => {
+      if (!map.has(s.therapistId)) {
+        map.set(s.therapistId, s.therapistName);
+      }
+    });
+    return Array.from(map, ([id, name]) => ({ id, name }));
+  }, [slots]);
+
+  // Filtered slots based on selected therapist
+  const filteredSlots = useMemo(() => {
+    if (!selectedTherapistId) return slots;
+    return slots.filter((s) => s.therapistId === selectedTherapistId);
+  }, [slots, selectedTherapistId]);
 
   const loadData = useCallback(async () => {
     if (!token || !tenant) return;
@@ -229,6 +246,9 @@ export function SpaScreen() {
             (r.status === 'confirmed' || r.status === 'pending') &&
             new Date(r.startTime) > new Date(),
         ),
+      );
+      setPastReservations(
+        reservationsRes.filter((r) => r.spaTherapist && new Date(r.startTime) < new Date()),
       );
     } catch {
       // silent
@@ -353,7 +373,7 @@ export function SpaScreen() {
           />
         }
       >
-        {/* ═══ Hero Banner ═══ */}
+        {/* ═══ 1. Hero Banner ═══ */}
         <View style={styles.hero}>
           <View style={styles.heroGradient}>
             <Text style={styles.heroEmoji}>💆‍♀️</Text>
@@ -364,7 +384,7 @@ export function SpaScreen() {
           </View>
         </View>
 
-        {/* ═══ Package Balance Card ═══ */}
+        {/* ═══ 2. Package Balance Card ═══ */}
         <GlassCard style={styles.balanceCard}>
           <View style={styles.balanceRow}>
             <View style={styles.balanceLeft}>
@@ -420,96 +440,9 @@ export function SpaScreen() {
           </View>
         </GlassCard>
 
-        {/* ═══ Date Strip ═══ */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateStripContainer}
-          style={styles.dateStripScroll}
-        >
-          {dateStrip.map((d) => (
-            <Pressable
-              key={d.date}
-              style={[styles.dateChip, d.date === selectedDate && styles.dateChipActive]}
-              onPress={() => setSelectedDate(d.date)}
-            >
-              <Text
-                style={[styles.dateChipDay, d.date === selectedDate && styles.dateChipDayActive]}
-              >
-                {d.day}
-              </Text>
-              <Text
-                style={[styles.dateChipNum, d.date === selectedDate && styles.dateChipNumActive]}
-              >
-                {d.num}
-              </Text>
-              {d.isToday && <View style={styles.todayDot} />}
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* ═══ Available Slots ═══ */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Müsait Saatler</Text>
-          <Text style={styles.sectionBadge}>{slots.length} slot</Text>
-        </View>
-
-        {slots.length === 0 ? (
-          <GlassCard style={styles.emptyCard}>
-            <Text style={styles.emptyEmoji}>🙅‍♀️</Text>
-            <Text style={styles.emptyTitle}>Müsait saat yok</Text>
-            <Text style={styles.emptyDesc}>
-              Bu tarihte açık masaj saati bulunmuyor. Başka bir gün deneyin.
-            </Text>
-          </GlassCard>
-        ) : (
-          slots.map((slot, idx) => (
-            <Pressable
-              key={slot.availabilityId}
-              style={({ pressed }) => [styles.slotCard, pressed && styles.slotCardPressed]}
-              onPress={() => {
-                if (remaining === 0) {
-                  Alert.alert(
-                    'Paket Gerekli',
-                    'Masaj randevusu almak için aktif bir masaj paketiniz olmalıdır.\n\nKulüp resepsiyonundan paket satın alabilirsiniz.',
-                  );
-                  return;
-                }
-                setBookingSlot(slot);
-                setSelectedServiceId('');
-              }}
-            >
-              {/* Therapist Avatar */}
-              <View style={styles.slotAvatar}>
-                {slot.therapistPhoto ? (
-                  <Image source={{ uri: slot.therapistPhoto }} style={styles.slotAvatarImg} />
-                ) : (
-                  <View style={styles.slotAvatarFallback}>
-                    <Text style={styles.slotAvatarLetter}>
-                      {slot.therapistName.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {/* Slot Info */}
-              <View style={styles.slotInfo}>
-                <Text style={styles.slotTime}>
-                  {slot.startTime} - {slot.endTime}
-                </Text>
-                <Text style={styles.slotTherapist}>{slot.therapistName}</Text>
-              </View>
-              {/* CTA */}
-              <View style={styles.slotCta}>
-                <Text style={styles.slotCtaText}>Randevu Al</Text>
-                <Text style={styles.slotCtaArrow}>→</Text>
-              </View>
-            </Pressable>
-          ))
-        )}
-
-        {/* ═══ My Upcoming Reservations ═══ */}
+        {/* ═══ 3. Yaklaşan Randevularım (moved up) ═══ */}
         {myReservations.length > 0 && (
-          <View style={{ marginTop: 28 }}>
+          <View style={{ marginBottom: 20 }}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Yaklaşan Randevularım</Text>
               <Text style={styles.sectionBadge}>{myReservations.length}</Text>
@@ -562,14 +495,12 @@ export function SpaScreen() {
           </View>
         )}
 
-        {/* ═══ Services Section (Collapsible) ═══ */}
-        <Pressable style={styles.collapseHeader} onPress={() => setShowServices(!showServices)}>
-          <Text style={styles.collapseTitle}>{showServices ? '▼' : '▶'} Hizmetlerimiz</Text>
-          <View style={styles.collapseBadge}>
-            <Text style={styles.collapseBadgeText}>{services.length}</Text>
+        {/* ═══ 4. Hizmetlerimiz (always visible, no collapse) ═══ */}
+        <View style={styles.servicesSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Hizmetlerimiz</Text>
+            <Text style={styles.sectionBadge}>{services.length}</Text>
           </View>
-        </Pressable>
-        {showServices && (
           <View style={styles.servicesGrid}>
             {services.map((s) => (
               <GlassCard key={s.id} style={styles.serviceCard}>
@@ -586,6 +517,194 @@ export function SpaScreen() {
                     {s.description}
                   </Text>
                 )}
+              </GlassCard>
+            ))}
+          </View>
+        </View>
+
+        {/* ═══ 5. Date Strip ═══ */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateStripContainer}
+          style={styles.dateStripScroll}
+        >
+          {dateStrip.map((d) => (
+            <Pressable
+              key={d.date}
+              style={[styles.dateChip, d.date === selectedDate && styles.dateChipActive]}
+              onPress={() => setSelectedDate(d.date)}
+            >
+              <Text
+                style={[styles.dateChipDay, d.date === selectedDate && styles.dateChipDayActive]}
+              >
+                {d.day}
+              </Text>
+              <Text
+                style={[styles.dateChipNum, d.date === selectedDate && styles.dateChipNumActive]}
+              >
+                {d.num}
+              </Text>
+              {d.isToday && <View style={styles.todayDot} />}
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* ═══ 6. Masöz Filtresi ═══ */}
+        {uniqueTherapists.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.therapistFilterContainer}
+            style={styles.therapistFilterScroll}
+          >
+            <Pressable
+              style={[
+                styles.therapistChip,
+                selectedTherapistId === null && styles.therapistChipActive,
+              ]}
+              onPress={() => setSelectedTherapistId(null)}
+            >
+              <Text
+                style={[
+                  styles.therapistChipText,
+                  selectedTherapistId === null && styles.therapistChipTextActive,
+                ]}
+              >
+                Tümü
+              </Text>
+            </Pressable>
+            {uniqueTherapists.map((t) => (
+              <Pressable
+                key={t.id}
+                style={[
+                  styles.therapistChip,
+                  selectedTherapistId === t.id && styles.therapistChipActive,
+                ]}
+                onPress={() => setSelectedTherapistId(t.id)}
+              >
+                <Text
+                  style={[
+                    styles.therapistChipText,
+                    selectedTherapistId === t.id && styles.therapistChipTextActive,
+                  ]}
+                >
+                  {t.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* ═══ 7. Available Slots (filtered) ═══ */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Müsait Saatler</Text>
+          <Text style={styles.sectionBadge}>{filteredSlots.length} slot</Text>
+        </View>
+
+        {filteredSlots.length === 0 ? (
+          <GlassCard style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>🙅‍♀️</Text>
+            <Text style={styles.emptyTitle}>Müsait saat yok</Text>
+            <Text style={styles.emptyDesc}>
+              {selectedTherapistId
+                ? 'Seçili masöz için bu tarihte açık saat bulunmuyor.'
+                : 'Bu tarihte açık masaj saati bulunmuyor. Başka bir gün deneyin.'}
+            </Text>
+          </GlassCard>
+        ) : (
+          filteredSlots.map((slot) => (
+            <Pressable
+              key={slot.availabilityId}
+              style={({ pressed }) => [styles.slotCard, pressed && styles.slotCardPressed]}
+              onPress={() => {
+                if (remaining === 0) {
+                  Alert.alert(
+                    'Paket Gerekli',
+                    'Masaj randevusu almak için aktif bir masaj paketiniz olmalıdır.\n\nKulüp resepsiyonundan paket satın alabilirsiniz.',
+                  );
+                  return;
+                }
+                setBookingSlot(slot);
+                setSelectedServiceId('');
+              }}
+            >
+              {/* Therapist Avatar */}
+              <View style={styles.slotAvatar}>
+                {slot.therapistPhoto ? (
+                  <Image source={{ uri: slot.therapistPhoto }} style={styles.slotAvatarImg} />
+                ) : (
+                  <View style={styles.slotAvatarFallback}>
+                    <Text style={styles.slotAvatarLetter}>
+                      {slot.therapistName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {/* Slot Info */}
+              <View style={styles.slotInfo}>
+                <Text style={styles.slotTime}>
+                  {slot.startTime} - {slot.endTime}
+                </Text>
+                <Text style={styles.slotTherapist}>{slot.therapistName}</Text>
+              </View>
+              {/* CTA */}
+              <View style={styles.slotCta}>
+                <Text style={styles.slotCtaText}>Randevu Al</Text>
+                <Text style={styles.slotCtaArrow}>→</Text>
+              </View>
+            </Pressable>
+          ))
+        )}
+
+        {/* ═══ 8. Geçmiş Seanslarım ═══ */}
+        {pastReservations.length > 0 && (
+          <View style={{ marginTop: 28 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Geçmiş Seanslarım</Text>
+              <Text style={styles.sectionBadge}>{pastReservations.length}</Text>
+            </View>
+            {pastReservations.map((r) => (
+              <GlassCard key={r.id} style={styles.pastCard}>
+                <View style={styles.pastTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pastDate}>
+                      📅{' '}
+                      {new Date(r.startTime).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}{' '}
+                      ·{' '}
+                      {new Date(r.startTime).toLocaleTimeString('tr-TR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    <Text style={styles.pastDetail}>
+                      💆 {r.spaTherapist?.name ?? ''} {r.spaService ? `· ${r.spaService.name}` : ''}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.pastStatusBadge,
+                      r.status === 'cancelled' && styles.pastStatusCancelled,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pastStatusText,
+                        r.status === 'cancelled' && styles.pastStatusTextCancelled,
+                      ]}
+                    >
+                      {r.status === 'confirmed' || r.status === 'completed'
+                        ? 'Tamamlandı'
+                        : r.status === 'cancelled'
+                          ? 'İptal'
+                          : r.status}
+                    </Text>
+                  </View>
+                </View>
               </GlassCard>
             ))}
           </View>
@@ -856,7 +975,7 @@ const styles = StyleSheet.create({
   ruleText: { flex: 1, fontSize: 12, color: premium.textMuted, lineHeight: 17 },
 
   // Date strip
-  dateStripScroll: { marginBottom: 20 },
+  dateStripScroll: { marginBottom: 12 },
   dateStripContainer: { gap: 8, paddingHorizontal: 2 },
   dateChip: {
     alignItems: 'center',
@@ -889,6 +1008,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  // Therapist filter
+  therapistFilterScroll: { marginBottom: 16 },
+  therapistFilterContainer: { gap: 6, paddingHorizontal: 2 },
+  therapistChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(148,163,184,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.12)',
+  },
+  therapistChipActive: {
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    borderColor: premium.accentBlue,
+  },
+  therapistChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: premium.textMuted,
+  },
+  therapistChipTextActive: {
+    color: premium.accentBlue,
+  },
+
   // Section
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: premium.text },
@@ -901,6 +1044,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
+
+  // Services section
+  servicesSection: { marginBottom: 20 },
 
   // Slots
   slotCard: {
@@ -979,24 +1125,20 @@ const styles = StyleSheet.create({
   resTimeBadgeText: { fontSize: 11, color: premium.accentGreen, fontWeight: '600' },
   resTimeBadgeTextWarn: { color: '#f59e0b' },
 
-  // Collapsible
-  collapseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    marginTop: 24,
-    borderTopWidth: 0.5,
-    borderTopColor: 'rgba(148,163,184,0.15)',
-    gap: 8,
+  // Past sessions
+  pastCard: { marginBottom: 10, opacity: 0.8 },
+  pastTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  pastDate: { fontSize: 13, fontWeight: '600', color: premium.textMuted },
+  pastDetail: { fontSize: 12, color: premium.textMuted, marginTop: 4, opacity: 0.8 },
+  pastStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(34,197,94,0.08)',
   },
-  collapseTitle: { fontSize: 16, fontWeight: '700', color: premium.text, flex: 1 },
-  collapseBadge: {
-    backgroundColor: 'rgba(148,163,184,0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  collapseBadgeText: { fontSize: 11, fontWeight: '700', color: premium.textMuted },
+  pastStatusCancelled: { backgroundColor: 'rgba(239,68,68,0.08)' },
+  pastStatusText: { fontSize: 11, fontWeight: '700', color: premium.accentGreen },
+  pastStatusTextCancelled: { color: premium.danger },
 
   // Services grid
   servicesGrid: { gap: 10 },
