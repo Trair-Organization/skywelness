@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
+import { apiJson } from '../../api/client';
 import { showImagePickerAlert } from '../../utils/imagePicker';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
@@ -18,7 +20,7 @@ const TAB_BAR_PAD = 72;
 export function MemberProfileScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { user, tenant, logout, deleteAccount, updateProfile } = useMemberAuth();
+  const { user, token, tenant, logout, deleteAccount, updateProfile } = useMemberAuth();
   const navigation = useNavigation<BottomTabNavigationProp<MemberTabParamList>>();
 
   const [showEditForm, setShowEditForm] = useState(false);
@@ -30,6 +32,32 @@ export function MemberProfileScreen() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Stats
+  const [ptRemaining, setPtRemaining] = useState<number | null>(null);
+  const [spaRemaining, setSpaRemaining] = useState<number | null>(null);
+  const [memberSince, setMemberSince] = useState<string | null>(null);
+
+  const loadStats = useCallback(async () => {
+    if (!token || !tenant) return;
+    const opts = { token, tenantSubdomain: tenant.subdomain };
+    try {
+      const [ptBal, spaBal] = await Promise.all([
+        apiJson<{ remainingSessions: number }>('/pt/my-package-balance', opts).catch(() => null),
+        apiJson<{ remainingSessions: number }>('/spa/my-package-balance', opts).catch(() => null),
+      ]);
+      setPtRemaining(ptBal?.remainingSessions ?? 0);
+      setSpaRemaining(spaBal?.remainingSessions ?? 0);
+    } catch {
+      // silent
+    }
+  }, [token, tenant]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadStats();
+    }, [loadStats]),
+  );
 
   useEffect(() => {
     if (!user) {
@@ -125,15 +153,15 @@ export function MemberProfileScreen() {
         {/* ─── Quick Stats ─── */}
         <View style={styles.statsRow}>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>—</Text>
+            <Text style={styles.statValue}>{ptRemaining ?? '—'}</Text>
             <Text style={styles.statLabel}>Kalan PT</Text>
           </GlassCard>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>—</Text>
+            <Text style={styles.statValue}>{spaRemaining ?? '—'}</Text>
             <Text style={styles.statLabel}>Kalan Masaj</Text>
           </GlassCard>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>—</Text>
+            <Text style={styles.statValue}>Aktif</Text>
             <Text style={styles.statLabel}>Üyelik</Text>
           </GlassCard>
         </View>
