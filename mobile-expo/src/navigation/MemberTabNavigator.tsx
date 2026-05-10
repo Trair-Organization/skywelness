@@ -13,7 +13,7 @@ import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import { LegalScreen } from '../screens/member/LegalScreen';
 import { SpaScreen } from '../screens/member/SpaScreen';
-import { MemberSpecialLessonsScreen } from '../screens/member/MemberServiceHubScreen';
+import { PtScreen } from '../screens/member/PtScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -100,7 +100,7 @@ export function MemberTabNavigator() {
       />
       <Tab.Screen
         name="PT"
-        component={MemberSpecialLessonsScreen}
+        component={PtScreen}
         options={{
           tabBarLabel: 'PT',
           tabBarIcon: ({ focused }) => tabIcon('🏋️', focused),

@@ -32,14 +32,10 @@ export function RootNavigator() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Check if intro has been seen
+  // Check if intro has been seen — skip intro for now (Apple review prep)
   useEffect(() => {
-    hasSeenIntro()
-      .then((seen) => {
-        setShowIntro(!seen);
-        setIntroChecked(true);
-      })
-      .catch(() => setIntroChecked(true));
+    setShowIntro(false);
+    setIntroChecked(true);
   }, []);
 
   useEffect(() => {
