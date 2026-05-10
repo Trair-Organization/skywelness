@@ -1206,4 +1206,112 @@ export class AdminMembersService {
     await this.availabilityRepo.delete({ spaTherapistId: therapistId, date });
     return { ok: true as const };
   }
+
+  // ─── Masöz Rezervasyon Yönetimi ──────────────────────────────────────────────
+
+  async createTherapistReservationByAdmin(
+    tenantId: string,
+    data: { therapistId: string; userId: string; date: string; startTime: string; endTime: string },
+  ) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: data.therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+
+    const member = await this.usersRepo.findOne({
+      where: { id: data.userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!member) throw new NotFoundException('Üye bulunamadı');
+
+    const startDateTime = new Date(`${data.date}T${data.startTime}Z`);
+    const endDateTime = new Date(`${data.date}T${data.endTime}Z`);
+
+    const reservation = this.reservationsRepo.create({
+      userId: data.userId,
+      trainerId: null as never,
+      tenantId,
+      sessionType: SessionType.MASSAGE,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      status: ReservationStatus.CONFIRMED,
+      notes: `Admin tarafından oluşturuldu - Masöz: ${therapist.name}`,
+      timeSlotId: null as never,
+      packageId: null as never,
+    });
+    await this.reservationsRepo.save(reservation);
+
+    const dateStr = startDateTime.toLocaleDateString('tr-TR');
+    const timeStr = data.startTime.slice(0, 5);
+    void this.notifier
+      .reservationCreatedForMember({
+        member,
+        trainerName: therapist.name,
+        date: dateStr,
+        time: timeStr,
+        sessionType: 'massage',
+        reservationId: reservation.id,
+      })
+      .catch(() => {});
+
+    return { ok: true as const, reservationId: reservation.id };
+  }
+
+  async rescheduleTherapistReservation(
+    tenantId: string,
+    reservationId: string,
+    newDate: string,
+    newStartTime: string,
+    newEndTime: string,
+    therapistId?: string,
+  ) {
+    const reservation = await this.reservationsRepo.findOne({
+      where: { id: reservationId, tenantId },
+      relations: ['user'],
+    });
+    if (!reservation) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (
+      reservation.status === ReservationStatus.CANCELLED ||
+      reservation.status === ReservationStatus.COMPLETED
+    ) {
+      throw new BadRequestException('Bu rezervasyon taşınamaz');
+    }
+
+    const newStart = new Date(`${newDate}T${newStartTime}Z`);
+    const newEnd = new Date(`${newDate}T${newEndTime}Z`);
+
+    if (therapistId) {
+      const existing = await this.availabilityRepo.findOne({
+        where: { spaTherapistId: therapistId, date: newDate, startTime: newStartTime },
+      });
+      if (!existing) {
+        const newAv = this.availabilityRepo.create({
+          spaTherapistId: therapistId,
+          trainerId: null,
+          date: newDate,
+          startTime: newStartTime,
+          endTime: newEndTime,
+          available: true,
+        });
+        await this.availabilityRepo.save(newAv);
+      }
+    }
+
+    reservation.startTime = newStart;
+    reservation.endTime = newEnd;
+    await this.reservationsRepo.save(reservation);
+
+    if (reservation.user) {
+      void this.notifier
+        .reservationRescheduledForMember({
+          member: reservation.user,
+          trainerName: '',
+          newDate: newStart.toLocaleDateString('tr-TR'),
+          newTime: newStartTime.slice(0, 5),
+          reservationId,
+        })
+        .catch(() => {});
+    }
+
+    return { ok: true as const };
+  }
 }

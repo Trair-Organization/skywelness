@@ -79,6 +79,23 @@ export function TherapistsPage() {
   });
   const [bulkSaving, setBulkSaving] = useState(false);
 
+  // Booking modal
+  const [bookingModal, setBookingModal] = useState<{
+    date: string;
+    start: string;
+    end: string;
+  } | null>(null);
+  const [members, setMembers] = useState<
+    Array<{ id: string; firstName: string; lastName: string; email: string }>
+  >([]);
+  const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [bookingSaving, setBookingSaving] = useState(false);
+
+  // Reschedule modal
+  const [rescheduleModal, setRescheduleModal] = useState<{ reservationId: string } | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('10:00');
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -268,6 +285,79 @@ export function TherapistsPage() {
       method: 'DELETE',
     });
     void loadCalendar(calendarTherapist.id, weekOffset);
+  }
+
+  async function cancelReservation(reservationId: string) {
+    if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) return;
+    try {
+      await apiJson(`/admin/reservations/${reservationId}/cancel`, { method: 'POST' });
+      setSuccess('✅ Rezervasyon iptal edildi');
+      if (calendarTherapist) void loadCalendar(calendarTherapist.id, weekOffset);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'İptal başarısız');
+    }
+  }
+
+  async function openBookingModal(date: string, start: string, end: string) {
+    setBookingModal({ date, start, end });
+    setCellPopup(null);
+    try {
+      const data = await apiJson<
+        Array<{ id: string; firstName: string; lastName: string; email: string }>
+      >('/admin/members?status=active');
+      setMembers(data);
+    } catch {
+      setMembers([]);
+    }
+  }
+
+  async function createBooking() {
+    if (!calendarTherapist || !bookingModal || !selectedMemberId) return;
+    setBookingSaving(true);
+    try {
+      await apiJson('/admin/therapists/reservations/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          therapistId: calendarTherapist.id,
+          userId: selectedMemberId,
+          date: bookingModal.date,
+          startTime: bookingModal.start,
+          endTime: bookingModal.end,
+        }),
+      });
+      setSuccess('✅ Randevu oluşturuldu');
+      setBookingModal(null);
+      setSelectedMemberId('');
+      void loadCalendar(calendarTherapist.id, weekOffset);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Hata');
+    } finally {
+      setBookingSaving(false);
+    }
+  }
+
+  async function rescheduleReservation() {
+    if (!rescheduleModal || !rescheduleDate || !calendarTherapist) return;
+    try {
+      const endHour = parseInt(rescheduleTime.split(':')[0]) + 1;
+      await apiJson(`/admin/therapists/reservations/${rescheduleModal.reservationId}/reschedule`, {
+        method: 'POST',
+        body: JSON.stringify({
+          newDate: rescheduleDate,
+          newStartTime: rescheduleTime,
+          newEndTime: `${endHour.toString().padStart(2, '0')}:00`,
+          therapistId: calendarTherapist.id,
+        }),
+      });
+      setSuccess('✅ Randevu taşındı');
+      setRescheduleModal(null);
+      void loadCalendar(calendarTherapist.id, weekOffset);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Taşıma başarısız');
+    }
   }
 
   async function bulkAdd() {
@@ -508,6 +598,26 @@ export function TherapistsPage() {
                                     ? 'Onaylı'
                                     : 'Bekliyor'}
                                 </div>
+                                <button
+                                  className="cell-popup-btn cell-popup-cancel"
+                                  onClick={() => {
+                                    void cancelReservation(slotData!.bookedBy!.reservationId);
+                                    setCellPopup(null);
+                                  }}
+                                >
+                                  ❌ Rezervasyonu İptal Et
+                                </button>
+                                <button
+                                  className="cell-popup-btn cell-popup-reschedule"
+                                  onClick={() => {
+                                    setRescheduleModal({
+                                      reservationId: slotData!.bookedBy!.reservationId,
+                                    });
+                                    setCellPopup(null);
+                                  }}
+                                >
+                                  🔄 İleri Tarihe Al
+                                </button>
                               </div>
                             ) : (
                               <div className="cell-popup-actions">
@@ -519,6 +629,14 @@ export function TherapistsPage() {
                                   }}
                                 >
                                   🔴 Rezervasyona Kapat
+                                </button>
+                                <button
+                                  className="cell-popup-btn cell-popup-book"
+                                  onClick={() =>
+                                    void openBookingModal(day.date, slot.start, slot.end)
+                                  }
+                                >
+                                  📝 Üye Adına Randevu Ekle
                                 </button>
                               </div>
                             )
@@ -558,6 +676,145 @@ export function TherapistsPage() {
             <span className="legend-dot legend-today"></span> Bugün
           </span>
         </div>
+
+        {/* Booking Modal */}
+        {bookingModal && (
+          <div className="modal-overlay" onClick={() => setBookingModal(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>📝 Üye Adına Masaj Randevusu</h3>
+                <button className="modal-close" onClick={() => setBookingModal(null)}>
+                  ✕
+                </button>
+              </div>
+              <p className="muted">
+                {bookingModal.date} · {bookingModal.start}-{bookingModal.end} ·{' '}
+                {calendarTherapist?.name}
+              </p>
+              <div style={{ marginTop: 12 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: 8,
+                    fontSize: '0.85rem',
+                    color: 'var(--muted)',
+                  }}
+                >
+                  Üye Seçin *
+                </label>
+                <select
+                  value={selectedMemberId}
+                  onChange={(e) => setSelectedMemberId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <option value="">Üye seçin...</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.firstName} {m.lastName} — {m.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                <button
+                  className="primary"
+                  onClick={() => void createBooking()}
+                  disabled={!selectedMemberId || bookingSaving}
+                >
+                  {bookingSaving ? '⏳...' : '✓ Oluştur'}
+                </button>
+                <button className="secondary" onClick={() => setBookingModal(null)}>
+                  İptal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reschedule Modal */}
+        {rescheduleModal && (
+          <div className="modal-overlay" onClick={() => setRescheduleModal(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>🔄 Randevuyu Taşı</h3>
+                <button className="modal-close" onClick={() => setRescheduleModal(null)}>
+                  ✕
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: 4,
+                      fontSize: '0.85rem',
+                      color: 'var(--muted)',
+                    }}
+                  >
+                    Yeni Tarih *
+                  </label>
+                  <input
+                    type="date"
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: 4,
+                      fontSize: '0.85rem',
+                      color: 'var(--muted)',
+                    }}
+                  >
+                    Yeni Saat *
+                  </label>
+                  <select
+                    value={rescheduleTime}
+                    onChange={(e) => setRescheduleTime(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                    }}
+                  >
+                    {TIME_SLOTS.map((s) => (
+                      <option key={s.start} value={s.start}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                <button
+                  className="primary"
+                  onClick={() => void rescheduleReservation()}
+                  disabled={!rescheduleDate}
+                >
+                  ✓ Taşı
+                </button>
+                <button className="secondary" onClick={() => setRescheduleModal(null)}>
+                  İptal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

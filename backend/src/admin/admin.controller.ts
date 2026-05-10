@@ -523,4 +523,36 @@ export class AdminController {
   ) {
     return this.adminMembers.clearTherapistDay(admin.tenantId, therapistId, date);
   }
+
+  // ─── Masöz Rezervasyon ───────────────────────────────────────────────────────
+
+  @Post('therapists/reservations/create')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  createTherapistReservation(
+    @CurrentUser() admin: User,
+    @Body()
+    body: { therapistId: string; userId: string; date: string; startTime: string; endTime: string },
+  ) {
+    return this.adminMembers.createTherapistReservationByAdmin(admin.tenantId, body);
+  }
+
+  @Post('therapists/reservations/:reservationId/reschedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  rescheduleTherapistReservation(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+    @Body()
+    body: { newDate: string; newStartTime: string; newEndTime: string; therapistId?: string },
+  ) {
+    return this.adminMembers.rescheduleTherapistReservation(
+      admin.tenantId,
+      reservationId,
+      body.newDate,
+      body.newStartTime,
+      body.newEndTime,
+      body.therapistId,
+    );
+  }
 }
