@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,173 +11,195 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson, ApiError } from '../../api/client';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
-import { EmptyState } from '../../components/premium/EmptyState';
-import { showToast } from '../../components/premium/Toast';
 import { premium } from '../../theme/premiumTheme';
 
-type SpaServiceRow = {
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Slot = {
+  availabilityId: string;
+  therapistId: string;
+  therapistName: string;
+  therapistPhoto: string | null;
+  startTime: string;
+  endTime: string;
+};
+type PackageBalance = {
+  remainingSessions: number;
+  packages: Array<{
+    id: string;
+    packageTypeName: string;
+    remainingSessions: number;
+    expiresAt: string;
+  }>;
+};
+type ServiceRow = {
   id: string;
   name: string;
-  description: string | null;
   category: string;
   durationMinutes: number;
   price: string;
-  benefits: string[] | null;
-};
-
-type TherapistRow = {
-  id: string;
-  name: string;
-  bio: string | null;
-  specialties: string[];
-  avgRating: string;
-  totalSessions: number;
-};
-
-type PackageRow = {
-  id: string;
-  name: string;
   description: string | null;
-  sessionCount: number;
-  price: string;
-  validityDays: number;
 };
-
-type BookingRow = {
+type MyReservation = {
   id: string;
-  bookingDate: string;
-  timeSlot: string;
+  startTime: string;
+  endTime: string;
   status: string;
-  service: { name: string };
-  therapist: { name: string } | null;
+  spaTherapist?: { id: string; name: string } | null;
+  spaService?: { id: string; name: string } | null;
+  trainer?: { user: { firstName: string; lastName: string } } | null;
 };
 
-const CATEGORIES = [
-  { key: 'all', label: 'Tümü', icon: '✨' },
-  { key: 'relax', label: 'Relax', icon: '🧘' },
-  { key: 'therapy', label: 'Therapy', icon: '💆' },
-  { key: 'recovery', label: 'Recovery', icon: '🔄' },
-  { key: 'sport', label: 'Sport', icon: '🏋️' },
-  { key: 'premium', label: 'Premium', icon: '👑' },
-  { key: 'cold', label: 'Cold', icon: '🧊' },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const TAB_BAR_PAD = 100;
+const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-const TAB_BAR_PAD = 80;
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+function addDays(d: string, n: number) {
+  const dt = new Date(`${d}T12:00:00`);
+  dt.setDate(dt.getDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+function dayLabel(d: string) {
+  const dt = new Date(`${d}T12:00:00`);
+  const day = dt.toLocaleDateString('tr-TR', { weekday: 'short' });
+  const num = dt.getDate();
+  return { day, num };
+}
+function canRefund(startTime: string): boolean {
+  return new Date(startTime).getTime() - Date.now() > THREE_HOURS_MS;
+}
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export function SpaScreen() {
-  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { token, tenant } = useMemberAuth();
 
-  const [services, setServices] = useState<SpaServiceRow[]>([]);
-  const [therapists, setTherapists] = useState<TherapistRow[]>([]);
-  const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [balance, setBalance] = useState<PackageBalance | null>(null);
+  const [services, setServices] = useState<ServiceRow[]>([]);
+  const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedService, setSelectedService] = useState<SpaServiceRow | null>(null);
-  const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null);
-  const [bookingDate, setBookingDate] = useState('');
-  const [bookingTime, setBookingTime] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+
+  // Booking modal
+  const [bookingSlot, setBookingSlot] = useState<Slot | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [booking, setBooking] = useState(false);
+
+  // Collapsible sections
+  const [showServices, setShowServices] = useState(false);
+
+  const opts = useMemo(
+    () => ({ token: token ?? undefined, tenantSubdomain: tenant?.subdomain }),
+    [token, tenant],
+  );
 
   const loadData = useCallback(async () => {
     if (!token || !tenant) return;
     try {
-      const [svc, ther, pkg, bk] = await Promise.all([
-        apiJson<SpaServiceRow[]>('/spa/services', { token, tenantSubdomain: tenant.subdomain }),
-        apiJson<TherapistRow[]>('/spa/therapists', { token, tenantSubdomain: tenant.subdomain }),
-        apiJson<PackageRow[]>('/spa/packages', { token, tenantSubdomain: tenant.subdomain }),
-        apiJson<BookingRow[]>('/spa/bookings', { token, tenantSubdomain: tenant.subdomain }),
+      const [slotsRes, balanceRes, servicesRes, reservationsRes] = await Promise.all([
+        apiJson<{ date: string; slots: Slot[] }>(`/spa/available-slots?date=${selectedDate}`, opts),
+        apiJson<PackageBalance>('/spa/my-package-balance', opts),
+        apiJson<ServiceRow[]>('/spa/services', opts),
+        apiJson<MyReservation[]>('/reservations?limit=20', opts),
       ]);
-      setServices(svc);
-      setTherapists(ther);
-      setPackages(pkg);
-      setBookings(bk);
+      setSlots(slotsRes.slots);
+      setBalance(balanceRes);
+      setServices(servicesRes);
+      // Filter only spa reservations (confirmed/pending)
+      setMyReservations(
+        reservationsRes.filter(
+          (r) =>
+            r.spaTherapist &&
+            (r.status === 'confirmed' || r.status === 'pending') &&
+            new Date(r.startTime) > new Date(),
+        ),
+      );
     } catch {
-      /* ignore */
+      // silent
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [token, tenant]);
+  }, [token, tenant, selectedDate, opts]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      void loadData();
+    }, [loadData]),
+  );
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    void loadData();
+  }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-    showToast('Güncellendi', 'success', 1500);
-  };
-
-  const filteredServices =
-    selectedCategory === 'all' ? services : services.filter((s) => s.category === selectedCategory);
-
-  const handleBook = async () => {
-    if (!selectedService || !token || !tenant) return;
-    if (!bookingDate || !bookingTime) {
-      showToast('Tarih ve saat seçin', 'warning');
-      return;
-    }
-    setSubmitting(true);
+  async function handleBook() {
+    if (!bookingSlot || !selectedServiceId) return;
+    setBooking(true);
     try {
-      await apiJson('/spa/bookings', {
+      await apiJson('/spa/book-slot', {
+        ...opts,
         method: 'POST',
-        token,
-        tenantSubdomain: tenant.subdomain,
         body: JSON.stringify({
-          serviceId: selectedService.id,
-          therapistId: selectedTherapist,
-          bookingDate,
-          timeSlot: bookingTime,
+          availabilityId: bookingSlot.availabilityId,
+          serviceId: selectedServiceId,
         }),
       });
-      showToast('Randevunuz oluşturuldu! Onay bekleniyor.', 'success', 3000);
-      setSelectedService(null);
-      setSelectedTherapist(null);
-      setBookingDate('');
-      setBookingTime('');
-      await loadData();
+      Alert.alert('✅ Randevu Oluşturuldu', 'Masaj randevunuz onaylandı. İyi seanslar!');
+      setBookingSlot(null);
+      setSelectedServiceId('');
+      void loadData();
     } catch (e) {
-      showToast(e instanceof ApiError ? e.message : 'Randevu oluşturulamadı', 'error');
+      Alert.alert('Randevu', e instanceof ApiError ? e.message : 'Randevu oluşturulamadı');
     } finally {
-      setSubmitting(false);
+      setBooking(false);
     }
-  };
+  }
 
-  const cancelBooking = async (id: string) => {
-    Alert.alert('İptal', 'Bu randevuyu iptal etmek istediğinize emin misiniz?', [
+  async function handleCancel(reservationId: string, startTime: string) {
+    const willRefund = canRefund(startTime);
+    const msg = willRefund
+      ? 'Randevunuz iptal edilecek ve 1 seans paketinize iade edilecek.'
+      : '⚠️ Randevu başlangıcına 3 saatten az kaldığı için iptal edebilirsiniz ancak seans hakkınız iade edilmeyecektir.';
+    Alert.alert('Randevu İptali', msg, [
       { text: 'Vazgeç', style: 'cancel' },
       {
-        text: 'İptal Et',
+        text: willRefund ? 'İptal Et (İade)' : 'İptal Et (Hak Yanar)',
         style: 'destructive',
         onPress: async () => {
           try {
-            await apiJson(`/spa/bookings/${id}`, {
-              method: 'DELETE',
-              token,
-              tenantSubdomain: tenant!.subdomain,
-            });
-            showToast('Randevu iptal edildi', 'info');
-            await loadData();
-          } catch {
-            showToast('İptal edilemedi', 'error');
+            await apiJson(`/spa/cancel/${reservationId}`, { ...opts, method: 'POST' });
+            Alert.alert('✅', willRefund ? 'İptal edildi, 1 seans iade edildi.' : 'İptal edildi.');
+            void loadData();
+          } catch (e) {
+            Alert.alert('Hata', e instanceof ApiError ? e.message : 'İptal başarısız');
           }
         },
       },
     ]);
-  };
+  }
 
-  if (loading) {
+  // ─── Date strip ─────────────────────────────────────────────────────────────
+  const dateStrip = useMemo(() => {
+    const today = todayISO();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(today, i);
+      const { day, num } = dayLabel(d);
+      return { date: d, day, num, isToday: i === 0 };
+    });
+  }, []);
+
+  if (loading && !refreshing) {
     return (
       <GradientBackground>
         <View style={[styles.center, { paddingTop: insets.top + 60 }]}>
@@ -191,396 +214,376 @@ export function SpaScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + TAB_BAR_PAD },
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + TAB_BAR_PAD },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={() => {
+              setRefreshing(true);
+              void loadData();
+            }}
             tintColor={premium.accentBlue}
           />
         }
       >
-        <Text style={styles.screenTitle}>🧖 Spa & Wellness</Text>
-        <Text style={styles.screenSub}>Premium masaj ve wellness deneyimi</Text>
+        {/* Header */}
+        <Text style={styles.title}>💆 Spa & Masaj</Text>
+        <Text style={styles.subtitle}>Müsait saatleri seç, hemen randevu al</Text>
 
-        {/* ═══ Yaklaşan Randevularım ═══ */}
-        {bookings.filter((b) => b.status === 'pending' || b.status === 'confirmed').length > 0 && (
-          <GlassCard style={styles.section}>
-            <Text style={styles.sectionTitle}>📅 Yaklaşan Randevularım</Text>
-            {bookings
-              .filter((b) => b.status === 'pending' || b.status === 'confirmed')
-              .slice(0, 3)
-              .map((b) => (
-                <View key={b.id} style={styles.bookingRow}>
-                  <View style={styles.bookingInfo}>
-                    <Text style={styles.bookingService}>{b.service.name}</Text>
-                    <Text style={styles.bookingMeta}>
-                      {b.bookingDate} · {b.timeSlot} {b.therapist ? `· ${b.therapist.name}` : ''}
-                    </Text>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        b.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending,
-                      ]}
-                    >
-                      <Text style={styles.statusText}>
-                        {b.status === 'confirmed' ? '✓ Onaylı' : '⏳ Onay Bekliyor'}
-                      </Text>
-                    </View>
-                  </View>
-                  <Pressable onPress={() => cancelBooking(b.id)} hitSlop={8}>
-                    <Text style={styles.cancelBtn}>✕</Text>
-                  </Pressable>
-                </View>
-              ))}
-          </GlassCard>
-        )}
+        {/* Package Balance */}
+        <GlassCard style={styles.balanceCard}>
+          <View style={styles.balanceRow}>
+            <View>
+              <Text style={styles.balanceLabel}>Kalan Masaj Hakkı</Text>
+              <Text style={styles.balanceValue}>{balance?.remainingSessions ?? 0}</Text>
+            </View>
+            <View style={styles.balanceBadge}>
+              <Text style={styles.balanceBadgeText}>
+                {(balance?.remainingSessions ?? 0) > 0 ? '✅ Aktif' : '❌ Paket Yok'}
+              </Text>
+            </View>
+          </View>
+          {(balance?.remainingSessions ?? 0) === 0 && (
+            <Text style={styles.noPackageHint}>
+              Masaj randevusu almak için aktif bir paketiniz olmalıdır. Kulüp resepsiyonundan paket
+              satın alabilirsiniz.
+            </Text>
+          )}
+          <Text style={styles.cancelRule}>
+            ⏰ İptal kuralı: Randevu başlangıcından en az 3 saat önce iptal ederseniz hakkınız iade
+            edilir. 3 saatten az kala iptal ederseniz hakkınız kullanılmış sayılır.
+          </Text>
+        </GlassCard>
 
-        {/* ═══ Kategori Filtreleme ═══ */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.catScroll}
-        >
-          {CATEGORIES.map((cat) => (
+        {/* Date Strip */}
+        <View style={styles.dateStrip}>
+          {dateStrip.map((d) => (
             <Pressable
-              key={cat.key}
-              style={[styles.catChip, selectedCategory === cat.key && styles.catChipActive]}
-              onPress={() => setSelectedCategory(cat.key)}
+              key={d.date}
+              style={[
+                styles.dateChip,
+                d.date === selectedDate && styles.dateChipActive,
+                d.isToday && styles.dateChipToday,
+              ]}
+              onPress={() => setSelectedDate(d.date)}
             >
-              <Text style={styles.catIcon}>{cat.icon}</Text>
               <Text
-                style={[styles.catLabel, selectedCategory === cat.key && styles.catLabelActive]}
+                style={[styles.dateChipDay, d.date === selectedDate && styles.dateChipDayActive]}
               >
-                {cat.label}
+                {d.day}
+              </Text>
+              <Text
+                style={[styles.dateChipNum, d.date === selectedDate && styles.dateChipNumActive]}
+              >
+                {d.num}
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
 
-        {/* ═══ Hizmet Kataloğu ═══ */}
-        <Text style={styles.sectionTitle}>💆 Hizmetler</Text>
-        {filteredServices.length === 0 ? (
-          <EmptyState icon="🧖" title="Bu kategoride hizmet yok" />
+        {/* Available Slots */}
+        <Text style={styles.sectionTitle}>
+          Müsait Saatler ·{' '}
+          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('tr-TR', {
+            day: 'numeric',
+            month: 'long',
+          })}
+        </Text>
+        {slots.length === 0 ? (
+          <GlassCard style={styles.emptyCard}>
+            <Text style={styles.emptyText}>Bu tarihte müsait saat bulunmuyor.</Text>
+          </GlassCard>
         ) : (
-          filteredServices.map((svc) => (
+          slots.map((slot) => (
             <Pressable
-              key={svc.id}
-              style={({ pressed }) => [
-                styles.serviceCard,
-                pressed && styles.serviceCardPressed,
-                selectedService?.id === svc.id && styles.serviceCardSelected,
-              ]}
-              onPress={() => setSelectedService(selectedService?.id === svc.id ? null : svc)}
+              key={slot.availabilityId}
+              style={({ pressed }) => [styles.slotCard, pressed && styles.slotCardPressed]}
+              onPress={() => {
+                if ((balance?.remainingSessions ?? 0) === 0) {
+                  Alert.alert(
+                    'Paket Gerekli',
+                    'Masaj randevusu almak için aktif bir masaj paketiniz olmalıdır. Lütfen kulüp resepsiyonuyla iletişime geçin.',
+                  );
+                  return;
+                }
+                setBookingSlot(slot);
+                setSelectedServiceId('');
+              }}
             >
-              <View style={styles.serviceHeader}>
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceName}>{svc.name}</Text>
-                  <Text style={styles.serviceMeta}>
-                    {svc.durationMinutes} dk · {svc.category}
-                  </Text>
-                </View>
-                <Text style={styles.servicePrice}>₺{svc.price}</Text>
+              <View style={styles.slotLeft}>
+                <Text style={styles.slotTime}>
+                  {slot.startTime} - {slot.endTime}
+                </Text>
+                <Text style={styles.slotTherapist}>💆 {slot.therapistName}</Text>
               </View>
-              {selectedService?.id === svc.id && (
-                <View style={styles.serviceExpanded}>
-                  {svc.description && <Text style={styles.serviceDesc}>{svc.description}</Text>}
-                  {svc.benefits && svc.benefits.length > 0 && (
-                    <View style={styles.benefitsRow}>
-                      {svc.benefits.map((b) => (
-                        <View key={b} style={styles.benefitChip}>
-                          <Text style={styles.benefitText}>{b}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              )}
+              <View style={styles.slotRight}>
+                <Text style={styles.slotCta}>Randevu Al →</Text>
+              </View>
             </Pressable>
           ))
         )}
 
-        {/* ═══ Masözler ═══ */}
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>🙌 Terapistler</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.therapistScroll}
-        >
-          {therapists.map((th) => (
-            <Pressable
-              key={th.id}
-              style={[
-                styles.therapistCard,
-                selectedTherapist === th.id && styles.therapistCardSelected,
-              ]}
-              onPress={() => setSelectedTherapist(selectedTherapist === th.id ? null : th.id)}
-            >
-              <View style={styles.therapistAvatar}>
-                <Text style={styles.therapistInitials}>{th.name.slice(0, 2).toUpperCase()}</Text>
-              </View>
-              <Text style={styles.therapistName}>{th.name}</Text>
-              <Text style={styles.therapistRating}>★ {th.avgRating}</Text>
-              <Text style={styles.therapistSpec} numberOfLines={2}>
-                {th.specialties.slice(0, 2).join(', ')}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* ═══ Randevu Oluştur ═══ */}
-        {selectedService && (
-          <GlassCard style={styles.bookingSection}>
-            <Text style={styles.sectionTitle}>📋 Randevu Oluştur</Text>
-            <Text style={styles.bookingLabel}>
-              Seçili hizmet: <Text style={styles.bookingValue}>{selectedService.name}</Text>
-            </Text>
-            {selectedTherapist && (
-              <Text style={styles.bookingLabel}>
-                Terapist:{' '}
-                <Text style={styles.bookingValue}>
-                  {therapists.find((t) => t.id === selectedTherapist)?.name}
-                </Text>
-              </Text>
-            )}
-            <View style={styles.dateTimeRow}>
-              <Pressable
-                style={styles.dateBtn}
-                onPress={() => {
-                  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-                  setBookingDate(tomorrow);
-                }}
-              >
-                <Text style={styles.dateBtnTxt}>{bookingDate || 'Tarih Seç'}</Text>
-              </Pressable>
-              <Pressable style={styles.dateBtn} onPress={() => setBookingTime('14:00')}>
-                <Text style={styles.dateBtnTxt}>{bookingTime || 'Saat Seç'}</Text>
-              </Pressable>
-            </View>
-            <View style={styles.timeSlots}>
-              {[
-                '10:00',
-                '11:00',
-                '12:00',
-                '14:00',
-                '15:00',
-                '16:00',
-                '17:00',
-                '18:00',
-                '19:00',
-              ].map((t) => (
-                <Pressable
-                  key={t}
-                  style={[styles.timeChip, bookingTime === t && styles.timeChipActive]}
-                  onPress={() => setBookingTime(t)}
-                >
-                  <Text style={[styles.timeChipTxt, bookingTime === t && styles.timeChipTxtActive]}>
-                    {t}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable
-              style={({ pressed }) => [
-                styles.bookBtn,
-                pressed && styles.bookBtnPressed,
-                submitting && styles.bookBtnDisabled,
-              ]}
-              onPress={handleBook}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color={premium.accentBlue} />
-              ) : (
-                <Text style={styles.bookBtnTxt}>Randevu Oluştur</Text>
-              )}
-            </Pressable>
-          </GlassCard>
+        {/* My Upcoming Reservations */}
+        {myReservations.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Yaklaşan Randevularım</Text>
+            {myReservations.map((r) => {
+              const refundable = canRefund(r.startTime);
+              return (
+                <GlassCard key={r.id} style={styles.resCard}>
+                  <View style={styles.resRow}>
+                    <View>
+                      <Text style={styles.resTime}>
+                        {new Date(r.startTime).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}{' '}
+                        ·{' '}
+                        {new Date(r.startTime).toLocaleTimeString('tr-TR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                      <Text style={styles.resDetail}>
+                        💆 {r.spaTherapist?.name ?? ''}{' '}
+                        {r.spaService ? `· ${r.spaService.name}` : ''}
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={[styles.cancelBtn, !refundable && styles.cancelBtnWarn]}
+                      onPress={() => void handleCancel(r.id, r.startTime)}
+                    >
+                      <Text style={styles.cancelBtnText}>{refundable ? 'İptal' : 'İptal ⚠️'}</Text>
+                    </Pressable>
+                  </View>
+                  {!refundable && (
+                    <Text style={styles.warnText}>
+                      ⚠️ 3 saatten az kaldı — iptal ederseniz hakkınız iade edilmez
+                    </Text>
+                  )}
+                </GlassCard>
+              );
+            })}
+          </>
         )}
 
-        {/* ═══ Paketler ═══ */}
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>📦 Masaj Paketleri</Text>
-        {packages.map((pkg) => (
-          <GlassCard key={pkg.id} style={styles.packageCard}>
-            <View style={styles.packageHeader}>
-              <Text style={styles.packageName}>{pkg.name}</Text>
-              <Text style={styles.packagePrice}>₺{pkg.price}</Text>
-            </View>
-            <Text style={styles.packageDesc}>{pkg.description}</Text>
-            <Text style={styles.packageMeta}>
-              {pkg.sessionCount} seans · {pkg.validityDays} gün geçerli
-            </Text>
-          </GlassCard>
-        ))}
+        {/* Services Collapsible */}
+        <Pressable style={styles.collapseHeader} onPress={() => setShowServices(!showServices)}>
+          <Text style={styles.collapseTitle}>
+            {showServices ? '▼' : '▶'} Hizmetlerimiz ({services.length})
+          </Text>
+        </Pressable>
+        {showServices &&
+          services.map((s) => (
+            <GlassCard key={s.id} style={styles.serviceCard}>
+              <Text style={styles.serviceName}>{s.name}</Text>
+              <Text style={styles.serviceMeta}>
+                {s.durationMinutes} dk · {s.price} ₺ · {s.category}
+              </Text>
+              {s.description && <Text style={styles.serviceDesc}>{s.description}</Text>}
+            </GlassCard>
+          ))}
       </ScrollView>
+
+      {/* Booking Modal */}
+      <Modal visible={!!bookingSlot} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Masaj Randevusu</Text>
+            {bookingSlot && (
+              <>
+                <Text style={styles.modalSub}>
+                  {selectedDate} · {bookingSlot.startTime}-{bookingSlot.endTime} ·{' '}
+                  {bookingSlot.therapistName}
+                </Text>
+
+                <Text style={styles.modalLabel}>Hizmet Seçin *</Text>
+                <View style={styles.serviceList}>
+                  {services.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      style={[
+                        styles.serviceOption,
+                        selectedServiceId === s.id && styles.serviceOptionActive,
+                      ]}
+                      onPress={() => setSelectedServiceId(s.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.serviceOptionText,
+                          selectedServiceId === s.id && styles.serviceOptionTextActive,
+                        ]}
+                      >
+                        {s.name}
+                      </Text>
+                      <Text style={styles.serviceOptionMeta}>
+                        {s.durationMinutes} dk · {s.price} ₺
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={styles.modalActions}>
+                  <Pressable
+                    style={[styles.modalBtn, styles.modalBtnPrimary]}
+                    onPress={() => void handleBook()}
+                    disabled={!selectedServiceId || booking}
+                  >
+                    <Text style={styles.modalBtnPrimaryText}>{booking ? '⏳...' : '✓ Onayla'}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.modalBtn, styles.modalBtnSecondary]}
+                    onPress={() => setBookingSlot(null)}
+                  >
+                    <Text style={styles.modalBtnSecondaryText}>Vazgeç</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </GradientBackground>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, flexGrow: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  screenTitle: { fontSize: 24, fontWeight: '800', color: premium.text, marginBottom: 4 },
-  screenSub: { fontSize: 14, color: premium.textMuted, marginBottom: 16 },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: premium.text, marginBottom: 12 },
-  // Bookings
-  bookingRow: {
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scroll: { paddingHorizontal: 20, maxWidth: 480, alignSelf: 'center', width: '100%' },
+  title: { fontSize: 26, fontWeight: '800', color: premium.text, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: premium.textMuted, marginBottom: 16 },
+
+  // Balance
+  balanceCard: { marginBottom: 16 },
+  balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  balanceLabel: { fontSize: 13, color: premium.textMuted, marginBottom: 4 },
+  balanceValue: { fontSize: 36, fontWeight: '900', color: premium.accentBlue },
+  balanceBadge: {
+    backgroundColor: 'rgba(34,197,94,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  balanceBadgeText: { fontSize: 12, fontWeight: '700', color: '#22c55e' },
+  noPackageHint: { fontSize: 12, color: '#f59e0b', marginTop: 10, lineHeight: 18 },
+  cancelRule: {
+    fontSize: 11,
+    color: premium.textMuted,
+    marginTop: 12,
+    lineHeight: 16,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(148,163,184,0.2)',
+    paddingTop: 10,
+  },
+
+  // Date strip
+  dateStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  dateChip: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(148,163,184,0.08)',
+    minWidth: 44,
+  },
+  dateChipActive: { backgroundColor: premium.accentBlue },
+  dateChipToday: { borderWidth: 1, borderColor: premium.accentBlue },
+  dateChipDay: { fontSize: 11, color: premium.textMuted, fontWeight: '600' },
+  dateChipDayActive: { color: '#fff' },
+  dateChipNum: { fontSize: 16, fontWeight: '800', color: premium.text, marginTop: 2 },
+  dateChipNumActive: { color: '#fff' },
+
+  // Section
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: premium.text, marginBottom: 10 },
+
+  // Slots
+  slotCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: premium.glassBorder,
-  },
-  bookingInfo: { flex: 1 },
-  bookingService: { color: premium.text, fontSize: 14, fontWeight: '700' },
-  bookingMeta: { color: premium.textMuted, fontSize: 12, marginTop: 2 },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 4,
-  },
-  statusConfirmed: { backgroundColor: 'rgba(52,211,153,0.15)' },
-  statusPending: { backgroundColor: 'rgba(251,191,36,0.15)' },
-  statusText: { fontSize: 11, fontWeight: '700', color: premium.text },
-  cancelBtn: { color: premium.danger, fontSize: 18, fontWeight: '700' },
-  // Categories
-  catScroll: { gap: 8, paddingBottom: 16 },
-  catChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    backgroundColor: 'rgba(148,163,184,0.06)',
     borderWidth: 1,
-    borderColor: premium.glassBorder,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  catChipActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.1)' },
-  catIcon: { fontSize: 14 },
-  catLabel: { fontSize: 13, fontWeight: '700', color: premium.textMuted },
-  catLabelActive: { color: premium.accentBlue },
-  // Services
-  serviceCard: {
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    borderRadius: premium.radiusMd,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    padding: 14,
+    borderColor: 'rgba(148,163,184,0.15)',
+    borderRadius: 14,
+    padding: 16,
     marginBottom: 8,
   },
-  serviceCardPressed: { backgroundColor: 'rgba(255,255,255,0.04)' },
-  serviceCardSelected: {
-    borderColor: premium.accentBlue,
-    backgroundColor: 'rgba(56,189,248,0.06)',
-  },
-  serviceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  serviceInfo: { flex: 1 },
-  serviceName: { color: premium.text, fontSize: 15, fontWeight: '700' },
-  serviceMeta: { color: premium.textMuted, fontSize: 12, marginTop: 2 },
-  servicePrice: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
-  serviceExpanded: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: premium.glassBorder,
-  },
-  serviceDesc: { color: premium.textMuted, fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  benefitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  benefitChip: {
-    backgroundColor: 'rgba(52,211,153,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(52,211,153,0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  benefitText: { color: premium.accentGreen, fontSize: 11, fontWeight: '600' },
-  // Therapists
-  therapistScroll: { gap: 10, paddingBottom: 16 },
-  therapistCard: {
-    width: 100,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    borderRadius: 14,
-    padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  therapistCardSelected: {
-    borderColor: premium.accentBlue,
-    backgroundColor: 'rgba(56,189,248,0.08)',
-  },
-  therapistAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(56,189,248,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(56,189,248,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  therapistInitials: { color: premium.accentBlue, fontSize: 14, fontWeight: '800' },
-  therapistName: { color: premium.text, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  therapistRating: { color: '#fbbf24', fontSize: 11, fontWeight: '700', marginTop: 2 },
-  therapistSpec: { color: premium.textMuted, fontSize: 10, textAlign: 'center', marginTop: 2 },
-  // Booking form
-  bookingSection: { marginTop: 16 },
-  bookingLabel: { color: premium.textMuted, fontSize: 13, marginBottom: 6 },
-  bookingValue: { color: premium.text, fontWeight: '700' },
-  dateTimeRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  dateBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  dateBtnTxt: { color: premium.text, fontSize: 14, fontWeight: '600' },
-  timeSlots: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  timeChip: {
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+  slotCardPressed: { backgroundColor: 'rgba(56,189,248,0.1)' },
+  slotLeft: {},
+  slotTime: { fontSize: 16, fontWeight: '800', color: premium.text },
+  slotTherapist: { fontSize: 13, color: premium.textMuted, marginTop: 3 },
+  slotRight: {},
+  slotCta: { fontSize: 13, fontWeight: '700', color: premium.accentBlue },
+
+  // Empty
+  emptyCard: { paddingVertical: 24 },
+  emptyText: { fontSize: 14, color: premium.textMuted, textAlign: 'center' },
+
+  // Reservations
+  resCard: { marginBottom: 8 },
+  resRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  resTime: { fontSize: 14, fontWeight: '700', color: premium.text },
+  resDetail: { fontSize: 12, color: premium.textMuted, marginTop: 3 },
+  cancelBtn: {
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 10,
   },
-  timeChipActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.15)' },
-  timeChipTxt: { color: premium.textMuted, fontSize: 13, fontWeight: '600' },
-  timeChipTxtActive: { color: premium.accentBlue },
-  bookBtn: {
+  cancelBtnWarn: { backgroundColor: 'rgba(245,158,11,0.15)' },
+  cancelBtnText: { fontSize: 12, fontWeight: '700', color: '#ef4444' },
+  warnText: { fontSize: 11, color: '#f59e0b', marginTop: 8 },
+
+  // Collapsible
+  collapseHeader: { paddingVertical: 14, marginTop: 20 },
+  collapseTitle: { fontSize: 15, fontWeight: '700', color: premium.text },
+
+  // Service cards
+  serviceCard: { marginBottom: 8 },
+  serviceName: { fontSize: 15, fontWeight: '700', color: premium.text },
+  serviceMeta: { fontSize: 12, color: premium.accentBlue, marginTop: 3 },
+  serviceDesc: { fontSize: 12, color: premium.textMuted, marginTop: 6, lineHeight: 17 },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#0f172a',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '80%',
+  },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: premium.text, marginBottom: 4 },
+  modalSub: { fontSize: 13, color: premium.textMuted, marginBottom: 16 },
+  modalLabel: { fontSize: 13, color: premium.textMuted, marginBottom: 8, fontWeight: '600' },
+  serviceList: { marginBottom: 16 },
+  serviceOption: {
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: premium.accentBlue,
-    borderRadius: premium.radiusSm,
-    minHeight: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(56,189,248,0.1)',
+    borderColor: 'rgba(148,163,184,0.2)',
+    marginBottom: 8,
   },
-  bookBtnPressed: { backgroundColor: 'rgba(56,189,248,0.25)' },
-  bookBtnDisabled: { opacity: 0.5 },
-  bookBtnTxt: { color: premium.accentBlue, fontSize: 16, fontWeight: '800' },
-  // Packages
-  packageCard: { marginBottom: 10 },
-  packageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  packageName: { color: premium.text, fontSize: 15, fontWeight: '700', flex: 1 },
-  packagePrice: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
-  packageDesc: { color: premium.textMuted, fontSize: 13, lineHeight: 18, marginBottom: 4 },
-  packageMeta: { color: premium.textMuted, fontSize: 12, fontWeight: '600' },
+  serviceOptionActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.1)' },
+  serviceOptionText: { fontSize: 14, fontWeight: '700', color: premium.text },
+  serviceOptionTextActive: { color: premium.accentBlue },
+  serviceOptionMeta: { fontSize: 12, color: premium.textMuted, marginTop: 3 },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  modalBtnPrimary: { backgroundColor: premium.accentBlue },
+  modalBtnPrimaryText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  modalBtnSecondary: { backgroundColor: 'rgba(148,163,184,0.12)' },
+  modalBtnSecondaryText: { fontSize: 15, fontWeight: '700', color: premium.textMuted },
 });
