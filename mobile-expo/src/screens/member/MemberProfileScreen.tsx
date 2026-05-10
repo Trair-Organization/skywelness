@@ -129,7 +129,7 @@ export function MemberProfileScreen() {
 
   const editMaxHeight = editAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 520],
+    outputRange: [0, 700],
   });
   const editOpacity = editAnim.interpolate({
     inputRange: [0, 0.3, 1],
