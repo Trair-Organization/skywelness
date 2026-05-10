@@ -8,7 +8,13 @@ export type MemberTabParamList = {
   Messages: undefined;
   Chat: {
     conversationId: string;
-    otherUser: { id: string; firstName: string; lastName: string; photoUrl: string | null };
+    otherUser: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      photoUrl: string | null;
+      role?: string;
+    };
   };
   Legal: { type: 'privacy' | 'terms' };
   Notifications: undefined;

@@ -27,6 +27,12 @@ export class MessagingController {
     return this.messagingService.getOrCreateConversation(user.id, body.otherUserId);
   }
 
+  /** Kulübe mesaj gönder (tenant admin ile sohbet başlat). */
+  @Post('conversations/club')
+  startClubConversation(@CurrentUser() user: User) {
+    return this.messagingService.getOrCreateConversationWithClubByTenantId(user.id, user.tenantId);
+  }
+
   /** Mesaj gönder. */
   @Post('conversations/:conversationId')
   sendMessage(

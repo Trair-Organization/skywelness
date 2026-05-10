@@ -21,6 +21,7 @@ type Club = {
 };
 type Trainer = {
   id: string;
+  userId: string;
   name: string;
   specialties: string[];
   avgRating: string;
@@ -157,6 +158,23 @@ export function MemberDiscoverScreen() {
     }
   };
 
+  const startClubChat = async () => {
+    if (!token || !tenant) return;
+    try {
+      const res = await apiJson<{ conversationId: string }>('/messages/conversations/club', {
+        method: 'POST',
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      navigation.navigate('Chat', {
+        conversationId: res.conversationId,
+        otherUser: { id: '', firstName: tenant.name || 'Kulüp', lastName: '', photoUrl: null },
+      });
+    } catch {
+      showToast('Kulübe mesaj başlatılamadı', 'error');
+    }
+  };
+
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   const fmtTime = (iso: string) =>
@@ -288,7 +306,18 @@ export function MemberDiscoverScreen() {
                   <Pressable
                     style={styles.msgBtn}
                     onPress={() => {
-                      showToast('Eğitmene mesaj göndermek için Kulüp sekmesini kullanın', 'info');
+                      if (!token || !tenant) {
+                        showToast('Mesaj göndermek için giriş yapmalısınız', 'warning');
+                        return;
+                      }
+                      const nameParts = tr.name.split(' ');
+                      const firstName = nameParts[0] || '';
+                      const lastName = nameParts.slice(1).join(' ') || '';
+                      if (tr.userId) {
+                        startChat(tr.userId, firstName, lastName);
+                      } else {
+                        showToast('Eğitmen bilgisi yüklenemedi', 'error');
+                      }
                     }}
                   >
                     <Text style={styles.msgBtnTxt}>💬 Mesaj</Text>
@@ -326,6 +355,18 @@ export function MemberDiscoverScreen() {
                     <Text style={styles.clubSvc}>{club.services.slice(0, 4).join(' · ')}</Text>
                   )}
                 </View>
+                <Pressable
+                  style={styles.clubMsgBtn}
+                  onPress={() => {
+                    if (!token || !tenant) {
+                      showToast('Mesaj göndermek için giriş yapmalısınız', 'warning');
+                      return;
+                    }
+                    startClubChat();
+                  }}
+                >
+                  <Text style={styles.clubMsgBtnTxt}>💬</Text>
+                </Pressable>
               </Pressable>
             ))}
           </>
@@ -474,4 +515,15 @@ const styles = StyleSheet.create({
   clubName: { color: premium.text, fontSize: 15, fontWeight: '700' },
   clubLoc: { color: premium.textMuted, fontSize: 12, marginTop: 1 },
   clubSvc: { color: premium.textMuted, fontSize: 10, marginTop: 2 },
+  clubMsgBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clubMsgBtnTxt: { fontSize: 16 },
 });

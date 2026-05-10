@@ -3,8 +3,10 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -37,6 +39,12 @@ type Nav = NativeStackNavigationProp<{
   Chat: { conversationId: string; otherUser: ConversationRow['otherUser'] };
 }>;
 
+type TrainerContact = {
+  id: string;
+  userId: string;
+  name: string;
+};
+
 export function MessagesScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -45,6 +53,11 @@ export function MessagesScreen() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // New conversation modal
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [trainers, setTrainers] = useState<TrainerContact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !tenant) return;
@@ -76,6 +89,74 @@ export function MessagesScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  };
+
+  const loadContacts = async () => {
+    if (!token || !tenant) return;
+    setLoadingContacts(true);
+    try {
+      const rows = await apiJson<
+        Array<{ id: string; user: { id: string; firstName: string; lastName: string } }>
+      >('/trainers', { token, tenantSubdomain: tenant.subdomain });
+      setTrainers(
+        rows.map((r) => ({
+          id: r.id,
+          userId: r.user.id,
+          name: `${r.user.firstName} ${r.user.lastName}`.trim(),
+        })),
+      );
+    } catch {
+      // ignore
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const startConversationWith = async (
+    otherUserId: string,
+    firstName: string,
+    lastName: string,
+  ) => {
+    if (!token || !tenant) return;
+    try {
+      const res = await apiJson<{ conversationId: string }>('/messages/conversations', {
+        method: 'POST',
+        token,
+        tenantSubdomain: tenant.subdomain,
+        body: JSON.stringify({ otherUserId }),
+      });
+      setShowNewChat(false);
+      navigation.navigate('Chat', {
+        conversationId: res.conversationId,
+        otherUser: { id: otherUserId, firstName, lastName, photoUrl: null, role: 'trainer' },
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const startClubChat = async () => {
+    if (!token || !tenant) return;
+    try {
+      const res = await apiJson<{ conversationId: string }>('/messages/conversations/club', {
+        method: 'POST',
+        token,
+        tenantSubdomain: tenant.subdomain,
+      });
+      setShowNewChat(false);
+      navigation.navigate('Chat', {
+        conversationId: res.conversationId,
+        otherUser: {
+          id: '',
+          firstName: tenant.name || 'Kulüp',
+          lastName: '',
+          photoUrl: null,
+          role: 'administrator',
+        },
+      });
+    } catch {
+      // ignore
+    }
   };
 
   const formatTime = (iso: string | null) => {
@@ -159,7 +240,18 @@ export function MessagesScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.title}>💬 Mesajlar</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>💬 Mesajlar</Text>
+          <Pressable
+            style={styles.newChatBtn}
+            onPress={() => {
+              setShowNewChat(true);
+              loadContacts();
+            }}
+          >
+            <Text style={styles.newChatBtnTxt}>+ Yeni</Text>
+          </Pressable>
+        </View>
         {conversations.length === 0 ? (
           <EmptyState
             icon="💬"
@@ -182,6 +274,75 @@ export function MessagesScreen() {
           />
         )}
       </View>
+
+      {/* New Conversation Modal */}
+      <Modal visible={showNewChat} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowNewChat(false)} />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Yeni Mesaj</Text>
+            <Text style={styles.modalSub}>Eğitmenlerinize veya kulübünüze mesaj gönderin</Text>
+
+            {/* Club Chat */}
+            <Pressable style={styles.contactItem} onPress={startClubChat}>
+              <View style={styles.contactAvatarClub}>
+                <Text style={styles.contactAvatarClubTxt}>🏢</Text>
+              </View>
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactName}>{tenant?.name || 'Kulüp'}</Text>
+                <Text style={styles.contactRole}>Kulüp Yönetimi</Text>
+              </View>
+              <Text style={styles.contactArrow}>›</Text>
+            </Pressable>
+
+            {/* Trainers */}
+            {loadingContacts ? (
+              <ActivityIndicator
+                size="small"
+                color={premium.accentBlue}
+                style={{ marginTop: 16 }}
+              />
+            ) : (
+              <ScrollView style={styles.contactList} showsVerticalScrollIndicator={false}>
+                {trainers.map((tr) => (
+                  <Pressable
+                    key={tr.id}
+                    style={styles.contactItem}
+                    onPress={() => {
+                      const nameParts = tr.name.split(' ');
+                      startConversationWith(
+                        tr.userId,
+                        nameParts[0] || '',
+                        nameParts.slice(1).join(' ') || '',
+                      );
+                    }}
+                  >
+                    <View style={styles.contactAvatar}>
+                      <Text style={styles.contactAvatarTxt}>
+                        {tr.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)}
+                      </Text>
+                    </View>
+                    <View style={styles.contactInfo}>
+                      <Text style={styles.contactName}>{tr.name}</Text>
+                      <Text style={styles.contactRole}>🏋️ Eğitmen</Text>
+                    </View>
+                    <Text style={styles.contactArrow}>›</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
+            <Pressable style={styles.modalCloseBtn} onPress={() => setShowNewChat(false)}>
+              <Text style={styles.modalCloseBtnTxt}>Kapat</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </GradientBackground>
   );
 }
@@ -189,7 +350,22 @@ export function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 22, fontWeight: '800', color: premium.text, marginBottom: 16 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: { fontSize: 22, fontWeight: '800', color: premium.text },
+  newChatBtn: {
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  newChatBtnTxt: { fontSize: 13, fontWeight: '700', color: premium.accentBlue },
   list: { paddingBottom: 80 },
   convRow: {
     flexDirection: 'row',
@@ -234,4 +410,68 @@ const styles = StyleSheet.create({
   convRole: { color: premium.textMuted, fontSize: 11, fontWeight: '600', marginTop: 1 },
   convPreview: { color: premium.textMuted, fontSize: 13, marginTop: 3 },
   convPreviewUnread: { color: premium.text, fontWeight: '600' },
+
+  // Modal
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalContent: {
+    backgroundColor: '#0f172a',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    maxHeight: '75%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(148,163,184,0.3)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: premium.text, marginBottom: 4 },
+  modalSub: { fontSize: 13, color: premium.textMuted, marginBottom: 16 },
+  contactList: { maxHeight: 300 },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(148,163,184,0.1)',
+  },
+  contactAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactAvatarTxt: { color: premium.accentBlue, fontSize: 14, fontWeight: '800' },
+  contactAvatarClub: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(34,197,94,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactAvatarClubTxt: { fontSize: 20 },
+  contactInfo: { flex: 1 },
+  contactName: { fontSize: 15, fontWeight: '700', color: premium.text },
+  contactRole: { fontSize: 12, color: premium.textMuted, marginTop: 1 },
+  contactArrow: { fontSize: 22, color: premium.textMuted },
+  modalCloseBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(148,163,184,0.08)',
+  },
+  modalCloseBtnTxt: { fontSize: 15, fontWeight: '600', color: premium.textMuted },
 });

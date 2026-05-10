@@ -89,6 +89,17 @@ export class MessagingService {
     return this.getOrCreateConversation(userId, admin.id);
   }
 
+  /** Kulübe mesaj: TenantId ile admin kullanıcısını bulup sohbet başlat. */
+  async getOrCreateConversationWithClubByTenantId(userId: string, tenantId: string) {
+    const admin = await this.usersRepo.findOne({
+      where: { tenantId, role: 'administrator' as never },
+    });
+    if (!admin) {
+      throw new NotFoundException('Club admin not found');
+    }
+    return this.getOrCreateConversation(userId, admin.id);
+  }
+
   /** Mesaj gönder. */
   async sendMessage(
     userId: string,
