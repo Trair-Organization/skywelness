@@ -43,7 +43,22 @@ export function RootNavigator() {
   }, []);
 
   useEffect(() => {
+    console.log('[NAV] effect check', {
+      authReady,
+      navReady,
+      introChecked,
+      showIntro,
+      hasUser: !!user,
+      hasToken: !!token,
+      hasTenant: !!tenant,
+    });
     if (!authReady || !navReady || !introChecked || !navigationRef.isReady()) {
+      console.log('[NAV] early return', {
+        authReady,
+        navReady,
+        introChecked,
+        navIsReady: navigationRef.isReady?.(),
+      });
       return;
     }
     // If intro hasn't been seen, show it first
@@ -59,6 +74,14 @@ export function RootNavigator() {
       const pending = user.accountStatus === 'pending_approval';
       target = pending ? 'PendingApproval' : 'Main';
     }
+    console.log('[NAV] effect', {
+      target,
+      last: lastTargetRef.current,
+      hasUser: !!user,
+      hasToken: !!token,
+      hasTenant: !!tenant,
+      status: user?.accountStatus,
+    });
     if (lastTargetRef.current === target) {
       return;
     }
