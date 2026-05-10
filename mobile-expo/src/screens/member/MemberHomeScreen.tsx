@@ -786,9 +786,13 @@ export function MemberHomeScreen() {
                 <Text style={styles.todayMeta}>
                   {t('home.nextSessionMeta', {
                     time: fmt(nextReservation.startTime),
-                    trainer: `${nextReservation.trainer.user.firstName} ${nextReservation.trainer.user.lastName}`,
+                    trainer: nextReservation.trainer
+                      ? `${nextReservation.trainer.user.firstName} ${nextReservation.trainer.user.lastName}`
+                      : (nextReservation.spaTherapist?.name ?? ''),
                     type:
-                      nextReservation.package?.packageType?.name ?? t('home.unknownSessionType'),
+                      nextReservation.package?.packageType?.name ??
+                      nextReservation.spaService?.name ??
+                      t('home.unknownSessionType'),
                   })}
                 </Text>
                 <Pressable

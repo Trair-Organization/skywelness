@@ -147,8 +147,11 @@ export function MemberReservationsScreen() {
             return (
               <View key={r.id} style={styles.resRow}>
                 <Text style={styles.resTxt}>
-                  {fmt(r.startTime)} · {r.trainer.user.firstName} {r.trainer.user.lastName} ·{' '}
-                  {r.status}
+                  {fmt(r.startTime)} ·{' '}
+                  {r.trainer
+                    ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+                    : (r.spaTherapist?.name ?? '')}{' '}
+                  · {r.status}
                 </Text>
                 {canCancel ? (
                   <Pressable

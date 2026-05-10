@@ -848,8 +848,11 @@ export function MemberServiceHubScreen({ mode }: Props) {
               return (
                 <View key={r.id} style={styles.resRow}>
                   <Text style={styles.resTxt}>
-                    {fmt(r.startTime)} · {r.trainer.user.firstName} {r.trainer.user.lastName} ·{' '}
-                    {r.package.packageTypeName}
+                    {fmt(r.startTime)} ·{' '}
+                    {r.trainer
+                      ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+                      : (r.spaTherapist?.name ?? '')}{' '}
+                    · {r.package?.packageTypeName ?? r.spaService?.name ?? ''}
                   </Text>
                   {canCancel ? (
                     <Pressable
@@ -879,8 +882,11 @@ export function MemberServiceHubScreen({ mode }: Props) {
           ) : (
             pastRes.slice(0, 20).map((r) => (
               <Text key={r.id} style={styles.pastLine}>
-                {fmt(r.startTime)} · {r.trainer.user.firstName} {r.trainer.user.lastName} ·{' '}
-                {r.status}
+                {fmt(r.startTime)} ·{' '}
+                {r.trainer
+                  ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+                  : (r.spaTherapist?.name ?? '')}{' '}
+                · {r.status}
               </Text>
             ))
           )}
