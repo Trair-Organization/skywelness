@@ -217,6 +217,18 @@ export class AdminController {
     return this.bookingService.rejectPackageRequest(admin.tenantId, requestId, body.reason);
   }
 
+  @Patch('package-requests/:requestId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updatePackageRequestStatus(
+    @CurrentUser() admin: User,
+    @Param('requestId', new ParseUUIDPipe({ version: '4' })) requestId: string,
+    @Body()
+    body: { status?: string; adminNote?: string; paymentStatus?: string; paymentMethod?: string },
+  ) {
+    return this.bookingService.updatePackageRequestStatus(admin.tenantId, requestId, body);
+  }
+
   @Post('reservation-requests/:reservationId/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
