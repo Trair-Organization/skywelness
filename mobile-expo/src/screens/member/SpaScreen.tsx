@@ -367,9 +367,46 @@ export function SpaScreen() {
                 </View>
               )}
               {remaining === 0 && (
-                <Text style={styles.noPackageHint}>
-                  Randevu almak için kulüp resepsiyonundan masaj paketi satın alın.
-                </Text>
+                <>
+                  <Text style={styles.noPackageHint}>
+                    Randevu almak için aktif bir masaj paketiniz olmalıdır.
+                  </Text>
+                  <Pressable
+                    style={styles.requestPackageBtn}
+                    onPress={() => {
+                      Alert.alert(
+                        'Paket Talebi',
+                        'Kulübünüze masaj paketi talebi göndermek istiyor musunuz?\n\nKulüp yetkilisi talebinizi değerlendirecektir.',
+                        [
+                          { text: 'Vazgeç', style: 'cancel' },
+                          {
+                            text: 'Talep Gönder',
+                            onPress: async () => {
+                              try {
+                                await apiJson('/package-requests', {
+                                  ...opts,
+                                  method: 'POST',
+                                  body: JSON.stringify({ sessionType: 'massage' }),
+                                });
+                                Alert.alert(
+                                  '✅ Talep Gönderildi',
+                                  'Kulüp yetkiliniz en kısa sürede sizinle iletişime geçecektir.',
+                                );
+                              } catch (e) {
+                                Alert.alert(
+                                  'Hata',
+                                  e instanceof ApiError ? e.message : 'Talep gönderilemedi',
+                                );
+                              }
+                            },
+                          },
+                        ],
+                      );
+                    }}
+                  >
+                    <Text style={styles.requestPackageBtnText}>📦 Paket Talep Et</Text>
+                  </Pressable>
+                </>
               )}
             </View>
             <ProgressRing remaining={remaining} total={Math.max(remaining, maxSessions)} />
@@ -693,6 +730,17 @@ const styles = StyleSheet.create({
   activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: premium.accentGreen },
   activeText: { fontSize: 13, fontWeight: '600', color: premium.accentGreen },
   noPackageHint: { fontSize: 12, color: '#f59e0b', marginTop: 8, lineHeight: 17 },
+  requestPackageBtn: {
+    marginTop: 12,
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  requestPackageBtnText: { fontSize: 14, fontWeight: '700', color: premium.accentBlue },
   ruleBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
