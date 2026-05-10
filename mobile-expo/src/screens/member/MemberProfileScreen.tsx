@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +45,9 @@ export function MemberProfileScreen() {
   // Stats
   const [ptRemaining, setPtRemaining] = useState<number | null>(null);
   const [spaRemaining, setSpaRemaining] = useState<number | null>(null);
-  const [memberSince, setMemberSince] = useState<string | null>(null);
+
+  // Animation
+  const editAnim = useRef(new Animated.Value(0)).current;
 
   const loadStats = useCallback(async () => {
     if (!token || !tenant) return;
@@ -60,9 +71,7 @@ export function MemberProfileScreen() {
   );
 
   useEffect(() => {
-    if (!user) {
-      return;
-    }
+    if (!user) return;
     setFirstName(user.firstName ?? '');
     setLastName(user.lastName ?? '');
     setEmail(user.email ?? '');
@@ -70,6 +79,14 @@ export function MemberProfileScreen() {
     setPhone(user.phone ?? '');
     setPhotoUrl(user.photoUrl ?? null);
   }, [user]);
+
+  useEffect(() => {
+    Animated.timing(editAnim, {
+      toValue: showEditForm ? 1 : 0,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
+  }, [showEditForm, editAnim]);
 
   if (!user || !tenant) {
     return null;
@@ -110,6 +127,15 @@ export function MemberProfileScreen() {
       .finally(() => setSaving(false));
   };
 
+  const editMaxHeight = editAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 520],
+  });
+  const editOpacity = editAnim.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0, 1],
+  });
+
   return (
     <GradientBackground>
       <ScrollView
@@ -123,7 +149,7 @@ export function MemberProfileScreen() {
         {/* ─── Profile Header ─── */}
         <GlassCard style={styles.headerCard}>
           <Pressable style={styles.settingsIcon} onPress={() => setShowEditForm((v) => !v)}>
-            <Text style={styles.settingsIconText}>⚙️</Text>
+            <Text style={styles.settingsIconText}>{showEditForm ? '✕' : '⚙️'}</Text>
           </Pressable>
 
           <View style={styles.avatarContainer}>
@@ -150,18 +176,90 @@ export function MemberProfileScreen() {
           </View>
         </GlassCard>
 
+        {/* ─── Edit Form (animated, between header and stats) ─── */}
+        <Animated.View
+          style={[styles.editAnimWrap, { maxHeight: editMaxHeight, opacity: editOpacity }]}
+        >
+          <GlassCard style={styles.editCard}>
+            <View style={styles.editHeader}>
+              <View style={styles.editTitleRow}>
+                <Text style={styles.editTitleIcon}>✏️</Text>
+                <Text style={styles.editTitle}>Profil Düzenle</Text>
+              </View>
+            </View>
+
+            <View style={styles.editFieldsGrid}>
+              <View style={styles.editFieldHalf}>
+                <PremiumInput
+                  label={t('register.firstName')}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                />
+              </View>
+              <View style={styles.editFieldHalf}>
+                <PremiumInput
+                  label={t('register.lastName')}
+                  value={lastName}
+                  onChangeText={setLastName}
+                />
+              </View>
+            </View>
+
+            <PremiumInput label={t('login.emailLabel')} value={email} onChangeText={setEmail} />
+            <PremiumInput
+              label={t('register.usernameLabel')}
+              value={username}
+              onChangeText={setUsername}
+            />
+            <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
+
+            <Pressable
+              style={({ pressed }) => [styles.editPhotoBtn, pressed && styles.editPhotoBtnPressed]}
+              onPress={uploadPhoto}
+              disabled={uploadingPhoto}
+            >
+              <Text style={styles.editPhotoBtnIcon}>📷</Text>
+              <Text style={styles.editPhotoBtnTxt}>
+                {uploadingPhoto
+                  ? t('profile.photoUploading')
+                  : photoUrl
+                    ? t('profile.photoChange')
+                    : t('profile.photoUpload')}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.btnSave,
+                pressed && styles.btnSavePressed,
+                saving && styles.btnDisabled,
+              ]}
+              disabled={saving}
+              onPress={handleSave}
+            >
+              <Text style={styles.btnSaveTxt}>
+                {saving ? '⏳ Kaydediliyor...' : '✓ Değişiklikleri Kaydet'}
+              </Text>
+            </Pressable>
+          </GlassCard>
+        </Animated.View>
+
         {/* ─── Quick Stats ─── */}
         <View style={styles.statsRow}>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>{ptRemaining ?? '—'}</Text>
+            <Text style={[styles.statValue, ptRemaining === 0 && styles.statValueWarn]}>
+              {ptRemaining ?? '—'}
+            </Text>
             <Text style={styles.statLabel}>Kalan PT</Text>
           </GlassCard>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>{spaRemaining ?? '—'}</Text>
+            <Text style={[styles.statValue, spaRemaining === 0 && styles.statValueWarn]}>
+              {spaRemaining ?? '—'}
+            </Text>
             <Text style={styles.statLabel}>Kalan Masaj</Text>
           </GlassCard>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>Aktif</Text>
+            <Text style={[styles.statValue, styles.statValueActive]}>Aktif</Text>
             <Text style={styles.statLabel}>Üyelik</Text>
           </GlassCard>
         </View>
@@ -190,65 +288,6 @@ export function MemberProfileScreen() {
             <Text style={styles.quickAccessArrow}>›</Text>
           </Pressable>
         </GlassCard>
-
-        {/* ─── Edit Form (collapsible) ─── */}
-        {showEditForm && (
-          <GlassCard style={styles.editCard}>
-            <View style={styles.editHeader}>
-              <Text style={styles.cardTitle}>{t('profile.editTitle')}</Text>
-              <Pressable onPress={() => setShowEditForm(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.cardLineMuted}>{t('profile.editBody')}</Text>
-
-            <Pressable
-              style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
-              onPress={uploadPhoto}
-              disabled={uploadingPhoto}
-            >
-              <Text style={styles.photoBtnTxt}>
-                {uploadingPhoto
-                  ? t('profile.photoUploading')
-                  : photoUrl
-                    ? t('profile.photoChange')
-                    : t('profile.photoUpload')}
-              </Text>
-            </Pressable>
-
-            <PremiumInput
-              label={t('register.firstName')}
-              value={firstName}
-              onChangeText={setFirstName}
-            />
-            <PremiumInput
-              label={t('register.lastName')}
-              value={lastName}
-              onChangeText={setLastName}
-            />
-            <PremiumInput label={t('login.emailLabel')} value={email} onChangeText={setEmail} />
-            <PremiumInput
-              label={t('register.usernameLabel')}
-              value={username}
-              onChangeText={setUsername}
-            />
-            <PremiumInput label={t('register.phoneLabel')} value={phone} onChangeText={setPhone} />
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.btnPrimary,
-                pressed && styles.btnPrimaryPressed,
-                saving && styles.btnDisabled,
-              ]}
-              disabled={saving}
-              onPress={handleSave}
-            >
-              <Text style={styles.btnPrimaryTxt}>
-                {saving ? t('profile.saving') : t('profile.save')}
-              </Text>
-            </Pressable>
-          </GlassCard>
-        )}
 
         {/* ─── Settings ─── */}
         <GlassCard style={styles.settingsCard}>
@@ -426,6 +465,81 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
 
+  /* ─── Edit Form (animated) ─── */
+  editAnimWrap: {
+    overflow: 'hidden',
+    marginBottom: 0,
+  },
+  editCard: {
+    marginBottom: 12,
+    borderColor: 'rgba(56,189,248,0.2)',
+    borderWidth: 1,
+  },
+  editHeader: {
+    marginBottom: 12,
+  },
+  editTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editTitleIcon: {
+    fontSize: 18,
+  },
+  editTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: premium.text,
+  },
+  editFieldsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  editFieldHalf: {
+    flex: 1,
+  },
+  editPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+    backgroundColor: 'rgba(56,189,248,0.05)',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  editPhotoBtnPressed: {
+    backgroundColor: 'rgba(56,189,248,0.12)',
+  },
+  editPhotoBtnIcon: {
+    fontSize: 16,
+  },
+  editPhotoBtnTxt: {
+    color: premium.accentBlue,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  btnSave: {
+    backgroundColor: premium.accentBlue,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  btnSavePressed: {
+    opacity: 0.85,
+  },
+  btnSaveTxt: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
+
   /* ─── Stats ─── */
   statsRow: {
     flexDirection: 'row',
@@ -442,6 +556,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: premium.text,
     marginBottom: 4,
+  },
+  statValueWarn: {
+    color: '#f59e0b',
+  },
+  statValueActive: {
+    color: premium.accentGreen,
+    fontSize: 14,
   },
   statLabel: {
     fontSize: 11,
@@ -475,53 +596,15 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
   },
 
-  /* ─── Edit Form ─── */
-  editCard: {
+  /* ─── Settings ─── */
+  settingsCard: {
     marginBottom: 12,
-  },
-  editHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  closeBtn: {
-    fontSize: 18,
-    color: premium.textMuted,
-    padding: 4,
   },
   cardTitle: {
     fontSize: 17,
     fontWeight: '800',
     color: premium.text,
     marginBottom: 8,
-  },
-  cardLineMuted: {
-    fontSize: 13,
-    color: premium.textMuted,
-    marginBottom: 10,
-  },
-  photoBtn: {
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: premium.radiusSm,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    marginBottom: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  photoBtnPressed: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  photoBtnTxt: {
-    color: premium.accentBlue,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-
-  /* ─── Settings ─── */
-  settingsCard: {
-    marginBottom: 12,
   },
   settingsDivider: {
     height: 1,
@@ -554,47 +637,27 @@ const styles = StyleSheet.create({
   },
 
   /* ─── Buttons ─── */
-  btnPrimary: {
-    backgroundColor: 'rgba(56,189,248,0.35)',
-    borderWidth: 1,
-    borderColor: 'rgba(56,189,248,0.5)',
-    borderRadius: premium.radiusSm,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  btnPrimaryPressed: {
-    backgroundColor: 'rgba(56,189,248,0.5)',
-  },
-  btnPrimaryTxt: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  btnDisabled: {
-    opacity: 0.6,
-  },
   btnDanger: {
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: premium.radiusSm,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.6)',
-    backgroundColor: 'rgba(248,113,113,0.2)',
+    borderColor: 'rgba(248,113,113,0.4)',
+    backgroundColor: 'rgba(248,113,113,0.08)',
     marginTop: 8,
   },
   btnDangerPressed: {
-    backgroundColor: 'rgba(248,113,113,0.3)',
+    backgroundColor: 'rgba(248,113,113,0.15)',
   },
   btnDangerTxt: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 15,
+    color: '#f87171',
+    fontWeight: '700',
+    fontSize: 14,
   },
   btnGhost: {
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: premium.radiusSm,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(0,0,0,0.2)',
@@ -606,6 +669,6 @@ const styles = StyleSheet.create({
   btnGhostTxt: {
     color: premium.textMuted,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14,
   },
 });
