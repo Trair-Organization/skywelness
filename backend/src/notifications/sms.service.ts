@@ -175,4 +175,18 @@ export class SmsService {
     const msg = `Sayin uyemiz, randevunuz guncellenmistir. Yeni tarih: ${newDate}, Saat: ${newTime}, Egitmen: ${trainerName}.${ticketLink} Skyland Wellness Club`;
     return this.send(phone, msg);
   }
+
+  async sendReservationReminder(
+    phone: string,
+    date: string,
+    time: string,
+    trainerName: string,
+    ticketId?: string,
+  ) {
+    const ticketLink = ticketId
+      ? ` Bilet: https://www.wellnessclub.tech/api/v1/ticket/${ticketId}`
+      : '';
+    const msg = `Hatirlatma: Yarin ${date} saat ${time} icin ${trainerName} ile randevunuz var. Lutfen 10 dk once kulupte olunuz.${ticketLink} Skyland Wellness Club`;
+    return this.send(phone, msg);
+  }
 }

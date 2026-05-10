@@ -306,4 +306,68 @@ ${ticketBtn}`,
     for (const a of admins)
       await this.push.sendToUser(a.id, '📅 Katılım', `${memberName} — ${eventTitle}`);
   }
+
+  // ─── HATIRLATMA (T-24 ve T-2 saat) ───────────────────────────────────────────
+
+  async reservationReminder(params: {
+    member: User;
+    providerName: string; // eğitmen veya masöz adı
+    sessionType: 'personal_training' | 'massage';
+    date: string; // "10.05.2026"
+    time: string; // "14:00"
+    reservationId?: string;
+    window: 'day' | 'hour'; // T-24 veya T-2 saat
+  }) {
+    const typeLabel = params.sessionType === 'personal_training' ? 'Personal Training' : 'Masaj';
+    const when = params.window === 'day' ? 'Yarın' : 'Yaklaşan randevu';
+    const title = `⏰ ${when}: ${params.time}`;
+    const body = `${params.date} ${params.time} — ${params.providerName} (${typeLabel})`;
+    const ticketLink = params.reservationId ? `${TICKET_BASE}/${params.reservationId}` : '';
+
+    await this.push.sendToUser(params.member.id, title, body);
+
+    // SMS sadece T-24 için (T-2'de push yeterli, maliyet optimizasyonu)
+    if (params.window === 'day' && params.member.phone) {
+      await this.sms
+        .sendReservationReminder(
+          params.member.phone,
+          params.date,
+          params.time,
+          params.providerName,
+          params.reservationId,
+        )
+        .catch((e: unknown) => this.logger.error('Reminder SMS failed: ' + String(e)));
+    }
+
+    // Mail sadece T-24 için
+    if (params.window === 'day') {
+      const ticketBtn = ticketLink
+        ? `<a href="${ticketLink}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;">🎫 Randevu Biletini Görüntüle</a>`
+        : '';
+      const html = emailShell({
+        title: 'Yarınki Randevunuz',
+        previewText: `${params.date} ${params.time} — ${params.providerName}`,
+        clubName: CLUB_NAME,
+        innerHtml: `
+<p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(params.member.firstName)}</strong>,</p>
+<p style="margin:0 0 16px;">Yarın için bir randevunuz olduğunu hatırlatmak istedik.</p>
+<div style="margin:20px 0;padding:18px;background:rgba(59,130,246,0.1);border-radius:12px;border:1px solid rgba(59,130,246,0.3);">
+  <p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">${escapeHtml(typeLabel)}</p>
+  <p style="margin:0 0 4px;font-weight:700;color:#1f2937;font-size:16px;">🏋️ ${escapeHtml(params.providerName)}</p>
+  <p style="margin:8px 0 0;color:#6b7280;">📅 ${escapeHtml(params.date)}</p>
+  <p style="margin:4px 0 0;color:#d97706;font-weight:700;font-size:18px;">🕐 ${escapeHtml(params.time)}</p>
+</div>
+${ticketBtn}
+<p style="margin:16px 0 0;font-size:13px;color:#6b7280;">Gelemeyecekseniz lütfen en kısa sürede bizi bilgilendirin.</p>`,
+      });
+      await this.mail['send']({
+        to: [params.member.email],
+        subject: `${CLUB_NAME} — Yarınki Randevunuz`,
+        html,
+        text: body,
+      }).catch((e: unknown) => this.logger.error('Reminder mail failed: ' + String(e)));
+    }
+
+    this.logger.log(`[NOTIFY] reminder (${params.window}) → ${params.member.email}`);
+  }
 }

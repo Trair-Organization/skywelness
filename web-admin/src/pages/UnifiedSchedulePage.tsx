@@ -94,7 +94,41 @@ export function UnifiedSchedulePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [bookingNotes, setBookingNotes] = useState('');
   const [bookingSaving, setBookingSaving] = useState(false);
+
+  // Reschedule modal
+  const [rescheduleModal, setRescheduleModal] = useState<{
+    resource: Resource;
+    reservationId: string;
+  } | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('10:00');
+
+  // Quick-create member modal
+  const [newMemberModal, setNewMemberModal] = useState(false);
+  const [newMemberForm, setNewMemberForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+  });
+  const [newMemberSaving, setNewMemberSaving] = useState(false);
+
+  // Bulk open modal
+  const [bulkOpenModal, setBulkOpenModal] = useState(false);
+  const [allTrainers, setAllTrainers] = useState<{ id: string; name: string }[]>([]);
+  const [allTherapists, setAllTherapists] = useState<{ id: string; name: string }[]>([]);
+  const [bulkForm, setBulkForm] = useState({
+    startDate: todayISO(),
+    endDate: addDays(todayISO(), 6),
+    weekdays: [1, 2, 3, 4, 5, 6] as number[],
+    startTime: '09:00',
+    endTime: '21:00',
+    trainerIds: [] as string[],
+    therapistIds: [] as string[],
+  });
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const isPastDate = useMemo(() => date < todayISO(), [date]);
   const isToday = useMemo(() => date === todayISO(), [date]);
@@ -130,6 +164,7 @@ export function UnifiedSchedulePage() {
     setPopup(null);
     setSelectedMemberId('');
     setSelectedServiceId('');
+    setBookingNotes('');
     try {
       const [memberList, serviceList] = await Promise.all([
         apiJson<Member[]>('/admin/members?status=active'),
@@ -160,6 +195,7 @@ export function UnifiedSchedulePage() {
             date,
             startTime: hour,
             endTime: endHour,
+            notes: bookingNotes.trim() || undefined,
           }),
         });
       } else {
@@ -171,6 +207,7 @@ export function UnifiedSchedulePage() {
         };
         if (selectedServiceId) payload.serviceId = selectedServiceId;
         else payload.endTime = endHour;
+        if (bookingNotes.trim()) payload.notes = bookingNotes.trim();
         await apiJson('/admin/therapists/reservations/create', {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -184,6 +221,96 @@ export function UnifiedSchedulePage() {
       setError(e instanceof ApiError ? e.message : 'Hata');
     } finally {
       setBookingSaving(false);
+    }
+  }
+
+  async function rescheduleReservation() {
+    if (!rescheduleModal || !rescheduleDate) return;
+    try {
+      const endHour =
+        (parseInt(rescheduleTime.split(':')[0]) + 1).toString().padStart(2, '0') + ':00';
+      const path =
+        rescheduleModal.resource.kind === 'trainer'
+          ? `/admin/reservations/${rescheduleModal.reservationId}/reschedule`
+          : `/admin/therapists/reservations/${rescheduleModal.reservationId}/reschedule`;
+      const body: Record<string, unknown> = {
+        newDate: rescheduleDate,
+        newStartTime: rescheduleTime,
+        newEndTime: endHour,
+      };
+      if (rescheduleModal.resource.kind === 'therapist') {
+        body.therapistId = rescheduleModal.resource.id;
+      }
+      await apiJson(path, { method: 'POST', body: JSON.stringify(body) });
+      setSuccess('✅ Randevu ileri tarihe taşındı');
+      setRescheduleModal(null);
+      void loadAll();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Taşıma başarısız');
+    }
+  }
+
+  async function quickCreateMember() {
+    if (!newMemberForm.firstName.trim() || !newMemberForm.lastName.trim()) {
+      setError('Ad ve soyad zorunlu');
+      return;
+    }
+    setNewMemberSaving(true);
+    try {
+      const res = await apiJson<Member>('/admin/members/quick-create', {
+        method: 'POST',
+        body: JSON.stringify({
+          firstName: newMemberForm.firstName.trim(),
+          lastName: newMemberForm.lastName.trim(),
+          phone: newMemberForm.phone.trim() || undefined,
+          email: newMemberForm.email.trim() || undefined,
+        }),
+      });
+      // Listeye ekle ve seç
+      setMembers((prev) => [res, ...prev]);
+      setSelectedMemberId(res.id);
+      setNewMemberModal(false);
+      setNewMemberForm({ firstName: '', lastName: '', phone: '', email: '' });
+      setSuccess('✅ Üye oluşturuldu ve seçildi');
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Hata');
+    } finally {
+      setNewMemberSaving(false);
+    }
+  }
+
+  async function openBulkModal() {
+    setBulkOpenModal(true);
+    // Kaynakları yükle
+    if (trainerData?.resources) {
+      setAllTrainers(trainerData.resources.map((r) => ({ id: r.id, name: r.name })));
+    }
+    if (therapistData?.resources) {
+      setAllTherapists(therapistData.resources.map((r) => ({ id: r.id, name: r.name })));
+    }
+  }
+
+  async function runBulkOpen() {
+    if (bulkForm.trainerIds.length === 0 && bulkForm.therapistIds.length === 0) {
+      setError('En az bir eğitmen veya masöz seçilmeli');
+      return;
+    }
+    setBulkSaving(true);
+    try {
+      const res = await apiJson<{ created: number }>('/admin/schedule/bulk-open', {
+        method: 'POST',
+        body: JSON.stringify(bulkForm),
+      });
+      setSuccess(`✅ ${res.created} slot oluşturuldu`);
+      setBulkOpenModal(false);
+      void loadAll();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Hata');
+    } finally {
+      setBulkSaving(false);
     }
   }
 
@@ -321,6 +448,20 @@ export function UnifiedSchedulePage() {
                                   >
                                     ❌ Rezervasyonu İptal Et
                                   </button>
+                                  <button
+                                    className="cell-popup-btn cell-popup-reschedule"
+                                    onClick={() => {
+                                      setRescheduleModal({
+                                        resource: r,
+                                        reservationId: cell.reservationId!,
+                                      });
+                                      setRescheduleDate(date);
+                                      setRescheduleTime(hour);
+                                      setPopup(null);
+                                    }}
+                                  >
+                                    🔄 İleri Tarihe Al
+                                  </button>
                                 </div>
                               </>
                             )}
@@ -407,6 +548,9 @@ export function UnifiedSchedulePage() {
             Günlük eğitmen ve masöz matrisi — tek bakışta tüm kaynaklar
           </p>
         </div>
+        <button className="btn-primary-lg" onClick={() => void openBulkModal()}>
+          📋 Toplu Program Oluştur
+        </button>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -497,24 +641,35 @@ export function UnifiedSchedulePage() {
               >
                 Üye Seçin *
               </label>
-              <select
-                value={selectedMemberId}
-                onChange={(e) => setSelectedMemberId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  fontSize: '0.9rem',
-                }}
-              >
-                <option value="">Üye seçin…</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.firstName} {m.lastName} — {m.email}
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  value={selectedMemberId}
+                  onChange={(e) => setSelectedMemberId(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <option value="">Üye seçin…</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.firstName} {m.lastName} — {m.email}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn-sm btn-outline"
+                  onClick={() => setNewMemberModal(true)}
+                  style={{ whiteSpace: 'nowrap' }}
+                  title="Sisteme kayıtlı olmayan walk-in üye için hızlı kayıt"
+                >
+                  ➕ Yeni
+                </button>
+              </div>
             </div>
             {bookingModal.resource.kind === 'therapist' && (
               <div style={{ marginTop: 12 }}>
@@ -576,6 +731,33 @@ export function UnifiedSchedulePage() {
                   })()}
               </div>
             )}
+            <div style={{ marginTop: 12 }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: 8,
+                  fontSize: '0.85rem',
+                  color: 'var(--muted)',
+                }}
+              >
+                Notlar (opsiyonel)
+              </label>
+              <textarea
+                value={bookingNotes}
+                onChange={(e) => setBookingNotes(e.target.value)}
+                rows={2}
+                placeholder="Örn: bel sakatlığı var, yumuşak bas"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  fontSize: '0.9rem',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
               <button
                 className="primary"
@@ -585,6 +767,418 @@ export function UnifiedSchedulePage() {
                 {bookingSaving ? '⏳…' : '✓ Oluştur'}
               </button>
               <button className="secondary" onClick={() => setBookingModal(null)}>
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Modal */}
+      {rescheduleModal && (
+        <div className="modal-overlay" onClick={() => setRescheduleModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🔄 Randevuyu İleri Tarihe Al</h3>
+              <button className="modal-close" onClick={() => setRescheduleModal(null)}>
+                ✕
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: 8 }}>
+              {rescheduleModal.resource.name}
+            </p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+              <label style={{ flex: 1 }}>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Yeni Tarih
+                </div>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  min={todayISO()}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                />
+              </label>
+              <label style={{ flex: 1 }}>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Yeni Saat
+                </div>
+                <input
+                  type="time"
+                  step={3600}
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                />
+              </label>
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+              <button
+                className="primary"
+                onClick={() => void rescheduleReservation()}
+                disabled={!rescheduleDate}
+              >
+                ✓ Taşı
+              </button>
+              <button className="secondary" onClick={() => setRescheduleModal(null)}>
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Create Member Modal */}
+      {newMemberModal && (
+        <div className="modal-overlay" onClick={() => setNewMemberModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>➕ Hızlı Üye Kaydı</h3>
+              <button className="modal-close" onClick={() => setNewMemberModal(false)}>
+                ✕
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: 6, fontSize: '0.85rem' }}>
+              Sisteme kayıtlı olmayan walk-in üyeler için — ad, soyad ve telefon yeterli.
+            </p>
+            <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+              <label>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Ad *
+                </div>
+                <input
+                  value={newMemberForm.firstName}
+                  onChange={(e) =>
+                    setNewMemberForm({ ...newMemberForm, firstName: e.target.value })
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                />
+              </label>
+              <label>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Soyad *
+                </div>
+                <input
+                  value={newMemberForm.lastName}
+                  onChange={(e) => setNewMemberForm({ ...newMemberForm, lastName: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                />
+              </label>
+              <label>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Telefon (opsiyonel)
+                </div>
+                <input
+                  value={newMemberForm.phone}
+                  onChange={(e) => setNewMemberForm({ ...newMemberForm, phone: e.target.value })}
+                  placeholder="05xxxxxxxxx"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                />
+              </label>
+              <label>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  E-posta (opsiyonel)
+                </div>
+                <input
+                  type="email"
+                  value={newMemberForm.email}
+                  onChange={(e) => setNewMemberForm({ ...newMemberForm, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                />
+              </label>
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+              <button
+                className="primary"
+                onClick={() => void quickCreateMember()}
+                disabled={
+                  newMemberSaving ||
+                  !newMemberForm.firstName.trim() ||
+                  !newMemberForm.lastName.trim()
+                }
+              >
+                {newMemberSaving ? '⏳…' : '✓ Oluştur ve Seç'}
+              </button>
+              <button className="secondary" onClick={() => setNewMemberModal(false)}>
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Open Modal */}
+      {bulkOpenModal && (
+        <div className="modal-overlay" onClick={() => setBulkOpenModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 640 }}
+          >
+            <div className="modal-header">
+              <h3>📋 Toplu Program Oluştur</h3>
+              <button className="modal-close" onClick={() => setBulkOpenModal(false)}>
+                ✕
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: 6, fontSize: '0.85rem' }}>
+              Seçilen tarih aralığında, seçilen günlerde ve saatlerde seçilen eğitmen/masözler için
+              1&apos;er saatlik slotları toplu aç.
+            </p>
+
+            <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <label style={{ flex: 1 }}>
+                  <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    Başlangıç Tarihi
+                  </div>
+                  <input
+                    type="date"
+                    value={bulkForm.startDate}
+                    onChange={(e) => setBulkForm({ ...bulkForm, startDate: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                    }}
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    Bitiş Tarihi
+                  </div>
+                  <input
+                    type="date"
+                    value={bulkForm.endDate}
+                    onChange={(e) => setBulkForm({ ...bulkForm, endDate: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <label style={{ flex: 1 }}>
+                  <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    İlk Saat
+                  </div>
+                  <input
+                    type="time"
+                    step={3600}
+                    value={bulkForm.startTime}
+                    onChange={(e) => setBulkForm({ ...bulkForm, startTime: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                    }}
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    Son Saat
+                  </div>
+                  <input
+                    type="time"
+                    step={3600}
+                    value={bulkForm.endTime}
+                    onChange={(e) => setBulkForm({ ...bulkForm, endTime: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  Günler
+                </div>
+                <div className="weekday-selector">
+                  {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((lbl, idx) => {
+                    const weekdayNum = [1, 2, 3, 4, 5, 6, 0][idx];
+                    const checked = bulkForm.weekdays.includes(weekdayNum);
+                    return (
+                      <label
+                        key={lbl}
+                        className={`weekday-chip ${checked ? 'weekday-chip-active' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setBulkForm({
+                              ...bulkForm,
+                              weekdays: e.target.checked
+                                ? [...bulkForm.weekdays, weekdayNum]
+                                : bulkForm.weekdays.filter((w) => w !== weekdayNum),
+                            })
+                          }
+                          style={{ display: 'none' }}
+                        />
+                        {lbl}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  🏋️ Eğitmenler ({allTrainers.length})
+                </div>
+                <div className="bulk-resource-grid">
+                  {allTrainers.length === 0 && (
+                    <span className="muted" style={{ fontSize: '0.85rem' }}>
+                      Eğitmen yok
+                    </span>
+                  )}
+                  {allTrainers.map((t) => {
+                    const checked = bulkForm.trainerIds.includes(t.id);
+                    return (
+                      <label
+                        key={t.id}
+                        className={`weekday-chip ${checked ? 'weekday-chip-active' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setBulkForm({
+                              ...bulkForm,
+                              trainerIds: e.target.checked
+                                ? [...bulkForm.trainerIds, t.id]
+                                : bulkForm.trainerIds.filter((id) => id !== t.id),
+                            })
+                          }
+                          style={{ display: 'none' }}
+                        />
+                        {t.name}
+                      </label>
+                    );
+                  })}
+                  {allTrainers.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-sm btn-outline"
+                      onClick={() =>
+                        setBulkForm({
+                          ...bulkForm,
+                          trainerIds:
+                            bulkForm.trainerIds.length === allTrainers.length
+                              ? []
+                              : allTrainers.map((t) => t.id),
+                        })
+                      }
+                    >
+                      {bulkForm.trainerIds.length === allTrainers.length ? 'Hiçbiri' : 'Tümünü Seç'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  💆 Masözler ({allTherapists.length})
+                </div>
+                <div className="bulk-resource-grid">
+                  {allTherapists.length === 0 && (
+                    <span className="muted" style={{ fontSize: '0.85rem' }}>
+                      Masöz yok
+                    </span>
+                  )}
+                  {allTherapists.map((t) => {
+                    const checked = bulkForm.therapistIds.includes(t.id);
+                    return (
+                      <label
+                        key={t.id}
+                        className={`weekday-chip ${checked ? 'weekday-chip-active' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setBulkForm({
+                              ...bulkForm,
+                              therapistIds: e.target.checked
+                                ? [...bulkForm.therapistIds, t.id]
+                                : bulkForm.therapistIds.filter((id) => id !== t.id),
+                            })
+                          }
+                          style={{ display: 'none' }}
+                        />
+                        {t.name}
+                      </label>
+                    );
+                  })}
+                  {allTherapists.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-sm btn-outline"
+                      onClick={() =>
+                        setBulkForm({
+                          ...bulkForm,
+                          therapistIds:
+                            bulkForm.therapistIds.length === allTherapists.length
+                              ? []
+                              : allTherapists.map((t) => t.id),
+                        })
+                      }
+                    >
+                      {bulkForm.therapistIds.length === allTherapists.length
+                        ? 'Hiçbiri'
+                        : 'Tümünü Seç'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+              <button className="primary" onClick={() => void runBulkOpen()} disabled={bulkSaving}>
+                {bulkSaving ? '⏳…' : '✓ Slotları Aç'}
+              </button>
+              <button className="secondary" onClick={() => setBulkOpenModal(false)}>
                 İptal
               </button>
             </div>

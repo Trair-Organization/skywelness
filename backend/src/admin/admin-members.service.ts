@@ -743,7 +743,14 @@ export class AdminMembersService {
   /** Admin üye adına randevu oluşturur (telefonda arayan üye için) */
   async createReservationByAdmin(
     tenantId: string,
-    data: { trainerId: string; userId: string; date: string; startTime: string; endTime: string },
+    data: {
+      trainerId: string;
+      userId: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      notes?: string | null;
+    },
   ) {
     const trainer = await this.trainersRepo.findOne({ where: { id: data.trainerId, tenantId } });
     if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
@@ -781,7 +788,7 @@ export class AdminMembersService {
       startTime: startDateTime,
       endTime: endDateTime,
       status: ReservationStatus.CONFIRMED,
-      notes: 'Admin tarafından oluşturuldu',
+      notes: data.notes?.trim() || 'Admin tarafından oluşturuldu',
       timeSlotId: null as never,
       packageId: null as never,
     });
@@ -1264,6 +1271,7 @@ export class AdminMembersService {
       startTime: string;
       endTime?: string;
       serviceId?: string;
+      notes?: string | null;
     },
   ) {
     const therapist = await this.spaTherapistsRepo.findOne({
@@ -1321,9 +1329,13 @@ export class AdminMembersService {
       startTime: startDateTime,
       endTime: endDateTime,
       status: ReservationStatus.CONFIRMED,
-      notes: service
-        ? `Admin tarafından oluşturuldu - Masöz: ${therapist.name} - Hizmet: ${service.name}`
-        : `Admin tarafından oluşturuldu - Masöz: ${therapist.name}`,
+      notes: data.notes?.trim()
+        ? service
+          ? `${data.notes.trim()} | Masöz: ${therapist.name} - Hizmet: ${service.name}`
+          : `${data.notes.trim()} | Masöz: ${therapist.name}`
+        : service
+          ? `Admin tarafından oluşturuldu - Masöz: ${therapist.name} - Hizmet: ${service.name}`
+          : `Admin tarafından oluşturuldu - Masöz: ${therapist.name}`,
       timeSlotId: null as never,
       packageId: null as never,
     });
@@ -1407,8 +1419,177 @@ export class AdminMembersService {
   // ─── Birleşik Ajanda (Günlük Matris) ─────────────────────────────────────────
 
   /**
+   * Hızlı üye oluşturma — walk-in için. Sadece ad/soyad + telefon alır,
+   * email opsiyonel (boşsa deterministik placeholder üretilir).
+   */
+  async quickCreateMember(
+    tenantId: string,
+    data: { firstName: string; lastName: string; phone?: string | null; email?: string | null },
+  ) {
+    const firstName = data.firstName?.trim();
+    const lastName = data.lastName?.trim();
+    if (!firstName || !lastName) {
+      throw new BadRequestException('Ad ve soyad zorunlu');
+    }
+
+    const phone = (data.phone || '').trim() || null;
+    let email = (data.email || '').trim().toLowerCase();
+    if (!email) {
+      const slugBase = phone
+        ? phone.replace(/\D+/g, '')
+        : `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      email = `${slugBase || 'walkin'}-${Date.now().toString(36)}@walkin.local`;
+    }
+
+    const existing = await this.usersRepo.findOne({ where: { tenantId, email } });
+    if (existing) {
+      throw new BadRequestException('Bu e-posta adresi zaten kullanılıyor');
+    }
+
+    const tempPassword = `WI-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const username = email.split('@')[0];
+
+    const user = this.usersRepo.create({
+      tenantId,
+      email,
+      username,
+      passwordHash,
+      firstName,
+      lastName,
+      phone,
+      role: UserRole.MEMBER,
+      accountStatus: MemberAccountStatus.ACTIVE,
+    });
+    await this.usersRepo.save(user);
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+    };
+  }
+
+  /**
+   * Seçilen tüm eğitmen/masözlere belirtilen tarih aralığında belirli haftanın günlerinde
+   * saat aralığını 1 saatlik slotlar olarak açar. Idempotent.
+   */
+  async bulkOpenAvailability(
+    tenantId: string,
+    data: {
+      trainerIds?: string[];
+      therapistIds?: string[];
+      startDate: string;
+      endDate: string;
+      weekdays: number[];
+      startTime: string;
+      endTime: string;
+    },
+  ) {
+    const trainerIds = data.trainerIds ?? [];
+    const therapistIds = data.therapistIds ?? [];
+    if (trainerIds.length === 0 && therapistIds.length === 0) {
+      throw new BadRequestException('En az bir eğitmen veya masöz seçilmeli');
+    }
+
+    if (trainerIds.length > 0) {
+      const foundTrainers = await this.trainersRepo.find({
+        where: trainerIds.map((id) => ({ id, tenantId })),
+      });
+      if (foundTrainers.length !== trainerIds.length) {
+        throw new BadRequestException('Geçersiz eğitmen id');
+      }
+    }
+    if (therapistIds.length > 0) {
+      const foundTherapists = await this.spaTherapistsRepo.find({
+        where: therapistIds.map((id) => ({ id, tenantId })),
+      });
+      if (foundTherapists.length !== therapistIds.length) {
+        throw new BadRequestException('Geçersiz masöz id');
+      }
+    }
+
+    const startH = parseInt(data.startTime.split(':')[0], 10);
+    const endH = parseInt(data.endTime.split(':')[0], 10);
+    if (!(startH < endH)) {
+      throw new BadRequestException('Bitiş saati başlangıçtan büyük olmalı');
+    }
+
+    const rows: Availability[] = [];
+    const start = new Date(`${data.startDate}T00:00:00Z`);
+    const end = new Date(`${data.endDate}T00:00:00Z`);
+    const current = new Date(start);
+    while (current.getTime() <= end.getTime()) {
+      if (data.weekdays.includes(current.getUTCDay())) {
+        const dateStr = current.toISOString().slice(0, 10);
+        for (let h = startH; h < endH; h += 1) {
+          const ss = `${h.toString().padStart(2, '0')}:00`;
+          const se = `${(h + 1).toString().padStart(2, '0')}:00`;
+          for (const tId of trainerIds) {
+            rows.push(
+              this.availabilityRepo.create({
+                trainerId: tId,
+                spaTherapistId: null,
+                date: dateStr,
+                startTime: ss,
+                endTime: se,
+                available: true,
+              }),
+            );
+          }
+          for (const sId of therapistIds) {
+            rows.push(
+              this.availabilityRepo.create({
+                trainerId: null,
+                spaTherapistId: sId,
+                date: dateStr,
+                startTime: ss,
+                endTime: se,
+                available: true,
+              }),
+            );
+          }
+        }
+      }
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    if (rows.length === 0) return { created: 0 };
+
+    const dates = Array.from(new Set(rows.map((r) => r.date)));
+    const qb = this.availabilityRepo
+      .createQueryBuilder('a')
+      .where('a.date IN (:...dates)', { dates });
+    if (trainerIds.length > 0 && therapistIds.length > 0) {
+      qb.andWhere('(a.trainerId IN (:...trainers) OR a.spaTherapistId IN (:...therapists))', {
+        trainers: trainerIds,
+        therapists: therapistIds,
+      });
+    } else if (trainerIds.length > 0) {
+      qb.andWhere('a.trainerId IN (:...trainers)', { trainers: trainerIds });
+    } else {
+      qb.andWhere('a.spaTherapistId IN (:...therapists)', { therapists: therapistIds });
+    }
+    const existingRows = await qb.getMany();
+    const existingKeys = new Set(
+      existingRows.map(
+        (a) => `${a.trainerId ?? 'T:' + a.spaTherapistId}|${a.date}|${a.startTime.slice(0, 5)}`,
+      ),
+    );
+    const toInsert = rows.filter((r) => {
+      const key = `${r.trainerId ?? 'T:' + r.spaTherapistId}|${r.date}|${r.startTime.slice(0, 5)}`;
+      return !existingKeys.has(key);
+    });
+    if (toInsert.length === 0) return { created: 0 };
+    await this.availabilityRepo.save(toInsert);
+    return { created: toInsert.length };
+  }
+
+  /**
    * Günlük eğitmen matrisi: Tek bir tarih için tüm eğitmenlerin saat bazında durumu.
-   * Her hücre: { state: 'unavailable' | 'available' | 'booked', bookedBy?: {...}, availabilityId?, reservationId? }
+   * Her hücre: { state: 'available' | 'booked', bookedBy?: {...}, availabilityId?, reservationId? }
    */
   async listDailyTrainerGrid(tenantId: string, date: string) {
     const trainers = await this.trainersRepo.find({

@@ -575,6 +575,35 @@ export class AdminController {
 
   // ─── Birleşik Günlük Ajanda ──────────────────────────────────────────────────
 
+  @Post('members/quick-create')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  quickCreateMember(
+    @CurrentUser() admin: User,
+    @Body() body: { firstName: string; lastName: string; phone?: string; email?: string },
+  ) {
+    return this.adminMembers.quickCreateMember(admin.tenantId, body);
+  }
+
+  @Post('schedule/bulk-open')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  bulkOpenAvailability(
+    @CurrentUser() admin: User,
+    @Body()
+    body: {
+      trainerIds?: string[];
+      therapistIds?: string[];
+      startDate: string;
+      endDate: string;
+      weekdays: number[];
+      startTime: string;
+      endTime: string;
+    },
+  ) {
+    return this.adminMembers.bulkOpenAvailability(admin.tenantId, body);
+  }
+
   @Get('schedule/daily/trainers')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)

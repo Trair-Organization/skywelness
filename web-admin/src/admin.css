@@ -3676,3 +3676,11 @@ button.primary:disabled {
   font-size: 0.82rem;
   color: var(--muted);
 }
+
+/* ─── Bulk resource selector ─────────────────────────────────────────────── */
+.bulk-resource-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
