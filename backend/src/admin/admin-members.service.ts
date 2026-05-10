@@ -1403,4 +1403,194 @@ export class AdminMembersService {
 
     return { ok: true as const };
   }
+
+  // ─── Birleşik Ajanda (Günlük Matris) ─────────────────────────────────────────
+
+  /**
+   * Günlük eğitmen matrisi: Tek bir tarih için tüm eğitmenlerin saat bazında durumu.
+   * Her hücre: { state: 'unavailable' | 'available' | 'booked', bookedBy?: {...}, availabilityId?, reservationId? }
+   */
+  async listDailyTrainerGrid(tenantId: string, date: string) {
+    const trainers = await this.trainersRepo.find({
+      where: { tenantId },
+      relations: ['user'],
+      order: { createdAt: 'ASC' },
+    });
+    if (trainers.length === 0) {
+      return { date, resources: [], grid: {} as Record<string, Record<string, unknown>> };
+    }
+
+    const trainerIds = trainers.map((t) => t.id);
+    const availabilities = await this.availabilityRepo
+      .createQueryBuilder('a')
+      .where('a.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('a.date = :date', { date })
+      .getMany();
+
+    const dayStart = new Date(`${date}T00:00:00Z`);
+    const dayEnd = new Date(`${date}T23:59:59Z`);
+    const reservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :from AND r.startTime < :to', { from: dayStart, to: dayEnd })
+      .getMany();
+
+    const grid: Record<string, Record<string, unknown>> = {};
+    for (const t of trainers) grid[t.id] = {};
+    for (const a of availabilities) {
+      const key = a.startTime.slice(0, 5);
+      if (!a.trainerId || !grid[a.trainerId]) continue;
+      grid[a.trainerId][key] = {
+        state: 'available',
+        availabilityId: a.id,
+        endTime: a.endTime.slice(0, 5),
+      };
+    }
+    for (const r of reservations) {
+      if (!r.trainerId) continue;
+      const key = new Date(r.startTime).toISOString().slice(11, 16);
+      grid[r.trainerId][key] = {
+        state: 'booked',
+        reservationId: r.id,
+        endTime: new Date(r.endTime).toISOString().slice(11, 16),
+        bookedBy: r.user
+          ? {
+              firstName: r.user.firstName,
+              lastName: r.user.lastName,
+              phone: r.user.phone,
+              status: r.status,
+            }
+          : null,
+      };
+    }
+
+    return {
+      date,
+      resources: trainers.map((t) => ({
+        id: t.id,
+        kind: 'trainer' as const,
+        name: `${t.user.firstName} ${t.user.lastName}`.trim(),
+        photoUrl: t.photoUrl,
+      })),
+      grid,
+    };
+  }
+
+  /**
+   * Günlük masöz matrisi: Tek bir tarih için tüm masözlerin saat bazında durumu.
+   */
+  async listDailyTherapistGrid(tenantId: string, date: string) {
+    const therapists = await this.spaTherapistsRepo.find({
+      where: { tenantId, active: true },
+      order: { name: 'ASC' },
+    });
+    if (therapists.length === 0) {
+      return { date, resources: [], grid: {} as Record<string, Record<string, unknown>> };
+    }
+
+    const ids = therapists.map((t) => t.id);
+    const availabilities = await this.availabilityRepo
+      .createQueryBuilder('a')
+      .where('a.spaTherapistId IN (:...ids)', { ids })
+      .andWhere('a.date = :date', { date })
+      .getMany();
+
+    const dayStart = new Date(`${date}T00:00:00Z`);
+    const dayEnd = new Date(`${date}T23:59:59Z`);
+    const reservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .leftJoinAndSelect('r.spaService', 's')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.spaTherapistId IN (:...ids)', { ids })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :from AND r.startTime < :to', { from: dayStart, to: dayEnd })
+      .getMany();
+
+    const grid: Record<string, Record<string, unknown>> = {};
+    for (const t of therapists) grid[t.id] = {};
+    for (const a of availabilities) {
+      const key = a.startTime.slice(0, 5);
+      if (!a.spaTherapistId || !grid[a.spaTherapistId]) continue;
+      grid[a.spaTherapistId][key] = {
+        state: 'available',
+        availabilityId: a.id,
+        endTime: a.endTime.slice(0, 5),
+      };
+    }
+    for (const r of reservations) {
+      if (!r.spaTherapistId) continue;
+      const key = new Date(r.startTime).toISOString().slice(11, 16);
+      grid[r.spaTherapistId][key] = {
+        state: 'booked',
+        reservationId: r.id,
+        endTime: new Date(r.endTime).toISOString().slice(11, 16),
+        serviceName: r.spaService?.name ?? null,
+        bookedBy: r.user
+          ? {
+              firstName: r.user.firstName,
+              lastName: r.user.lastName,
+              phone: r.user.phone,
+              status: r.status,
+            }
+          : null,
+      };
+    }
+
+    return {
+      date,
+      resources: therapists.map((t) => ({
+        id: t.id,
+        kind: 'therapist' as const,
+        name: t.name,
+        photoUrl: t.photoUrl,
+        specialties: t.specialties,
+      })),
+      grid,
+    };
+  }
+
+  /**
+   * Günlük özet KPI: bugün toplam/müsait/dolu slot, doluluk oranı, kaynak sayısı.
+   */
+  async getDailyScheduleSummary(tenantId: string, date: string) {
+    const [trainerGrid, therapistGrid] = await Promise.all([
+      this.listDailyTrainerGrid(tenantId, date),
+      this.listDailyTherapistGrid(tenantId, date),
+    ]);
+
+    const summarize = (g: {
+      resources: { id: string }[];
+      grid: Record<string, Record<string, unknown>>;
+    }) => {
+      let available = 0;
+      let booked = 0;
+      for (const r of g.resources) {
+        const cells = g.grid[r.id] ?? {};
+        for (const cell of Object.values(cells)) {
+          const state = (cell as { state?: string })?.state;
+          if (state === 'available') available += 1;
+          else if (state === 'booked') booked += 1;
+        }
+      }
+      const total = available + booked;
+      return { resourceCount: g.resources.length, available, booked, total };
+    };
+
+    const trainerSummary = summarize(trainerGrid);
+    const therapistSummary = summarize(therapistGrid);
+    const grandTotal = trainerSummary.total + therapistSummary.total;
+    const grandBooked = trainerSummary.booked + therapistSummary.booked;
+    return {
+      date,
+      trainers: trainerSummary,
+      therapists: therapistSummary,
+      total: grandTotal,
+      totalBooked: grandBooked,
+      occupancyRate: grandTotal === 0 ? 0 : Math.round((grandBooked / grandTotal) * 100),
+    };
+  }
 }

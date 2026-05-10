@@ -13,7 +13,7 @@ import { TrainersManagementPage } from './pages/TrainersManagementPage';
 import { TherapistsPage } from './pages/TherapistsPage';
 import { SpaManagementPage } from './pages/SpaManagementPage';
 import { PackageTypesPage } from './pages/PackageTypesPage';
-import { ScheduleManagementPage } from './pages/ScheduleManagementPage';
+import { UnifiedSchedulePage } from './pages/UnifiedSchedulePage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
@@ -54,7 +54,7 @@ function AppRoutes() {
         <Route path="/trainers" element={<TrainersManagementPage />} />
         <Route path="/therapists" element={<TherapistsPage />} />
         <Route path="/packages" element={<PackageTypesPage />} />
-        <Route path="/schedule" element={<ScheduleManagementPage />} />
+        <Route path="/schedule" element={<UnifiedSchedulePage />} />
         <Route path="/spa" element={<SpaManagementPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />

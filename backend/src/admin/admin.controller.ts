@@ -572,4 +572,30 @@ export class AdminController {
       body.therapistId,
     );
   }
+
+  // ─── Birleşik Günlük Ajanda ──────────────────────────────────────────────────
+
+  @Get('schedule/daily/trainers')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  dailyTrainerGrid(@CurrentUser() admin: User, @Query('date') date: string) {
+    if (!date) throw new BadRequestException('date zorunlu');
+    return this.adminMembers.listDailyTrainerGrid(admin.tenantId, date);
+  }
+
+  @Get('schedule/daily/therapists')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  dailyTherapistGrid(@CurrentUser() admin: User, @Query('date') date: string) {
+    if (!date) throw new BadRequestException('date zorunlu');
+    return this.adminMembers.listDailyTherapistGrid(admin.tenantId, date);
+  }
+
+  @Get('schedule/daily/summary')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  dailyScheduleSummary(@CurrentUser() admin: User, @Query('date') date: string) {
+    if (!date) throw new BadRequestException('date zorunlu');
+    return this.adminMembers.getDailyScheduleSummary(admin.tenantId, date);
+  }
 }
