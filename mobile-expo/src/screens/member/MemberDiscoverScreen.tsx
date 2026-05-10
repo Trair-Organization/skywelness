@@ -287,9 +287,9 @@ export function MemberDiscoverScreen() {
                   </Text>
                   <Pressable
                     style={styles.msgBtn}
-                    onPress={() =>
-                      showToast('Mesaj göndermek için eğitmenin kulübüne üye olmalısınız', 'info')
-                    }
+                    onPress={() => {
+                      showToast('Eğitmene mesaj göndermek için Kulüp sekmesini kullanın', 'info');
+                    }}
                   >
                     <Text style={styles.msgBtnTxt}>💬 Mesaj</Text>
                   </Pressable>
