@@ -188,6 +188,13 @@ export class AdminController {
     return this.bookingService.listPendingMassageReservations(admin.tenantId);
   }
 
+  @Get('package-requests')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listPackageRequests(@CurrentUser() admin: User) {
+    return this.bookingService.listPackageRequests(admin.tenantId);
+  }
+
   @Post('reservation-requests/:reservationId/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
