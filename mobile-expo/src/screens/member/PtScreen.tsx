@@ -182,6 +182,7 @@ export function PtScreen() {
   // Trainer filter
   const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
   const [allTrainers, setAllTrainers] = useState<Array<{ id: string; name: string }>>([]);
+  const [showServicesDropdown, setShowServicesDropdown] = useState(false);
 
   const opts = useMemo(
     () => ({ token: token ?? undefined, tenantSubdomain: tenant?.subdomain }),
@@ -502,22 +503,47 @@ export function PtScreen() {
           </View>
         )}
 
-        {/* ═══ 4. Eğitmenlerimiz (always visible) ═══ */}
-        <View style={styles.servicesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Eğitmenlerimiz</Text>
-            <Text style={styles.sectionBadge}>{allTrainers.length}</Text>
-          </View>
-          <View style={styles.servicesGrid}>
-            {allTrainers.map((t) => (
-              <GlassCard key={t.id} style={styles.serviceCard}>
-                <View style={styles.serviceTop}>
-                  <Text style={styles.serviceIcon}>🏋️</Text>
-                </View>
-                <Text style={styles.serviceName}>{t.name}</Text>
-              </GlassCard>
-            ))}
-          </View>
+        {/* ═══ 4. Eğitmen Seçin Dropdown ═══ */}
+        <View style={styles.dropdown}>
+          <Pressable
+            style={styles.dropdownHeader}
+            onPress={() => setShowServicesDropdown(!showServicesDropdown)}
+          >
+            <Text style={[styles.dropdownLabel, !selectedTrainerId && styles.dropdownLabelMuted]}>
+              {selectedTrainerId
+                ? `🏋️ ${allTrainers.find((t) => t.id === selectedTrainerId)?.name ?? 'Eğitmen'}`
+                : 'Eğitmen Seçin'}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showServicesDropdown ? '▲' : '▼'}</Text>
+          </Pressable>
+          {showServicesDropdown && (
+            <View style={styles.dropdownList}>
+              <Pressable
+                style={[styles.dropdownItem, !selectedTrainerId && styles.dropdownItemActive]}
+                onPress={() => {
+                  setSelectedTrainerId(null);
+                  setShowServicesDropdown(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>Tüm Eğitmenler</Text>
+              </Pressable>
+              {allTrainers.map((t) => (
+                <Pressable
+                  key={t.id}
+                  style={[
+                    styles.dropdownItem,
+                    selectedTrainerId === t.id && styles.dropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedTrainerId(t.id);
+                    setShowServicesDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>🏋️ {t.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ═══ 5. Date Strip ═══ */}
@@ -547,52 +573,6 @@ export function PtScreen() {
             </Pressable>
           ))}
         </ScrollView>
-
-        {/* ═══ 6. Eğitmen Filtresi ═══ */}
-        {uniqueTrainers.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.therapistFilterContainer}
-            style={styles.therapistFilterScroll}
-          >
-            <Pressable
-              style={[
-                styles.therapistChip,
-                selectedTrainerId === null && styles.therapistChipActive,
-              ]}
-              onPress={() => setSelectedTrainerId(null)}
-            >
-              <Text
-                style={[
-                  styles.therapistChipText,
-                  selectedTrainerId === null && styles.therapistChipTextActive,
-                ]}
-              >
-                Tümü
-              </Text>
-            </Pressable>
-            {uniqueTrainers.map((t) => (
-              <Pressable
-                key={t.id}
-                style={[
-                  styles.therapistChip,
-                  selectedTrainerId === t.id && styles.therapistChipActive,
-                ]}
-                onPress={() => setSelectedTrainerId(t.id)}
-              >
-                <Text
-                  style={[
-                    styles.therapistChipText,
-                    selectedTrainerId === t.id && styles.therapistChipTextActive,
-                  ]}
-                >
-                  {t.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
 
         {/* ═══ 7. Available Slots (filtered) ═══ */}
         <View style={styles.sectionHeader}>
@@ -934,6 +914,41 @@ const styles = StyleSheet.create({
 
   // Section
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+
+  // Dropdown
+  dropdown: { marginBottom: 12 },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(148,163,184,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.12)',
+    borderRadius: 14,
+    padding: 14,
+  },
+  dropdownLabel: { fontSize: 14, fontWeight: '600', color: premium.text },
+  dropdownLabelMuted: { color: premium.textMuted },
+  dropdownArrow: { fontSize: 14, color: premium.textMuted },
+  dropdownList: {
+    marginTop: 4,
+    backgroundColor: 'rgba(15,23,42,0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.15)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(148,163,184,0.1)',
+  },
+  dropdownItemText: { fontSize: 14, fontWeight: '600', color: premium.text },
+  dropdownItemActive: { backgroundColor: 'rgba(56,189,248,0.08)' },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: premium.text },
   sectionBadge: {
     fontSize: 11,
