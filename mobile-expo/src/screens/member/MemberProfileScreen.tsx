@@ -181,6 +181,28 @@ export function MemberProfileScreen() {
         </GlassCard>
 
         <GlassCard style={styles.card}>
+          <Text style={styles.cardTitle}>Hızlı Erişim</Text>
+          <Pressable
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={() => navigation.navigate('Reservations')}
+          >
+            <Text style={styles.btnOutlineTxt}>📅 Rezervasyonlarım</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={() => navigation.navigate('Messages')}
+          >
+            <Text style={styles.btnOutlineTxt}>💬 Mesajlarım</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnOutline, pressed && styles.btnOutlinePressed]}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <Text style={styles.btnOutlineTxt}>🔔 Bildirimlerim</Text>
+          </Pressable>
+        </GlassCard>
+
+        <GlassCard style={styles.card}>
           <Text style={styles.cardTitle}>{t('profile.contractsTitle')}</Text>
           <Text style={styles.muted}>{t('profile.contractsBody')}</Text>
           <Pressable

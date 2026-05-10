@@ -22,13 +22,16 @@ type ReservationRow = {
   status: string;
   startTime: string;
   endTime: string;
-  trainer: { user: { firstName: string; lastName: string } };
-  timeSlot: { id: string; startTime: string; endTime: string };
+  trainer: { user: { firstName: string; lastName: string } } | null;
+  timeSlot: { id: string; startTime: string; endTime: string } | null;
   package: {
     remainingSessions: number;
     status: string;
     packageType?: { id: string; name: string; sessionType: string };
-  };
+    packageTypeName?: string;
+  } | null;
+  spaTherapist?: { id: string; name: string } | null;
+  spaService?: { id: string; name: string; durationMinutes: number } | null;
 };
 
 function fmt(iso: string) {

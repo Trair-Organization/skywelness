@@ -242,16 +242,25 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const completeSignIn = useCallback(async (res: AuthRes, ten: TenantInfo) => {
+    console.log('[AUTH] completeSignIn start', {
+      hasRefresh: !!res.refreshToken,
+      tenant: ten.subdomain,
+    });
     setToken(res.accessToken);
     setUser(res.user);
     setPassword('');
-    await saveMemberSession({
-      accessToken: res.accessToken,
-      refreshToken: res.refreshToken,
-      tenantSubdomain: ten.subdomain,
-      tenant: ten,
-      user: res.user,
-    });
+    try {
+      await saveMemberSession({
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+        tenantSubdomain: ten.subdomain,
+        tenant: ten,
+        user: res.user,
+      });
+      console.log('[AUTH] completeSignIn done');
+    } catch (e) {
+      console.error('[AUTH] saveMemberSession failed', e);
+    }
   }, []);
 
   const refreshMe = useCallback(async () => {
@@ -317,8 +326,15 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
           password: normalizedPassword,
         }),
       });
+      console.log('[AUTH] login response', {
+        hasToken: !!res.accessToken,
+        hasRefresh: !!res.refreshToken,
+        sub: res.tenantSubdomain,
+        role: res.user?.role,
+      });
       const resolvedSub = (res.tenantSubdomain ?? '').trim().toLowerCase();
       if (!resolvedSub) {
+        console.warn('[AUTH] tenantSubdomain missing in login response');
         Alert.alert(t('login.section'), t('login.failed'));
         return;
       }
@@ -326,10 +342,12 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
         `/tenants/by-subdomain/${encodeURIComponent(resolvedSub)}`,
         { auth: false },
       );
+      console.log('[AUTH] tenant info loaded', tenantInfo.subdomain);
       setTenant(tenantInfo);
       setSubdomain(resolvedSub);
       await completeSignIn(res, tenantInfo);
     } catch (e) {
+      console.error('[AUTH] login flow failed', e);
       Alert.alert(
         t('login.section'),
         e instanceof ApiError

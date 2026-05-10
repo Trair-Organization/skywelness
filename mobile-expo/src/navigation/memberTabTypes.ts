@@ -1,14 +1,16 @@
 export type MemberTabParamList = {
-  Home: undefined;
   Discover: undefined;
-  Messages: undefined;
-  Massage: undefined;
+  ClubHome: undefined;
+  Spa: undefined;
+  PT: undefined;
   Profile: undefined;
   // Hidden routes
+  Messages: undefined;
   Chat: {
     conversationId: string;
     otherUser: { id: string; firstName: string; lastName: string; photoUrl: string | null };
   };
   Legal: { type: 'privacy' | 'terms' };
   Notifications: undefined;
+  Reservations: undefined;
 };

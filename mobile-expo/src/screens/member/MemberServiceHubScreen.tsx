@@ -64,12 +64,14 @@ type HubReservation = {
   sessionType: string;
   startTime: string;
   endTime: string;
-  trainer: { user: { firstName: string; lastName: string } };
+  trainer: { user: { firstName: string; lastName: string } } | null;
   package: {
     remainingSessions: number;
     status: string;
     packageTypeName: string;
-  };
+  } | null;
+  spaTherapist?: { id: string; name: string } | null;
+  spaService?: { id: string; name: string; durationMinutes: number } | null;
 };
 
 const TAB_BAR_PAD = 72;

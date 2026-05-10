@@ -8,10 +8,12 @@ import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
 import { MemberDiscoverScreen } from '../screens/member/MemberDiscoverScreen';
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
+import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
 import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import { LegalScreen } from '../screens/member/LegalScreen';
 import { SpaScreen } from '../screens/member/SpaScreen';
+import { MemberSpecialLessonsScreen } from '../screens/member/MemberServiceHubScreen';
 import type { MemberTabParamList } from './memberTabTypes';
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
@@ -57,24 +59,21 @@ export function MemberTabNavigator() {
         tabBarStyle: {
           backgroundColor: '#070d18',
           borderTopColor: 'rgba(148,163,184,0.22)',
-          paddingTop: 4,
-          height: Platform.OS === 'ios' ? 84 : 64,
+          paddingTop: 6,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          height: Platform.OS === 'ios' ? 88 : 68,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '700',
-          marginBottom: Platform.OS === 'ios' ? 2 : 4,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
         },
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={MemberHomeScreen}
-        options={{
-          tabBarLabel: t('tabs.home'),
-          tabBarIcon: ({ focused }) => tabIcon('🏠', focused),
-        }}
-      />
       <Tab.Screen
         name="Discover"
         component={MemberDiscoverScreen}
@@ -84,37 +83,57 @@ export function MemberTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Messages"
-        component={MessagesScreen}
+        name="ClubHome"
+        component={MemberHomeScreen}
         options={{
-          tabBarLabel: t('tabs.messages'),
-          tabBarIcon: ({ focused }) => tabIcon('💬', focused),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 10, fontWeight: '800' },
+          tabBarLabel: 'Kulübüm',
+          tabBarIcon: ({ focused }) => tabIcon('🏠', focused),
         }}
       />
       <Tab.Screen
-        name="Massage"
+        name="Spa"
         component={SpaScreen}
         options={{
           tabBarLabel: 'Spa',
-          tabBarIcon: ({ focused }) => tabIcon('🧖', focused),
+          tabBarIcon: ({ focused }) => tabIcon('💆', focused),
+        }}
+      />
+      <Tab.Screen
+        name="PT"
+        component={MemberSpecialLessonsScreen}
+        options={{
+          tabBarLabel: 'PT',
+          tabBarIcon: ({ focused }) => tabIcon('🏋️', focused),
         }}
       />
       <Tab.Screen
         name="Profile"
         component={MemberProfileScreen}
         options={{
-          tabBarLabel: t('tabs.profile'),
+          tabBarLabel: 'Profil',
           tabBarIcon: ({ focused }) => tabIcon('👤', focused),
         }}
       />
       {/* Hidden routes (no tab bar button) */}
+      <Tab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 10, fontWeight: '800' },
+        }}
+      />
       <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Legal" component={LegalScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen
         name="Notifications"
         component={MemberNotificationsScreen}
+        options={{ tabBarButton: () => null }}
+      />
+      <Tab.Screen
+        name="Reservations"
+        component={MemberReservationsScreen}
         options={{ tabBarButton: () => null }}
       />
     </Tab.Navigator>
@@ -123,13 +142,13 @@ export function MemberTabNavigator() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    fontSize: 18,
-    marginBottom: -2,
+    fontSize: 20,
+    marginBottom: 0,
   },
   tabIconActive: {
     opacity: 1,
   },
   tabIconInactive: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
 });
