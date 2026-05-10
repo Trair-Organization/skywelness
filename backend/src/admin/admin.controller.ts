@@ -454,4 +454,73 @@ export class AdminController {
       body.workingHours,
     );
   }
+
+  // ─── Masöz Takvim (Eğitmenlerle aynı mantık) ─────────────────────────────────
+
+  @Get('therapists/:therapistId/calendar')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTherapistCalendar(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.adminMembers.listTherapistCalendar(admin.tenantId, therapistId, from, to);
+  }
+
+  @Post('therapists/:therapistId/calendar')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  addTherapistAvailability(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+    @Body() body: { date: string; startTime: string; endTime: string },
+  ) {
+    return this.adminMembers.addTherapistAvailability(admin.tenantId, therapistId, body);
+  }
+
+  @Post('therapists/:therapistId/calendar/bulk')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  bulkAddTherapistAvailability(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+    @Body()
+    body: {
+      startDate: string;
+      endDate: string;
+      weekdays: number[];
+      startTime: string;
+      endTime: string;
+    },
+  ) {
+    return this.adminMembers.bulkAddTherapistAvailability(admin.tenantId, therapistId, body);
+  }
+
+  @Delete('therapists/:therapistId/calendar/:availabilityId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deleteTherapistAvailability(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+    @Param('availabilityId', new ParseUUIDPipe({ version: '4' })) availabilityId: string,
+  ) {
+    return this.adminMembers.deleteTherapistAvailability(
+      admin.tenantId,
+      therapistId,
+      availabilityId,
+    );
+  }
+
+  @Delete('therapists/:therapistId/calendar-day')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  clearTherapistDay(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+    @Query('date') date: string,
+  ) {
+    return this.adminMembers.clearTherapistDay(admin.tenantId, therapistId, date);
+  }
 }

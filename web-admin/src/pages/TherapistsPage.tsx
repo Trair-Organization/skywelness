@@ -14,11 +14,34 @@ type TherapistRow = {
   totalSessions: number;
   active: boolean;
 };
+type AvailabilityRow = {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  available: boolean;
+  booked: boolean;
+  bookedBy: {
+    reservationId: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    status: string;
+  } | null;
+};
 
 const DAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
-const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const WEEKDAY_NUMS = [1, 2, 3, 4, 5, 6, 0];
+const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
+  const h = 6 + i;
+  return {
+    start: `${h.toString().padStart(2, '0')}:00`,
+    end: `${(h + 1).toString().padStart(2, '0')}:00`,
+    label: `${h.toString().padStart(2, '0')}:00-${(h + 1).toString().padStart(2, '0')}:00`,
+  };
+});
 
-type ViewMode = 'list' | 'schedule';
+type ViewMode = 'list' | 'calendar';
 
 export function TherapistsPage() {
   const [therapists, setTherapists] = useState<TherapistRow[]>([]);
@@ -33,10 +56,28 @@ export function TherapistsPage() {
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', bio: '', specialties: '', photoUrl: '' });
 
-  // Ajanda
+  // Calendar
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [scheduleTherapist, setScheduleTherapist] = useState<TherapistRow | null>(null);
-  const [therapistHours, setTherapistHours] = useState<Record<string, string>>({});
+  const [calendarTherapist, setCalendarTherapist] = useState<TherapistRow | null>(null);
+  const [schedule, setSchedule] = useState<AvailabilityRow[]>([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [cellPopup, setCellPopup] = useState<{
+    date: string;
+    start: string;
+    end: string;
+    hasSlot: boolean;
+  } | null>(null);
+  const [showBulkForm, setShowBulkForm] = useState(false);
+  const [bulkForm, setBulkForm] = useState({
+    startDate: '',
+    endDate: '',
+    weekdays: [1, 2, 3, 4, 5, 6] as number[],
+    startTime: '10:00',
+    endTime: '20:00',
+    slotDuration: 60,
+  });
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,7 +102,6 @@ export function TherapistsPage() {
     setForm({ name: '', phone: '', bio: '', specialties: '', photoUrl: '' });
     setEditId(null);
   }
-
   function openEdit(t: TherapistRow) {
     setForm({
       name: t.name,
@@ -81,16 +121,14 @@ export function TherapistsPage() {
       fd.append('file', file);
       const base = apiBaseUrl();
       const res = await fetch(`${base}/auth/upload-image`, { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) throw new Error('fail');
       const body = (await res.json()) as { url?: string };
       if (body.url) {
-        const serverBase = base.replace('/api/v1', '');
+        const sb = base.replace('/api/v1', '');
         setForm((prev) => ({
           ...prev,
-          photoUrl: body.url!.startsWith('http') ? body.url! : `${serverBase}${body.url}`,
+          photoUrl: body.url!.startsWith('http') ? body.url! : `${sb}${body.url}`,
         }));
-        setSuccess('✅ Fotoğraf yüklendi');
-        setTimeout(() => setSuccess(null), 2000);
       }
     } catch {
       setError('Fotoğraf yüklenemedi');
@@ -121,10 +159,10 @@ export function TherapistsPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        setSuccess('✅ Masöz güncellendi');
+        setSuccess('✅ Güncellendi');
       } else {
         await apiJson('/spa/admin/therapists', { method: 'POST', body: JSON.stringify(payload) });
-        setSuccess('✅ Masöz eklendi');
+        setSuccess('✅ Eklendi');
       }
       setShowForm(false);
       resetForm();
@@ -138,17 +176,10 @@ export function TherapistsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Bu masözü silmek istediğinize emin misiniz?')) return;
-    try {
-      await apiJson(`/spa/admin/therapists/${id}`, { method: 'DELETE' });
-      await load();
-      setSuccess('✅ Silindi');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Silinemedi');
-    }
+    if (!confirm('Silmek istediğinize emin misiniz?')) return;
+    await apiJson(`/spa/admin/therapists/${id}`, { method: 'DELETE' });
+    await load();
   }
-
   async function toggleActive(t: TherapistRow) {
     await apiJson(`/spa/admin/therapists/${t.id}`, {
       method: 'PATCH',
@@ -157,33 +188,124 @@ export function TherapistsPage() {
     await load();
   }
 
-  // ─── AJANDA ───────────────────────────────────────────────────────────────────
-  function openSchedule(t: TherapistRow) {
-    setScheduleTherapist(t);
-    setTherapistHours(t.workingHours || {});
-    setViewMode('schedule');
+  // ─── CALENDAR ─────────────────────────────────────────────────────────────────
+  function getWeekRange(offset: number) {
+    const now = new Date();
+    const mon = new Date(now);
+    const dow = now.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    mon.setDate(now.getDate() + diff + offset * 7);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return {
+      from: mon.toISOString().slice(0, 10),
+      to: sun.toISOString().slice(0, 10),
+      label: `${mon.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - ${sun.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`,
+    };
+  }
+  function getWeekDays(offset: number) {
+    const now = new Date();
+    const mon = new Date(now);
+    const dow = now.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    mon.setDate(now.getDate() + diff + offset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      return { date: d.toISOString().slice(0, 10), label: DAYS[i], dayNum: d.getDate() };
+    });
   }
 
-  async function saveSchedule() {
-    if (!scheduleTherapist) return;
+  function openCalendar(t: TherapistRow) {
+    setCalendarTherapist(t);
+    setViewMode('calendar');
+    setWeekOffset(0);
+    void loadCalendar(t.id, 0);
+  }
+
+  async function loadCalendar(therapistId: string, offset: number) {
+    setLoadingSchedule(true);
+    const { from, to } = getWeekRange(offset);
     try {
-      await apiJson(`/admin/therapists/${scheduleTherapist.id}/schedule`, {
-        method: 'PATCH',
-        body: JSON.stringify({ workingHours: therapistHours }),
-      });
-      setSuccess('✅ Çalışma saatleri kaydedildi');
-      setViewMode('list');
-      await load();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Kaydedilemedi');
+      const data = await apiJson<AvailabilityRow[]>(
+        `/admin/therapists/${therapistId}/calendar?from=${from}&to=${to}`,
+      );
+      setSchedule(data);
+    } catch {
+      setSchedule([]);
+    } finally {
+      setLoadingSchedule(false);
     }
   }
 
+  function changeWeek(dir: number) {
+    const next = weekOffset + dir;
+    setWeekOffset(next);
+    if (calendarTherapist) void loadCalendar(calendarTherapist.id, next);
+  }
+
+  async function toggleSlot(date: string, startTime: string, endTime: string) {
+    if (!calendarTherapist) return;
+    const existing = schedule.find(
+      (s) => s.date.slice(0, 10) === date && s.startTime.slice(0, 5) === startTime,
+    );
+    if (existing) {
+      await apiJson(`/admin/therapists/${calendarTherapist.id}/calendar/${existing.id}`, {
+        method: 'DELETE',
+      });
+    } else {
+      await apiJson(`/admin/therapists/${calendarTherapist.id}/calendar`, {
+        method: 'POST',
+        body: JSON.stringify({ date, startTime, endTime }),
+      });
+    }
+    void loadCalendar(calendarTherapist.id, weekOffset);
+  }
+
+  async function clearDay(date: string) {
+    if (!calendarTherapist || !confirm('Günü temizle?')) return;
+    await apiJson(`/admin/therapists/${calendarTherapist.id}/calendar-day?date=${date}`, {
+      method: 'DELETE',
+    });
+    void loadCalendar(calendarTherapist.id, weekOffset);
+  }
+
+  async function bulkAdd() {
+    if (!calendarTherapist) return;
+    setBulkSaving(true);
+    try {
+      const startH = parseInt(bulkForm.startTime.split(':')[0]);
+      const endH = parseInt(bulkForm.endTime.split(':')[0]);
+      let total = 0;
+      for (let h = startH; h < endH; h += bulkForm.slotDuration / 60) {
+        const ss = `${Math.floor(h).toString().padStart(2, '0')}:00`;
+        const se = `${Math.floor(h + bulkForm.slotDuration / 60)
+          .toString()
+          .padStart(2, '0')}:00`;
+        const res = await apiJson<{ created: number }>(
+          `/admin/therapists/${calendarTherapist.id}/calendar/bulk`,
+          { method: 'POST', body: JSON.stringify({ ...bulkForm, startTime: ss, endTime: se }) },
+        );
+        total += res.created;
+      }
+      setSuccess(`✅ ${total} slot oluşturuldu`);
+      setShowBulkForm(false);
+      void loadCalendar(calendarTherapist.id, weekOffset);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Hata');
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  const weekRange = getWeekRange(weekOffset);
+  const weekDays = getWeekDays(weekOffset);
+
   // ═══════════════════════════════════════════════════════════════════════════════
-  // AJANDA GÖRÜNÜMÜ
+  // CALENDAR VIEW
   // ═══════════════════════════════════════════════════════════════════════════════
-  if (viewMode === 'schedule' && scheduleTherapist) {
+  if (viewMode === 'calendar' && calendarTherapist) {
     return (
       <div className="dashboard-page">
         <div className="dashboard-header">
@@ -191,88 +313,257 @@ export function TherapistsPage() {
             <button className="btn-back" onClick={() => setViewMode('list')}>
               ← Masözlere Dön
             </button>
-            <h1 className="dashboard-title">{scheduleTherapist.name} — Çalışma Saatleri</h1>
+            <h1 className="dashboard-title">{calendarTherapist.name} — Ajanda</h1>
             <p className="dashboard-subtitle">
-              Her gün için çalışma saatlerini belirleyin. Kullanıcılar sadece bu saatler içinde
-              randevu alabilir.
+              Müsait saatleri belirleyin. Hücrelere tıklayarak ekle/kaldır.
             </p>
           </div>
-          <button className="btn-primary-lg" onClick={() => void saveSchedule()}>
-            💾 Kaydet
+          <button className="btn-primary-lg" onClick={() => setShowBulkForm(true)}>
+            📋 Haftalık Program Oluştur
           </button>
         </div>
-
         {error && <p className="error">{error}</p>}
         {success && <p className="success-msg">{success}</p>}
 
-        <div className="schedule-info-banner">
-          <span>💡</span>
-          <p>
-            Format: <code>10:00-20:00</code> — Boş bırakırsanız o gün kapalı olur. Birden fazla
-            aralık: <code>09:00-12:00, 14:00-20:00</code>
-          </p>
-        </div>
-
-        <div className="therapist-schedule-edit-grid">
-          {DAY_KEYS.map((key, i) => (
-            <div key={key} className="schedule-day-card">
-              <div className="schedule-day-label">{DAYS[i]}</div>
-              <input
-                type="text"
-                value={therapistHours[key] || ''}
-                onChange={(e) => setTherapistHours({ ...therapistHours, [key]: e.target.value })}
-                placeholder="Kapalı"
-                className="schedule-day-input"
-              />
-              <div className="schedule-day-status">
-                {therapistHours[key] ? (
-                  <span className="text-green">● Açık</span>
-                ) : (
-                  <span className="text-red">● Kapalı</span>
-                )}
+        {showBulkForm && (
+          <div className="bulk-form-card">
+            <h4>📋 Toplu Program Oluştur</h4>
+            <div className="form-grid">
+              <label>
+                Başlangıç{' '}
+                <input
+                  type="date"
+                  value={bulkForm.startDate}
+                  onChange={(e) => setBulkForm({ ...bulkForm, startDate: e.target.value })}
+                />
+              </label>
+              <label>
+                Bitiş{' '}
+                <input
+                  type="date"
+                  value={bulkForm.endDate}
+                  onChange={(e) => setBulkForm({ ...bulkForm, endDate: e.target.value })}
+                />
+              </label>
+              <label>
+                İlk Saat{' '}
+                <input
+                  type="time"
+                  value={bulkForm.startTime}
+                  onChange={(e) => setBulkForm({ ...bulkForm, startTime: e.target.value })}
+                />
+              </label>
+              <label>
+                Son Saat{' '}
+                <input
+                  type="time"
+                  value={bulkForm.endTime}
+                  onChange={(e) => setBulkForm({ ...bulkForm, endTime: e.target.value })}
+                />
+              </label>
+              <label style={{ gridColumn: '1/-1' }}>
+                Günler{' '}
+                <div className="weekday-selector">
+                  {DAYS.map((d, i) => (
+                    <label
+                      key={i}
+                      className={`weekday-chip ${bulkForm.weekdays.includes(WEEKDAY_NUMS[i]) ? 'weekday-chip-active' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={bulkForm.weekdays.includes(WEEKDAY_NUMS[i])}
+                        onChange={(e) =>
+                          setBulkForm({
+                            ...bulkForm,
+                            weekdays: e.target.checked
+                              ? [...bulkForm.weekdays, WEEKDAY_NUMS[i]]
+                              : bulkForm.weekdays.filter((w) => w !== WEEKDAY_NUMS[i]),
+                          })
+                        }
+                        style={{ display: 'none' }}
+                      />
+                      {d.slice(0, 3)}
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <div className="form-actions">
+                <button className="primary" onClick={() => void bulkAdd()} disabled={bulkSaving}>
+                  {bulkSaving ? '⏳...' : '✓ Oluştur'}
+                </button>
+                <button className="secondary" onClick={() => setShowBulkForm(false)}>
+                  İptal
+                </button>
               </div>
             </div>
-          ))}
+          </div>
+        )}
+
+        <div className="week-nav">
+          <button className="btn-sm btn-outline" onClick={() => changeWeek(-1)}>
+            ‹ Önceki
+          </button>
+          <span className="week-label">{weekRange.label}</span>
+          <button className="btn-sm btn-outline" onClick={() => changeWeek(1)}>
+            Sonraki ›
+          </button>
+          <button
+            className="btn-sm btn-outline"
+            onClick={() => {
+              setWeekOffset(0);
+              void loadCalendar(calendarTherapist.id, 0);
+            }}
+          >
+            Bugün
+          </button>
         </div>
 
-        <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn-primary-lg" onClick={() => void saveSchedule()}>
-            💾 Kaydet ve Dön
-          </button>
-          <button className="btn-sm btn-outline" onClick={() => setViewMode('list')}>
-            İptal
-          </button>
-          <button
-            className="btn-sm btn-outline"
-            onClick={() => {
-              const p: Record<string, string> = {};
-              DAY_KEYS.forEach((k, i) => {
-                if (i < 6) p[k] = '10:00-20:00';
-              });
-              setTherapistHours(p);
-            }}
-          >
-            📋 Varsayılan (Pzt-Cmt 10-20)
-          </button>
-          <button
-            className="btn-sm btn-outline"
-            onClick={() => {
-              const p: Record<string, string> = {};
-              DAY_KEYS.forEach((k) => {
-                p[k] = '10:00-20:00';
-              });
-              setTherapistHours(p);
-            }}
-          >
-            📋 Her Gün 10-20
-          </button>
+        {loadingSchedule ? (
+          <p className="muted">Yükleniyor...</p>
+        ) : (
+          <div className="calendar-grid">
+            <div className="calendar-header-row">
+              <div className="calendar-time-col">Saat</div>
+              {weekDays.map((day) => {
+                const today = new Date().toISOString().slice(0, 10);
+                return (
+                  <div
+                    key={day.date}
+                    className={`calendar-day-col ${day.date < today ? 'cal-day-past' : ''} ${day.date === today ? 'cal-day-today' : ''}`}
+                  >
+                    <span className="cal-day-name">{day.label.slice(0, 3)}</span>
+                    <span className="cal-day-num">{day.dayNum}</span>
+                    {day.date === today && <span className="cal-today-badge">Bugün</span>}
+                    {schedule.filter((s) => s.date.slice(0, 10) === day.date).length > 0 && (
+                      <button className="cal-clear-btn" onClick={() => void clearDay(day.date)}>
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {TIME_SLOTS.map((slot) => (
+              <div key={slot.start} className="calendar-row">
+                <div className="calendar-time-cell">{slot.label}</div>
+                {weekDays.map((day) => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  const currentHour = new Date().getHours();
+                  const slotHour = parseInt(slot.start);
+                  const isPast =
+                    day.date < today || (day.date === today && slotHour <= currentHour);
+                  const slotData = schedule.find(
+                    (s) =>
+                      s.date.slice(0, 10) === day.date && s.startTime.slice(0, 5) === slot.start,
+                  );
+                  const hasSlot = !!slotData;
+                  const isBooked = slotData?.booked || false;
+                  const isPopup = cellPopup?.date === day.date && cellPopup?.start === slot.start;
+                  return (
+                    <div
+                      key={`${day.date}-${slot.start}`}
+                      className={`calendar-cell ${isPast ? 'calendar-cell-disabled' : ''} ${hasSlot ? (isBooked ? 'calendar-cell-booked' : 'calendar-cell-active') : ''} ${isPopup ? 'calendar-cell-selected' : ''}`}
+                      onClick={() => {
+                        if (isPast) return;
+                        setCellPopup(
+                          isPopup
+                            ? null
+                            : { date: day.date, start: slot.start, end: slot.end, hasSlot },
+                        );
+                      }}
+                    >
+                      {isPast && hasSlot && !isBooked && <span className="cell-check-past">✓</span>}
+                      {!isPast && hasSlot && !isBooked && (
+                        <span className="cell-check">Müsait</span>
+                      )}
+                      {!isPast && isBooked && (
+                        <span className="cell-booked-name">
+                          {slotData?.bookedBy?.firstName} {slotData?.bookedBy?.lastName?.charAt(0)}.
+                        </span>
+                      )}
+                      {isPopup && !isPast && (
+                        <div className="cell-popup" onClick={(e) => e.stopPropagation()}>
+                          <div className="cell-popup-header">
+                            {day.label.slice(0, 3)} {day.dayNum} · {slot.label}
+                          </div>
+                          {isBooked && slotData?.bookedBy && (
+                            <div className="cell-popup-booked">
+                              👤 {slotData.bookedBy.firstName} {slotData.bookedBy.lastName}
+                              {slotData.bookedBy.phone && (
+                                <a
+                                  href={`tel:${slotData.bookedBy.phone}`}
+                                  className="cell-popup-phone"
+                                >
+                                  📞 {slotData.bookedBy.phone}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {hasSlot ? (
+                            isBooked ? (
+                              <div className="cell-popup-actions">
+                                <div className="cell-popup-info">
+                                  🔵 Randevu:{' '}
+                                  {slotData?.bookedBy?.status === 'confirmed'
+                                    ? 'Onaylı'
+                                    : 'Bekliyor'}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="cell-popup-actions">
+                                <button
+                                  className="cell-popup-btn cell-popup-close"
+                                  onClick={() => {
+                                    void toggleSlot(day.date, slot.start, slot.end);
+                                    setCellPopup(null);
+                                  }}
+                                >
+                                  🔴 Rezervasyona Kapat
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            <div className="cell-popup-actions">
+                              <button
+                                className="cell-popup-btn cell-popup-open"
+                                onClick={() => {
+                                  void toggleSlot(day.date, slot.start, slot.end);
+                                  setCellPopup(null);
+                                }}
+                              >
+                                🟢 Rezervasyona Aç
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="calendar-legend">
+          <span>
+            <span className="legend-dot legend-green"></span> Müsait
+          </span>
+          <span>
+            <span className="legend-dot legend-blue"></span> Dolu
+          </span>
+          <span>
+            <span className="legend-dot legend-gray"></span> Geçmiş
+          </span>
+          <span>
+            <span className="legend-dot legend-today"></span> Bugün
+          </span>
         </div>
       </div>
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // LİSTE GÖRÜNÜMÜ
+  // LIST VIEW
   // ═══════════════════════════════════════════════════════════════════════════════
   return (
     <div className="dashboard-page">
@@ -291,22 +582,19 @@ export function TherapistsPage() {
           + Yeni Masöz Ekle
         </button>
       </div>
-
       {error && <p className="error">{error}</p>}
       {success && <p className="success-msg">{success}</p>}
 
-      {/* Form */}
       {showForm && (
         <div className="card" style={{ marginBottom: 20 }}>
-          <h3>{editId ? '✏️ Masöz Düzenle' : '➕ Yeni Masöz Ekle'}</h3>
+          <h3>{editId ? '✏️ Düzenle' : '➕ Yeni Masöz'}</h3>
           <form onSubmit={(e) => void handleSubmit(e)} className="form-grid">
             <label>
-              Ad Soyad *{' '}
+              Ad *{' '}
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                placeholder="Vinda"
               />
             </label>
             <label>
@@ -314,7 +602,6 @@ export function TherapistsPage() {
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="05XX XXX XX XX"
               />
             </label>
             <label>
@@ -323,40 +610,38 @@ export function TherapistsPage() {
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 rows={2}
-                placeholder="Masöz hakkında kısa bilgi..."
               />
             </label>
             <label>
-              Uzmanlık Alanları (virgülle ayırın){' '}
+              Uzmanlık{' '}
               <input
                 value={form.specialties}
                 onChange={(e) => setForm({ ...form, specialties: e.target.value })}
-                placeholder="Klasik Masaj, Bali, Aroma Terapi"
+                placeholder="Klasik, Bali, Aroma"
               />
             </label>
             <label>
-              Fotoğraf
+              Fotoğraf{' '}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) void handleImageUpload(f);
                 }}
                 disabled={uploading}
               />
-              {uploading && <span className="muted">⏳ Yükleniyor...</span>}
               {form.photoUrl && (
                 <img
                   src={form.photoUrl}
                   alt=""
-                  style={{ marginTop: 8, maxHeight: 60, borderRadius: 8 }}
+                  style={{ marginTop: 8, maxHeight: 50, borderRadius: 8 }}
                 />
               )}
             </label>
             <div className="form-actions">
               <button type="submit" className="primary" disabled={saving}>
-                {saving ? 'Kaydediliyor...' : editId ? 'Güncelle' : 'Ekle'}
+                {saving ? '...' : editId ? 'Güncelle' : 'Ekle'}
               </button>
               <button
                 type="button"
@@ -373,13 +658,12 @@ export function TherapistsPage() {
         </div>
       )}
 
-      {/* Masöz Kartları */}
       {loading ? (
         <p className="muted">Yükleniyor...</p>
       ) : therapists.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon">💆</span>
-          <p>Henüz masöz eklenmemiş</p>
+          <p>Henüz masöz yok</p>
         </div>
       ) : (
         <div className="trainers-grid">
@@ -392,19 +676,12 @@ export function TherapistsPage() {
                 <div className="trainer-card-info">
                   <h3>{t.name}</h3>
                   {t.phone && <p className="trainer-phone">📞 {t.phone}</p>}
-                  {t.bio && (
-                    <p className="trainer-email">
-                      {t.bio.slice(0, 60)}
-                      {t.bio.length > 60 ? '...' : ''}
-                    </p>
-                  )}
                 </div>
                 <div className="trainer-rating">
                   <span className="rating-star">⭐</span>
                   <span>{Number(t.avgRating).toFixed(1)}</span>
                 </div>
               </div>
-
               <div className="trainer-card-body">
                 {t.specialties && t.specialties.length > 0 && (
                   <div className="trainer-tags">
@@ -415,27 +692,13 @@ export function TherapistsPage() {
                     ))}
                   </div>
                 )}
-                {/* Mini Haftalık Program */}
-                <div className="wh-mini-display">
-                  {DAY_KEYS.map((key, i) => (
-                    <span
-                      key={key}
-                      className={`wh-mini-cell ${t.workingHours?.[key] ? 'wh-mini-open' : ''}`}
-                      title={`${DAYS[i]}: ${t.workingHours?.[key] || 'Kapalı'}`}
-                    >
-                      {DAYS[i].slice(0, 2)}
-                    </span>
-                  ))}
-                </div>
                 <div className="trainer-stats-row">
                   <span>{t.active ? '🟢 Aktif' : '🔴 Pasif'}</span>
                   <span>📊 {t.totalSessions || 0} seans</span>
                 </div>
               </div>
-
-              {/* Butonlar */}
               <div className="trainer-actions">
-                <button className="btn-sm btn-schedule" onClick={() => openSchedule(t)}>
+                <button className="btn-sm btn-schedule" onClick={() => openCalendar(t)}>
                   🗓️ Ajanda
                 </button>
                 <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>

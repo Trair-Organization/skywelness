@@ -1071,4 +1071,139 @@ export class AdminMembersService {
       specialties: t.specialties,
     }));
   }
+
+  // ─── Masöz Takvim Yönetimi (Eğitmenlerle aynı mantık) ────────────────────────
+
+  async listTherapistCalendar(tenantId: string, therapistId: string, from: string, to: string) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+
+    const rows = await this.availabilityRepo.find({
+      where: { spaTherapistId: therapistId, date: Between(from, to) },
+      order: { date: 'ASC', startTime: 'ASC' },
+    });
+
+    // Bu tarih aralığındaki spa booking'leri getir
+    const bookings = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .where('r.trainerId IS NULL')
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :from', { from: new Date(`${from}T00:00:00Z`) })
+      .andWhere('r.startTime < :to', { to: new Date(`${to}T23:59:59Z`) })
+      .getMany();
+
+    return rows.map((row) => {
+      const dateStr =
+        typeof row.date === 'string'
+          ? row.date.slice(0, 10)
+          : new Date(row.date).toISOString().slice(0, 10);
+      const slotStart = new Date(`${dateStr}T${row.startTime}Z`);
+      const slotEnd = new Date(`${dateStr}T${row.endTime}Z`);
+      const booking = bookings.find((b) => b.startTime >= slotStart && b.startTime < slotEnd);
+      return {
+        id: row.id,
+        spaTherapistId: row.spaTherapistId,
+        date: row.date,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        available: row.available,
+        booked: !!booking,
+        bookedBy: booking
+          ? {
+              reservationId: booking.id,
+              firstName: booking.user?.firstName,
+              lastName: booking.user?.lastName,
+              phone: booking.user?.phone,
+              status: booking.status,
+            }
+          : null,
+      };
+    });
+  }
+
+  async addTherapistAvailability(
+    tenantId: string,
+    therapistId: string,
+    data: { date: string; startTime: string; endTime: string },
+  ) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+    const row = this.availabilityRepo.create({
+      spaTherapistId: therapistId,
+      trainerId: null,
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      available: true,
+    });
+    return this.availabilityRepo.save(row);
+  }
+
+  async deleteTherapistAvailability(tenantId: string, therapistId: string, availabilityId: string) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+    const row = await this.availabilityRepo.findOne({
+      where: { id: availabilityId, spaTherapistId: therapistId },
+    });
+    if (!row) throw new NotFoundException('Müsaitlik kaydı bulunamadı');
+    await this.availabilityRepo.remove(row);
+    return { ok: true as const };
+  }
+
+  async bulkAddTherapistAvailability(
+    tenantId: string,
+    therapistId: string,
+    data: {
+      startDate: string;
+      endDate: string;
+      weekdays: number[];
+      startTime: string;
+      endTime: string;
+    },
+  ) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    const rows: Availability[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      if (data.weekdays.includes(current.getDay())) {
+        rows.push(
+          this.availabilityRepo.create({
+            spaTherapistId: therapistId,
+            trainerId: null,
+            date: current.toISOString().slice(0, 10),
+            startTime: data.startTime,
+            endTime: data.endTime,
+            available: true,
+          }),
+        );
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    if (rows.length === 0) return { created: 0 };
+    await this.availabilityRepo.save(rows);
+    return { created: rows.length };
+  }
+
+  async clearTherapistDay(tenantId: string, therapistId: string, date: string) {
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    if (!therapist) throw new NotFoundException('Masöz bulunamadı');
+    await this.availabilityRepo.delete({ spaTherapistId: therapistId, date });
+    return { ok: true as const };
+  }
 }

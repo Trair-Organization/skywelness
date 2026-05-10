@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { SpaTherapist } from './spa-therapist.entity';
 import { Trainer } from './trainer.entity';
 
 @Entity({ name: 'availability' })
@@ -14,12 +15,19 @@ export class Availability {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid', name: 'trainer_id' })
-  trainerId!: string;
+  @Column({ type: 'uuid', nullable: true, name: 'trainer_id' })
+  trainerId!: string | null;
 
-  @ManyToOne(() => Trainer, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Trainer, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'trainer_id' })
-  trainer!: Trainer;
+  trainer!: Trainer | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'spa_therapist_id' })
+  spaTherapistId!: string | null;
+
+  @ManyToOne(() => SpaTherapist, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'spa_therapist_id' })
+  spaTherapist!: SpaTherapist | null;
 
   @Column({ type: 'date' })
   date!: string;
