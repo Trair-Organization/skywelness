@@ -317,6 +317,16 @@ export class BookingService {
     }));
   }
 
+  /** Admin: Paket taleplerini listele. */
+  async listPackageRequests(tenantId: string) {
+    return this.packageRequestsRepo.find({
+      where: { tenantId },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      take: 100,
+    });
+  }
+
   async createPackageRequest(user: User, dto: CreatePackageRequestDto) {
     if (user.role !== UserRole.MEMBER) {
       throw new ForbiddenException('Only members can request packages');
