@@ -197,6 +197,11 @@ export function SpaScreen() {
   // Therapist filter
   const [selectedTherapistId, setSelectedTherapistId] = useState<string | null>(null);
 
+  // Dropdown states
+  const [showServicesDropdown, setShowServicesDropdown] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceRow | null>(null);
+  const [showTherapistDropdown, setShowTherapistDropdown] = useState(false);
+
   const opts = useMemo(
     () => ({ token: token ?? undefined, tenantSubdomain: tenant?.subdomain }),
     [token, tenant],
@@ -495,34 +500,97 @@ export function SpaScreen() {
           </View>
         )}
 
-        {/* ═══ 4. Hizmetlerimiz (always visible, no collapse) ═══ */}
-        <View style={styles.servicesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hizmetlerimiz</Text>
-            <Text style={styles.sectionBadge}>{services.length}</Text>
-          </View>
-          <View style={styles.servicesGrid}>
-            {services.map((s) => (
-              <GlassCard key={s.id} style={styles.serviceCard}>
-                <View style={styles.serviceTop}>
-                  <Text style={styles.serviceIcon}>{CATEGORY_ICONS[s.category] ?? '💆'}</Text>
-                  <View style={styles.servicePriceBadge}>
-                    <Text style={styles.servicePriceText}>{s.price} ₺</Text>
+        {/* ═══ 4. Hizmet Seçin Dropdown ═══ */}
+        <View style={styles.dropdown}>
+          <Pressable
+            style={styles.dropdownHeader}
+            onPress={() => setShowServicesDropdown(!showServicesDropdown)}
+          >
+            <Text style={[styles.dropdownLabel, !selectedService && styles.dropdownLabelMuted]}>
+              {selectedService
+                ? `${CATEGORY_ICONS[selectedService.category] ?? '💆'} ${selectedService.name}`
+                : 'Hizmet Seçin'}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showServicesDropdown ? '▲' : '▼'}</Text>
+          </Pressable>
+          {showServicesDropdown && (
+            <View style={styles.dropdownList}>
+              {services.map((s) => (
+                <Pressable
+                  key={s.id}
+                  style={[
+                    styles.dropdownItem,
+                    selectedService?.id === s.id && styles.dropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedService(s);
+                    setShowServicesDropdown(false);
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dropdownItemText}>
+                      {CATEGORY_ICONS[s.category] ?? '💆'} {s.name}
+                    </Text>
+                    <Text style={styles.dropdownItemMeta}>{s.durationMinutes} dakika</Text>
                   </View>
-                </View>
-                <Text style={styles.serviceName}>{s.name}</Text>
-                <Text style={styles.serviceDuration}>{s.durationMinutes} dakika</Text>
-                {s.description && (
-                  <Text style={styles.serviceDesc} numberOfLines={2}>
-                    {s.description}
-                  </Text>
-                )}
-              </GlassCard>
-            ))}
-          </View>
+                  <Text style={styles.dropdownItemPrice}>{s.price} ₺</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
-        {/* ═══ 5. Date Strip ═══ */}
+        {/* ═══ 5. Masöz Seçin Dropdown ═══ */}
+        {uniqueTherapists.length > 0 && (
+          <View style={styles.dropdown}>
+            <Pressable
+              style={styles.dropdownHeader}
+              onPress={() => setShowTherapistDropdown(!showTherapistDropdown)}
+            >
+              <Text
+                style={[styles.dropdownLabel, !selectedTherapistId && styles.dropdownLabelMuted]}
+              >
+                {selectedTherapistId
+                  ? (uniqueTherapists.find((t) => t.id === selectedTherapistId)?.name ?? 'Masöz')
+                  : 'Tüm Masözler'}
+              </Text>
+              <Text style={styles.dropdownArrow}>{showTherapistDropdown ? '▲' : '▼'}</Text>
+            </Pressable>
+            {showTherapistDropdown && (
+              <View style={styles.dropdownList}>
+                <Pressable
+                  style={[
+                    styles.dropdownItem,
+                    selectedTherapistId === null && styles.dropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedTherapistId(null);
+                    setShowTherapistDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>Tüm Masözler</Text>
+                </Pressable>
+                {uniqueTherapists.map((t) => (
+                  <Pressable
+                    key={t.id}
+                    style={[
+                      styles.dropdownItem,
+                      selectedTherapistId === t.id && styles.dropdownItemActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedTherapistId(t.id);
+                      setShowTherapistDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownItemText}>{t.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ═══ 6. Date Strip ═══ */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -549,52 +617,6 @@ export function SpaScreen() {
             </Pressable>
           ))}
         </ScrollView>
-
-        {/* ═══ 6. Masöz Filtresi ═══ */}
-        {uniqueTherapists.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.therapistFilterContainer}
-            style={styles.therapistFilterScroll}
-          >
-            <Pressable
-              style={[
-                styles.therapistChip,
-                selectedTherapistId === null && styles.therapistChipActive,
-              ]}
-              onPress={() => setSelectedTherapistId(null)}
-            >
-              <Text
-                style={[
-                  styles.therapistChipText,
-                  selectedTherapistId === null && styles.therapistChipTextActive,
-                ]}
-              >
-                Tümü
-              </Text>
-            </Pressable>
-            {uniqueTherapists.map((t) => (
-              <Pressable
-                key={t.id}
-                style={[
-                  styles.therapistChip,
-                  selectedTherapistId === t.id && styles.therapistChipActive,
-                ]}
-                onPress={() => setSelectedTherapistId(t.id)}
-              >
-                <Text
-                  style={[
-                    styles.therapistChipText,
-                    selectedTherapistId === t.id && styles.therapistChipTextActive,
-                  ]}
-                >
-                  {t.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
 
         {/* ═══ 7. Available Slots (filtered) ═══ */}
         <View style={styles.sectionHeader}>
@@ -1008,30 +1030,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Therapist filter
-  therapistFilterScroll: { marginBottom: 16 },
-  therapistFilterContainer: { gap: 6, paddingHorizontal: 2 },
-  therapistChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: 'rgba(148,163,184,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.12)',
-  },
-  therapistChipActive: {
-    backgroundColor: 'rgba(56,189,248,0.15)',
-    borderColor: premium.accentBlue,
-  },
-  therapistChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: premium.textMuted,
-  },
-  therapistChipTextActive: {
-    color: premium.accentBlue,
-  },
-
   // Section
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: premium.text },
@@ -1045,8 +1043,42 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  // Services section
-  servicesSection: { marginBottom: 20 },
+  // Dropdown
+  dropdown: { marginBottom: 12 },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(148,163,184,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.12)',
+    borderRadius: 14,
+    padding: 14,
+  },
+  dropdownLabel: { fontSize: 14, fontWeight: '600', color: premium.text },
+  dropdownLabelMuted: { color: premium.textMuted },
+  dropdownArrow: { fontSize: 14, color: premium.textMuted },
+  dropdownList: {
+    marginTop: 4,
+    backgroundColor: 'rgba(15,23,42,0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.15)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(148,163,184,0.1)',
+  },
+  dropdownItemText: { fontSize: 14, fontWeight: '600', color: premium.text },
+  dropdownItemMeta: { fontSize: 12, color: premium.textMuted },
+  dropdownItemPrice: { fontSize: 13, fontWeight: '700', color: premium.accentBlue },
+  dropdownItemActive: { backgroundColor: 'rgba(56,189,248,0.08)' },
 
   // Slots
   slotCard: {
@@ -1139,27 +1171,6 @@ const styles = StyleSheet.create({
   pastStatusCancelled: { backgroundColor: 'rgba(239,68,68,0.08)' },
   pastStatusText: { fontSize: 11, fontWeight: '700', color: premium.accentGreen },
   pastStatusTextCancelled: { color: premium.danger },
-
-  // Services grid
-  servicesGrid: { gap: 10 },
-  serviceCard: { padding: 16 },
-  serviceTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  serviceIcon: { fontSize: 28 },
-  servicePriceBadge: {
-    backgroundColor: 'rgba(56,189,248,0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  servicePriceText: { fontSize: 13, fontWeight: '800', color: premium.accentBlue },
-  serviceName: { fontSize: 15, fontWeight: '700', color: premium.text },
-  serviceDuration: { fontSize: 12, color: premium.textMuted, marginTop: 3 },
-  serviceDesc: { fontSize: 12, color: premium.textMuted, marginTop: 6, lineHeight: 17 },
 
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
