@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 
 function timeAgo(iso: string) {
-  const now = Date.now();
-  const diff = now - new Date(iso).getTime();
-  if (diff < 60000) return 'Şimdi';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)} dk önce`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)} saat önce`;
-  return `${Math.floor(diff / 86400000)} gün önce`;
+  const d = new Date(iso);
+  return d.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 type DashboardStats = {

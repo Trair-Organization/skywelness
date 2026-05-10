@@ -2,128 +2,220 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
- * SMS Service — Netgsm API entegrasyonu
+ * SMS Service — Hybrid Netgsm (Türkiye) + Twilio (uluslararası) entegrasyonu.
  *
- * .env'ye eklenecek değişkenler:
- * SMS_PROVIDER=netgsm (veya twilio)
- * NETGSM_USERCODE=850XXXXXXX
+ * .env değişkenleri:
+ *
+ * SMS_PROVIDER=hybrid | netgsm | twilio  (default: hybrid)
+ *
+ * # Netgsm (TR numaraları için öncelikli)
+ * NETGSM_USERCODE=xxxxx
  * NETGSM_PASSWORD=xxxxx
- * NETGSM_MSGHEADER=SKYWELLNESS
+ * NETGSM_MSGHEADER=TRAIR TEKN.
  *
- * Veya Twilio:
+ * # Twilio (TR olmayan numaralar + Netgsm yedeği)
  * TWILIO_ACCOUNT_SID=ACxxxxx
  * TWILIO_AUTH_TOKEN=xxxxx
- * TWILIO_FROM_NUMBER=+905xxxxxxxxx
+ * TWILIO_PHONE_NUMBER=+1...   (veya TWILIO_FROM_NUMBER)
+ * TWILIO_MESSAGING_SERVICE_SID=MGxxxxx  (varsa öncelikli)
  */
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
-  private readonly provider: 'netgsm' | 'twilio' | null;
+
+  private readonly mode: 'hybrid' | 'netgsm' | 'twilio' | null;
+
   private readonly netgsmUsercode: string;
   private readonly netgsmPassword: string;
   private readonly netgsmHeader: string;
+  private readonly netgsmReady: boolean;
+
+  private readonly twilioSid: string;
+  private readonly twilioToken: string;
+  private readonly twilioFrom: string;
+  private readonly twilioMessagingServiceSid: string;
+  private readonly twilioReady: boolean;
 
   constructor(private readonly config: ConfigService) {
-    const provider = config.get<string>('SMS_PROVIDER')?.trim()?.toLowerCase();
+    const requested = (config.get<string>('SMS_PROVIDER') || 'hybrid').trim().toLowerCase();
 
-    if (provider === 'netgsm') {
-      this.provider = 'netgsm';
-      this.netgsmUsercode = config.get<string>('NETGSM_USERCODE')?.trim() || '';
-      this.netgsmPassword = config.get<string>('NETGSM_PASSWORD')?.trim() || '';
-      this.netgsmHeader = config.get<string>('NETGSM_MSGHEADER')?.trim() || 'SKYWELLNESS';
-      this.logger.log('SMS transport: Netgsm');
-    } else if (provider === 'twilio') {
-      this.provider = 'twilio';
-      this.netgsmUsercode = '';
-      this.netgsmPassword = '';
-      this.netgsmHeader = '';
-      this.logger.log('SMS transport: Twilio');
+    this.netgsmUsercode = config.get<string>('NETGSM_USERCODE')?.trim() || '';
+    this.netgsmPassword = config.get<string>('NETGSM_PASSWORD')?.trim() || '';
+    this.netgsmHeader = config.get<string>('NETGSM_MSGHEADER')?.trim() || 'SKYWELLNESS';
+    this.netgsmReady = !!(this.netgsmUsercode && this.netgsmPassword);
+
+    this.twilioSid = config.get<string>('TWILIO_ACCOUNT_SID')?.trim() || '';
+    this.twilioToken = config.get<string>('TWILIO_AUTH_TOKEN')?.trim() || '';
+    this.twilioFrom =
+      config.get<string>('TWILIO_FROM_NUMBER')?.trim() ||
+      config.get<string>('TWILIO_PHONE_NUMBER')?.trim() ||
+      '';
+    this.twilioMessagingServiceSid =
+      config.get<string>('TWILIO_MESSAGING_SERVICE_SID')?.trim() || '';
+    this.twilioReady =
+      !!this.twilioSid &&
+      !!this.twilioToken &&
+      !!(this.twilioFrom || this.twilioMessagingServiceSid);
+
+    if (requested === 'twilio') {
+      if (this.twilioReady) {
+        this.mode = 'twilio';
+        this.logger.log('SMS transport: Twilio');
+      } else {
+        this.mode = null;
+        this.logger.warn('SMS_PROVIDER=twilio ama Twilio bilgileri eksik — SMS devre dışı');
+      }
+    } else if (requested === 'netgsm') {
+      if (this.netgsmReady) {
+        this.mode = 'netgsm';
+        this.logger.log('SMS transport: Netgsm');
+      } else {
+        this.mode = null;
+        this.logger.warn('SMS_PROVIDER=netgsm ama Netgsm bilgileri eksik — SMS devre dışı');
+      }
+    } else if (requested === 'hybrid') {
+      if (this.netgsmReady || this.twilioReady) {
+        this.mode = 'hybrid';
+        const parts: string[] = [];
+        if (this.netgsmReady) parts.push('Netgsm');
+        if (this.twilioReady) parts.push('Twilio');
+        this.logger.log(`SMS transport: Hybrid (${parts.join(' + ')})`);
+      } else {
+        this.mode = null;
+        this.logger.warn('Hiçbir SMS sağlayıcısı yapılandırılmamış — SMS devre dışı');
+      }
     } else {
-      this.provider = null;
-      this.netgsmUsercode = '';
-      this.netgsmPassword = '';
-      this.netgsmHeader = '';
-      this.logger.warn('SMS disabled — SMS_PROVIDER not configured');
+      this.mode = null;
+      this.logger.warn(`SMS_PROVIDER="${requested}" geçersiz — SMS devre dışı`);
     }
   }
 
   isConfigured(): boolean {
-    return this.provider !== null;
+    return this.mode !== null;
   }
 
   /**
-   * SMS gönder
-   * @param phone Telefon numarası (05XX XXX XX XX formatında)
-   * @param message SMS metni (max 160 karakter önerilir)
+   * Hybrid: TR → Netgsm (başarısızsa Twilio), diğer → Twilio
    */
   async send(phone: string, message: string): Promise<{ ok: boolean; error?: string }> {
-    if (!this.provider) {
-      this.logger.debug(`SMS skipped (no provider): ${phone} — ${message.slice(0, 50)}`);
+    if (!this.mode) {
+      this.logger.debug(`SMS skipped (no provider): ${phone}`);
       return { ok: false, error: 'SMS provider not configured' };
     }
 
-    // Telefon numarasını normalize et (05XX → 905XX)
-    const normalized = this.normalizePhone(phone);
-    if (!normalized) {
-      return { ok: false, error: 'Invalid phone number' };
+    const digits = this.normalizeDigits(phone);
+    if (!digits) return { ok: false, error: 'Invalid phone number' };
+    const isTurkish = digits.startsWith('90') && digits.length === 12;
+
+    if (this.mode === 'netgsm') {
+      if (!isTurkish) {
+        this.logger.warn(`Netgsm sadece TR numara destekler, atlandı: ${digits}`);
+        return { ok: false, error: 'Netgsm: only Turkish numbers supported' };
+      }
+      return this.sendViaNetgsm(digits, message);
+    }
+    if (this.mode === 'twilio') {
+      return this.sendViaTwilio(digits, message);
     }
 
-    try {
-      if (this.provider === 'netgsm') {
-        return await this.sendViaNetgsm(normalized, message);
+    // hybrid
+    if (isTurkish && this.netgsmReady) {
+      const r = await this.sendViaNetgsm(digits, message);
+      if (r.ok) return r;
+      if (this.twilioReady) {
+        this.logger.warn(`Netgsm failed, Twilio fallback: ${digits}`);
+        return this.sendViaTwilio(digits, message);
       }
-      // Twilio desteği ileride eklenebilir
-      return { ok: false, error: 'Provider not implemented' };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`SMS send failed: ${msg}`);
-      return { ok: false, error: msg };
+      return r;
     }
+    if (this.twilioReady) return this.sendViaTwilio(digits, message);
+    return { ok: false, error: 'No suitable SMS provider available' };
   }
 
-  private normalizePhone(phone: string): string | null {
-    // Boşlukları ve tire/parantezleri kaldır
+  /** 0532 / +90 532 / 90532 / 532 / +1... hepsini canonical formata çevirir. */
+  private normalizeDigits(phone: string): string | null {
     const cleaned = phone.replace(/[\s\-()]/g, '');
-    // 05XX... → 905XX...
-    if (cleaned.startsWith('05') && cleaned.length === 11) {
-      return '9' + cleaned;
-    }
-    // +905XX... → 905XX...
-    if (cleaned.startsWith('+90') && cleaned.length === 13) {
-      return cleaned.slice(1);
-    }
-    // 905XX... zaten doğru
-    if (cleaned.startsWith('90') && cleaned.length === 12) {
-      return cleaned;
-    }
+    if (cleaned.startsWith('05') && cleaned.length === 11) return '9' + cleaned;
+    if (cleaned.startsWith('+90') && cleaned.length === 13) return cleaned.slice(1);
+    if (cleaned.startsWith('90') && cleaned.length === 12) return cleaned;
+    if (cleaned.startsWith('+') && cleaned.length >= 9) return cleaned.slice(1);
+    if (cleaned.startsWith('5') && cleaned.length === 10) return '90' + cleaned;
     return null;
   }
 
+  // ─── Netgsm ────────────────────────────────────────────────────────────────
+
   private async sendViaNetgsm(
-    phone: string,
+    digits: string,
     message: string,
   ): Promise<{ ok: boolean; error?: string }> {
     const url = 'https://api.netgsm.com.tr/sms/send/get';
     const params = new URLSearchParams({
       usercode: this.netgsmUsercode,
       password: this.netgsmPassword,
-      gsmno: phone,
-      message: message,
+      gsmno: digits,
+      message,
       msgheader: this.netgsmHeader,
       dil: 'TR',
     });
 
-    const res = await fetch(`${url}?${params.toString()}`);
-    const text = await res.text();
-
-    // Netgsm başarılı yanıt: "00" veya "01" ile başlar
-    if (text.startsWith('00') || text.startsWith('01')) {
-      this.logger.log(`SMS sent to ${phone}: ${message.slice(0, 40)}...`);
-      return { ok: true };
+    try {
+      const res = await fetch(`${url}?${params.toString()}`);
+      const text = await res.text();
+      if (text.startsWith('00') || text.startsWith('01')) {
+        this.logger.log(`Netgsm sent to ${digits}: ${message.slice(0, 40)}...`);
+        return { ok: true };
+      }
+      this.logger.error(`Netgsm error → ${digits}: ${text}`);
+      return { ok: false, error: `Netgsm: ${text}` };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Netgsm exception → ${digits}: ${msg}`);
+      return { ok: false, error: msg };
     }
+  }
 
-    this.logger.error(`Netgsm error: ${text}`);
-    return { ok: false, error: `Netgsm: ${text}` };
+  // ─── Twilio ────────────────────────────────────────────────────────────────
+
+  private async sendViaTwilio(
+    digits: string,
+    message: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const to = `+${digits}`;
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${this.twilioSid}/Messages.json`;
+    const params = new URLSearchParams();
+    params.append('To', to);
+    if (this.twilioMessagingServiceSid) {
+      params.append('MessagingServiceSid', this.twilioMessagingServiceSid);
+    } else {
+      params.append('From', this.twilioFrom);
+    }
+    params.append('Body', message);
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization:
+            'Basic ' + Buffer.from(`${this.twilioSid}:${this.twilioToken}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      });
+      const body = (await res.json()) as { sid?: string; message?: string; code?: number };
+      if (res.ok && body.sid) {
+        this.logger.log(`Twilio sent to ${to}: sid=${body.sid}`);
+        return { ok: true };
+      }
+      this.logger.error(
+        `Twilio error → ${to}: code=${body.code ?? 'n/a'} ${body.message ?? res.statusText}`,
+      );
+      return { ok: false, error: `Twilio: ${body.message ?? res.statusText}` };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Twilio exception → ${to}: ${msg}`);
+      return { ok: false, error: msg };
+    }
   }
 
   // ─── Hazır Mesaj Şablonları ─────────────────────────────────────────────────
