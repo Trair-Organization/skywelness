@@ -445,6 +445,33 @@ export class SpaServiceService {
     });
     const saved = await this.reservationsRepo.save(reservation);
 
+    // Bildirim gönder (async, hata olursa sessizce devam et)
+    void (async () => {
+      try {
+        const user = (await this.memberPackagesRepo.manager
+          .getRepository('User')
+          .findOne({ where: { id: userId } })) as {
+          firstName: string;
+          lastName: string;
+          phone: string | null;
+          email: string;
+        } | null;
+        if (user) {
+          const therapistName = availability.spaTherapist?.name ?? '';
+          const date = new Date(slotStart).toLocaleDateString('tr-TR');
+          const time = availability.startTime.slice(0, 5);
+          // Push
+          await this.pushService.sendToUser(
+            userId,
+            '📅 Randevunuz Oluşturuldu',
+            `${date} ${time} — ${therapistName}`,
+          );
+        }
+      } catch {
+        /* silent */
+      }
+    })();
+
     return saved;
   }
 
