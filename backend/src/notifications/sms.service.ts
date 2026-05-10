@@ -114,16 +114,36 @@ export class SmsService {
     });
 
     const res = await fetch(`${url}?${params.toString()}`);
-    const text = await res.text();
+    const text = (await res.text()).trim();
+    const firstTwo = text.split(/\s+/)[0] ?? '';
 
-    // Netgsm başarılı yanıt: "00" veya "01" ile başlar
-    if (text.startsWith('00') || text.startsWith('01')) {
-      this.logger.log(`SMS sent to ${phone}: ${message.slice(0, 40)}...`);
+    // Netgsm yanıt kodları:
+    // 00 <bulk_id> → başarılı
+    // 20 → boş mesaj, 30 → yanlış kullanıcı/şifre, 40 → başlık tanımsız,
+    // 50 → ip izni yok, 60 → uygulama pasif, 70 → parametre hatası,
+    // 80 → limit aşıldı, 85 → mükerrer, 100 → sistem hatası
+    if (firstTwo === '00') {
+      const bulkId = text.substring(2).trim();
+      this.logger.log(
+        `Netgsm OK → ${phone} · bulk_id=${bulkId || '(none)'} · "${message.slice(0, 40)}..."`,
+      );
       return { ok: true };
     }
 
-    this.logger.error(`Netgsm error: ${text}`);
-    return { ok: false, error: `Netgsm: ${text}` };
+    const errorMap: Record<string, string> = {
+      '20': 'Mesaj içeriği boş ya da 1530 karakteri aşıyor',
+      '30': 'Geçersiz kullanıcı adı / şifre / API erişimi kapalı',
+      '40': `Mesaj başlığı "${this.netgsmHeader}" sistemde tanımlı değil`,
+      '50': 'Gönderim yapılan IP adresi yetkili değil',
+      '60': 'Üyelik/API aktif değil',
+      '70': 'Parametre hatası (gsmno/header formatı)',
+      '80': 'SMS limiti aşıldı',
+      '85': 'Mükerrer gönderim engeli',
+      '100': 'Netgsm sistem hatası',
+    };
+    const friendly = errorMap[firstTwo] ?? `Bilinmeyen yanıt: ${text}`;
+    this.logger.error(`Netgsm FAIL → ${phone} · code=${firstTwo} · ${friendly} · raw="${text}"`);
+    return { ok: false, error: `Netgsm(${firstTwo}): ${friendly}` };
   }
 
   // ─── Hazır Mesaj Şablonları ─────────────────────────────────────────────────
