@@ -90,6 +90,17 @@ export function TherapistsPage() {
   >([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [bookingSaving, setBookingSaving] = useState(false);
+  const [services, setServices] = useState<
+    Array<{
+      id: string;
+      name: string;
+      category: string;
+      durationMinutes: number;
+      price: string;
+      currency: string;
+    }>
+  >([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
 
   // Reschedule modal
   const [rescheduleModal, setRescheduleModal] = useState<{ reservationId: string } | null>(null);
@@ -302,13 +313,30 @@ export function TherapistsPage() {
   async function openBookingModal(date: string, start: string, end: string) {
     setBookingModal({ date, start, end });
     setCellPopup(null);
+    setSelectedServiceId('');
     try {
-      const data = await apiJson<
-        Array<{ id: string; firstName: string; lastName: string; email: string }>
-      >('/admin/members?status=active');
-      setMembers(data);
+      const [memberData, serviceData] = await Promise.all([
+        apiJson<Array<{ id: string; firstName: string; lastName: string; email: string }>>(
+          '/admin/members?status=active',
+        ),
+        calendarTherapist
+          ? apiJson<
+              Array<{
+                id: string;
+                name: string;
+                category: string;
+                durationMinutes: number;
+                price: string;
+                currency: string;
+              }>
+            >(`/admin/therapists/${calendarTherapist.id}/services`)
+          : Promise.resolve([]),
+      ]);
+      setMembers(memberData);
+      setServices(serviceData);
     } catch {
       setMembers([]);
+      setServices([]);
     }
   }
 
@@ -316,19 +344,25 @@ export function TherapistsPage() {
     if (!calendarTherapist || !bookingModal || !selectedMemberId) return;
     setBookingSaving(true);
     try {
+      const payload: Record<string, unknown> = {
+        therapistId: calendarTherapist.id,
+        userId: selectedMemberId,
+        date: bookingModal.date,
+        startTime: bookingModal.start,
+      };
+      if (selectedServiceId) {
+        payload.serviceId = selectedServiceId;
+      } else {
+        payload.endTime = bookingModal.end;
+      }
       await apiJson('/admin/therapists/reservations/create', {
         method: 'POST',
-        body: JSON.stringify({
-          therapistId: calendarTherapist.id,
-          userId: selectedMemberId,
-          date: bookingModal.date,
-          startTime: bookingModal.start,
-          endTime: bookingModal.end,
-        }),
+        body: JSON.stringify(payload),
       });
       setSuccess('✅ Randevu oluşturuldu');
       setBookingModal(null);
       setSelectedMemberId('');
+      setSelectedServiceId('');
       void loadCalendar(calendarTherapist.id, weekOffset);
       setTimeout(() => setSuccess(null), 3000);
     } catch (e) {
@@ -688,8 +722,7 @@ export function TherapistsPage() {
                 </button>
               </div>
               <p className="muted">
-                {bookingModal.date} · {bookingModal.start}-{bookingModal.end} ·{' '}
-                {calendarTherapist?.name}
+                {bookingModal.date} · Başlangıç {bookingModal.start} · {calendarTherapist?.name}
               </p>
               <div style={{ marginTop: 12 }}>
                 <label
@@ -720,6 +753,64 @@ export function TherapistsPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: 8,
+                    fontSize: '0.85rem',
+                    color: 'var(--muted)',
+                  }}
+                >
+                  Masaj Hizmeti *
+                </label>
+                <select
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <option value="">
+                    {services.length === 0
+                      ? 'Hizmet bulunamadı (varsayılan 1 saat)'
+                      : 'Hizmet seçin...'}
+                  </option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} · {s.durationMinutes} dk · {s.price} {s.currency}
+                    </option>
+                  ))}
+                </select>
+                {selectedServiceId &&
+                  (() => {
+                    const svc = services.find((s) => s.id === selectedServiceId);
+                    if (!svc) return null;
+                    const [hh, mm] = bookingModal.start.split(':').map((v) => parseInt(v, 10));
+                    const totalMin = hh * 60 + mm + svc.durationMinutes;
+                    const endH = Math.floor(totalMin / 60) % 24;
+                    const endM = totalMin % 60;
+                    const endLabel = `${endH.toString().padStart(2, '0')}:${endM
+                      .toString()
+                      .padStart(2, '0')}`;
+                    return (
+                      <p
+                        style={{
+                          marginTop: 8,
+                          fontSize: '0.85rem',
+                          color: 'var(--muted)',
+                        }}
+                      >
+                        ⏱ Seans: {bookingModal.start} → {endLabel} ({svc.durationMinutes} dk) · 💰{' '}
+                        {svc.price} {svc.currency}
+                      </p>
+                    );
+                  })()}
               </div>
               <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
                 <button

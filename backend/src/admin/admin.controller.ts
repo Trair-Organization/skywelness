@@ -526,13 +526,30 @@ export class AdminController {
 
   // ─── Masöz Rezervasyon ───────────────────────────────────────────────────────
 
+  @Get('therapists/:therapistId/services')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listServicesForTherapist(
+    @CurrentUser() admin: User,
+    @Param('therapistId', new ParseUUIDPipe({ version: '4' })) therapistId: string,
+  ) {
+    return this.adminMembers.listSpaServicesForBooking(admin.tenantId, therapistId);
+  }
+
   @Post('therapists/reservations/create')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
   createTherapistReservation(
     @CurrentUser() admin: User,
     @Body()
-    body: { therapistId: string; userId: string; date: string; startTime: string; endTime: string },
+    body: {
+      therapistId: string;
+      userId: string;
+      date: string;
+      startTime: string;
+      endTime?: string;
+      serviceId?: string;
+    },
   ) {
     return this.adminMembers.createTherapistReservationByAdmin(admin.tenantId, body);
   }

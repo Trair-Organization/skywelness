@@ -11,6 +11,7 @@ import { ClubEventRegistration } from '../database/entities/club-event-registrat
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
+import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
@@ -33,6 +34,7 @@ import { AdminMembersService } from './admin-members.service';
       Trainer,
       Availability,
       SpaTherapist,
+      SpaService,
       ClubEvent,
       ClubEventRegistration,
     ]),

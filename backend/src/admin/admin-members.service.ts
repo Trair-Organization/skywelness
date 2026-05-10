@@ -5,6 +5,7 @@ import { Availability } from '../database/entities/availability.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
+import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
@@ -31,6 +32,8 @@ export class AdminMembersService {
     private readonly availabilityRepo: Repository<Availability>,
     @InjectRepository(SpaTherapist)
     private readonly spaTherapistsRepo: Repository<SpaTherapist>,
+    @InjectRepository(SpaService)
+    private readonly spaServicesRepo: Repository<SpaService>,
     @InjectRepository(ClubEvent)
     private readonly eventsRepo: Repository<ClubEvent>,
     private readonly smsService: SmsService,
@@ -1209,9 +1212,59 @@ export class AdminMembersService {
 
   // ─── Masöz Rezervasyon Yönetimi ──────────────────────────────────────────────
 
+  /**
+   * Masaj hizmet kataloğunu döner (admin rezervasyon modalı için).
+   * Masöz belirtilirse, masözün uzmanlık alanlarıyla filtrelenir.
+   */
+  async listSpaServicesForBooking(tenantId: string, therapistId?: string) {
+    const services = await this.spaServicesRepo.find({
+      where: { tenantId, active: true },
+      order: { sortOrder: 'ASC', name: 'ASC' },
+    });
+    if (!therapistId) {
+      return services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        durationMinutes: s.durationMinutes,
+        price: s.price,
+        currency: s.currency,
+      }));
+    }
+    const therapist = await this.spaTherapistsRepo.findOne({
+      where: { id: therapistId, tenantId },
+    });
+    // Masöz bulunamadıysa tümünü dön; uzmanlık tanımlıysa filtrele
+    const specialties = therapist?.specialties ?? [];
+    const filtered =
+      specialties.length > 0
+        ? services.filter((s) => {
+            const lc = (x: string) => x.toLocaleLowerCase('tr-TR');
+            return specialties.some((sp) => lc(sp) === lc(s.name) || lc(sp) === lc(s.category));
+          })
+        : services;
+    // Filtre boş gelirse fallback olarak tümünü dön (yeni masöz, uzmanlık girilmemiş olabilir)
+    const out = filtered.length > 0 ? filtered : services;
+    return out.map((s) => ({
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      durationMinutes: s.durationMinutes,
+      price: s.price,
+      currency: s.currency,
+    }));
+  }
+
   async createTherapistReservationByAdmin(
     tenantId: string,
-    data: { therapistId: string; userId: string; date: string; startTime: string; endTime: string },
+    data: {
+      therapistId: string;
+      userId: string;
+      date: string;
+      startTime: string;
+      endTime?: string;
+      serviceId?: string;
+    },
   ) {
     const therapist = await this.spaTherapistsRepo.findOne({
       where: { id: data.therapistId, tenantId },
@@ -1223,19 +1276,54 @@ export class AdminMembersService {
     });
     if (!member) throw new NotFoundException('Üye bulunamadı');
 
+    // Hizmet seçildiyse doğrula ve süreye göre bitişi otomatik hesapla
+    let service: SpaService | null = null;
+    if (data.serviceId) {
+      service = await this.spaServicesRepo.findOne({
+        where: { id: data.serviceId, tenantId, active: true },
+      });
+      if (!service) throw new NotFoundException('Masaj hizmeti bulunamadı');
+    }
+
     const startDateTime = new Date(`${data.date}T${data.startTime}Z`);
-    const endDateTime = new Date(`${data.date}T${data.endTime}Z`);
+    const endDateTime = service
+      ? new Date(startDateTime.getTime() + service.durationMinutes * 60_000)
+      : new Date(`${data.date}T${data.endTime ?? data.startTime}Z`);
+    if (!service && !data.endTime) {
+      throw new BadRequestException('Bitiş saati veya masaj hizmeti seçimi zorunlu');
+    }
+    if (endDateTime <= startDateTime) {
+      throw new BadRequestException('Bitiş saati başlangıçtan sonra olmalı');
+    }
+
+    // Çakışma kontrolü: aynı masözün aynı zaman aralığında aktif başka rezervasyonu var mı?
+    const conflict = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.spaTherapistId = :therapistId', { therapistId: data.therapistId })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime < :end AND r.endTime > :start', {
+        start: startDateTime,
+        end: endDateTime,
+      })
+      .getOne();
+    if (conflict) {
+      throw new BadRequestException('Bu zaman aralığında masözün başka bir randevusu var');
+    }
 
     const reservation = this.reservationsRepo.create({
       userId: data.userId,
       trainerId: null as never,
       spaTherapistId: data.therapistId,
+      spaServiceId: service?.id ?? null,
       tenantId,
       sessionType: SessionType.MASSAGE,
       startTime: startDateTime,
       endTime: endDateTime,
       status: ReservationStatus.CONFIRMED,
-      notes: `Admin tarafından oluşturuldu - Masöz: ${therapist.name}`,
+      notes: service
+        ? `Admin tarafından oluşturuldu - Masöz: ${therapist.name} - Hizmet: ${service.name}`
+        : `Admin tarafından oluşturuldu - Masöz: ${therapist.name}`,
       timeSlotId: null as never,
       packageId: null as never,
     });
@@ -1246,7 +1334,7 @@ export class AdminMembersService {
     void this.notifier
       .reservationCreatedForMember({
         member,
-        trainerName: therapist.name,
+        trainerName: service ? `${therapist.name} · ${service.name}` : therapist.name,
         date: dateStr,
         time: timeStr,
         sessionType: 'massage',

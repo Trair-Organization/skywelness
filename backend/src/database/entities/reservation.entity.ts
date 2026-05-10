@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { ReservationStatus, SessionType } from '../enums';
 import { Package } from './package.entity';
+import { SpaService } from './spa-service.entity';
 import { SpaTherapist } from './spa-therapist.entity';
 import { Tenant } from './tenant.entity';
 import { TimeSlot } from './time-slot.entity';
@@ -45,6 +46,13 @@ export class Reservation {
   @ManyToOne(() => SpaTherapist, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'spa_therapist_id' })
   spaTherapist!: SpaTherapist | null;
+
+  @Column({ type: 'uuid', name: 'spa_service_id', nullable: true })
+  spaServiceId!: string | null;
+
+  @ManyToOne(() => SpaService, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'spa_service_id' })
+  spaService!: SpaService | null;
 
   @Column({ type: 'uuid', name: 'package_id', nullable: true })
   packageId!: string;
