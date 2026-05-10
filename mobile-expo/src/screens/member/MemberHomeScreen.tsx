@@ -614,14 +614,14 @@ export function MemberHomeScreen() {
             token,
             tenantSubdomain: tenant.subdomain,
           });
-          setEventNotice(t('events.leftOk'));
+          setEventNotice(`"${row.title}" etkinliğinden ayrıldınız.`);
         } else {
           await apiJson(`/events/${row.id}/join`, {
             method: 'POST',
             token,
             tenantSubdomain: tenant.subdomain,
           });
-          setEventNotice(t('events.joinedOk'));
+          setEventNotice(`✅ "${row.title}" etkinliğine katıldınız!`);
         }
         await loadClubEvents();
       } catch (e) {
@@ -801,7 +801,7 @@ export function MemberHomeScreen() {
                 <Pressable
                   {...ripple}
                   style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPrimaryPressed]}
-                  onPress={scrollToBooking}
+                  onPress={() => navigation.navigate('PT')}
                 >
                   <Text style={styles.btnPrimaryTxt}>{t('home.ctaBookPt')}</Text>
                 </Pressable>
@@ -1038,7 +1038,7 @@ export function MemberHomeScreen() {
                 <TouchableOpacity
                   activeOpacity={0.85}
                   style={styles.trainerPlanBtn}
-                  onPress={() => selectTrainerAndScroll(tr.id)}
+                  onPress={() => navigation.navigate('PT')}
                 >
                   <Text style={styles.trainerPlanBtnTxt}>Özel Ders Planla</Text>
                 </TouchableOpacity>
