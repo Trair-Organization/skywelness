@@ -317,19 +317,14 @@ export function UnifiedSchedulePage() {
   async function toggleSlot(resource: Resource, hour: string, cell: Cell | null) {
     const endHour = (parseInt(hour) + 1).toString().padStart(2, '0') + ':00';
     try {
+      // Eğitmen tarafı /schedule, masöz tarafı /calendar endpoint'ini kullanır
+      const base =
+        resource.kind === 'trainer'
+          ? `/admin/trainers/${resource.id}/schedule`
+          : `/admin/therapists/${resource.id}/calendar`;
       if (cell?.availabilityId) {
-        // Slot'u kapat (availability sil)
-        const base =
-          resource.kind === 'trainer'
-            ? `/admin/trainers/${resource.id}/calendar`
-            : `/admin/therapists/${resource.id}/calendar`;
         await apiJson(`${base}/${cell.availabilityId}`, { method: 'DELETE' });
       } else {
-        // Slot'u aç (availability ekle)
-        const base =
-          resource.kind === 'trainer'
-            ? `/admin/trainers/${resource.id}/calendar`
-            : `/admin/therapists/${resource.id}/calendar`;
         await apiJson(base, {
           method: 'POST',
           body: JSON.stringify({ date, startTime: hour, endTime: endHour }),
