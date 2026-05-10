@@ -85,6 +85,19 @@ export class AuthController {
     );
   }
 
+  @Get('email-availability')
+  emailAvailability(
+    @Req() req: Request,
+    @Query('tenantSubdomain') tenantSubdomain?: string,
+    @Query('email') email?: string,
+  ) {
+    return this.authService.checkEmailAvailability(
+      tenantSubdomain ?? '',
+      email ?? '',
+      req.requestSubdomain ?? null,
+    );
+  }
+
   @Post('refresh')
   @HttpCode(200)
   refresh(@Body() dto: RefreshTokenDto) {

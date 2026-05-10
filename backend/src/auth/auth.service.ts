@@ -133,6 +133,34 @@ export class AuthService {
     };
   }
 
+  async checkEmailAvailability(
+    tenantSubdomain: string,
+    rawEmail: string,
+    requestSubdomain?: string | null,
+  ) {
+    const subdomain = this.resolveTenantSubdomain(tenantSubdomain, requestSubdomain);
+    const email = rawEmail.trim().toLowerCase();
+
+    if (!email || !email.includes('@')) {
+      return { available: false as const, reason: 'invalid' as const };
+    }
+
+    const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant not found for subdomain: ${subdomain}`);
+    }
+
+    const existing = await this.usersRepo.findOne({
+      where: { tenantId: tenant.id, email },
+    });
+
+    if (!existing) {
+      return { available: true as const, reason: 'available' as const };
+    }
+
+    return { available: false as const, reason: 'taken' as const };
+  }
+
   private async buildUsernameSuggestions(tenantId: string, username: string): Promise<string[]> {
     const base = this.trimUsername(username) || 'member';
     const compact = base.replace(/[._-]+/g, '') || 'member';
