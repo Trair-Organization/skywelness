@@ -84,17 +84,19 @@ export class SmsService {
   private normalizePhone(phone: string): string | null {
     // Boşlukları ve tire/parantezleri kaldır
     const cleaned = phone.replace(/[\s\-()]/g, '');
-    // 05XX... → 905XX...
-    if (cleaned.startsWith('05') && cleaned.length === 11) {
-      return '9' + cleaned;
-    }
-    // +905XX... → 905XX...
+    // Netgsm Türk numaraları için 10 haneli formatı tercih eder (ülke kodu olmadan).
+    // Safely'de de çalışan format: "5321646788"
     if (cleaned.startsWith('+90') && cleaned.length === 13) {
-      return cleaned.slice(1);
+      return cleaned.slice(3); // +90532... → 532...
     }
-    // 905XX... zaten doğru
     if (cleaned.startsWith('90') && cleaned.length === 12) {
-      return cleaned;
+      return cleaned.slice(2); // 90532... → 532...
+    }
+    if (cleaned.startsWith('05') && cleaned.length === 11) {
+      return cleaned.slice(1); // 0532... → 532...
+    }
+    if (cleaned.startsWith('5') && cleaned.length === 10) {
+      return cleaned; // 532... zaten doğru
     }
     return null;
   }
@@ -110,7 +112,6 @@ export class SmsService {
       gsmno: phone,
       message: message,
       msgheader: this.netgsmHeader,
-      dil: 'TR',
     });
 
     const res = await fetch(`${url}?${params.toString()}`);
