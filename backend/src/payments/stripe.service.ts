@@ -10,7 +10,7 @@ export class StripeService {
   constructor(private readonly config: ConfigService) {
     const secretKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (secretKey) {
-      this.stripe = new Stripe(secretKey, { apiVersion: '2025-04-30.basil' });
+      this.stripe = new Stripe(secretKey);
       this.logger.log('Stripe initialized');
     } else {
       this.logger.warn('STRIPE_SECRET_KEY not set — payments disabled');
