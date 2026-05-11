@@ -75,7 +75,7 @@ export function TrainerTabNavigator() {
         name="Calendar"
         component={TrainerCalendarScreen}
         options={{
-          tabBarLabel: 'Takvim',
+          tabBarLabel: 'Ajanda',
           tabBarIcon: ({ focused }) => tabIcon('📅', focused),
         }}
       />
