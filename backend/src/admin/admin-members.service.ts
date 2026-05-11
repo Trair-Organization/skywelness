@@ -8,6 +8,8 @@ import { Reservation } from '../database/entities/reservation.entity';
 import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
+import { TrainerApplication } from '../database/entities/trainer-application.entity';
+import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { MemberAccountStatus, ReservationStatus, SessionType, UserRole } from '../database/enums';
@@ -28,6 +30,10 @@ export class AdminMembersService {
     private readonly reservationsRepo: Repository<Reservation>,
     @InjectRepository(Trainer)
     private readonly trainersRepo: Repository<Trainer>,
+    @InjectRepository(TrainerApplication)
+    private readonly trainerApplicationsRepo: Repository<TrainerApplication>,
+    @InjectRepository(TrainerProfile)
+    private readonly trainerProfilesRepo: Repository<TrainerProfile>,
     @InjectRepository(Availability)
     private readonly availabilityRepo: Repository<Availability>,
     @InjectRepository(SpaTherapist)
@@ -1773,5 +1779,108 @@ export class AdminMembersService {
       totalBooked: grandBooked,
       occupancyRate: grandTotal === 0 ? 0 : Math.round((grandBooked / grandTotal) * 100),
     };
+  }
+
+  // ─── Eğitmen Başvuruları (Kulüp Admin) ──────────────────────────────────────
+
+  /** Kulübe başvuran eğitmenleri listele (preferredClubSubdomain eşleşen) */
+  async listTrainerApplications(tenantId: string) {
+    // Kulübün subdomain'ini bul
+    const tenant = (await this.usersRepo.manager
+      .getRepository('Tenant')
+      .findOne({ where: { id: tenantId } })) as { subdomain: string } | null;
+    if (!tenant) return [];
+
+    const apps = await this.trainerApplicationsRepo.find({
+      where: { preferredClubSubdomain: tenant.subdomain },
+      relations: ['user', 'trainer'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return apps.map((app) => ({
+      id: app.id,
+      status: app.status,
+      createdAt: app.createdAt,
+      reviewedAt: app.reviewedAt,
+      adminNote: app.adminNote,
+      user: {
+        id: app.user.id,
+        firstName: app.user.firstName,
+        lastName: app.user.lastName,
+        email: app.user.email,
+        phone: app.user.phone,
+        photoUrl: app.user.photoUrl,
+      },
+      trainer: app.trainer
+        ? {
+            id: app.trainer.id,
+            bio: app.trainer.bio,
+            specializations: app.trainer.specializations,
+            offersSessionTypes: app.trainer.offersSessionTypes,
+          }
+        : null,
+    }));
+  }
+
+  /** Eğitmen başvurusunu onayla — kulüp admin */
+  async approveTrainerApplication(admin: User, applicationId: string, note?: string) {
+    const app = await this.trainerApplicationsRepo.findOne({
+      where: { id: applicationId },
+      relations: ['user', 'trainer'],
+    });
+    if (!app) throw new NotFoundException('Başvuru bulunamadı');
+    if (app.status !== 'pending') throw new BadRequestException('Bu başvuru zaten işlenmiş');
+
+    // Verify this club admin has authority (preferredClubSubdomain matches)
+    const tenant = (await this.usersRepo.manager
+      .getRepository('Tenant')
+      .findOne({ where: { id: admin.tenantId } })) as { subdomain: string } | null;
+    if (!tenant || app.preferredClubSubdomain !== tenant.subdomain) {
+      throw new BadRequestException('Bu başvuru sizin kulübünüze ait değil');
+    }
+
+    // Approve
+    app.status = 'approved';
+    app.adminNote = note?.trim() || null;
+    app.reviewedByUserId = admin.id;
+    app.reviewedAt = new Date();
+    await this.trainerApplicationsRepo.save(app);
+
+    // Activate user
+    await this.usersRepo.update({ id: app.userId }, { accountStatus: MemberAccountStatus.ACTIVE });
+
+    // Move trainer to this club's tenant
+    await this.trainersRepo.update({ id: app.trainerId }, { tenantId: admin.tenantId });
+
+    // Notify trainer
+    void this.notifier
+      .memberApproved({
+        ...app.user,
+        tenantId: admin.tenantId,
+      })
+      .catch(() => {});
+
+    return { ok: true };
+  }
+
+  /** Eğitmen başvurusunu reddet — kulüp admin */
+  async rejectTrainerApplication(admin: User, applicationId: string, note?: string) {
+    const app = await this.trainerApplicationsRepo.findOne({ where: { id: applicationId } });
+    if (!app) throw new NotFoundException('Başvuru bulunamadı');
+    if (app.status !== 'pending') throw new BadRequestException('Bu başvuru zaten işlenmiş');
+
+    app.status = 'rejected';
+    app.adminNote = note?.trim() || null;
+    app.reviewedByUserId = admin.id;
+    app.reviewedAt = new Date();
+    await this.trainerApplicationsRepo.save(app);
+
+    // Update user status
+    await this.usersRepo.update(
+      { id: app.userId },
+      { accountStatus: MemberAccountStatus.REJECTED },
+    );
+
+    return { ok: true };
   }
 }

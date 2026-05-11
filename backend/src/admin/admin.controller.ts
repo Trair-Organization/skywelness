@@ -60,6 +60,38 @@ export class AdminController {
     return this.adminMembers.listTrainers(admin.tenantId);
   }
 
+  /** Kulübe başvuran eğitmen listesi (preferredClubSubdomain eşleşen) */
+  @Get('trainer-applications')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTrainerApplications(@CurrentUser() admin: User) {
+    return this.adminMembers.listTrainerApplications(admin.tenantId);
+  }
+
+  /** Eğitmen başvurusunu onayla */
+  @Post('trainer-applications/:id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  approveTrainerApplication(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { note?: string },
+  ) {
+    return this.adminMembers.approveTrainerApplication(admin, id, body.note);
+  }
+
+  /** Eğitmen başvurusunu reddet */
+  @Post('trainer-applications/:id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  rejectTrainerApplication(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { note?: string },
+  ) {
+    return this.adminMembers.rejectTrainerApplication(admin, id, body.note);
+  }
+
   /** Diagnostic: probe the active mail transport (SMTP verify). */
   @Get('mail/health')
   @UseGuards(JwtAuthGuard, RolesGuard)

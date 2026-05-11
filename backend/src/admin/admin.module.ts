@@ -14,6 +14,8 @@ import { Reservation } from '../database/entities/reservation.entity';
 import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
 import { Trainer } from '../database/entities/trainer.entity';
+import { TrainerApplication } from '../database/entities/trainer-application.entity';
+import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { User } from '../database/entities/user.entity';
 import { AdminController } from './admin.controller';
 import { AdminEventsController } from './admin-events.controller';
@@ -32,6 +34,8 @@ import { AdminMembersService } from './admin-members.service';
       PackageType,
       Reservation,
       Trainer,
+      TrainerApplication,
+      TrainerProfile,
       Availability,
       SpaTherapist,
       SpaService,
