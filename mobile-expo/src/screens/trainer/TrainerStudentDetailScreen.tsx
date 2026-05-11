@@ -31,6 +31,10 @@ type StudentDetail = {
   source: string;
   connectedAt: string;
   totalLessons: number;
+  completedLessons: number;
+  cancelledLessons: number;
+  upcomingCount: number;
+  nextLesson: { startTime: string; endTime: string } | null;
   notes: Array<{ id: string; note: string; createdAt: string }>;
   packages: Array<{ id: string; name: string; remainingSessions: number; expiresAt: string }>;
 };
@@ -194,9 +198,25 @@ export function TrainerStudentDetailScreen() {
               </Text>
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>🏋️ {detail.totalLessons} ders</Text>
+              <Text style={styles.badgeText}>✅ {detail.completedLessons} tamamlanan</Text>
             </View>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>📅 {detail.upcomingCount} yaklaşan</Text>
+            </View>
+            {detail.cancelledLessons > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>❌ {detail.cancelledLessons} iptal</Text>
+              </View>
+            )}
           </View>
+          {detail.nextLesson && (
+            <View style={styles.nextLessonBadge}>
+              <Text style={styles.nextLessonText}>
+                Sıradaki: {fmtDate(detail.nextLesson.startTime)} ·{' '}
+                {fmtTime(detail.nextLesson.startTime)}
+              </Text>
+            </View>
+          )}
           <View style={styles.actionRow}>
             <Pressable style={styles.actionBtn} onPress={handleMessage}>
               <Text style={styles.actionBtnText}>💬 Mesaj</Text>
@@ -379,7 +399,13 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 20, fontWeight: '800', color: premium.accentBlue },
   name: { fontSize: 20, fontWeight: '800', color: premium.text },
   meta: { fontSize: 12, color: premium.textMuted, marginTop: 4 },
-  badges: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  badges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+    justifyContent: 'center',
+  },
   badge: {
     backgroundColor: 'rgba(148,163,184,0.08)',
     borderRadius: 8,
@@ -387,6 +413,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   badgeText: { fontSize: 11, fontWeight: '600', color: premium.textMuted },
+  nextLessonBadge: {
+    marginTop: 10,
+    backgroundColor: 'rgba(56,189,248,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: 'center',
+  },
+  nextLessonText: { fontSize: 12, fontWeight: '700', color: premium.accentBlue },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
   actionBtn: {
     backgroundColor: 'rgba(56,189,248,0.12)',

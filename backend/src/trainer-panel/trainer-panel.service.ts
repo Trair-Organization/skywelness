@@ -318,24 +318,59 @@ export class TrainerPanelService {
     });
     if (!link) throw new NotFoundException('Öğrenci bulunamadı');
 
-    const [notes, packages, totalLessons] = await Promise.all([
-      this.notesRepo.find({
-        where: { trainerId: trainer.id, memberUserId: studentUserId },
-        order: { createdAt: 'DESC' },
-        take: 20,
-      }),
-      this.packagesRepo.find({
-        where: { userId: studentUserId, status: In(['active'] as never[]) },
-        relations: ['packageType'],
-      }),
-      this.resRepo.count({
-        where: {
-          trainerId: trainer.id,
-          userId: studentUserId,
-          status: ReservationStatus.CONFIRMED,
-        },
-      }),
-    ]);
+    const now = new Date();
+
+    const [notes, completedLessons, cancelledLessons, upcomingLessons, totalLessons] =
+      await Promise.all([
+        this.notesRepo.find({
+          where: { trainerId: trainer.id, memberUserId: studentUserId },
+          order: { createdAt: 'DESC' },
+          take: 20,
+        }),
+        this.resRepo.count({
+          where: {
+            trainerId: trainer.id,
+            userId: studentUserId,
+            status: In([ReservationStatus.CONFIRMED, ReservationStatus.COMPLETED]),
+            startTime: Between(new Date('2020-01-01'), now) as never,
+          },
+        }),
+        this.resRepo.count({
+          where: {
+            trainerId: trainer.id,
+            userId: studentUserId,
+            status: ReservationStatus.CANCELLED,
+          },
+        }),
+        this.resRepo.find({
+          where: {
+            trainerId: trainer.id,
+            userId: studentUserId,
+            status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+            startTime: MoreThanOrEqual(now),
+          },
+          order: { startTime: 'ASC' },
+          take: 5,
+        }),
+        this.resRepo.count({
+          where: { trainerId: trainer.id, userId: studentUserId },
+        }),
+      ]);
+
+    // Only show packages assigned to this trainer (or PT packages)
+    const packages = await this.packagesRepo.find({
+      where: [
+        { userId: studentUserId, assignedTrainerId: trainer.id, status: In(['active'] as never[]) },
+        { userId: studentUserId, status: In(['active'] as never[]) },
+      ],
+      relations: ['packageType'],
+    });
+    // Filter: only PT packages or packages assigned to this trainer
+    const relevantPackages = packages.filter(
+      (p) =>
+        p.assignedTrainerId === trainer.id ||
+        (p.packageType && p.packageType.sessionType === SessionType.PERSONAL_TRAINING),
+    );
 
     return {
       userId: link.memberUserId,
@@ -346,11 +381,20 @@ export class TrainerPanelService {
       photoUrl: link.memberUser.photoUrl,
       source: link.source,
       connectedAt: link.createdAt,
+      // Stats
       totalLessons,
+      completedLessons,
+      cancelledLessons,
+      upcomingCount: upcomingLessons.length,
+      nextLesson: upcomingLessons[0]
+        ? { startTime: upcomingLessons[0].startTime, endTime: upcomingLessons[0].endTime }
+        : null,
+      // Notes
       notes: notes.map((n) => ({ id: n.id, note: n.note, createdAt: n.createdAt })),
-      packages: packages.map((p) => ({
+      // Only relevant packages (PT / assigned to this trainer)
+      packages: relevantPackages.map((p) => ({
         id: p.id,
-        name: p.packageType?.name ?? 'Paket',
+        name: p.packageType?.name ?? 'PT Paketi',
         remainingSessions: p.remainingSessions,
         expiresAt: p.expiresAt,
       })),

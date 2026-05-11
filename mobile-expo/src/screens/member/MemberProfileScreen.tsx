@@ -59,6 +59,10 @@ export function MemberProfileScreen() {
   const [ptRemaining, setPtRemaining] = useState<number | null>(null);
   const [spaRemaining, setSpaRemaining] = useState<number | null>(null);
 
+  // Trainer code
+  const [trainerCode, setTrainerCode] = useState('');
+  const [connectingTrainer, setConnectingTrainer] = useState(false);
+
   // Animation
   const editAnim = useRef(new Animated.Value(0)).current;
 
@@ -82,6 +86,30 @@ export function MemberProfileScreen() {
       void loadStats();
     }, [loadStats]),
   );
+
+  const handleConnectByCode = async () => {
+    if (!trainerCode.trim() || !token || !tenant) return;
+    setConnectingTrainer(true);
+    try {
+      const res = await apiJson<{ ok: boolean; trainerName: string }>(
+        '/trainer-network/connect-by-code',
+        {
+          method: 'POST',
+          token,
+          tenantSubdomain: tenant.subdomain,
+          body: JSON.stringify({ inviteCode: trainerCode.trim() }),
+        },
+      );
+      Alert.alert('✅ Bağlandınız', `${res.trainerName} eğitmeninize başarıyla bağlandınız!`);
+      setTrainerCode('');
+    } catch (e) {
+      const msg =
+        e instanceof Error && 'message' in e ? (e as { message: string }).message : 'Bağlanılamadı';
+      Alert.alert('Hata', msg);
+    } finally {
+      setConnectingTrainer(false);
+    }
+  };
 
   const checkUsername = useCallback(
     (value: string) => {
@@ -435,6 +463,37 @@ export function MemberProfileScreen() {
           </Pressable>
         </GlassCard>
 
+        {/* ─── Eğitmen Kodu Gir ─── */}
+        <GlassCard style={styles.quickAccessCard}>
+          <View style={styles.trainerCodeSection}>
+            <Text style={styles.trainerCodeTitle}>🔗 Eğitmen Kodu Gir</Text>
+            <Text style={styles.trainerCodeHint}>
+              Eğitmeninizin size verdiği kodu girerek bağlanın
+            </Text>
+            <View style={styles.trainerCodeRow}>
+              <View style={styles.trainerCodeInputWrap}>
+                <PremiumInput
+                  label=""
+                  value={trainerCode}
+                  onChangeText={(v) => setTrainerCode(v.toUpperCase())}
+                  placeholder="ABCD1234"
+                  autoCapitalize="characters"
+                />
+              </View>
+              <Pressable
+                style={[
+                  styles.trainerCodeBtn,
+                  (!trainerCode.trim() || connectingTrainer) && { opacity: 0.4 },
+                ]}
+                onPress={handleConnectByCode}
+                disabled={!trainerCode.trim() || connectingTrainer}
+              >
+                <Text style={styles.trainerCodeBtnText}>{connectingTrainer ? '⏳' : '→'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </GlassCard>
+
         {/* ─── Settings ─── */}
         <GlassCard style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t('lang.label')}</Text>
@@ -766,6 +825,42 @@ const styles = StyleSheet.create({
   /* ─── Quick Access ─── */
   quickAccessCard: {
     marginBottom: 12,
+  },
+  trainerCodeSection: {
+    paddingVertical: 4,
+  },
+  trainerCodeTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: premium.text,
+    marginBottom: 4,
+  },
+  trainerCodeHint: {
+    fontSize: 12,
+    color: premium.textMuted,
+    marginBottom: 12,
+  },
+  trainerCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  trainerCodeInputWrap: {
+    flex: 1,
+  },
+  trainerCodeBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: premium.accentBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  trainerCodeBtnText: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '800',
   },
   quickAccessItem: {
     flexDirection: 'row',
