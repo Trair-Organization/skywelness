@@ -9,4 +9,5 @@ export type RootStackParamList = {
   TrainerRegister: undefined;
   PendingApproval: undefined;
   Main: undefined;
+  TrainerMain: undefined;
 };

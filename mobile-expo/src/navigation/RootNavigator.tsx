@@ -12,6 +12,7 @@ import { ForgotPasswordScreen } from '../screens/onboarding/ForgotPasswordScreen
 import { RegisterScreen } from '../screens/onboarding/RegisterScreen';
 import { TrainerRegisterScreen } from '../screens/onboarding/TrainerRegisterScreen';
 import { MemberTabNavigator } from './MemberTabNavigator';
+import { TrainerTabNavigator } from './TrainerTabNavigator';
 import { MemberPendingApprovalScreen } from '../screens/MemberPendingApprovalScreen';
 import type { RootStackParamList } from './types';
 
@@ -68,7 +69,13 @@ export function RootNavigator() {
     let target: keyof RootStackParamList = 'ClubConnect';
     if (user && token && tenant) {
       const pending = user.accountStatus === 'pending_approval';
-      target = pending ? 'PendingApproval' : 'Main';
+      if (pending) {
+        target = 'PendingApproval';
+      } else if (user.role === 'trainer' || user.role === 'independent_trainer') {
+        target = 'TrainerMain';
+      } else {
+        target = 'Main';
+      }
     }
     console.log('[NAV] effect', {
       target,
@@ -108,6 +115,7 @@ export function RootNavigator() {
         <Stack.Screen name="TrainerRegister" component={TrainerRegisterScreen} />
         <Stack.Screen name="PendingApproval" component={MemberPendingApprovalScreen} />
         <Stack.Screen name="Main" component={MemberTabNavigator} />
+        <Stack.Screen name="TrainerMain" component={TrainerTabNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );
