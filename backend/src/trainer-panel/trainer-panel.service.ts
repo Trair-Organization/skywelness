@@ -56,38 +56,45 @@ export class TrainerPanelService {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    const [todayLessons, weeklyLessons, monthlyCompleted, monthlyCancelled, activeStudents] =
-      await Promise.all([
-        this.resRepo.count({
-          where: {
-            trainerId: trainer.id,
-            status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
-            startTime: Between(todayStart, todayEnd),
-          },
-        }),
-        this.resRepo.count({
-          where: {
-            trainerId: trainer.id,
-            status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
-            startTime: Between(weekStart, weekEnd),
-          },
-        }),
-        this.resRepo.count({
-          where: {
-            trainerId: trainer.id,
-            status: ReservationStatus.COMPLETED,
-            startTime: Between(monthStart, monthEnd),
-          },
-        }),
-        this.resRepo.count({
-          where: {
-            trainerId: trainer.id,
-            status: ReservationStatus.CANCELLED,
-            startTime: Between(monthStart, monthEnd),
-          },
-        }),
-        this.linksRepo.count({ where: { trainerId: trainer.id, status: 'active' } }),
-      ]);
+    const [
+      todayLessons,
+      weeklyLessons,
+      monthlyCompleted,
+      monthlyCancelled,
+      activeStudents,
+      pendingRequests,
+    ] = await Promise.all([
+      this.resRepo.count({
+        where: {
+          trainerId: trainer.id,
+          status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+          startTime: Between(todayStart, todayEnd),
+        },
+      }),
+      this.resRepo.count({
+        where: {
+          trainerId: trainer.id,
+          status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+          startTime: Between(weekStart, weekEnd),
+        },
+      }),
+      this.resRepo.count({
+        where: {
+          trainerId: trainer.id,
+          status: ReservationStatus.COMPLETED,
+          startTime: Between(monthStart, monthEnd),
+        },
+      }),
+      this.resRepo.count({
+        where: {
+          trainerId: trainer.id,
+          status: ReservationStatus.CANCELLED,
+          startTime: Between(monthStart, monthEnd),
+        },
+      }),
+      this.linksRepo.count({ where: { trainerId: trainer.id, status: 'active' } }),
+      this.resRepo.count({ where: { trainerId: trainer.id, status: ReservationStatus.PENDING } }),
+    ]);
 
     // Next lesson
     const nextLesson = await this.resRepo.findOne({
@@ -127,6 +134,7 @@ export class TrainerPanelService {
       monthlyCompleted,
       monthlyCancelled,
       activeStudents,
+      pendingRequests,
       unreadMessages,
       nextLesson: nextLesson
         ? {
@@ -661,6 +669,115 @@ export class TrainerPanelService {
     });
     await this.notesRepo.save(row);
     return { id: row.id, createdAt: row.createdAt };
+  }
+
+  // ─── Pending Requests (Onay Bekleyen Talepler) ───────────────────────────────
+
+  async getPendingRequests(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const pending = await this.resRepo.find({
+      where: {
+        trainerId: trainer.id,
+        status: ReservationStatus.PENDING,
+      },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+    });
+    return pending.map((r) => ({
+      id: r.id,
+      studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
+      studentId: r.userId,
+      studentEmail: r.user.email,
+      studentPhone: r.user.phone,
+      sessionType: r.sessionType,
+      startTime: r.startTime.toISOString(),
+      endTime: r.endTime.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+      notes: r.notes,
+    }));
+  }
+
+  async approveRequest(user: User, reservationId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const reservation = await this.resRepo.findOne({
+      where: { id: reservationId, trainerId: trainer.id, status: ReservationStatus.PENDING },
+      relations: ['user'],
+    });
+    if (!reservation) throw new NotFoundException('Talep bulunamadı');
+
+    reservation.status = ReservationStatus.CONFIRMED;
+    await this.resRepo.save(reservation);
+
+    // Notify student
+    const student = reservation.user;
+    if (student) {
+      const date = reservation.startTime.toLocaleDateString('tr-TR');
+      const time = reservation.startTime.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      void this.notifier.studentLessonCreated({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        date,
+        time,
+      });
+    }
+
+    return { ok: true, status: 'confirmed' };
+  }
+
+  async rejectRequest(user: User, reservationId: string, reason?: string) {
+    const trainer = await this.resolveTrainer(user);
+    const reservation = await this.resRepo.findOne({
+      where: { id: reservationId, trainerId: trainer.id, status: ReservationStatus.PENDING },
+      relations: ['user'],
+    });
+    if (!reservation) throw new NotFoundException('Talep bulunamadı');
+
+    reservation.status = ReservationStatus.CANCELLED;
+    reservation.cancelledAt = new Date();
+    reservation.cancelledBy = 'trainer';
+    reservation.cancelReason = reason?.trim() || 'Eğitmen tarafından reddedildi';
+    await this.resRepo.save(reservation);
+
+    // Refund package session
+    if (reservation.packageId) {
+      const pkg = await this.packagesRepo.findOne({ where: { id: reservation.packageId } });
+      if (pkg) {
+        pkg.remainingSessions += 1;
+        await this.packagesRepo.save(pkg);
+      }
+    }
+
+    // Notify student
+    const student = reservation.user;
+    if (student) {
+      const date = reservation.startTime.toLocaleDateString('tr-TR');
+      const time = reservation.startTime.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      void this.notifier.studentLessonCancelled({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        date,
+        time,
+        reason: reason?.trim() || 'Eğitmen tarafından reddedildi',
+      });
+    }
+
+    return { ok: true, status: 'rejected' };
   }
 
   // ─── Lessons ────────────────────────────────────────────────────────────────

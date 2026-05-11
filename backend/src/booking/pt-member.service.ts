@@ -161,7 +161,7 @@ export class PtMemberService {
     }
     await this.memberPackagesRepo.save(ptPackage);
 
-    // 5. Create a Reservation record
+    // 5. Create a Reservation record (pending — eğitmen onayı gerekli)
     const reservation = this.reservationsRepo.create({
       userId,
       tenantId,
@@ -170,7 +170,7 @@ export class PtMemberService {
       sessionType: SessionType.PERSONAL_TRAINING,
       startTime: slotStart,
       endTime: slotEnd,
-      status: ReservationStatus.CONFIRMED,
+      status: ReservationStatus.PENDING,
       notes: null,
       cancelledAt: null,
     });

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,12 +12,22 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiJson } from '../../api/client';
+import { apiJson, ApiError } from '../../api/client';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { premium } from '../../theme/premiumTheme';
 import type { TrainerTabParamList } from '../../navigation/trainerTabTypes';
+
+type PendingRequest = {
+  id: string;
+  studentName: string;
+  studentId: string;
+  sessionType: string;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+};
 
 type DashboardData = {
   todayLessons: number;
@@ -24,6 +35,7 @@ type DashboardData = {
   monthlyCompleted: number;
   monthlyCancelled: number;
   activeStudents: number;
+  pendingRequests: number;
   unreadMessages: number;
   nextLesson: { time: string; studentName: string } | null;
   todaySchedule: Array<{
@@ -41,17 +53,21 @@ export function TrainerDashboardScreen() {
   const { user, token, tenant } = useMemberAuth();
   const navigation = useNavigation<BottomTabNavigationProp<TrainerTabParamList>>();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const opts = { token: token ?? undefined, tenantSubdomain: tenant?.subdomain };
 
   const load = useCallback(async () => {
     if (!token || !tenant) return;
     try {
-      const res = await apiJson<DashboardData>('/trainer-panel/dashboard', {
-        token,
-        tenantSubdomain: tenant.subdomain,
-      });
+      const [res, reqs] = await Promise.all([
+        apiJson<DashboardData>('/trainer-panel/dashboard', opts),
+        apiJson<PendingRequest[]>('/trainer-panel/requests', opts),
+      ]);
       setData(res);
+      setRequests(reqs);
     } catch {
       // silent
     } finally {
@@ -59,6 +75,39 @@ export function TrainerDashboardScreen() {
       setRefreshing(false);
     }
   }, [token, tenant]);
+
+  const handleApprove = async (id: string) => {
+    try {
+      await apiJson(`/trainer-panel/requests/${id}/approve`, { ...opts, method: 'POST' });
+      Alert.alert('✅', 'Randevu onaylandı');
+      void load();
+    } catch (e) {
+      Alert.alert('Hata', e instanceof ApiError ? e.message : 'Onaylanamadı');
+    }
+  };
+
+  const handleReject = (id: string) => {
+    Alert.alert('Reddet', 'Bu randevu talebini reddetmek istiyor musunuz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Reddet',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await apiJson(`/trainer-panel/requests/${id}/reject`, {
+              ...opts,
+              method: 'POST',
+              body: JSON.stringify({}),
+            });
+            Alert.alert('❌', 'Talep reddedildi');
+            void load();
+          } catch (e) {
+            Alert.alert('Hata', e instanceof ApiError ? e.message : 'Reddedilemedi');
+          }
+        },
+      },
+    ]);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -149,6 +198,38 @@ export function TrainerDashboardScreen() {
           </View>
         </GlassCard>
 
+        {/* Pending Requests */}
+        {requests.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.sectionTitle}>⏳ Bekleyen Talepler ({requests.length})</Text>
+            {requests.map((req) => (
+              <GlassCard key={req.id} style={styles.pendingCard}>
+                <View style={styles.pendingInfo}>
+                  <Text style={styles.pendingStudentName}>{req.studentName}</Text>
+                  <Text style={styles.pendingTime}>
+                    {new Date(req.startTime).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}{' '}
+                    · {fmtTime(req.startTime)}
+                  </Text>
+                  <Text style={styles.pendingType}>
+                    {req.sessionType === 'personal_training' ? '🏋️ Özel Ders' : '💆 Masaj'}
+                  </Text>
+                </View>
+                <View style={styles.pendingActions}>
+                  <Pressable style={styles.approveBtn} onPress={() => handleApprove(req.id)}>
+                    <Text style={styles.approveBtnText}>✓ Onayla</Text>
+                  </Pressable>
+                  <Pressable style={styles.rejectBtn} onPress={() => handleReject(req.id)}>
+                    <Text style={styles.rejectBtnText}>✕ Reddet</Text>
+                  </Pressable>
+                </View>
+              </GlassCard>
+            ))}
+          </View>
+        )}
+
         {/* Next Lesson */}
         {data?.nextLesson && (
           <GlassCard style={styles.nextLessonCard}>
@@ -236,6 +317,32 @@ const styles = StyleSheet.create({
   monthlyValue: { fontSize: 24, fontWeight: '900' },
   monthlyLabel: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
   nextLessonCard: { marginBottom: 16, borderColor: 'rgba(56,189,248,0.2)', borderWidth: 1 },
+  pendingCard: { marginBottom: 8, borderColor: 'rgba(245,158,11,0.2)', borderWidth: 1 },
+  pendingInfo: { marginBottom: 10 },
+  pendingStudentName: { fontSize: 15, fontWeight: '700', color: premium.text },
+  pendingTime: { fontSize: 13, color: premium.accentBlue, marginTop: 2 },
+  pendingType: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  pendingActions: { flexDirection: 'row', gap: 8 },
+  approveBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(34,197,94,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.3)',
+  },
+  approveBtnText: { fontSize: 13, fontWeight: '700', color: premium.accentGreen },
+  rejectBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
+  },
+  rejectBtnText: { fontSize: 13, fontWeight: '700', color: '#ef4444' },
   nextLessonHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   nextLessonIcon: { fontSize: 18 },
   nextLessonTitle: { fontSize: 14, fontWeight: '700', color: premium.textMuted },

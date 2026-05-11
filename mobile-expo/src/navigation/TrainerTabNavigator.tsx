@@ -88,11 +88,12 @@ export function TrainerTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Students"
-        component={TrainerStudentsScreen}
+        name="TrainerMessages"
+        component={TrainerMessagesScreen}
         options={{
-          tabBarLabel: 'Öğrenciler',
-          tabBarIcon: ({ focused }) => tabIcon('👥', focused),
+          tabBarLabel: 'Mesajlar',
+          tabBarIcon: ({ focused }) => tabIcon('💬', focused),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tab.Screen
@@ -105,8 +106,8 @@ export function TrainerTabNavigator() {
       />
       {/* Hidden routes */}
       <Tab.Screen
-        name="TrainerMessages"
-        component={TrainerMessagesScreen}
+        name="Students"
+        component={TrainerStudentsScreen}
         options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tab.Screen

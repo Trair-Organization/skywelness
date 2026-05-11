@@ -166,6 +166,28 @@ export class TrainerPanelController {
 
   // ─── Lessons ────────────────────────────────────────────────────────────────
 
+  @Get('requests')
+  getPendingRequests(@CurrentUser() user: User) {
+    return this.service.getPendingRequests(user);
+  }
+
+  @Post('requests/:id/approve')
+  approveRequest(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.approveRequest(user, id);
+  }
+
+  @Post('requests/:id/reject')
+  rejectRequest(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.service.rejectRequest(user, id, body.reason);
+  }
+
   @Get('lessons')
   getLessons(
     @CurrentUser() user: User,
