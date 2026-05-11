@@ -87,6 +87,11 @@ export class TrainerPanelController {
     return this.service.listStudents(user);
   }
 
+  @Get('students/search')
+  searchUser(@CurrentUser() user: User, @Query('q') query: string) {
+    return this.service.searchUser(user, query ?? '');
+  }
+
   @Get('students/:userId')
   getStudentDetail(
     @CurrentUser() user: User,
@@ -106,11 +111,6 @@ export class TrainerPanelController {
   @Post('students/add-by-id')
   addStudentById(@CurrentUser() user: User, @Body() body: { userId: string }) {
     return this.service.addStudentById(user, body.userId);
-  }
-
-  @Get('students/search')
-  searchUser(@CurrentUser() user: User, @Query('q') query: string) {
-    return this.service.searchUser(user, query ?? '');
   }
 
   @Get('invite-code')
