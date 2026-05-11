@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson, ApiError } from '../lib/api';
+import { TherapistsPage } from './TherapistsPage';
 
 type SpaServiceRow = {
   id: string;
@@ -23,7 +24,7 @@ type SpaBookingRow = {
   user: { id: string; firstName: string; lastName: string; email: string } | null;
 };
 
-type TabType = 'bookings' | 'services';
+type TabType = 'bookings' | 'services' | 'therapists';
 
 export function SpaManagementPage() {
   const [activeTab, setActiveTab] = useState<TabType>('bookings');
@@ -110,6 +111,12 @@ export function SpaManagementPage() {
             onClick={() => setActiveTab('services')}
           >
             🧴 Hizmetler ({services.length})
+          </button>
+          <button
+            className={`filter-tab ${activeTab === 'therapists' ? 'filter-tab-active' : ''}`}
+            onClick={() => setActiveTab('therapists')}
+          >
+            💆 Masözler
           </button>
         </div>
       </div>
@@ -225,6 +232,9 @@ export function SpaManagementPage() {
               ))}
             </div>
           )}
+
+          {/* Masözler */}
+          {activeTab === 'therapists' && <TherapistsPage embedded />}
         </>
       )}
     </div>

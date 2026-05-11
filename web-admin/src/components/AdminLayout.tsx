@@ -7,18 +7,14 @@ type NavItem = { path: string; icon: string; label: string };
 const CLUB_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
-  { path: '/trainers', icon: '🏋️', label: 'Eğitmenler' },
-  { path: '/therapists', icon: '💆', label: 'Masözler' },
+  { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
+  { path: '/spa', icon: '💆', label: 'Spa Yönetimi' },
   { path: '/schedule', icon: '🗓️', label: 'Ajanda' },
   { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
-  { path: '/spa', icon: '🧴', label: 'Spa Hizmetleri' },
-  { path: '/leads', icon: '📋', label: 'Gelen Talepler' },
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
-  { path: '/club/reservation-requests', icon: '📝', label: 'PT Rezervasyonları' },
-  { path: '/club/cafe-orders', icon: '☕', label: 'Cafe Siparişleri' },
 ];
 
 const PLATFORM_NAV: NavItem[] = [

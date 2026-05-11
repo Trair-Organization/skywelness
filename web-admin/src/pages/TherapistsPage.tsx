@@ -43,7 +43,7 @@ const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
 
 type ViewMode = 'list' | 'calendar';
 
-export function TherapistsPage() {
+export function TherapistsPage({}: { embedded?: boolean } = {}) {
   const [therapists, setTherapists] = useState<TherapistRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -9,7 +9,7 @@ type ReservationRequest = {
   trainer: { user: { firstName: string; lastName: string } };
 };
 
-export function ClubReservationRequestsPage() {
+export function ClubReservationRequestsPage({}: { embedded?: boolean } = {}) {
   const [rows, setRows] = useState<ReservationRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

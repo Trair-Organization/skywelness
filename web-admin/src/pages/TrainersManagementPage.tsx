@@ -64,7 +64,7 @@ const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
 
 type ViewMode = 'list' | 'schedule';
 
-export function TrainersManagementPage() {
+export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
   const [trainers, setTrainers] = useState<TrainerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

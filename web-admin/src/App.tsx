@@ -9,8 +9,6 @@ import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { MembersPage } from './pages/MembersPage';
-import { TrainersManagementPage } from './pages/TrainersManagementPage';
-import { TherapistsPage } from './pages/TherapistsPage';
 import { SpaManagementPage } from './pages/SpaManagementPage';
 import { PackageTypesPage } from './pages/PackageTypesPage';
 import { UnifiedSchedulePage } from './pages/UnifiedSchedulePage';
@@ -27,6 +25,7 @@ import { ClubInsightsPage } from './pages/ClubInsightsPage';
 import { ClubCafeOrdersPage } from './pages/ClubCafeOrdersPage';
 import { ClubReservationRequestsPage } from './pages/ClubReservationRequestsPage';
 import { ConnectionsPage } from './pages/ConnectionsPage';
+import { PtManagementPage } from './pages/PtManagementPage';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { SuperAdminDashboardPage } from './pages/SuperAdminDashboardPage';
 import { SuperAdminTenantsPage } from './pages/SuperAdminTenantsPage';
@@ -52,8 +51,9 @@ function AppRoutes() {
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
         <Route path="/members" element={<MembersPage />} />
         <Route path="/members/pending" element={<PendingMembersPage />} />
-        <Route path="/trainers" element={<TrainersManagementPage />} />
-        <Route path="/therapists" element={<TherapistsPage />} />
+        <Route path="/trainers" element={<Navigate to="/pt" replace />} />
+        <Route path="/therapists" element={<Navigate to="/spa" replace />} />
+        <Route path="/pt" element={<PtManagementPage />} />
         <Route path="/packages" element={<PackageTypesPage />} />
         <Route path="/schedule" element={<UnifiedSchedulePage />} />
         <Route path="/spa" element={<SpaManagementPage />} />
