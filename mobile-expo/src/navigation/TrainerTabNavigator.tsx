@@ -9,7 +9,7 @@ import { TrainerStudentsScreen } from '../screens/trainer/TrainerStudentsScreen'
 import { TrainerStudentDetailScreen } from '../screens/trainer/TrainerStudentDetailScreen';
 import { TrainerMessagesScreen } from '../screens/trainer/TrainerMessagesScreen';
 import { TrainerProfileScreen } from '../screens/trainer/TrainerProfileScreen';
-import { MemberDiscoverScreen } from '../screens/member/MemberDiscoverScreen';
+import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
 import { ConnectionsScreen } from '../screens/shared/ConnectionsScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import type { TrainerTabParamList } from './trainerTabTypes';
@@ -66,7 +66,7 @@ export function TrainerTabNavigator() {
     >
       <Tab.Screen
         name="Discover"
-        component={MemberDiscoverScreen}
+        component={ClubConnectScreen}
         options={{
           tabBarLabel: 'Keşfet',
           tabBarIcon: ({ focused }) => tabIcon('🔍', focused),

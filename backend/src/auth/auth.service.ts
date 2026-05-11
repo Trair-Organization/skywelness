@@ -735,4 +735,45 @@ export class AuthService {
       accountStatus: user.accountStatus,
     };
   }
+
+  /**
+   * Kullanıcının aynı email ile üye olduğu TÜM tenant'ları listele.
+   * Birden fazla kulübe üye olabilir — keşif ekranında "Bağlı Kulüplerim"
+   * olarak gösterilir.
+   */
+  async listMyMemberships(user: User) {
+    if (!user.email) return [];
+    const memberships = await this.usersRepo.find({
+      where: { email: user.email.toLowerCase() },
+      relations: ['tenant'],
+    });
+    return memberships
+      .filter((m) => m.tenant)
+      .filter((m) => {
+        const sub = m.tenant.subdomain;
+        const workspaceType = (m.tenant.settings as { workspaceType?: string } | null)
+          ?.workspaceType;
+        // Discovery hub'ı ve coach tenant'ları atla
+        return (
+          sub !== 'independent-hub' &&
+          !sub.startsWith('coach-') &&
+          workspaceType !== 'public_discovery'
+        );
+      })
+      .map((m) => ({
+        membershipId: m.id,
+        role: m.role,
+        accountStatus: m.accountStatus,
+        isCurrent: m.id === user.id,
+        tenant: {
+          id: m.tenant.id,
+          name: m.tenant.name,
+          subdomain: m.tenant.subdomain,
+          logoUrl: m.tenant.logoUrl ?? null,
+          location: m.tenant.location ?? null,
+          services: m.tenant.services ?? [],
+          featured: m.tenant.featured ?? false,
+        },
+      }));
+  }
 }

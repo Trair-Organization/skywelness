@@ -138,6 +138,12 @@ export class AuthController {
     return this.authService.sanitizeUser(req.user);
   }
 
+  @Get('my-memberships')
+  @UseGuards(JwtAuthGuard)
+  myMemberships(@CurrentUser() user: User) {
+    return this.authService.listMyMemberships(user);
+  }
+
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   updateMe(@CurrentUser() user: User, @Body() dto: UpdateMeDto) {

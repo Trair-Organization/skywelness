@@ -23,10 +23,11 @@ import { GradientBackground } from '../../components/premium/GradientBackground'
 import { GlassCard } from '../../components/premium/GlassCard';
 import { LeadCaptureModal } from '../../components/premium/LeadCaptureModal';
 import { EventDetailModal } from '../../components/premium/EventDetailModal';
+import { showToast } from '../../components/premium/Toast';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
 import { persistLanguage } from '../../i18n';
-import { apiJson } from '../../api/client';
+import { apiJson, ApiError } from '../../api/client';
 
 const logoLight = require('../../../assets/branding/wellness-club-logo-header.png');
 
@@ -78,6 +79,7 @@ type DiscoveryClub = {
 
 type DiscoveryTrainer = {
   id: string;
+  userId?: string;
   name: string;
   photoUrl: string | null;
   city: string;
@@ -253,7 +255,25 @@ export function ClubConnectScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
-  const { tenantDirectory, loadTenantDirectory } = useMemberAuth();
+  const { tenantDirectory, loadTenantDirectory, user, token, tenant } = useMemberAuth();
+  const isAuthenticated = Boolean(user && token);
+  const [myMemberships, setMyMemberships] = useState<
+    Array<{
+      membershipId: string;
+      role: string;
+      accountStatus: string;
+      isCurrent: boolean;
+      tenant: {
+        id: string;
+        name: string;
+        subdomain: string;
+        logoUrl: string | null;
+        location: string | null;
+        services: string[];
+        featured: boolean;
+      };
+    }>
+  >([]);
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
   const [previewTrainer, setPreviewTrainer] = useState<Trainer | null>(null);
   const [previewCampaign, setPreviewCampaign] = useState<PublicCampaign | null>(null);
@@ -285,9 +305,171 @@ export function ClubConnectScreen() {
     Promise.resolve(fn()).catch(() => {});
   };
 
+  /** Chat ekranına yönlendir — tab içinden ya da root'tan çalışır. */
+  const navigateToChat = (chatParams: {
+    conversationId: string;
+    otherUser: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      photoUrl: string | null;
+    };
+  }) => {
+    const nav = navigation as unknown as {
+      navigate: (...args: unknown[]) => void;
+      getState?: () => { routeNames?: string[] };
+    };
+    const state = nav.getState?.();
+    // Eğer bulunduğumuz navigator'de 'Chat' route'u varsa direkt navigate et.
+    if (state?.routeNames?.includes('Chat')) {
+      nav.navigate('Chat', chatParams);
+    } else {
+      // Değilse Main tab navigator'ın Chat'ine git.
+      nav.navigate('Main', { screen: 'Chat', params: chatParams });
+    }
+  };
+
+  // ─── Auth-aware helpers ──────────────────────────────────────────
+  // Giriş yapmış kullanıcı → direkt mesajlaşma/join çalışsın
+  // Giriş yapmamış kullanıcı → LeadCaptureModal göster (mevcut davranış)
+
+  /** Kulüp ile iletişime geç: girişli kullanıcı → admin ile sohbet başlat */
+  const contactClub = async (params: {
+    clubSubdomain: string;
+    clubName: string;
+    clubId?: string;
+    prefillMessage?: string;
+  }) => {
+    if (isAuthenticated && token && tenant) {
+      try {
+        const res = await apiJson<{ conversationId: string }>('/messages/conversations/club', {
+          method: 'POST',
+          token,
+          tenantSubdomain: params.clubSubdomain,
+        });
+        showToast(`${params.clubName} ile sohbet başladı`, 'success');
+        navigateToChat({
+          conversationId: res.conversationId,
+          otherUser: {
+            id: '',
+            firstName: params.clubName,
+            lastName: '',
+            photoUrl: null,
+          },
+        });
+      } catch {
+        showToast('Kulübe mesaj başlatılamadı', 'error');
+      }
+      return;
+    }
+    setLeadModal({
+      visible: true,
+      source: 'club',
+      sourceRef: params.clubId,
+      sourceLabel: params.clubName,
+      clubSubdomain: params.clubSubdomain,
+      prefillMessage: params.prefillMessage ?? `${params.clubName} hakkında bilgi almak istiyorum.`,
+    });
+  };
+
+  /** Eğitmen ile iletişime geç */
+  const contactTrainer = async (params: {
+    trainerId: string;
+    trainerUserId?: string;
+    trainerName: string;
+    clubName: string;
+    clubSubdomain: string;
+    prefillMessage?: string;
+  }) => {
+    if (isAuthenticated && token && tenant) {
+      if (!params.trainerUserId) {
+        showToast('Eğitmen bilgisi yüklenemedi', 'error');
+        return;
+      }
+      try {
+        const res = await apiJson<{ conversationId: string }>('/messages/conversations', {
+          method: 'POST',
+          token,
+          tenantSubdomain: tenant.subdomain,
+          body: JSON.stringify({ otherUserId: params.trainerUserId }),
+        });
+        const nameParts = params.trainerName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        navigateToChat({
+          conversationId: res.conversationId,
+          otherUser: {
+            id: params.trainerUserId,
+            firstName,
+            lastName,
+            photoUrl: null,
+          },
+        });
+      } catch {
+        showToast('Mesaj başlatılamadı', 'error');
+      }
+      return;
+    }
+    setLeadModal({
+      visible: true,
+      source: 'trainer',
+      sourceRef: params.trainerId,
+      sourceLabel: `${params.trainerName} — ${params.clubName}`,
+      clubSubdomain: params.clubSubdomain,
+      prefillMessage:
+        params.prefillMessage ?? `${params.trainerName} eğitmen hakkında bilgi almak istiyorum.`,
+    });
+  };
+
+  /** Etkinliğe katıl: girişli → direkt katıl, girişsiz → lead modal */
+  const joinEventAction = async (evt: DiscoveryEvent) => {
+    if (isAuthenticated && token && tenant) {
+      try {
+        await apiJson(`/events/${evt.id}/join`, {
+          method: 'POST',
+          token,
+          tenantSubdomain: tenant.subdomain,
+        });
+        showToast('Etkinliğe katıldınız! ✓', 'success');
+        setSelectedEvent(null);
+      } catch (e) {
+        if (e instanceof ApiError && e.message.toLowerCase().includes('already')) {
+          showToast('Zaten katıldınız', 'info');
+        } else {
+          showToast(e instanceof ApiError ? e.message : 'Katılım başarısız', 'error');
+        }
+      }
+      return;
+    }
+    setSelectedEvent(null);
+    setLeadModal({
+      visible: true,
+      source: 'event',
+      sourceRef: evt.id,
+      sourceLabel: evt.title,
+      clubSubdomain: evt.clubSubdomain ?? undefined,
+      prefillMessage: `${evt.title} etkinliğine katılmak istiyorum.`,
+    });
+  };
+
   useEffect(() => {
     Promise.resolve(loadTenantDirectory()).catch(() => {});
   }, [loadTenantDirectory]);
+
+  // Giriş yapmış kullanıcının üye olduğu kulüpler (email ile eşleşen tüm tenant'lar)
+  useEffect(() => {
+    if (!isAuthenticated || !token || !tenant) {
+      setMyMemberships([]);
+      return;
+    }
+    apiJson<typeof myMemberships>('/auth/my-memberships', {
+      token,
+      tenantSubdomain: tenant.subdomain,
+    })
+      .then((rows) => setMyMemberships(rows))
+      .catch(() => setMyMemberships([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, token, tenant?.subdomain]);
 
   // Öne çıkan kampanyaları yükle
   useEffect(() => {
@@ -563,14 +745,39 @@ export function ClubConnectScreen() {
                   key={cat}
                   style={[styles.catChip, !selectedGoal && cat === 'Tümü' && styles.catChipActive]}
                   onPress={() => {
-                    if (cat === 'Tümü') { setSelectedGoal(null); setSearchQuery(''); setSubmittedQuery(null); }
-                    else if (cat === 'Kulüpler') { setSearchQuery('kulüp'); setSubmittedQuery('kulüp'); setSelectedGoal('fitness' as never); }
-                    else if (cat === 'Eğitmenler') { setSearchQuery('eğitmen'); setSubmittedQuery('eğitmen'); setSelectedGoal('fitness' as never); }
-                    else if (cat === 'Etkinlikler') { setSearchQuery('etkinlik'); setSubmittedQuery('etkinlik'); setSelectedGoal('fitness' as never); }
+                    if (cat === 'Tümü') {
+                      setSelectedGoal(null);
+                      setSearchQuery('');
+                      setSubmittedQuery(null);
+                    } else if (cat === 'Kulüpler') {
+                      setSearchQuery('kulüp');
+                      setSubmittedQuery('kulüp');
+                      setSelectedGoal('fitness' as never);
+                    } else if (cat === 'Eğitmenler') {
+                      setSearchQuery('eğitmen');
+                      setSubmittedQuery('eğitmen');
+                      setSelectedGoal('fitness' as never);
+                    } else if (cat === 'Etkinlikler') {
+                      setSearchQuery('etkinlik');
+                      setSubmittedQuery('etkinlik');
+                      setSelectedGoal('fitness' as never);
+                    }
                   }}
                 >
-                  <Text style={[styles.catChipText, !selectedGoal && cat === 'Tümü' && styles.catChipTextActive]}>
-                    {cat === 'Kulüpler' ? '🏢' : cat === 'Eğitmenler' ? '🏋️' : cat === 'Etkinlikler' ? '📅' : '✨'} {cat}
+                  <Text
+                    style={[
+                      styles.catChipText,
+                      !selectedGoal && cat === 'Tümü' && styles.catChipTextActive,
+                    ]}
+                  >
+                    {cat === 'Kulüpler'
+                      ? '🏢'
+                      : cat === 'Eğitmenler'
+                        ? '🏋️'
+                        : cat === 'Etkinlikler'
+                          ? '📅'
+                          : '✨'}{' '}
+                    {cat}
                   </Text>
                 </Pressable>
               ))}
@@ -582,7 +789,15 @@ export function ClubConnectScreen() {
                 <Text style={styles.popSearchTitle}>Popüler</Text>
                 <View style={styles.popSearchRow}>
                   {['Yoga', 'Pilates', 'Fitness', 'Masaj', 'CrossFit'].map((term) => (
-                    <Pressable key={term} style={styles.popSearchChip} onPress={() => { setSearchQuery(term); setSubmittedQuery(term); setSelectedGoal('fitness' as never); }}>
+                    <Pressable
+                      key={term}
+                      style={styles.popSearchChip}
+                      onPress={() => {
+                        setSearchQuery(term);
+                        setSubmittedQuery(term);
+                        setSelectedGoal('fitness' as never);
+                      }}
+                    >
                       <Text style={styles.popSearchChipText}>{term}</Text>
                     </Pressable>
                   ))}
@@ -880,6 +1095,15 @@ export function ClubConnectScreen() {
                   onPress={() => {
                     const camp = previewCampaign;
                     setPreviewCampaign(null);
+                    if (camp.tenant?.subdomain) {
+                      void contactClub({
+                        clubSubdomain: camp.tenant.subdomain,
+                        clubName: camp.tenant.name ?? camp.title,
+                        clubId: camp.tenant.id,
+                        prefillMessage: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
+                      });
+                      return;
+                    }
                     setLeadModal({
                       visible: true,
                       source: 'campaign',
@@ -968,12 +1192,10 @@ export function ClubConnectScreen() {
                       <Pressable
                         style={styles.trainerCtaPill}
                         onPress={() => {
-                          setLeadModal({
-                            visible: true,
-                            source: 'club',
-                            sourceRef: club.id,
-                            sourceLabel: club.name,
+                          void contactClub({
                             clubSubdomain: club.subdomain,
+                            clubName: club.name,
+                            clubId: club.id,
                             prefillMessage: `${club.name} hakkında bilgi almak istiyorum.`,
                           });
                         }}
@@ -1065,13 +1287,12 @@ export function ClubConnectScreen() {
                 <Pressable
                   key={`${trainer.id}-${idx}`}
                   onPress={() => {
-                    setLeadModal({
-                      visible: true,
-                      source: 'trainer',
-                      sourceRef: trainer.id,
-                      sourceLabel: `${trainer.name} — ${trainer.clubName}`,
+                    void contactTrainer({
+                      trainerId: trainer.id,
+                      trainerUserId: trainer.userId,
+                      trainerName: trainer.name,
+                      clubName: trainer.clubName,
                       clubSubdomain: trainer.clubSubdomain,
-                      prefillMessage: `${trainer.name} eğitmen hakkında bilgi almak istiyorum.`,
                     });
                   }}
                   style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
@@ -1126,48 +1347,136 @@ export function ClubConnectScreen() {
         )}
 
         <GlassCard style={styles.card}>
-          <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
+          {isAuthenticated ? (
+            <>
+              <View style={styles.membershipsHeader}>
+                <Text style={styles.membershipsTitle}>🏢 Bağlı Kulüplerim</Text>
+                <Text style={styles.membershipsHint}>
+                  {myMemberships.length} kulüp · Başka bir kulübe de üye olabilirsiniz
+                </Text>
+              </View>
+              {myMemberships.length === 0 ? (
+                <Text style={styles.membershipsEmpty}>
+                  Henüz bağlı kulübünüz yok. Aşağıdan bir kulüp keşfedin ve kaydolun.
+                </Text>
+              ) : (
+                <View style={styles.membershipsList}>
+                  {myMemberships.map((m) => (
+                    <Pressable
+                      key={m.membershipId}
+                      style={({ pressed }) => [
+                        styles.membershipRow,
+                        m.isCurrent && styles.membershipRowCurrent,
+                        pressed && styles.cardPressed,
+                      ]}
+                      onPress={() =>
+                        setPreviewClub({
+                          id: m.tenant.id,
+                          name: m.tenant.name,
+                          subdomain: m.tenant.subdomain,
+                          logoUrl: m.tenant.logoUrl,
+                        })
+                      }
+                    >
+                      <View style={styles.membershipLogo}>
+                        {m.tenant.logoUrl ? (
+                          <Image
+                            source={{ uri: m.tenant.logoUrl }}
+                            style={styles.membershipLogoImg}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Text style={styles.membershipLogoTxt}>
+                            {m.tenant.name.slice(0, 2).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.membershipInfo}>
+                        <View style={styles.membershipNameRow}>
+                          <Text style={styles.membershipName} numberOfLines={1}>
+                            {m.tenant.name}
+                          </Text>
+                          {m.isCurrent && (
+                            <View style={styles.membershipBadge}>
+                              <Text style={styles.membershipBadgeTxt}>AKTİF</Text>
+                            </View>
+                          )}
+                        </View>
+                        {m.tenant.location && (
+                          <Text style={styles.membershipLoc} numberOfLines={1}>
+                            📍 {m.tenant.location}
+                          </Text>
+                        )}
+                        <Text style={styles.membershipStatus}>
+                          {m.accountStatus === 'active'
+                            ? '✓ Aktif üyelik'
+                            : m.accountStatus === 'pending_approval'
+                              ? '⏳ Onay bekliyor'
+                              : m.accountStatus}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+              <Text style={styles.ctaChipsTitle}>Başka bir kulübe de kaydolun</Text>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate('Register', {
+                    preselectedGoal: selectedGoal ?? undefined,
+                  })
+                }
+                style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
+              >
+                <Text style={styles.outlineTxt}>+ Yeni Kulüp Kaydı</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.cardHint}>{t('registration.typeSubtitle')}</Text>
 
-          <Pressable
-            style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
-            onPress={() => {
-              navigation.navigate('Login');
-            }}
-          >
-            <Text style={styles.outlineTxt}>{t('onboarding.signIn')}</Text>
-          </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
+                onPress={() => {
+                  navigation.navigate('Login');
+                }}
+              >
+                <Text style={styles.outlineTxt}>{t('onboarding.signIn')}</Text>
+              </Pressable>
 
-          <Text style={styles.ctaChipsTitle}>Veya farklı bir yolla başla</Text>
-          <View style={styles.ctaChipsRow}>
-            <Pressable
-              onPress={() =>
-                navigation.navigate('Register', {
-                  preselectedGoal: selectedGoal ?? undefined,
-                })
-              }
-              style={({ pressed }) => [
-                styles.ctaChip,
-                styles.ctaChipDemo,
-                pressed && styles.ctaChipPressed,
-              ]}
-            >
-              <Text style={styles.ctaChipIcon}>👤</Text>
-              <Text style={styles.ctaChipLabel}>Kullanıcı Başvurusu</Text>
-              <Text style={styles.ctaChipHint}>Üye olarak kayıt ol</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => navigation.navigate('TrainerRegister')}
-              style={({ pressed }) => [
-                styles.ctaChip,
-                styles.ctaChipTrainer,
-                pressed && styles.ctaChipPressed,
-              ]}
-            >
-              <Text style={styles.ctaChipIcon}>👟</Text>
-              <Text style={styles.ctaChipLabel}>Eğitmen başvurusu</Text>
-              <Text style={styles.ctaChipHint}>Hizmet vermek istiyorum</Text>
-            </Pressable>
-          </View>
+              <Text style={styles.ctaChipsTitle}>Veya farklı bir yolla başla</Text>
+              <View style={styles.ctaChipsRow}>
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate('Register', {
+                      preselectedGoal: selectedGoal ?? undefined,
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.ctaChip,
+                    styles.ctaChipDemo,
+                    pressed && styles.ctaChipPressed,
+                  ]}
+                >
+                  <Text style={styles.ctaChipIcon}>👤</Text>
+                  <Text style={styles.ctaChipLabel}>Kullanıcı Başvurusu</Text>
+                  <Text style={styles.ctaChipHint}>Üye olarak kayıt ol</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => navigation.navigate('TrainerRegister')}
+                  style={({ pressed }) => [
+                    styles.ctaChip,
+                    styles.ctaChipTrainer,
+                    pressed && styles.ctaChipPressed,
+                  ]}
+                >
+                  <Text style={styles.ctaChipIcon}>👟</Text>
+                  <Text style={styles.ctaChipLabel}>Eğitmen başvurusu</Text>
+                  <Text style={styles.ctaChipHint}>Hizmet vermek istiyorum</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </GlassCard>
       </ScrollView>
       <Modal
@@ -1235,13 +1544,11 @@ export function ClubConnectScreen() {
                     const trainer = previewTrainer;
                     if (!trainer) return;
                     setPreviewTrainer(null);
-                    setLeadModal({
-                      visible: true,
-                      source: 'trainer',
-                      sourceRef: trainer.id,
-                      sourceLabel: `${trainer.name} — ${trainer.clubName}`,
+                    void contactTrainer({
+                      trainerId: trainer.id,
+                      trainerName: trainer.name,
+                      clubName: trainer.clubName,
                       clubSubdomain: trainer.clubSubdomain,
-                      prefillMessage: `${trainer.name} eğitmen hakkında bilgi almak istiyorum.`,
                     });
                   }}
                 >
@@ -1330,13 +1637,11 @@ export function ClubConnectScreen() {
                   onPress={() => {
                     const club = previewClub;
                     setPreviewClub(null);
-                    setLeadModal({
-                      visible: true,
-                      source: 'club',
-                      sourceRef: club?.id,
-                      sourceLabel: club?.name,
-                      clubSubdomain: club?.subdomain,
-                      prefillMessage: `${club?.name} hakkında bilgi almak istiyorum.`,
+                    if (!club) return;
+                    void contactClub({
+                      clubSubdomain: club.subdomain,
+                      clubName: club.name,
+                      clubId: club.id,
                     });
                   }}
                 >
@@ -1378,16 +1683,12 @@ export function ClubConnectScreen() {
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         onJoin={(eventId) => {
-          setSelectedEvent(null);
           const evt = apiEvents.find((e) => e.id === eventId);
-          setLeadModal({
-            visible: true,
-            source: 'event',
-            sourceRef: eventId,
-            sourceLabel: evt?.title ?? 'Etkinlik',
-            clubSubdomain: evt?.clubSubdomain ?? undefined,
-            prefillMessage: `${evt?.title ?? 'Etkinlik'} etkinliğine katılmak istiyorum.`,
-          });
+          if (evt) {
+            void joinEventAction(evt);
+          } else {
+            setSelectedEvent(null);
+          }
         }}
       />
     </GradientBackground>
@@ -2558,6 +2859,94 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     lineHeight: 12,
+  },
+  // ─── Bağlı Kulüplerim ──────────────────────────────────
+  membershipsHeader: {
+    marginBottom: 12,
+  },
+  membershipsTitle: {
+    color: premium.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  membershipsHint: {
+    color: premium.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  membershipsEmpty: {
+    color: premium.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 14,
+    lineHeight: 19,
+  },
+  membershipsList: {
+    gap: 8,
+  },
+  membershipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  membershipRowCurrent: {
+    borderColor: 'rgba(56,189,248,0.4)',
+    backgroundColor: 'rgba(56,189,248,0.06)',
+  },
+  membershipLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  membershipLogoImg: { width: '100%', height: '100%' },
+  membershipLogoTxt: {
+    color: premium.accentBlue,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  membershipInfo: { flex: 1 },
+  membershipNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  membershipName: {
+    color: premium.text,
+    fontSize: 14,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  membershipBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: 'rgba(56,189,248,0.15)',
+  },
+  membershipBadgeTxt: {
+    color: premium.accentBlue,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  membershipLoc: {
+    color: premium.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  membershipStatus: {
+    color: premium.accentGreen,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,

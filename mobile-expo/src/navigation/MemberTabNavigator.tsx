@@ -5,7 +5,7 @@ import { Platform, StyleSheet, Text } from 'react-native';
 import { apiJson } from '../api/client';
 import { useMemberAuth } from '../auth/MemberAuthContext';
 import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
-import { MemberDiscoverScreen } from '../screens/member/MemberDiscoverScreen';
+import { ClubConnectScreen } from '../screens/onboarding/ClubConnectScreen';
 import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 import { MemberNotificationsScreen } from '../screens/member/MemberNotificationsScreen';
 import { MemberReservationsScreen } from '../screens/member/MemberReservationsScreen';
@@ -78,7 +78,7 @@ export function MemberTabNavigator() {
     >
       <Tab.Screen
         name="Discover"
-        component={MemberDiscoverScreen}
+        component={ClubConnectScreen}
         options={{
           tabBarLabel: 'Keşfet',
           tabBarIcon: ({ focused }) => tabIcon('🔍', focused),
