@@ -59,21 +59,25 @@ export function ClubDashboardPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, members, acts, codeRes] = await Promise.all([
+      const [s, members, acts] = await Promise.all([
         apiJson<DashboardStats>('/admin/stats'),
         apiJson<RecentMember[]>('/admin/members?status=all'),
         apiJson<ActivityItem[]>('/admin/activity'),
-        apiJson<{ inviteCode: string }>('/admin/club-invite-code'),
       ]);
       setStats(s);
       setRecentMembers(members.slice(0, 5));
       setActivities(acts);
+    } catch {
+      // ignore
+    }
+    // Fetch invite code separately (don't block dashboard)
+    try {
+      const codeRes = await apiJson<{ inviteCode: string }>('/admin/club-invite-code');
       setClubInviteCode(codeRes.inviteCode);
     } catch {
       // ignore
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
