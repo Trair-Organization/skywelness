@@ -103,6 +103,26 @@ export class TrainerPanelController {
     return this.service.addExternalStudent(user, body);
   }
 
+  @Post('students/add-by-id')
+  addStudentById(@CurrentUser() user: User, @Body() body: { userId: string }) {
+    return this.service.addStudentById(user, body.userId);
+  }
+
+  @Get('students/search')
+  searchUser(@CurrentUser() user: User, @Query('q') query: string) {
+    return this.service.searchUser(user, query ?? '');
+  }
+
+  @Get('invite-code')
+  getInviteCode(@CurrentUser() user: User) {
+    return this.service.getInviteCode(user);
+  }
+
+  @Post('invite')
+  sendInvite(@CurrentUser() user: User) {
+    return this.service.sendInvite(user);
+  }
+
   @Delete('students/:userId')
   archiveStudent(
     @CurrentUser() user: User,

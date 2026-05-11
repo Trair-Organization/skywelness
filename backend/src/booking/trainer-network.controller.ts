@@ -7,13 +7,17 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { UserRole } from '../database/enums';
 import type { User } from '../database/entities/user.entity';
 import { BookingService } from './booking.service';
+import { TrainerPanelService } from '../trainer-panel/trainer-panel.service';
 import { ConnectTrainerDto } from './dto/connect-trainer.dto';
 import { CreateTrainerMemberNoteDto } from './dto/create-trainer-member-note.dto';
 
 @Controller('trainer-network')
 @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
 export class TrainerNetworkController {
-  constructor(private readonly bookingService: BookingService) {}
+  constructor(
+    private readonly bookingService: BookingService,
+    private readonly trainerPanelService: TrainerPanelService,
+  ) {}
 
   @Get('my-trainers')
   @Roles(UserRole.MEMBER)
@@ -25,6 +29,12 @@ export class TrainerNetworkController {
   @Roles(UserRole.MEMBER)
   connectTrainer(@CurrentUser() user: User, @Body() dto: ConnectTrainerDto) {
     return this.bookingService.connectMemberToTrainer(user, dto.trainerId);
+  }
+
+  @Post('connect-by-code')
+  @Roles(UserRole.MEMBER)
+  connectByInviteCode(@CurrentUser() user: User, @Body() body: { inviteCode: string }) {
+    return this.trainerPanelService.connectByInviteCode(user, body.inviteCode);
   }
 
   @Get('my-students')

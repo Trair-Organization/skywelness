@@ -32,5 +32,6 @@ import { TrainerPanelService } from './trainer-panel.service';
   ],
   controllers: [TrainerPanelController],
   providers: [TrainerPanelService],
+  exports: [TrainerPanelService],
 })
 export class TrainerPanelModule {}

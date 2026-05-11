@@ -429,6 +429,164 @@ export class TrainerPanelService {
     return { ok: true };
   }
 
+  // ─── Invite Code & Search ──────────────────────────────────────────────────
+
+  /** Eğitmenin davet kodunu getir (yoksa oluştur) */
+  async getInviteCode(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    if (!trainer.inviteCode) {
+      trainer.inviteCode = this.generateInviteCode();
+      await this.trainersRepo.save(trainer);
+    }
+    return { inviteCode: trainer.inviteCode };
+  }
+
+  /** Username veya e-posta ile kullanıcı ara */
+  async searchUser(user: User, query: string) {
+    const q = query.trim().toLowerCase();
+    if (q.length < 3) return { results: [] };
+
+    const results = await this.usersRepo
+      .createQueryBuilder('u')
+      .where('(LOWER(u.username) LIKE :q OR LOWER(u.email) LIKE :q)', { q: `%${q}%` })
+      .andWhere('u.id != :myId', { myId: user.id })
+      .select(['u.id', 'u.firstName', 'u.lastName', 'u.username', 'u.email', 'u.photoUrl'])
+      .take(10)
+      .getMany();
+
+    const trainer = await this.resolveTrainer(user);
+
+    // Check which ones are already linked
+    const linkedIds = new Set(
+      (
+        await this.linksRepo.find({ where: { trainerId: trainer.id }, select: ['memberUserId'] })
+      ).map((l) => l.memberUserId),
+    );
+
+    return {
+      results: results.map((u) => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        email: u.email,
+        photoUrl: u.photoUrl,
+        isLinked: linkedIds.has(u.id),
+      })),
+    };
+  }
+
+  /** Arama sonucundan direkt öğrenci ekle */
+  async addStudentById(user: User, studentUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const student = await this.usersRepo.findOne({ where: { id: studentUserId } });
+    if (!student) throw new NotFoundException('Kullanıcı bulunamadı');
+
+    const existing = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: student.id },
+    });
+    if (existing) {
+      if (existing.status === 'archived') {
+        existing.status = 'active';
+        existing.source = 'trainer_added';
+        await this.linksRepo.save(existing);
+        return { ok: true, userId: student.id, reactivated: true };
+      }
+      throw new ConflictException('Bu öğrenci zaten bağlı');
+    }
+
+    const link = this.linksRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId: student.id,
+      status: 'active',
+      source: 'trainer_added',
+    });
+    await this.linksRepo.save(link);
+
+    void this.pushService.sendToUser(
+      student.id,
+      '🏋️ Eğitmen Bağlantısı',
+      `${user.firstName} ${user.lastName} sizi öğrenci olarak ekledi.`,
+      { type: 'trainer_link' },
+    );
+
+    return { ok: true, userId: student.id, reactivated: false };
+  }
+
+  /** Davet kodu ile eğitmene bağlan (öğrenci tarafı) */
+  async connectByInviteCode(user: User, inviteCode: string) {
+    const code = inviteCode.trim().toUpperCase();
+    const trainer = await this.trainersRepo.findOne({
+      where: { inviteCode: code },
+      relations: ['user'],
+    });
+    if (!trainer) throw new NotFoundException('Geçersiz davet kodu');
+
+    const existing = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: user.id },
+    });
+    if (existing) {
+      if (existing.status === 'archived') {
+        existing.status = 'active';
+        existing.source = 'member_request';
+        await this.linksRepo.save(existing);
+        return {
+          ok: true,
+          trainerName: `${trainer.user.firstName} ${trainer.user.lastName}`.trim(),
+          reactivated: true,
+        };
+      }
+      throw new ConflictException('Bu eğitmene zaten bağlısınız');
+    }
+
+    const link = this.linksRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId: user.id,
+      status: 'active',
+      source: 'member_request',
+    });
+    await this.linksRepo.save(link);
+
+    void this.pushService.sendToUser(
+      trainer.userId,
+      '👥 Yeni Öğrenci',
+      `${user.firstName} ${user.lastName} davet kodunuzla bağlandı.`,
+      { type: 'new_student' },
+    );
+
+    return {
+      ok: true,
+      trainerName: `${trainer.user.firstName} ${trainer.user.lastName}`.trim(),
+      reactivated: false,
+    };
+  }
+
+  /** E-posta/SMS ile davet gönder (sistemde olmayan kişi) */
+  async sendInvite(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    if (!trainer.inviteCode) {
+      trainer.inviteCode = this.generateInviteCode();
+      await this.trainersRepo.save(trainer);
+    }
+    // For now just return the invite code — SMS/email integration can be added later
+    return {
+      ok: true,
+      inviteCode: trainer.inviteCode,
+      message: `Davet kodu: ${trainer.inviteCode}. Öğrencinize bu kodu paylaşın.`,
+    };
+  }
+
+  private generateInviteCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  }
+
   // ─── Notes ──────────────────────────────────────────────────────────────────
 
   async getStudentNotes(user: User, studentUserId: string) {

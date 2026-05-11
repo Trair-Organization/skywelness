@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { Availability } from '../database/entities/availability.entity';
@@ -16,6 +16,7 @@ import { User } from '../database/entities/user.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
 import { MailModule } from '../mail/mail.module';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { TrainerPanelModule } from '../trainer-panel/trainer-panel.module';
 import { BookingCatalogController } from './booking-catalog.controller';
 import { BookingService } from './booking.service';
 import { MemberPackagesController } from './member-packages.controller';
@@ -48,6 +49,7 @@ import { CafeOrdersService } from './cafe-orders.service';
     ]),
     AuthModule,
     MailModule,
+    forwardRef(() => TrainerPanelModule),
   ],
   controllers: [
     BookingCatalogController,

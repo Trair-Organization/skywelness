@@ -60,6 +60,10 @@ export class Trainer {
   })
   offersSessionTypes!: string[];
 
+  /** Benzersiz davet kodu — öğrenciler bu kodla eğitmene bağlanır. */
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true, name: 'invite_code' })
+  inviteCode!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
