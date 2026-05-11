@@ -1,0 +1,743 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
+import { Availability } from '../database/entities/availability.entity';
+import { Reservation } from '../database/entities/reservation.entity';
+import { Trainer } from '../database/entities/trainer.entity';
+import { TrainerProfile } from '../database/entities/trainer-profile.entity';
+import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
+import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
+import { Package } from '../database/entities/package.entity';
+import { User } from '../database/entities/user.entity';
+import { Conversation } from '../database/entities/conversation.entity';
+import { ReservationStatus, SessionType, MemberAccountStatus, UserRole } from '../database/enums';
+import { PushService } from '../notifications/push.service';
+
+@Injectable()
+export class TrainerPanelService {
+  constructor(
+    @InjectRepository(Availability) private readonly availRepo: Repository<Availability>,
+    @InjectRepository(Reservation) private readonly resRepo: Repository<Reservation>,
+    @InjectRepository(Trainer) private readonly trainersRepo: Repository<Trainer>,
+    @InjectRepository(TrainerProfile) private readonly profilesRepo: Repository<TrainerProfile>,
+    @InjectRepository(TrainerMemberLink) private readonly linksRepo: Repository<TrainerMemberLink>,
+    @InjectRepository(TrainerMemberNote) private readonly notesRepo: Repository<TrainerMemberNote>,
+    @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
+    private readonly pushService: PushService,
+  ) {}
+
+  private async resolveTrainer(user: User): Promise<Trainer> {
+    const trainer = await this.trainersRepo.findOne({ where: { userId: user.id } });
+    if (!trainer) throw new NotFoundException('Trainer profile not found');
+    return trainer;
+  }
+
+  // ─── Dashboard ──────────────────────────────────────────────────────────────
+
+  async getDashboard(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const now = new Date();
+    const todayStart = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
+    const todayEnd = new Date(now.toISOString().slice(0, 10) + 'T23:59:59Z');
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const [todayLessons, weeklyLessons, monthlyCompleted, monthlyCancelled, activeStudents] =
+      await Promise.all([
+        this.resRepo.count({
+          where: {
+            trainerId: trainer.id,
+            status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+            startTime: Between(todayStart, todayEnd),
+          },
+        }),
+        this.resRepo.count({
+          where: {
+            trainerId: trainer.id,
+            status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+            startTime: Between(weekStart, weekEnd),
+          },
+        }),
+        this.resRepo.count({
+          where: {
+            trainerId: trainer.id,
+            status: ReservationStatus.COMPLETED,
+            startTime: Between(monthStart, monthEnd),
+          },
+        }),
+        this.resRepo.count({
+          where: {
+            trainerId: trainer.id,
+            status: ReservationStatus.CANCELLED,
+            startTime: Between(monthStart, monthEnd),
+          },
+        }),
+        this.linksRepo.count({ where: { trainerId: trainer.id, status: 'active' } }),
+      ]);
+
+    // Next lesson
+    const nextLesson = await this.resRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: MoreThanOrEqual(now),
+      },
+      relations: ['user'],
+      order: { startTime: 'ASC' },
+    });
+
+    // Today schedule
+    const todaySchedule = await this.resRepo.find({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(todayStart, todayEnd),
+      },
+      relations: ['user'],
+      order: { startTime: 'ASC' },
+    });
+
+    // Unread messages
+    const conversations = await this.convRepo
+      .createQueryBuilder('c')
+      .where('c.participant_a_id = :uid OR c.participant_b_id = :uid', { uid: user.id })
+      .getMany();
+    const unreadMessages = conversations.reduce((sum, c) => {
+      const isA = c.participantAId === user.id;
+      return sum + (isA ? c.unreadCountA : c.unreadCountB);
+    }, 0);
+
+    return {
+      todayLessons,
+      weeklyLessons,
+      monthlyCompleted,
+      monthlyCancelled,
+      activeStudents,
+      unreadMessages,
+      nextLesson: nextLesson
+        ? {
+            time: nextLesson.startTime.toISOString(),
+            studentName: `${nextLesson.user.firstName} ${nextLesson.user.lastName}`.trim(),
+          }
+        : null,
+      todaySchedule: todaySchedule.map((r) => ({
+        id: r.id,
+        time: r.startTime.toISOString(),
+        endTime: r.endTime.toISOString(),
+        studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
+        type: r.sessionType,
+        status: r.status,
+      })),
+    };
+  }
+
+  // ─── Calendar ───────────────────────────────────────────────────────────────
+
+  async getCalendar(user: User, from: string, to: string) {
+    const trainer = await this.resolveTrainer(user);
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    const [availabilities, lessons] = await Promise.all([
+      this.availRepo.find({
+        where: { trainerId: trainer.id, date: Between(from.slice(0, 10), to.slice(0, 10)) },
+        order: { date: 'ASC', startTime: 'ASC' },
+      }),
+      this.resRepo.find({
+        where: {
+          trainerId: trainer.id,
+          status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+          startTime: Between(fromDate, toDate),
+        },
+        relations: ['user'],
+        order: { startTime: 'ASC' },
+      }),
+    ]);
+
+    return {
+      availabilities: availabilities.map((a) => ({
+        id: a.id,
+        date: typeof a.date === 'string' ? a.date : new Date(a.date).toISOString().slice(0, 10),
+        startTime: a.startTime,
+        endTime: a.endTime,
+        available: a.available,
+      })),
+      lessons: lessons.map((r) => ({
+        id: r.id,
+        startTime: r.startTime.toISOString(),
+        endTime: r.endTime.toISOString(),
+        studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
+        studentId: r.userId,
+        type: r.sessionType,
+        status: r.status,
+      })),
+    };
+  }
+
+  // ─── Availability Management ────────────────────────────────────────────────
+
+  async createAvailability(user: User, data: { date: string; startTime: string; endTime: string }) {
+    const trainer = await this.resolveTrainer(user);
+    const avail = this.availRepo.create({
+      trainerId: trainer.id,
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      available: true,
+    });
+    await this.availRepo.save(avail);
+    return { id: avail.id, date: data.date, startTime: data.startTime, endTime: data.endTime };
+  }
+
+  async createBulkAvailability(
+    user: User,
+    data: { startDate: string; weeks: number; days: number[]; startTime: string; endTime: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const created: Array<{ id: string; date: string; startTime: string; endTime: string }> = [];
+    const start = new Date(data.startDate + 'T12:00:00');
+
+    for (let w = 0; w < data.weeks; w++) {
+      for (const day of data.days) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + w * 7 + ((day - start.getDay() + 7) % 7));
+        const dateStr = d.toISOString().slice(0, 10);
+        const avail = this.availRepo.create({
+          trainerId: trainer.id,
+          date: dateStr,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          available: true,
+        });
+        await this.availRepo.save(avail);
+        created.push({
+          id: avail.id,
+          date: dateStr,
+          startTime: data.startTime,
+          endTime: data.endTime,
+        });
+      }
+    }
+    return { created: created.length, slots: created };
+  }
+
+  async updateAvailability(
+    user: User,
+    availId: string,
+    data: { startTime?: string; endTime?: string; available?: boolean },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const avail = await this.availRepo.findOne({ where: { id: availId, trainerId: trainer.id } });
+    if (!avail) throw new NotFoundException('Slot bulunamadı');
+    if (data.startTime) avail.startTime = data.startTime;
+    if (data.endTime) avail.endTime = data.endTime;
+    if (data.available !== undefined) avail.available = data.available;
+    await this.availRepo.save(avail);
+    return { ok: true };
+  }
+
+  async deleteAvailability(user: User, availId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const avail = await this.availRepo.findOne({ where: { id: availId, trainerId: trainer.id } });
+    if (!avail) throw new NotFoundException('Slot bulunamadı');
+
+    // Check if there's an active lesson in this slot
+    const dateStr =
+      typeof avail.date === 'string' ? avail.date : new Date(avail.date).toISOString().slice(0, 10);
+    const slotStart = new Date(`${dateStr}T${avail.startTime}Z`);
+    const slotEnd = new Date(`${dateStr}T${avail.endTime}Z`);
+    const activeLesson = await this.resRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(slotStart, slotEnd),
+      },
+    });
+    if (activeLesson) {
+      throw new BadRequestException(
+        'Bu slotta aktif ders var. Önce dersi iptal edin veya taşıyın.',
+      );
+    }
+
+    await this.availRepo.remove(avail);
+    return { ok: true };
+  }
+
+  // ─── Students ───────────────────────────────────────────────────────────────
+
+  async listStudents(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const links = await this.linksRepo.find({
+      where: { trainerId: trainer.id, status: 'active' },
+      relations: ['memberUser'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const result = [];
+    for (const link of links) {
+      const lastLesson = await this.resRepo.findOne({
+        where: {
+          trainerId: trainer.id,
+          userId: link.memberUserId,
+          status: ReservationStatus.CONFIRMED,
+        },
+        order: { startTime: 'DESC' },
+      });
+      result.push({
+        userId: link.memberUserId,
+        firstName: link.memberUser.firstName,
+        lastName: link.memberUser.lastName,
+        email: link.memberUser.email,
+        phone: link.memberUser.phone,
+        photoUrl: link.memberUser.photoUrl,
+        source: link.source,
+        connectedAt: link.createdAt,
+        lastLessonAt: lastLesson?.startTime ?? null,
+      });
+    }
+    return result;
+  }
+
+  async getStudentDetail(user: User, studentUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const link = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: studentUserId, status: 'active' },
+      relations: ['memberUser'],
+    });
+    if (!link) throw new NotFoundException('Öğrenci bulunamadı');
+
+    const [notes, packages, totalLessons] = await Promise.all([
+      this.notesRepo.find({
+        where: { trainerId: trainer.id, memberUserId: studentUserId },
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.packagesRepo.find({
+        where: { userId: studentUserId, status: In(['active'] as never[]) },
+        relations: ['packageType'],
+      }),
+      this.resRepo.count({
+        where: {
+          trainerId: trainer.id,
+          userId: studentUserId,
+          status: ReservationStatus.CONFIRMED,
+        },
+      }),
+    ]);
+
+    return {
+      userId: link.memberUserId,
+      firstName: link.memberUser.firstName,
+      lastName: link.memberUser.lastName,
+      email: link.memberUser.email,
+      phone: link.memberUser.phone,
+      photoUrl: link.memberUser.photoUrl,
+      source: link.source,
+      connectedAt: link.createdAt,
+      totalLessons,
+      notes: notes.map((n) => ({ id: n.id, note: n.note, createdAt: n.createdAt })),
+      packages: packages.map((p) => ({
+        id: p.id,
+        name: p.packageType?.name ?? 'Paket',
+        remainingSessions: p.remainingSessions,
+        expiresAt: p.expiresAt,
+      })),
+    };
+  }
+
+  async addExternalStudent(
+    user: User,
+    data: { firstName: string; lastName: string; email: string; phone: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+
+    // Check if user already exists
+    let student = await this.usersRepo.findOne({
+      where: [{ email: data.email.toLowerCase() }, { phone: data.phone }],
+    });
+
+    if (!student) {
+      // Create new user
+      student = this.usersRepo.create({
+        tenantId: trainer.tenantId,
+        email: data.email.toLowerCase(),
+        username: data.email.split('@')[0] + Math.floor(Math.random() * 1000),
+        passwordHash: '$2b$12$placeholder_external_student_no_login',
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        phone: data.phone.trim(),
+        role: UserRole.MEMBER,
+        accountStatus: MemberAccountStatus.ACTIVE,
+      });
+      await this.usersRepo.save(student);
+    }
+
+    // Check existing link
+    const existing = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: student.id },
+    });
+    if (existing) {
+      if (existing.status === 'archived') {
+        existing.status = 'active';
+        existing.source = 'trainer_added';
+        await this.linksRepo.save(existing);
+        return { ok: true, userId: student.id, reactivated: true };
+      }
+      throw new ConflictException('Bu öğrenci zaten bağlı');
+    }
+
+    const link = this.linksRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId: student.id,
+      status: 'active',
+      source: 'trainer_added',
+    });
+    await this.linksRepo.save(link);
+
+    // Notify student
+    void this.pushService.sendToUser(
+      student.id,
+      '🏋️ Eğitmen Bağlantısı',
+      `${user.firstName} ${user.lastName} sizi öğrenci olarak ekledi.`,
+      { type: 'trainer_link' },
+    );
+
+    return { ok: true, userId: student.id, reactivated: false };
+  }
+
+  async archiveStudent(user: User, studentUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const link = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: studentUserId, status: 'active' },
+    });
+    if (!link) throw new NotFoundException('Öğrenci bulunamadı');
+    link.status = 'archived';
+    await this.linksRepo.save(link);
+    return { ok: true };
+  }
+
+  // ─── Notes ──────────────────────────────────────────────────────────────────
+
+  async getStudentNotes(user: User, studentUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const notes = await this.notesRepo.find({
+      where: { trainerId: trainer.id, memberUserId: studentUserId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+    return notes.map((n) => ({ id: n.id, note: n.note, createdAt: n.createdAt }));
+  }
+
+  async addStudentNote(user: User, studentUserId: string, note: string) {
+    const trainer = await this.resolveTrainer(user);
+    const link = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: studentUserId, status: 'active' },
+    });
+    if (!link) throw new NotFoundException('Öğrenci bulunamadı');
+
+    const row = this.notesRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId: studentUserId,
+      createdByUserId: user.id,
+      note: note.trim(),
+    });
+    await this.notesRepo.save(row);
+    return { id: row.id, createdAt: row.createdAt };
+  }
+
+  // ─── Lessons ────────────────────────────────────────────────────────────────
+
+  async getLessons(user: User, date?: string, view?: string) {
+    const trainer = await this.resolveTrainer(user);
+    const now = new Date();
+    let from: Date;
+    let to: Date;
+
+    if (date) {
+      from = new Date(date + 'T00:00:00Z');
+      if (view === 'weekly') {
+        to = new Date(from);
+        to.setDate(to.getDate() + 7);
+      } else {
+        to = new Date(date + 'T23:59:59Z');
+      }
+    } else {
+      from = now;
+      to = new Date(now);
+      to.setDate(to.getDate() + 30);
+    }
+
+    const lessons = await this.resRepo.find({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(from, to),
+      },
+      relations: ['user'],
+      order: { startTime: 'ASC' },
+    });
+
+    return lessons.map((r) => ({
+      id: r.id,
+      startTime: r.startTime.toISOString(),
+      endTime: r.endTime.toISOString(),
+      studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
+      studentId: r.userId,
+      type: r.sessionType,
+      status: r.status,
+      notes: r.notes,
+    }));
+  }
+
+  async createLesson(
+    user: User,
+    data: { availabilityId: string; studentUserId: string; type?: string; notes?: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+
+    const avail = await this.availRepo.findOne({
+      where: { id: data.availabilityId, trainerId: trainer.id },
+    });
+    if (!avail) throw new NotFoundException('Slot bulunamadı');
+
+    const dateStr =
+      typeof avail.date === 'string' ? avail.date : new Date(avail.date).toISOString().slice(0, 10);
+    const startTime = new Date(`${dateStr}T${avail.startTime}Z`);
+    const endTime = new Date(`${dateStr}T${avail.endTime}Z`);
+
+    // Check conflict
+    const conflict = await this.resRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(startTime, endTime),
+      },
+    });
+    if (conflict) throw new ConflictException('Bu slot dolu');
+
+    const reservation = this.resRepo.create({
+      userId: data.studentUserId,
+      trainerId: trainer.id,
+      tenantId: trainer.tenantId,
+      sessionType: (data.type as SessionType) || SessionType.PERSONAL_TRAINING,
+      startTime,
+      endTime,
+      status: ReservationStatus.CONFIRMED,
+      notes: data.notes?.trim() || null,
+      packageId: null as never,
+      timeSlotId: null as never,
+    });
+    await this.resRepo.save(reservation);
+
+    // Notify student
+    const student = await this.usersRepo.findOne({ where: { id: data.studentUserId } });
+    if (student) {
+      void this.pushService.sendToUser(
+        student.id,
+        '📅 Yeni Ders Planlandı',
+        `${user.firstName} ${user.lastName} ${dateStr} ${avail.startTime.slice(0, 5)} tarihinde ders planladı.`,
+        { type: 'lesson_created', reservationId: reservation.id },
+      );
+    }
+
+    return { id: reservation.id, startTime: reservation.startTime, endTime: reservation.endTime };
+  }
+
+  async cancelLesson(user: User, lessonId: string, reason?: string) {
+    const trainer = await this.resolveTrainer(user);
+    const lesson = await this.resRepo.findOne({
+      where: {
+        id: lessonId,
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+      },
+      relations: ['user'],
+    });
+    if (!lesson) throw new NotFoundException('Ders bulunamadı');
+
+    lesson.status = ReservationStatus.CANCELLED;
+    lesson.cancelledAt = new Date();
+    lesson.cancelledBy = 'trainer';
+    lesson.cancelReason = reason?.trim() || null;
+    await this.resRepo.save(lesson);
+
+    // Notify student
+    void this.pushService.sendToUser(
+      lesson.userId,
+      '❌ Ders İptal Edildi',
+      reason
+        ? `${user.firstName} ${user.lastName} dersinizi iptal etti. Sebep: ${reason}`
+        : `${user.firstName} ${user.lastName} dersinizi iptal etti.`,
+      { type: 'lesson_cancelled', reservationId: lesson.id },
+    );
+
+    return { ok: true, cancelled: true };
+  }
+
+  async rescheduleLesson(user: User, lessonId: string, newAvailabilityId: string, note?: string) {
+    const trainer = await this.resolveTrainer(user);
+    const lesson = await this.resRepo.findOne({
+      where: {
+        id: lessonId,
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+      },
+      relations: ['user'],
+    });
+    if (!lesson) throw new NotFoundException('Ders bulunamadı');
+
+    const newAvail = await this.availRepo.findOne({
+      where: { id: newAvailabilityId, trainerId: trainer.id },
+    });
+    if (!newAvail) throw new NotFoundException('Yeni slot bulunamadı');
+
+    const newDateStr =
+      typeof newAvail.date === 'string'
+        ? newAvail.date
+        : new Date(newAvail.date).toISOString().slice(0, 10);
+    const newStart = new Date(`${newDateStr}T${newAvail.startTime}Z`);
+    const newEnd = new Date(`${newDateStr}T${newAvail.endTime}Z`);
+
+    // Check conflict on new slot
+    const conflict = await this.resRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(newStart, newEnd),
+      },
+    });
+    if (conflict && conflict.id !== lesson.id) throw new ConflictException('Yeni slot dolu');
+
+    const oldTime = lesson.startTime.toISOString();
+    lesson.startTime = newStart;
+    lesson.endTime = newEnd;
+    lesson.rescheduleNote = note?.trim() || `Eski: ${oldTime}`;
+    await this.resRepo.save(lesson);
+
+    // Notify student
+    void this.pushService.sendToUser(
+      lesson.userId,
+      '📅 Ders Tarihi Değişti',
+      `Dersiniz ${newDateStr} ${newAvail.startTime.slice(0, 5)} tarihine taşındı.`,
+      { type: 'lesson_rescheduled', reservationId: lesson.id },
+    );
+
+    return { ok: true, newStartTime: newStart, newEndTime: newEnd };
+  }
+
+  // ─── Student History & Packages ─────────────────────────────────────────────
+
+  async getStudentHistory(user: User, studentUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const lessons = await this.resRepo.find({
+      where: { trainerId: trainer.id, userId: studentUserId },
+      order: { startTime: 'DESC' },
+      take: 50,
+    });
+    return lessons.map((r) => ({
+      id: r.id,
+      startTime: r.startTime.toISOString(),
+      endTime: r.endTime.toISOString(),
+      type: r.sessionType,
+      status: r.status,
+    }));
+  }
+
+  async getStudentPackages(user: User, studentUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    // Verify link
+    const link = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: studentUserId, status: 'active' },
+    });
+    if (!link) throw new NotFoundException('Öğrenci bulunamadı');
+
+    const packages = await this.packagesRepo.find({
+      where: { userId: studentUserId },
+      relations: ['packageType'],
+      order: { createdAt: 'DESC' },
+    });
+    return packages.map((p) => ({
+      id: p.id,
+      name: p.packageType?.name ?? 'Paket',
+      remainingSessions: p.remainingSessions,
+      expiresAt: p.expiresAt,
+      status: p.status,
+    }));
+  }
+
+  // ─── Profile ────────────────────────────────────────────────────────────────
+
+  async getProfile(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const profile = await this.profilesRepo.findOne({ where: { trainerId: trainer.id } });
+    return {
+      trainerId: trainer.id,
+      bio: profile?.bio ?? trainer.bio,
+      specialties: profile?.specialties ?? [],
+      certifications: profile?.certifications ?? [],
+      experienceYears: profile?.experienceYears ?? null,
+      city: profile?.city ?? '',
+      photoUrl: profile?.photoUrl ?? trainer.photoUrl,
+      pricingNote: profile?.pricingNote ?? null,
+      role: user.role,
+    };
+  }
+
+  async updateProfile(
+    user: User,
+    data: {
+      bio?: string;
+      specialties?: string[];
+      certifications?: string[];
+      experienceYears?: number;
+      city?: string;
+      photoUrl?: string;
+      pricingNote?: string;
+    },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    let profile = await this.profilesRepo.findOne({ where: { trainerId: trainer.id } });
+
+    if (!profile) {
+      profile = this.profilesRepo.create({
+        userId: user.id,
+        trainerId: trainer.id,
+        tenantId: trainer.tenantId,
+        city: data.city ?? '',
+        bio: data.bio ?? '',
+        specialties: data.specialties ?? [],
+      });
+    }
+
+    if (data.bio !== undefined) profile.bio = data.bio;
+    if (data.specialties !== undefined) profile.specialties = data.specialties;
+    if (data.certifications !== undefined) profile.certifications = data.certifications;
+    if (data.experienceYears !== undefined) profile.experienceYears = data.experienceYears;
+    if (data.city !== undefined) profile.city = data.city;
+    if (data.photoUrl !== undefined) profile.photoUrl = data.photoUrl;
+    if (data.pricingNote !== undefined) profile.pricingNote = data.pricingNote;
+
+    await this.profilesRepo.save(profile);
+
+    // Also update trainer entity
+    if (data.bio !== undefined) trainer.bio = data.bio;
+    if (data.photoUrl !== undefined) trainer.photoUrl = data.photoUrl;
+    await this.trainersRepo.save(trainer);
+
+    return { ok: true };
+  }
+}

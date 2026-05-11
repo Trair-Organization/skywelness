@@ -96,6 +96,15 @@ export class Reservation {
   @Column({ type: 'timestamptz', nullable: true, name: 'cancelled_at' })
   cancelledAt!: Date | null;
 
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'cancelled_by' })
+  cancelledBy!: string | null;
+
+  @Column({ type: 'text', nullable: true, name: 'cancel_reason' })
+  cancelReason!: string | null;
+
+  @Column({ type: 'text', nullable: true, name: 'reschedule_note' })
+  rescheduleNote!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

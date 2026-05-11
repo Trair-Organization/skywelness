@@ -42,6 +42,9 @@ export class TrainerMemberLink {
   @Column({ type: 'varchar', length: 32, default: 'active' })
   status!: 'active' | 'archived';
 
+  @Column({ type: 'varchar', length: 30, default: 'member_request' })
+  source!: 'member_request' | 'trainer_added' | 'admin_assigned';
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
