@@ -73,6 +73,10 @@ export function TrainerProfileScreen() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+  // Club connection (bağımsız eğitmenler için)
+  const [clubCode, setClubCode] = useState('');
+  const [joiningClub, setJoiningClub] = useState(false);
+
   // Editable fields
   const [bio, setBio] = useState('');
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
@@ -189,6 +193,27 @@ export function TrainerProfileScreen() {
       Alert.alert('Hata', e instanceof ApiError ? e.message : 'Güncellenemedi');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleJoinClub = async () => {
+    if (!clubCode.trim() || !token || !tenant) return;
+    setJoiningClub(true);
+    try {
+      const res = await apiJson<{ ok: boolean; clubName: string; message: string }>(
+        '/trainer-panel/join-club',
+        {
+          ...opts,
+          method: 'POST',
+          body: JSON.stringify({ clubCode: clubCode.trim() }),
+        },
+      );
+      Alert.alert('✅ Başvuru Gönderildi', res.message);
+      setClubCode('');
+    } catch (e) {
+      Alert.alert('Hata', e instanceof ApiError ? e.message : 'Başvuru gönderilemedi');
+    } finally {
+      setJoiningClub(false);
     }
   };
 
@@ -440,6 +465,40 @@ export function TrainerProfileScreen() {
           </View>
         </GlassCard>
 
+        {/* ─── Kulübe Bağlan (sadece bağımsız eğitmenler) ─── */}
+        {profile?.role === 'independent_trainer' && (
+          <GlassCard style={styles.quickAccessCard}>
+            <View style={styles.clubConnectSection}>
+              <Text style={styles.clubConnectTitle}>🏢 Kulübe Bağlan</Text>
+              <Text style={styles.clubConnectHint}>
+                Bir kulübün size verdiği kodu girerek başvurun
+              </Text>
+              <View style={styles.clubConnectRow}>
+                <View style={styles.clubConnectInputWrap}>
+                  <TextInput
+                    style={styles.clubConnectInput}
+                    value={clubCode}
+                    onChangeText={(v) => setClubCode(v.toUpperCase())}
+                    placeholder="KULÜP KODU"
+                    placeholderTextColor={premium.textMuted}
+                    autoCapitalize="characters"
+                  />
+                </View>
+                <Pressable
+                  style={[
+                    styles.clubConnectBtn,
+                    (!clubCode.trim() || joiningClub) && { opacity: 0.4 },
+                  ]}
+                  onPress={handleJoinClub}
+                  disabled={!clubCode.trim() || joiningClub}
+                >
+                  <Text style={styles.clubConnectBtnText}>{joiningClub ? '⏳' : '→'}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </GlassCard>
+        )}
+
         {/* ─── Logout ─── */}
         <Pressable
           style={styles.logoutBtn}
@@ -619,4 +678,31 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   logoutBtnText: { color: premium.textMuted, fontWeight: '700', fontSize: 14 },
+
+  // Club Connect
+  clubConnectSection: { paddingVertical: 4 },
+  clubConnectTitle: { fontSize: 15, fontWeight: '800', color: premium.text, marginBottom: 4 },
+  clubConnectHint: { fontSize: 12, color: premium.textMuted, marginBottom: 12 },
+  clubConnectRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  clubConnectInputWrap: { flex: 1 },
+  clubConnectInput: {
+    backgroundColor: 'rgba(148,163,184,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.15)',
+    borderRadius: 12,
+    padding: 14,
+    color: premium.text,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  clubConnectBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: premium.accentBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clubConnectBtnText: { fontSize: 20, color: '#fff', fontWeight: '800' },
 });

@@ -100,6 +100,14 @@ export class AdminController {
     return this.mailService.verifyTransport();
   }
 
+  /** Kulüp davet kodunu getir */
+  @Get('club-invite-code')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getClubInviteCode(@CurrentUser() admin: User) {
+    return this.adminMembers.getClubInviteCode(admin.tenantId);
+  }
+
   /**
    * Diagnostic: send a test email through the active transport.
    * `to` defaults to the calling admin's address.

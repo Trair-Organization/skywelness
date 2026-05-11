@@ -1032,6 +1032,65 @@ export class TrainerPanelService {
     }));
   }
 
+  // ─── Club Connection (Kulübe Bağlanma) ───────────────────────────────────────
+
+  /** Bağımsız eğitmen: kulüp kodunu girerek başvuru gönder */
+  async joinClubByCode(user: User, clubCode: string) {
+    if (user.role !== UserRole.INDEPENDENT_TRAINER) {
+      throw new BadRequestException('Sadece bağımsız eğitmenler kulübe başvurabilir');
+    }
+
+    const code = clubCode.trim().toUpperCase();
+    const tenantRepo = this.usersRepo.manager.getRepository('Tenant');
+    const club = (await tenantRepo.findOne({ where: { inviteCode: code } })) as {
+      id: string;
+      name: string;
+      subdomain: string;
+    } | null;
+    if (!club) throw new NotFoundException('Geçersiz kulüp kodu');
+
+    // Check if already applied
+    const trainerAppRepo = this.usersRepo.manager.getRepository('TrainerApplication');
+    const existing = await trainerAppRepo.findOne({
+      where: { userId: user.id, preferredClubSubdomain: club.subdomain },
+    });
+    if (existing) throw new ConflictException('Bu kulübe zaten başvurdunuz');
+
+    const trainer = await this.resolveTrainer(user);
+
+    // Create trainer application
+    const app = trainerAppRepo.create({
+      userId: user.id,
+      trainerId: trainer.id,
+      tenantId: trainer.tenantId,
+      status: 'pending',
+      preferredClubSubdomain: club.subdomain,
+      adminNote: null,
+      reviewedByUserId: null,
+      reviewedAt: null,
+    });
+    await trainerAppRepo.save(app);
+
+    // Notify club admin
+    const admins = await this.usersRepo.find({
+      where: { tenantId: club.id, role: UserRole.ADMINISTRATOR },
+    });
+    for (const admin of admins) {
+      void this.pushService.sendToUser(
+        admin.id,
+        '🏋️ Yeni Eğitmen Başvurusu',
+        `${user.firstName} ${user.lastName} kulübünüze eğitmen olarak başvurdu.`,
+        { type: 'trainer_application' },
+      );
+    }
+
+    return {
+      ok: true,
+      clubName: club.name,
+      message: 'Başvurunuz kulübe iletildi. Onay bekleniyor.',
+    };
+  }
+
   // ─── Profile ────────────────────────────────────────────────────────────────
 
   async getProfile(user: User) {

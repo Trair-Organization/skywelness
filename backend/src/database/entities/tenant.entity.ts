@@ -61,6 +61,10 @@ export class Tenant {
   @Column({ type: 'jsonb', default: {} })
   settings!: Record<string, unknown>;
 
+  /** Benzersiz kulüp davet kodu — eğitmenler bu kodla kulübe başvurur. */
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true, name: 'invite_code' })
+  inviteCode!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

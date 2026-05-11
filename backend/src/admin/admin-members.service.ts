@@ -1783,6 +1783,25 @@ export class AdminMembersService {
 
   // ─── Eğitmen Başvuruları (Kulüp Admin) ──────────────────────────────────────
 
+  /** Kulüp davet kodunu getir (yoksa oluştur) */
+  async getClubInviteCode(tenantId: string) {
+    const tenantRepo = this.usersRepo.manager.getRepository('Tenant');
+    const tenant = (await tenantRepo.findOne({ where: { id: tenantId } })) as {
+      id: string;
+      inviteCode: string | null;
+    } | null;
+    if (!tenant) throw new NotFoundException('Kulüp bulunamadı');
+
+    if (!tenant.inviteCode) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      await tenantRepo.update({ id: tenantId }, { inviteCode: code });
+      return { inviteCode: code };
+    }
+    return { inviteCode: tenant.inviteCode };
+  }
+
   /** Kulübe başvuran eğitmenleri listele (preferredClubSubdomain eşleşen) */
   async listTrainerApplications(tenantId: string) {
     // Kulübün subdomain'ini bul

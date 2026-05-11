@@ -246,4 +246,11 @@ export class TrainerPanelController {
   ) {
     return this.service.updateProfile(user, body);
   }
+
+  // ─── Club Connection ────────────────────────────────────────────────────────
+
+  @Post('join-club')
+  joinClubByCode(@CurrentUser() user: User, @Body() body: { clubCode: string }) {
+    return this.service.joinClubByCode(user, body.clubCode);
+  }
 }
