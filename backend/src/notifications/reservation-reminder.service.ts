@@ -126,6 +126,7 @@ export class ReservationReminderService {
         if (r.trainer?.user) {
           await this.notifier.trainerLessonReminder({
             trainer: r.trainer.user,
+            trainerPhone: r.trainer.user.phone,
             studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
             date,
             time,
@@ -152,21 +153,24 @@ export class ReservationReminderService {
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.trainer', 't')
       .leftJoinAndSelect('t.user', 'tu')
+      .leftJoinAndSelect('r.user', 'student')
       .where('r.status = :status', { status: ReservationStatus.CONFIRMED })
       .andWhere('r.trainerId IS NOT NULL')
       .andWhere('r.startTime >= :start AND r.startTime < :end', {
         start: todayStart,
         end: todayEnd,
       })
+      .orderBy('r.startTime', 'ASC')
       .getMany();
 
     // Group by trainer
     const trainerMap = new Map<
       string,
       {
-        trainerUser: { id: string; firstName: string; lastName: string };
+        trainerUser: { id: string; firstName: string; lastName: string; email: string };
         count: number;
         firstTime: string;
+        schedule: Array<{ time: string; studentName: string }>;
       }
     >();
     for (const r of rows) {
@@ -174,10 +178,17 @@ export class ReservationReminderService {
       const key = r.trainer.userId;
       const existing = trainerMap.get(key);
       const time = r.startTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      const studentName = r.user ? `${r.user.firstName} ${r.user.lastName}`.trim() : '';
       if (!existing) {
-        trainerMap.set(key, { trainerUser: r.trainer.user, count: 1, firstTime: time });
+        trainerMap.set(key, {
+          trainerUser: r.trainer.user,
+          count: 1,
+          firstTime: time,
+          schedule: [{ time, studentName }],
+        });
       } else {
         existing.count += 1;
+        existing.schedule.push({ time, studentName });
       }
     }
 
@@ -187,8 +198,10 @@ export class ReservationReminderService {
       try {
         await this.notifier.trainerDailySummary({
           trainer: data.trainerUser,
+          trainerEmail: data.trainerUser.email,
           lessonCount: data.count,
           firstLessonTime: data.firstTime,
+          schedule: data.schedule,
         });
       } catch (e) {
         this.logger.error(`[TRAINER DAILY] ${data.trainerUser.id} failed: ${String(e)}`);

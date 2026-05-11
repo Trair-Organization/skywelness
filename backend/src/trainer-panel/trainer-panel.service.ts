@@ -17,6 +17,7 @@ import { User } from '../database/entities/user.entity';
 import { Conversation } from '../database/entities/conversation.entity';
 import { ReservationStatus, SessionType, MemberAccountStatus, UserRole } from '../database/enums';
 import { PushService } from '../notifications/push.service';
+import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
 
 @Injectable()
 export class TrainerPanelService {
@@ -31,6 +32,7 @@ export class TrainerPanelService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
     private readonly pushService: PushService,
+    private readonly notifier: NotificationDispatcher,
   ) {}
 
   private async resolveTrainer(user: User): Promise<Trainer> {
@@ -745,15 +747,20 @@ export class TrainerPanelService {
     });
     await this.resRepo.save(reservation);
 
-    // Notify student
+    // Notify student (push + SMS + mail)
     const student = await this.usersRepo.findOne({ where: { id: data.studentUserId } });
     if (student) {
-      void this.pushService.sendToUser(
-        student.id,
-        '📅 Yeni Ders Planlandı',
-        `${user.firstName} ${user.lastName} ${dateStr} ${avail.startTime.slice(0, 5)} tarihinde ders planladı.`,
-        { type: 'lesson_created', reservationId: reservation.id },
-      );
+      void this.notifier.studentLessonCreated({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        date: dateStr,
+        time: avail.startTime.slice(0, 5),
+      });
     }
 
     return { id: reservation.id, startTime: reservation.startTime, endTime: reservation.endTime };
@@ -777,15 +784,27 @@ export class TrainerPanelService {
     lesson.cancelReason = reason?.trim() || null;
     await this.resRepo.save(lesson);
 
-    // Notify student
-    void this.pushService.sendToUser(
-      lesson.userId,
-      '❌ Ders İptal Edildi',
-      reason
-        ? `${user.firstName} ${user.lastName} dersinizi iptal etti. Sebep: ${reason}`
-        : `${user.firstName} ${user.lastName} dersinizi iptal etti.`,
-      { type: 'lesson_cancelled', reservationId: lesson.id },
-    );
+    // Notify student (push + SMS + mail)
+    const student = await this.usersRepo.findOne({ where: { id: lesson.userId } });
+    if (student) {
+      const date = lesson.startTime.toLocaleDateString('tr-TR');
+      const time = lesson.startTime.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      void this.notifier.studentLessonCancelled({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        date,
+        time,
+        reason: reason?.trim() || null,
+      });
+    }
 
     return { ok: true, cancelled: true };
   }
@@ -830,13 +849,28 @@ export class TrainerPanelService {
     lesson.rescheduleNote = note?.trim() || `Eski: ${oldTime}`;
     await this.resRepo.save(lesson);
 
-    // Notify student
-    void this.pushService.sendToUser(
-      lesson.userId,
-      '📅 Ders Tarihi Değişti',
-      `Dersiniz ${newDateStr} ${newAvail.startTime.slice(0, 5)} tarihine taşındı.`,
-      { type: 'lesson_rescheduled', reservationId: lesson.id },
-    );
+    // Notify student (push + SMS + mail)
+    const student = await this.usersRepo.findOne({ where: { id: lesson.userId } });
+    if (student) {
+      const oldDate = new Date(oldTime).toLocaleDateString('tr-TR');
+      const oldTimeStr = new Date(oldTime).toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      void this.notifier.studentLessonRescheduled({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        oldDate,
+        oldTime: oldTimeStr,
+        newDate: newDateStr,
+        newTime: newAvail.startTime.slice(0, 5),
+      });
+    }
 
     return { ok: true, newStartTime: newStart, newEndTime: newEnd };
   }

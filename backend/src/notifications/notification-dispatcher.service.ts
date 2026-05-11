@@ -375,6 +375,7 @@ ${ticketBtn}
 
   async trainerLessonReminder(params: {
     trainer: { id: string; firstName: string; lastName: string };
+    trainerPhone?: string | null;
     studentName: string;
     date: string;
     time: string;
@@ -386,6 +387,11 @@ ${ticketBtn}
       type: 'trainer_lesson_reminder',
       reservationId: params.reservationId,
     });
+    // SMS to trainer
+    if (params.trainerPhone) {
+      const smsMsg = `1 saat sonra dersiniz var: ${params.studentName} - ${params.date} ${params.time}. Wellness Club`;
+      await this.sms.send(params.trainerPhone, smsMsg).catch(() => {});
+    }
     this.logger.log(`[NOTIFY] trainerLessonReminder → ${params.trainer.id}`);
   }
 
@@ -393,16 +399,200 @@ ${ticketBtn}
 
   async trainerDailySummary(params: {
     trainer: { id: string; firstName: string; lastName: string };
+    trainerEmail?: string | null;
     lessonCount: number;
     firstLessonTime: string;
+    schedule?: Array<{ time: string; studentName: string }>;
   }) {
     const title = '📋 Bugünkü Programınız';
     const body = `Bugün ${params.lessonCount} dersiniz var. İlk ders: ${params.firstLessonTime}`;
     await this.push.sendToUser(params.trainer.id, title, body, {
       type: 'trainer_daily_summary',
     });
+    // Mail to trainer (detailed schedule)
+    if (params.trainerEmail) {
+      const scheduleHtml = (params.schedule ?? [])
+        .map((s) => `<li><strong>${s.time}</strong> — ${s.studentName}</li>`)
+        .join('');
+      const html = emailShell({
+        title,
+        previewText: body,
+        clubName: CLUB_NAME,
+        innerHtml: `
+<p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(params.trainer.firstName)}</strong>,</p>
+<p style="margin:0 0 16px;">Bugün <strong>${params.lessonCount}</strong> dersiniz var.</p>
+<div style="margin:20px 0;padding:18px;background:rgba(56,189,248,0.08);border-radius:12px;border:1px solid rgba(56,189,248,0.2);">
+  <p style="margin:0 0 8px;font-weight:700;color:#38bdf8;">📅 Günlük Program</p>
+  <ul style="margin:0;padding-left:20px;color:#1f2937;">${scheduleHtml || '<li>Detay yok</li>'}</ul>
+</div>
+<p style="margin:16px 0 0;font-size:14px;color:#6b7280;">İlk ders: ${escapeHtml(params.firstLessonTime)}</p>`,
+      });
+      await this.mail['send']({
+        to: [params.trainerEmail],
+        subject: `${CLUB_NAME} — ${title}`,
+        html,
+        text: body,
+      }).catch((e: unknown) => this.logger.error('Trainer daily mail failed: ' + String(e)));
+    }
     this.logger.log(
       `[NOTIFY] trainerDailySummary → ${params.trainer.id} (${params.lessonCount} ders)`,
     );
+  }
+
+  // ─── EĞİTMEN: YENİ ÖĞRENCİ BAĞLANDI ──────────────────────────────────────
+
+  async trainerNewStudent(params: {
+    trainer: { id: string; firstName: string };
+    trainerPhone?: string | null;
+    studentName: string;
+  }) {
+    const title = '👥 Yeni Öğrenci';
+    const body = `${params.studentName} size bağlandı.`;
+    await this.push.sendToUser(params.trainer.id, title, body, { type: 'new_student' });
+    if (params.trainerPhone) {
+      await this.sms
+        .send(
+          params.trainerPhone,
+          `Yeni ogrenci: ${params.studentName} size baglandi. Wellness Club`,
+        )
+        .catch(() => {});
+    }
+    this.logger.log(`[NOTIFY] trainerNewStudent → ${params.trainer.id}`);
+  }
+
+  // ─── ÖĞRENCİYE: DERS OLUŞTURULDU (eğitmen tarafından) ─────────────────────
+
+  async studentLessonCreated(params: {
+    student: { id: string; firstName: string; email: string; phone?: string | null };
+    trainerName: string;
+    date: string;
+    time: string;
+  }) {
+    const title = '📅 Yeni Ders Planlandı';
+    const body = `${params.trainerName} ${params.date} ${params.time} tarihinde ders planladı.`;
+    await this.push.sendToUser(params.student.id, title, body, { type: 'lesson_created' });
+    // SMS
+    if (params.student.phone) {
+      await this.sms
+        .send(
+          params.student.phone,
+          `Yeni ders: ${params.trainerName} - ${params.date} ${params.time}. Wellness Club`,
+        )
+        .catch(() => {});
+    }
+    // Mail
+    const html = emailShell({
+      title,
+      previewText: body,
+      clubName: CLUB_NAME,
+      innerHtml: `
+<p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(params.student.firstName)}</strong>,</p>
+<p style="margin:0 0 16px;">Eğitmeniniz yeni bir ders planladı.</p>
+<div style="margin:20px 0;padding:18px;background:rgba(34,197,94,0.08);border-radius:12px;border:1px solid rgba(34,197,94,0.2);">
+  <p style="margin:0;font-weight:700;color:#22c55e;">✅ Ders Onaylandı</p>
+  <p style="margin:8px 0 0;color:#1f2937;font-size:16px;font-weight:700;">📅 ${escapeHtml(params.date)} · 🕐 ${escapeHtml(params.time)}</p>
+  <p style="margin:8px 0 0;color:#6b7280;">🏋️ ${escapeHtml(params.trainerName)}</p>
+</div>`,
+    });
+    await this.mail['send']({
+      to: [params.student.email],
+      subject: `${CLUB_NAME} — ${title}`,
+      html,
+      text: body,
+    }).catch((e: unknown) => this.logger.error('Student lesson mail: ' + String(e)));
+    this.logger.log(`[NOTIFY] studentLessonCreated → ${params.student.id}`);
+  }
+
+  // ─── ÖĞRENCİYE: DERS İPTAL EDİLDİ (eğitmen tarafından) ────────────────────
+
+  async studentLessonCancelled(params: {
+    student: { id: string; firstName: string; email: string; phone?: string | null };
+    trainerName: string;
+    date: string;
+    time: string;
+    reason?: string | null;
+  }) {
+    const title = '❌ Ders İptal Edildi';
+    const body = params.reason
+      ? `${params.trainerName} dersinizi iptal etti. Sebep: ${params.reason}`
+      : `${params.trainerName} dersinizi iptal etti.`;
+    await this.push.sendToUser(params.student.id, title, body, { type: 'lesson_cancelled' });
+    // SMS
+    if (params.student.phone) {
+      await this.sms
+        .send(
+          params.student.phone,
+          `Ders iptal: ${params.date} ${params.time} dersiniz iptal edildi. ${params.trainerName}. Wellness Club`,
+        )
+        .catch(() => {});
+    }
+    // Mail
+    const html = emailShell({
+      title,
+      previewText: body,
+      clubName: CLUB_NAME,
+      innerHtml: `
+<p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(params.student.firstName)}</strong>,</p>
+<p style="margin:0 0 16px;">Eğitmeniniz dersinizi iptal etti.</p>
+<div style="margin:20px 0;padding:18px;background:rgba(239,68,68,0.08);border-radius:12px;border:1px solid rgba(239,68,68,0.2);">
+  <p style="margin:0;font-weight:700;color:#ef4444;">❌ İptal Edildi</p>
+  <p style="margin:8px 0 0;color:#1f2937;font-size:16px;font-weight:700;">📅 ${escapeHtml(params.date)} · 🕐 ${escapeHtml(params.time)}</p>
+  <p style="margin:8px 0 0;color:#6b7280;">🏋️ ${escapeHtml(params.trainerName)}</p>
+  ${params.reason ? `<p style="margin:8px 0 0;color:#6b7280;">Sebep: ${escapeHtml(params.reason)}</p>` : ''}
+</div>`,
+    });
+    await this.mail['send']({
+      to: [params.student.email],
+      subject: `${CLUB_NAME} — ${title}`,
+      html,
+      text: body,
+    }).catch((e: unknown) => this.logger.error('Student cancel mail: ' + String(e)));
+    this.logger.log(`[NOTIFY] studentLessonCancelled → ${params.student.id}`);
+  }
+
+  // ─── ÖĞRENCİYE: DERS ERTELENDİ (eğitmen tarafından) ───────────────────────
+
+  async studentLessonRescheduled(params: {
+    student: { id: string; firstName: string; email: string; phone?: string | null };
+    trainerName: string;
+    oldDate: string;
+    oldTime: string;
+    newDate: string;
+    newTime: string;
+  }) {
+    const title = '📅 Ders Tarihi Değişti';
+    const body = `Dersiniz ${params.newDate} ${params.newTime} tarihine taşındı.`;
+    await this.push.sendToUser(params.student.id, title, body, { type: 'lesson_rescheduled' });
+    // SMS
+    if (params.student.phone) {
+      await this.sms
+        .send(
+          params.student.phone,
+          `Ders degisikligi: ${params.oldDate} ${params.oldTime} → ${params.newDate} ${params.newTime}. ${params.trainerName}. Wellness Club`,
+        )
+        .catch(() => {});
+    }
+    // Mail
+    const html = emailShell({
+      title,
+      previewText: body,
+      clubName: CLUB_NAME,
+      innerHtml: `
+<p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(params.student.firstName)}</strong>,</p>
+<p style="margin:0 0 16px;">Eğitmeniniz dersinizi yeni bir tarihe taşıdı.</p>
+<div style="margin:20px 0;padding:18px;background:rgba(245,158,11,0.08);border-radius:12px;border:1px solid rgba(245,158,11,0.2);">
+  <p style="margin:0;font-weight:700;color:#f59e0b;">🔄 Tarih Değişikliği</p>
+  <p style="margin:8px 0 0;color:#6b7280;text-decoration:line-through;">${escapeHtml(params.oldDate)} ${escapeHtml(params.oldTime)}</p>
+  <p style="margin:4px 0 0;color:#1f2937;font-size:16px;font-weight:700;">📅 ${escapeHtml(params.newDate)} · 🕐 ${escapeHtml(params.newTime)}</p>
+  <p style="margin:8px 0 0;color:#6b7280;">🏋️ ${escapeHtml(params.trainerName)}</p>
+</div>`,
+    });
+    await this.mail['send']({
+      to: [params.student.email],
+      subject: `${CLUB_NAME} — ${title}`,
+      html,
+      text: body,
+    }).catch((e: unknown) => this.logger.error('Student reschedule mail: ' + String(e)));
+    this.logger.log(`[NOTIFY] studentLessonRescheduled → ${params.student.id}`);
   }
 }
