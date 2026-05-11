@@ -322,6 +322,32 @@ export function MemberDiscoverScreen() {
                   >
                     <Text style={styles.msgBtnTxt}>💬 Mesaj</Text>
                   </Pressable>
+                  <Pressable
+                    style={styles.connectBtn}
+                    onPress={async () => {
+                      if (!token || !tenant) {
+                        showToast('Giriş yapmalısınız', 'warning');
+                        return;
+                      }
+                      try {
+                        await apiJson('/trainer-network/connect', {
+                          method: 'POST',
+                          token,
+                          tenantSubdomain: tenant.subdomain,
+                          body: JSON.stringify({ trainerId: tr.id }),
+                        });
+                        showToast('Eğitmeninize bağlandınız ✓', 'success');
+                      } catch (e) {
+                        if (e instanceof ApiError && e.message.toLowerCase().includes('already')) {
+                          showToast('Zaten bağlısınız', 'info');
+                        } else {
+                          showToast(e instanceof ApiError ? e.message : 'Bağlanılamadı', 'error');
+                        }
+                      }
+                    }}
+                  >
+                    <Text style={styles.connectBtnTxt}>➕ Ekle</Text>
+                  </Pressable>
                 </View>
               ))}
             </ScrollView>
@@ -488,6 +514,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56,189,248,0.08)',
   },
   msgBtnTxt: { color: premium.accentBlue, fontSize: 11, fontWeight: '700' },
+  connectBtn: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.3)',
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(34,197,94,0.08)',
+  },
+  connectBtnTxt: { color: '#22c55e', fontSize: 11, fontWeight: '700' },
   // Clubs
   clubRow: {
     flexDirection: 'row',

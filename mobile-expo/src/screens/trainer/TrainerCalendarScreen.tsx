@@ -201,6 +201,50 @@ export function TrainerCalendarScreen() {
     ]);
   };
 
+  const handleRescheduleLesson = async (lessonId: string) => {
+    const from = todayISO();
+    const to = addDays(from, 14);
+    try {
+      const res = await apiJson<{ availabilities: AvailSlot[]; lessons: Lesson[] }>(
+        `/trainer-panel/calendar?from=${from}&to=${to}`,
+        opts,
+      );
+      const lessonTimes = new Set(
+        res.lessons.map((l) => `${l.startTime.slice(0, 10)}|${l.startTime.slice(11, 16)}`),
+      );
+      const emptySlots = res.availabilities.filter((a) => {
+        const key = `${a.date}|${a.startTime.slice(0, 5)}`;
+        return !lessonTimes.has(key);
+      });
+      if (emptySlots.length === 0) {
+        Alert.alert('Uyarı', 'Müsait slot bulunamadı. Önce yeni slot oluşturun.');
+        return;
+      }
+      const options = emptySlots.slice(0, 5).map((s) => ({
+        text: `${s.date} ${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`,
+        onPress: async () => {
+          try {
+            await apiJson(`/trainer-panel/lessons/${lessonId}/reschedule`, {
+              ...opts,
+              method: 'POST',
+              body: JSON.stringify({ newAvailabilityId: s.id }),
+            });
+            Alert.alert('✅', 'Ders yeni tarihe taşındı');
+            void loadCalendar();
+          } catch (e) {
+            Alert.alert('Hata', e instanceof ApiError ? e.message : 'Taşınamadı');
+          }
+        },
+      }));
+      Alert.alert('İleri Tarihe Al', 'Yeni slot seçin:', [
+        ...options,
+        { text: 'Vazgeç', style: 'cancel' },
+      ]);
+    } catch {
+      Alert.alert('Hata', 'Slotlar yüklenemedi');
+    }
+  };
+
   // Determine which slots are occupied
   const occupiedSlots = new Set(lessons.map((l) => l.startTime.slice(11, 16)));
 
@@ -297,12 +341,20 @@ export function TrainerCalendarScreen() {
                     </View>
                     <View style={styles.slotActions}>
                       {lesson ? (
-                        <Pressable
-                          style={styles.cancelBtn}
-                          onPress={() => handleCancelLesson(lesson.id)}
-                        >
-                          <Text style={styles.cancelBtnText}>İptal</Text>
-                        </Pressable>
+                        <>
+                          <Pressable
+                            style={styles.rescheduleBtn}
+                            onPress={() => handleRescheduleLesson(lesson.id)}
+                          >
+                            <Text style={styles.rescheduleBtnText}>📅</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.cancelBtn}
+                            onPress={() => handleCancelLesson(lesson.id)}
+                          >
+                            <Text style={styles.cancelBtnText}>İptal</Text>
+                          </Pressable>
+                        </>
                       ) : (
                         <>
                           <Pressable
@@ -472,6 +524,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   cancelBtnText: { fontSize: 12, fontWeight: '700', color: '#ef4444' },
+  rescheduleBtn: {
+    backgroundColor: 'rgba(245,158,11,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  rescheduleBtnText: { fontSize: 14 },
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },

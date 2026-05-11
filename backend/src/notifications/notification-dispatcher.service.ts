@@ -370,4 +370,39 @@ ${ticketBtn}
 
     this.logger.log(`[NOTIFY] reminder (${params.window}) → ${params.member.email}`);
   }
+
+  // ─── EĞİTMEN: DERS HATIRLATMA (T-1h) ──────────────────────────────────────
+
+  async trainerLessonReminder(params: {
+    trainer: { id: string; firstName: string; lastName: string };
+    studentName: string;
+    date: string;
+    time: string;
+    reservationId: string;
+  }) {
+    const title = '⏰ 1 Saat Sonra Dersiniz Var';
+    const body = `${params.studentName} ile ${params.time} dersiniz başlayacak.`;
+    await this.push.sendToUser(params.trainer.id, title, body, {
+      type: 'trainer_lesson_reminder',
+      reservationId: params.reservationId,
+    });
+    this.logger.log(`[NOTIFY] trainerLessonReminder → ${params.trainer.id}`);
+  }
+
+  // ─── EĞİTMEN: GÜNLÜK ÖZET (08:00) ─────────────────────────────────────────
+
+  async trainerDailySummary(params: {
+    trainer: { id: string; firstName: string; lastName: string };
+    lessonCount: number;
+    firstLessonTime: string;
+  }) {
+    const title = '📋 Bugünkü Programınız';
+    const body = `Bugün ${params.lessonCount} dersiniz var. İlk ders: ${params.firstLessonTime}`;
+    await this.push.sendToUser(params.trainer.id, title, body, {
+      type: 'trainer_daily_summary',
+    });
+    this.logger.log(
+      `[NOTIFY] trainerDailySummary → ${params.trainer.id} (${params.lessonCount} ders)`,
+    );
+  }
 }

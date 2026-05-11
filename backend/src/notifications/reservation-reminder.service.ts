@@ -122,10 +122,76 @@ export class ReservationReminderService {
           reservationId: r.id,
           window: 'hour',
         });
+        // Also notify trainer (T-1h)
+        if (r.trainer?.user) {
+          await this.notifier.trainerLessonReminder({
+            trainer: r.trainer.user,
+            studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
+            date,
+            time,
+            reservationId: r.id,
+          });
+        }
         r.notes = `${r.notes || ''} [R2]`.trim();
         await this.reservationsRepo.save(r);
       } catch (e) {
         this.logger.error(`[REMINDER T-2] ${r.id} failed: ${String(e)}`);
+      }
+    }
+  }
+
+  /** Her gün 08:00 (Europe/Istanbul). Eğitmenlere bugünkü ders özeti. */
+  @Cron('0 8 * * *', { timeZone: 'Europe/Istanbul' })
+  async sendTrainerDailySummary() {
+    const now = new Date();
+    const todayStart = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z');
+    const todayEnd = new Date(now.toISOString().slice(0, 10) + 'T23:59:59Z');
+
+    // Find all trainers with lessons today
+    const rows = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.trainer', 't')
+      .leftJoinAndSelect('t.user', 'tu')
+      .where('r.status = :status', { status: ReservationStatus.CONFIRMED })
+      .andWhere('r.trainerId IS NOT NULL')
+      .andWhere('r.startTime >= :start AND r.startTime < :end', {
+        start: todayStart,
+        end: todayEnd,
+      })
+      .getMany();
+
+    // Group by trainer
+    const trainerMap = new Map<
+      string,
+      {
+        trainerUser: { id: string; firstName: string; lastName: string };
+        count: number;
+        firstTime: string;
+      }
+    >();
+    for (const r of rows) {
+      if (!r.trainer?.user) continue;
+      const key = r.trainer.userId;
+      const existing = trainerMap.get(key);
+      const time = r.startTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      if (!existing) {
+        trainerMap.set(key, { trainerUser: r.trainer.user, count: 1, firstTime: time });
+      } else {
+        existing.count += 1;
+      }
+    }
+
+    this.logger.log(`[TRAINER DAILY] ${trainerMap.size} eğitmene günlük özet gönderiliyor`);
+
+    for (const [, data] of trainerMap) {
+      try {
+        await this.notifier.trainerDailySummary({
+          trainer: data.trainerUser,
+          lessonCount: data.count,
+          firstLessonTime: data.firstTime,
+        });
+      } catch (e) {
+        this.logger.error(`[TRAINER DAILY] ${data.trainerUser.id} failed: ${String(e)}`);
       }
     }
   }
