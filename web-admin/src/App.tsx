@@ -26,6 +26,7 @@ import { ClubCafeOrdersPage } from './pages/ClubCafeOrdersPage';
 import { ClubReservationRequestsPage } from './pages/ClubReservationRequestsPage';
 import { ConnectionsPage } from './pages/ConnectionsPage';
 import { PtManagementPage } from './pages/PtManagementPage';
+import { ResourceManagementPage } from './pages/ResourceManagementPage';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { SuperAdminDashboardPage } from './pages/SuperAdminDashboardPage';
 import { SuperAdminTenantsPage } from './pages/SuperAdminTenantsPage';
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/leads" element={<LeadsPage />} />
         <Route path="/connections" element={<ConnectionsPage />} />
+        <Route path="/resource-management" element={<ResourceManagementPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboardPage />} />

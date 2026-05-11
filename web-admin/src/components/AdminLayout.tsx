@@ -13,6 +13,7 @@ const CLUB_NAV: NavItem[] = [
   { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
+  { path: '/resource-management', icon: '🏟️', label: 'Kaynaklar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
 ];
