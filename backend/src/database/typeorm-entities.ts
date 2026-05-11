@@ -25,6 +25,7 @@ import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { Rating } from './entities/rating.entity';
 import { Reservation } from './entities/reservation.entity';
 import { Tenant } from './entities/tenant.entity';
+import { TenantVisibilityAudit } from './entities/tenant-visibility-audit.entity';
 import { TimeSlot } from './entities/time-slot.entity';
 import { TrainerApplication } from './entities/trainer-application.entity';
 import { TrainerMemberLink } from './entities/trainer-member-link.entity';
@@ -43,6 +44,7 @@ import { WaitingListEntry } from './entities/waiting-list.entity';
 /** Registration order for TypeORM / migrations */
 export const typeOrmEntities = [
   Tenant,
+  TenantVisibilityAudit,
   Campaign,
   Conversation,
   Lead,

@@ -25,26 +25,27 @@ export class ResourceBookingController {
   /** Kaynakları listele */
   @Get('resources')
   @UseGuards(JwtAuthGuard)
-  listResources(@Query('tenant') tenantSubdomain: string) {
-    return this.service.listResources(tenantSubdomain);
+  listResources(@CurrentUser() user: User, @Query('tenant') tenantSubdomain: string) {
+    return this.service.listResources(user, tenantSubdomain);
   }
 
   /** Müsait slotları getir */
   @Get('slots')
   @UseGuards(JwtAuthGuard)
   listSlots(
+    @CurrentUser() user: User,
     @Query('tenant') tenantSubdomain: string,
     @Query('resourceId') resourceId: string,
     @Query('date') date: string,
   ) {
-    return this.service.listAvailableSlots(tenantSubdomain, resourceId, date);
+    return this.service.listAvailableSlots(user, tenantSubdomain, resourceId, date);
   }
 
   /** Add-on'ları listele */
   @Get('addons')
   @UseGuards(JwtAuthGuard)
-  listAddons(@Query('tenant') tenantSubdomain: string) {
-    return this.service.listAddons(tenantSubdomain);
+  listAddons(@CurrentUser() user: User, @Query('tenant') tenantSubdomain: string) {
+    return this.service.listAddons(user, tenantSubdomain);
   }
 
   /** Rezervasyon oluştur */

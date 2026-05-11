@@ -7,6 +7,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export type TenantVisibilityMode = 'public' | 'private';
+
 @Entity({ name: 'tenant' })
 export class Tenant {
   @PrimaryGeneratedColumn('uuid')
@@ -72,6 +74,17 @@ export class Tenant {
   /** İş alanı: wellness, padel, beauty, fitness, medical, other */
   @Column({ type: 'varchar', length: 30, default: 'wellness' })
   vertical!: string;
+
+  /**
+   * Partner kulüp erişim modeli.
+   * - public → platformdaki herkes üye olmadan rezervasyon yapabilir (marketplace)
+   * - private → sadece onaylı üyeler hizmetleri görüp rezervasyon yapabilir
+   *
+   * workspaceType !== 'partner_club' olan tenant'larda bu alan yetkilendirmede
+   * dikkate alınmaz (Req 1.5).
+   */
+  @Column({ type: 'varchar', length: 10, default: 'private', name: 'visibility_mode' })
+  visibilityMode!: TenantVisibilityMode;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

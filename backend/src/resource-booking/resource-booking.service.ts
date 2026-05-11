@@ -13,6 +13,7 @@ import { SmsService } from '../notifications/sms.service';
 import { MailService } from '../mail/mail.service';
 import { emailShell, escapeHtml } from '../mail/mail-templates';
 import { StripeService } from '../payments/stripe.service';
+import { assertTenantBookingAccess } from './tenant-access.util';
 
 @Injectable()
 export class ResourceBookingService {
@@ -33,9 +34,10 @@ export class ResourceBookingService {
   // ─── Public: Kullanıcı tarafı ───────────────────────────────────────────────
 
   /** Tenant'ın kaynaklarını listele (aktif) */
-  async listResources(tenantSubdomain: string) {
+  async listResources(user: User, tenantSubdomain: string) {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
     if (!tenant) throw new NotFoundException('Tesis bulunamadı');
+    await assertTenantBookingAccess(user, tenant, this.usersRepo);
     const resources = await this.resourceRepo.find({
       where: { tenantId: tenant.id, active: true },
       order: { sortOrder: 'ASC', name: 'ASC' },
@@ -54,9 +56,10 @@ export class ResourceBookingService {
   }
 
   /** Belirli bir kaynağın müsait slotlarını getir */
-  async listAvailableSlots(tenantSubdomain: string, resourceId: string, date: string) {
+  async listAvailableSlots(user: User, tenantSubdomain: string, resourceId: string, date: string) {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
     if (!tenant) throw new NotFoundException('Tesis bulunamadı');
+    await assertTenantBookingAccess(user, tenant, this.usersRepo);
     const slots = await this.slotRepo.find({
       where: { tenantId: tenant.id, resourceId, date, status: 'available' },
       relations: ['resource'],
@@ -75,9 +78,10 @@ export class ResourceBookingService {
   }
 
   /** Add-on'ları listele */
-  async listAddons(tenantSubdomain: string) {
+  async listAddons(user: User, tenantSubdomain: string) {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
     if (!tenant) throw new NotFoundException('Tesis bulunamadı');
+    await assertTenantBookingAccess(user, tenant, this.usersRepo);
     return this.addonRepo.find({
       where: { tenantId: tenant.id, active: true },
       order: { sortOrder: 'ASC' },
@@ -98,6 +102,7 @@ export class ResourceBookingService {
   ) {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
     if (!tenant) throw new NotFoundException('Tesis bulunamadı');
+    await assertTenantBookingAccess(user, tenant, this.usersRepo);
 
     const slot = await this.slotRepo.findOne({
       where: { id: data.resourceSlotId, tenantId: tenant.id, status: 'available' },

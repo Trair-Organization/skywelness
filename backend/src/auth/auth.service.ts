@@ -773,6 +773,8 @@ export class AuthService {
           location: m.tenant.location ?? null,
           services: m.tenant.services ?? [],
           featured: m.tenant.featured ?? false,
+          visibilityMode: m.tenant.visibilityMode,
+          vertical: m.tenant.vertical,
         },
       }));
   }

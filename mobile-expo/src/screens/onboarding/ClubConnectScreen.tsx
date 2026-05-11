@@ -23,6 +23,7 @@ import { GradientBackground } from '../../components/premium/GradientBackground'
 import { GlassCard } from '../../components/premium/GlassCard';
 import { LeadCaptureModal } from '../../components/premium/LeadCaptureModal';
 import { EventDetailModal } from '../../components/premium/EventDetailModal';
+import { JoinRequestModal } from '../../components/premium/JoinRequestModal';
 import { showToast } from '../../components/premium/Toast';
 import type { RootStackParamList } from '../../navigation/types';
 import { premium } from '../../theme/premiumTheme';
@@ -75,6 +76,9 @@ type DiscoveryClub = {
   featured: boolean;
   avgRating: string;
   reviewCount: number;
+  /** Partner kulüp görünürlük modu. Field eksikse güvenli fallback: private. */
+  visibilityMode?: 'public' | 'private';
+  vertical?: string;
 };
 
 type DiscoveryTrainer = {
@@ -271,9 +275,14 @@ export function ClubConnectScreen() {
         location: string | null;
         services: string[];
         featured: boolean;
+        visibilityMode?: 'public' | 'private';
       };
     }>
   >([]);
+  const [joinRequestTarget, setJoinRequestTarget] = useState<{
+    name: string;
+    subdomain: string;
+  } | null>(null);
   const [previewClub, setPreviewClub] = useState<TenantListRow | null>(null);
   const [previewTrainer, setPreviewTrainer] = useState<Trainer | null>(null);
   const [previewCampaign, setPreviewCampaign] = useState<PublicCampaign | null>(null);
@@ -450,6 +459,87 @@ export function ClubConnectScreen() {
       clubSubdomain: evt.clubSubdomain ?? undefined,
       prefillMessage: `${evt.title} etkinliğine katılmak istiyorum.`,
     });
+  };
+
+  /**
+   * Kulüp kartı için CTA durumunu hesapla.
+   * Requirements 6.4-6.8.
+   *
+   * - Public kulüp: her zaman book (zaten üye olsa bile direkt rezervasyon)
+   * - Private kulüp:
+   *   - Active üye → enter
+   *   - Pending → 'pending' (disabled)
+   *   - Rejected → 'rejected' (disabled)
+   *   - Üye değil → 'join'
+   *
+   * Backend visibilityMode göndermezse güvenli fallback: private.
+   */
+  type ClubCta = 'book' | 'enter' | 'join' | 'pending' | 'rejected';
+  const resolveClubCta = (club: DiscoveryClub): ClubCta => {
+    const visibilityMode = club.visibilityMode ?? 'private';
+    const membership = myMemberships.find((m) => m.tenant.subdomain === club.subdomain);
+
+    if (visibilityMode === 'public') {
+      // Public kulüpte, kullanıcı girişli de olsa değilse de rezervasyon direkt
+      return 'book';
+    }
+    // private
+    if (!membership) return isAuthenticated ? 'join' : 'join';
+    if (membership.accountStatus === 'active') return 'enter';
+    if (membership.accountStatus === 'pending_approval') return 'pending';
+    if (membership.accountStatus === 'rejected') return 'rejected';
+    return 'join';
+  };
+
+  const handleClubCta = (club: DiscoveryClub, cta: ClubCta) => {
+    if (cta === 'book') {
+      if (!isAuthenticated) {
+        // Girişsiz kullanıcıyı önce login'e yönlendir
+        navigation.navigate('Login');
+        return;
+      }
+      // Public kulübün booking ekranına git (Padel route'u generic resource booking)
+      (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Main', {
+        screen: 'Padel',
+        params: { subdomain: club.subdomain, clubName: club.name },
+      });
+      return;
+    }
+    if (cta === 'enter') {
+      (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Main');
+      return;
+    }
+    if (cta === 'join') {
+      if (!isAuthenticated) {
+        navigation.navigate('Login');
+        return;
+      }
+      setJoinRequestTarget({ name: club.name, subdomain: club.subdomain });
+      return;
+    }
+    if (cta === 'pending') {
+      showToast('Başvurunuz onay bekliyor', 'info');
+      return;
+    }
+    if (cta === 'rejected') {
+      showToast('Başvurunuz daha önce reddedildi', 'warning');
+      return;
+    }
+  };
+
+  const ctaLabel = (cta: ClubCta): string => {
+    switch (cta) {
+      case 'book':
+        return '🎾 Rezervasyon Yap';
+      case 'enter':
+        return '🏠 Kulübe Git';
+      case 'join':
+        return '📨 Üyelik Başvurusu';
+      case 'pending':
+        return '⏳ Onay bekleniyor';
+      case 'rejected':
+        return '❌ Başvuru reddedildi';
+    }
   };
 
   useEffect(() => {
@@ -1181,14 +1271,32 @@ export function ClubConnectScreen() {
                       )}
                     </View>
                     <View style={styles.clubCardCtas}>
-                      <Pressable
-                        style={styles.clubCardCtaJoin}
-                        onPress={() => {
-                          navigation.navigate('Register', { preselectedSubdomain: club.subdomain });
-                        }}
-                      >
-                        <Text style={styles.clubCardCtaJoinTxt}>Kulübe Katıl</Text>
-                      </Pressable>
+                      {(() => {
+                        const cta = resolveClubCta(club);
+                        const disabled = cta === 'pending' || cta === 'rejected';
+                        return (
+                          <Pressable
+                            style={[
+                              styles.clubCardCtaJoin,
+                              disabled && { opacity: 0.5 },
+                              cta === 'book' && {
+                                borderColor: 'rgba(52,211,153,0.4)',
+                                backgroundColor: 'rgba(52,211,153,0.1)',
+                              },
+                            ]}
+                            onPress={() => handleClubCta(club, cta)}
+                          >
+                            <Text
+                              style={[
+                                styles.clubCardCtaJoinTxt,
+                                cta === 'book' && { color: premium.accentGreen },
+                              ]}
+                            >
+                              {ctaLabel(cta)}
+                            </Text>
+                          </Pressable>
+                        );
+                      })()}
                       <Pressable
                         style={styles.trainerCtaPill}
                         onPress={() => {
@@ -1688,6 +1796,25 @@ export function ClubConnectScreen() {
             void joinEventAction(evt);
           } else {
             setSelectedEvent(null);
+          }
+        }}
+      />
+
+      <JoinRequestModal
+        visible={!!joinRequestTarget}
+        club={joinRequestTarget}
+        token={token}
+        tenantSubdomain={tenant?.subdomain ?? null}
+        onClose={() => setJoinRequestTarget(null)}
+        onSuccess={() => {
+          // Reload memberships so pending state shows up immediately
+          if (token && tenant) {
+            apiJson<typeof myMemberships>('/auth/my-memberships', {
+              token,
+              tenantSubdomain: tenant.subdomain,
+            })
+              .then((rows) => setMyMemberships(rows))
+              .catch(() => {});
           }
         }}
       />

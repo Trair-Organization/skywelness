@@ -109,14 +109,6 @@ export function MemberTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Padel"
-        component={PadelBookingScreen}
-        options={{
-          tabBarLabel: 'Padel',
-          tabBarIcon: ({ focused }) => tabIcon('🎾', focused),
-        }}
-      />
-      <Tab.Screen
         name="Profile"
         component={MemberProfileScreen}
         options={{
@@ -125,6 +117,11 @@ export function MemberTabNavigator() {
         }}
       />
       {/* Hidden routes (no tab bar button) */}
+      <Tab.Screen
+        name="Padel"
+        component={PadelBookingScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}

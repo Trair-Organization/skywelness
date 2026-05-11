@@ -56,6 +56,8 @@ export function ClubDashboardPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clubInviteCode, setClubInviteCode] = useState('');
+  const [visibilityMode, setVisibilityMode] = useState<'public' | 'private' | null>(null);
+  const [savingVisibility, setSavingVisibility] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,6 +77,19 @@ export function ClubDashboardPage() {
     try {
       const codeRes = await apiJson<{ inviteCode: string }>('/admin/club-invite-code');
       setClubInviteCode(codeRes.inviteCode);
+    } catch {
+      // ignore
+    }
+    // Fetch current tenant's visibility mode
+    try {
+      const sub = readStoredTenantSubdomain();
+      if (sub) {
+        const tenantInfo = await apiJson<{ visibilityMode?: 'public' | 'private' }>(
+          `/tenants/by-subdomain/${encodeURIComponent(sub)}`,
+          { auth: false },
+        );
+        setVisibilityMode(tenantInfo.visibilityMode ?? 'private');
+      }
     } catch {
       // ignore
     }
@@ -103,7 +118,9 @@ export function ClubDashboardPage() {
       <div className="dashboard-header">
         <div>
           <h1 className="dashboard-title">Dashboard</h1>
-          <p className="dashboard-subtitle">{isWellness ? 'Skyland Wellness Club yönetim paneli' : 'Yönetim Paneli'}</p>
+          <p className="dashboard-subtitle">
+            {isWellness ? 'Skyland Wellness Club yönetim paneli' : 'Yönetim Paneli'}
+          </p>
         </div>
         <button className="btn-refresh" onClick={() => void load()}>
           🔄 Yenile
@@ -236,6 +253,140 @@ export function ClubDashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Kulüp Görünürlüğü (Public / Private) */}
+      {visibilityMode && (
+        <div className="dashboard-section" style={{ marginTop: '1rem' }}>
+          <div
+            style={{
+              padding: '1rem',
+              background:
+                visibilityMode === 'public' ? 'rgba(52,211,153,0.06)' : 'rgba(139,92,246,0.06)',
+              border:
+                visibilityMode === 'public'
+                  ? '1px solid rgba(52,211,153,0.25)'
+                  : '1px solid rgba(139,92,246,0.25)',
+              borderRadius: '12px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                marginBottom: '0.75rem',
+              }}
+            >
+              <div style={{ fontSize: '2rem' }}>{visibilityMode === 'public' ? '🌍' : '🔒'}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, color: '#e2e8f0' }}>
+                  Kulüp Görünürlüğü:{' '}
+                  {visibilityMode === 'public'
+                    ? 'Public (Marketplace)'
+                    : 'Private (Kapalı Topluluk)'}
+                </div>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#94a3b8',
+                    marginTop: '2px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {visibilityMode === 'public'
+                    ? 'Platformdaki tüm kullanıcılar üye olmadan kulübünüzde rezervasyon yapabilir.'
+                    : 'Sadece onayladığınız üyeler kulübünüzün hizmetlerini görüp rezervasyon yapabilir. Diğer kullanıcılar "Üyelik Başvurusu" bırakabilir.'}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={async () => {
+                  if (visibilityMode === 'public') return;
+                  if (
+                    !confirm(
+                      'Kulübünüzü Public yapmak istediğinize emin misiniz? Sisteme kayıtlı TÜM kullanıcılar rezervasyon yapabilir.',
+                    )
+                  )
+                    return;
+                  setSavingVisibility(true);
+                  try {
+                    await apiJson('/admin/tenant/visibility', {
+                      method: 'PATCH',
+                      body: JSON.stringify({ visibilityMode: 'public' }),
+                    });
+                    setVisibilityMode('public');
+                    alert('✅ Kulüp artık Public');
+                  } catch (e) {
+                    alert(`Hata: ${e instanceof Error ? e.message : 'İşlem başarısız'}`);
+                  } finally {
+                    setSavingVisibility(false);
+                  }
+                }}
+                disabled={savingVisibility || visibilityMode === 'public'}
+                style={{
+                  flex: 1,
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border:
+                    visibilityMode === 'public'
+                      ? '1px solid rgba(52,211,153,0.5)'
+                      : '1px solid rgba(148,163,184,0.2)',
+                  background: visibilityMode === 'public' ? 'rgba(52,211,153,0.12)' : 'transparent',
+                  color: visibilityMode === 'public' ? '#34d399' : '#94a3b8',
+                  fontWeight: 700,
+                  cursor: visibilityMode === 'public' ? 'default' : 'pointer',
+                  fontSize: '0.85rem',
+                }}
+              >
+                🌍 Public
+              </button>
+              <button
+                onClick={async () => {
+                  if (visibilityMode === 'private') return;
+                  if (
+                    !confirm(
+                      'Kulübünüzü Private yapmak istediğinize emin misiniz? Sadece onayladığınız üyeler rezervasyon yapabilir.',
+                    )
+                  )
+                    return;
+                  setSavingVisibility(true);
+                  try {
+                    await apiJson('/admin/tenant/visibility', {
+                      method: 'PATCH',
+                      body: JSON.stringify({ visibilityMode: 'private' }),
+                    });
+                    setVisibilityMode('private');
+                    alert('✅ Kulüp artık Private');
+                  } catch (e) {
+                    alert(`Hata: ${e instanceof Error ? e.message : 'İşlem başarısız'}`);
+                  } finally {
+                    setSavingVisibility(false);
+                  }
+                }}
+                disabled={savingVisibility || visibilityMode === 'private'}
+                style={{
+                  flex: 1,
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border:
+                    visibilityMode === 'private'
+                      ? '1px solid rgba(139,92,246,0.5)'
+                      : '1px solid rgba(148,163,184,0.2)',
+                  background:
+                    visibilityMode === 'private' ? 'rgba(139,92,246,0.12)' : 'transparent',
+                  color: visibilityMode === 'private' ? '#a78bfa' : '#94a3b8',
+                  fontWeight: 700,
+                  cursor: visibilityMode === 'private' ? 'default' : 'pointer',
+                  fontSize: '0.85rem',
+                }}
+              >
+                🔒 Private
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hızlı Erişim */}
       <div className="dashboard-section">

@@ -3,7 +3,7 @@ export type MemberTabParamList = {
   ClubHome: undefined;
   Spa: undefined;
   PT: undefined;
-  Padel: undefined;
+  Padel: { subdomain?: string; clubName?: string } | undefined;
   Profile: undefined;
   // Hidden routes
   Messages: undefined;

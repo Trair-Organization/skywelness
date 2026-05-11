@@ -58,6 +58,8 @@ export class TenantsService {
       subdomain: tenant.subdomain,
       logoUrl: this.extractLogoUrl(tenant.branding),
       branding: tenant.branding,
+      visibilityMode: tenant.visibilityMode,
+      vertical: tenant.vertical,
     };
   }
 
