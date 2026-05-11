@@ -230,6 +230,28 @@ export function MemberDiscoverScreen() {
           </>
         )}
 
+        {/* ═══ O'Padel — Kort Rezervasyonu ═══ */}
+        {clubs.some((c) => c.subdomain === 'opadel') && (
+          <>
+            <Text style={styles.sectionTitle}>🎾 Padel Kortları</Text>
+            <Pressable
+              style={({ pressed }) => [styles.padelBanner, pressed && styles.pressed]}
+              onPress={() => navigation.navigate('Padel')}
+            >
+              <View style={styles.padelBannerContent}>
+                <View style={styles.padelIcon}>
+                  <Text style={{ fontSize: 28 }}>🏟️</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.padelTitle}>O'Padel</Text>
+                  <Text style={styles.padelDesc}>İstanbul'un en modern padel tesisi. Hemen kort rezervasyonu yapın!</Text>
+                </View>
+                <Text style={styles.padelArrow}>→</Text>
+              </View>
+            </Pressable>
+          </>
+        )}
+
         {/* ═══ Etkinlikler ═══ */}
         {events.length > 0 && (
           <>
@@ -562,4 +584,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clubMsgBtnTxt: { fontSize: 16 },
+  // Padel Banner
+  padelBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.3)',
+    backgroundColor: 'rgba(52,211,153,0.06)',
+    padding: 16,
+    marginBottom: 8,
+  },
+  padelBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  padelIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(52,211,153,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  padelTitle: { fontSize: 16, fontWeight: '800', color: premium.text },
+  padelDesc: { fontSize: 12, color: premium.textMuted, marginTop: 2, lineHeight: 16 },
+  padelArrow: { fontSize: 22, color: premium.accentGreen, fontWeight: '700' },
 });

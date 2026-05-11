@@ -3,6 +3,7 @@ export type MemberTabParamList = {
   ClubHome: undefined;
   Spa: undefined;
   PT: undefined;
+  Padel: undefined;
   Profile: undefined;
   // Hidden routes
   Messages: undefined;

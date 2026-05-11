@@ -13,6 +13,7 @@ import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import { LegalScreen } from '../screens/member/LegalScreen';
 import { ConnectionsScreen } from '../screens/shared/ConnectionsScreen';
+import { PadelBookingScreen } from '../screens/member/PadelBookingScreen';
 import { SpaScreen } from '../screens/member/SpaScreen';
 import { PtScreen } from '../screens/member/PtScreen';
 import type { MemberTabParamList } from './memberTabTypes';
@@ -105,6 +106,14 @@ export function MemberTabNavigator() {
         options={{
           tabBarLabel: 'PT',
           tabBarIcon: ({ focused }) => tabIcon('🏋️', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Padel"
+        component={PadelBookingScreen}
+        options={{
+          tabBarLabel: 'Padel',
+          tabBarIcon: ({ focused }) => tabIcon('🎾', focused),
         }}
       />
       <Tab.Screen

@@ -10,6 +10,8 @@ import { User } from '../database/entities/user.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { PushService } from '../notifications/push.service';
 import { SmsService } from '../notifications/sms.service';
+import { MailService } from '../mail/mail.service';
+import { emailShell, escapeHtml } from '../mail/mail-templates';
 
 @Injectable()
 export class ResourceBookingService {
@@ -23,6 +25,7 @@ export class ResourceBookingService {
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     private readonly pushService: PushService,
     private readonly smsService: SmsService,
+    private readonly mailService: MailService,
   ) {}
 
   // ─── Public: Kullanıcı tarafı ───────────────────────────────────────────────
@@ -103,11 +106,18 @@ export class ResourceBookingService {
     // Calculate total
     const slotPrice = parseFloat(slot.price ?? slot.resource?.price ?? '0');
     let addonTotal = 0;
-    const addonItems: Array<{ addonId: string; quantity: number; unitPrice: number; totalPrice: number }> = [];
+    const addonItems: Array<{
+      addonId: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }> = [];
 
     if (data.addons?.length) {
       for (const a of data.addons) {
-        const addon = await this.addonRepo.findOne({ where: { id: a.addonId, tenantId: tenant.id, active: true } });
+        const addon = await this.addonRepo.findOne({
+          where: { id: a.addonId, tenantId: tenant.id, active: true },
+        });
         if (!addon) continue;
         const unitPrice = parseFloat(addon.price);
         const totalPrice = unitPrice * a.quantity;
@@ -136,24 +146,57 @@ export class ResourceBookingService {
 
     // Create booking addons
     for (const item of addonItems) {
-      await this.bookingAddonRepo.save(this.bookingAddonRepo.create({
-        bookingId: booking.id,
-        addonId: item.addonId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice.toFixed(2),
-        totalPrice: item.totalPrice.toFixed(2),
-      }));
+      await this.bookingAddonRepo.save(
+        this.bookingAddonRepo.create({
+          bookingId: booking.id,
+          addonId: item.addonId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toFixed(2),
+          totalPrice: item.totalPrice.toFixed(2),
+        }),
+      );
     }
 
     // Mark slot as booked
     slot.status = 'booked';
     await this.slotRepo.save(slot);
 
-    // Notify user
+    // Notify user (push + SMS + mail)
     if (user.phone) {
-      void this.smsService.send(user.phone, `Rezervasyonunuz onaylandi: ${slot.resource?.name} - ${slot.date} ${slot.startTime}. Toplam: ${totalAmount}₺. ${tenant.name}`);
+      void this.smsService.send(
+        user.phone,
+        `Rezervasyonunuz onaylandi: ${slot.resource?.name} - ${slot.date} ${slot.startTime}. Toplam: ${totalAmount}₺. ${tenant.name}`,
+      );
     }
-    void this.pushService.sendToUser(user.id, '✅ Rezervasyon Onaylandı', `${slot.resource?.name} - ${slot.date} ${slot.startTime}`, { type: 'booking_confirmed', bookingId: booking.id });
+    void this.pushService.sendToUser(
+      user.id,
+      '✅ Rezervasyon Onaylandı',
+      `${slot.resource?.name} - ${slot.date} ${slot.startTime}`,
+      { type: 'booking_confirmed', bookingId: booking.id },
+    );
+
+    // Email
+    const html = emailShell({
+      title: 'Rezervasyon Onaylandı',
+      previewText: `${slot.resource?.name} - ${slot.date} ${slot.startTime}`,
+      clubName: tenant.name,
+      innerHtml: `
+<p style="margin:0 0 16px;">Merhaba <strong>${escapeHtml(user.firstName)}</strong>,</p>
+<p style="margin:0 0 16px;">Rezervasyonunuz başarıyla oluşturuldu.</p>
+<div style="margin:20px 0;padding:18px;background:rgba(34,197,94,0.08);border-radius:12px;border:1px solid rgba(34,197,94,0.2);">
+  <p style="margin:0;font-weight:700;color:#22c55e;">✅ Onaylandı</p>
+  <p style="margin:8px 0 0;color:#1f2937;font-size:16px;font-weight:700;">🏟️ ${escapeHtml(slot.resource?.name ?? '')}</p>
+  <p style="margin:4px 0 0;color:#1f2937;">📅 ${escapeHtml(slot.date)} · 🕐 ${escapeHtml(slot.startTime)} - ${escapeHtml(slot.endTime)}</p>
+  <p style="margin:8px 0 0;color:#1f2937;font-weight:700;">💰 Toplam: ${totalAmount}₺</p>
+</div>
+<p style="margin:16px 0 0;font-size:14px;color:#6b7280;">İptal veya değişiklik için uygulamamızı kullanabilirsiniz.</p>`,
+    });
+    void this.mailService['send']({
+      to: [user.email],
+      subject: `${tenant.name} — Rezervasyon Onaylandı`,
+      html,
+      text: `Rezervasyonunuz onaylandi: ${slot.resource?.name} - ${slot.date} ${slot.startTime}. Toplam: ${totalAmount}₺`,
+    }).catch(() => {});
 
     return {
       id: booking.id,
@@ -218,14 +261,31 @@ export class ResourceBookingService {
   }
 
   /** Admin: Kaynak oluştur */
-  async createResource(tenantId: string, data: { name: string; resourceType: string; capacity: number; durationMinutes: number; price: number; description?: string }) {
+  async createResource(
+    tenantId: string,
+    data: {
+      name: string;
+      resourceType: string;
+      capacity: number;
+      durationMinutes: number;
+      price: number;
+      description?: string;
+    },
+  ) {
     const resource = this.resourceRepo.create({ tenantId, ...data, price: data.price.toFixed(2) });
     await this.resourceRepo.save(resource);
     return resource;
   }
 
   /** Admin: Slot oluştur (tekli veya toplu) */
-  async createSlots(tenantId: string, data: { resourceId: string; date: string; slots: Array<{ startTime: string; endTime: string; price?: number }> }) {
+  async createSlots(
+    tenantId: string,
+    data: {
+      resourceId: string;
+      date: string;
+      slots: Array<{ startTime: string; endTime: string; price?: number }>;
+    },
+  ) {
     const created = [];
     for (const s of data.slots) {
       const slot = this.slotRepo.create({
@@ -258,5 +318,225 @@ export class ResourceBookingService {
   /** Admin: Add-on'ları listele */
   async listAdminAddons(tenantId: string) {
     return this.addonRepo.find({ where: { tenantId }, order: { sortOrder: 'ASC' } });
+  }
+
+  // ─── Rezervasyon Yönetimi ───────────────────────────────────────────────────
+
+  /** Kullanıcı: Rezervasyon iptal */
+  async cancelBooking(user: User, bookingId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId, userId: user.id },
+      relations: ['resource', 'resourceSlot'],
+    });
+    if (!booking) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (booking.status === 'cancelled') throw new BadRequestException('Zaten iptal edilmiş');
+
+    booking.status = 'cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancelledBy = 'user';
+    await this.bookingRepo.save(booking);
+
+    // Free the slot
+    if (booking.resourceSlotId) {
+      await this.slotRepo.update({ id: booking.resourceSlotId }, { status: 'available' });
+    }
+
+    // Notify
+    void this.pushService.sendToUser(
+      user.id,
+      '❌ Rezervasyon İptal',
+      `${booking.resource?.name} rezervasyonunuz iptal edildi.`,
+      { type: 'booking_cancelled' },
+    );
+    if (user.phone) {
+      void this.smsService.send(
+        user.phone,
+        `Rezervasyonunuz iptal edildi: ${booking.resource?.name} - ${booking.resourceSlot?.date} ${booking.resourceSlot?.startTime}. Wellness Club`,
+      );
+    }
+
+    return { ok: true, status: 'cancelled' };
+  }
+
+  /** Admin: Rezervasyon onayla */
+  async adminApproveBooking(tenantId: string, bookingId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId, tenantId, status: 'pending' },
+      relations: ['resource', 'resourceSlot', 'user'],
+    });
+    if (!booking) throw new NotFoundException('Rezervasyon bulunamadı');
+
+    booking.status = 'confirmed';
+    await this.bookingRepo.save(booking);
+
+    // Notify user
+    if (booking.user) {
+      void this.pushService.sendToUser(
+        booking.userId,
+        '✅ Rezervasyon Onaylandı',
+        `${booking.resource?.name} - ${booking.resourceSlot?.date} ${booking.resourceSlot?.startTime}`,
+        { type: 'booking_confirmed' },
+      );
+      if (booking.user.phone) {
+        void this.smsService.send(
+          booking.user.phone,
+          `Rezervasyonunuz onaylandi: ${booking.resource?.name} - ${booking.resourceSlot?.date} ${booking.resourceSlot?.startTime}. Toplam: ${booking.totalAmount}TL`,
+        );
+      }
+    }
+
+    return { ok: true, status: 'confirmed' };
+  }
+
+  /** Admin: Rezervasyon reddet */
+  async adminRejectBooking(tenantId: string, bookingId: string, reason?: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId, tenantId },
+      relations: ['resource', 'resourceSlot', 'user'],
+    });
+    if (!booking) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (booking.status === 'cancelled') throw new BadRequestException('Zaten iptal edilmiş');
+
+    booking.status = 'cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancelledBy = 'admin';
+    await this.bookingRepo.save(booking);
+
+    // Free the slot
+    if (booking.resourceSlotId) {
+      await this.slotRepo.update({ id: booking.resourceSlotId }, { status: 'available' });
+    }
+
+    // Notify user
+    if (booking.user) {
+      const msg = reason
+        ? `Rezervasyonunuz reddedildi. Sebep: ${reason}`
+        : 'Rezervasyonunuz reddedildi.';
+      void this.pushService.sendToUser(booking.userId, '❌ Rezervasyon Reddedildi', msg, {
+        type: 'booking_rejected',
+      });
+      if (booking.user.phone) {
+        void this.smsService.send(
+          booking.user.phone,
+          `Rezervasyonunuz reddedildi: ${booking.resource?.name} - ${booking.resourceSlot?.date} ${booking.resourceSlot?.startTime}. ${reason ?? ''}`,
+        );
+      }
+    }
+
+    return { ok: true, status: 'cancelled' };
+  }
+
+  /** Admin: Rezervasyon ileri tarihe al */
+  async adminRescheduleBooking(tenantId: string, bookingId: string, newSlotId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId, tenantId },
+      relations: ['resource', 'resourceSlot', 'user'],
+    });
+    if (!booking) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (booking.status === 'cancelled')
+      throw new BadRequestException('İptal edilmiş rezervasyon taşınamaz');
+
+    const newSlot = await this.slotRepo.findOne({
+      where: { id: newSlotId, tenantId, status: 'available' },
+    });
+    if (!newSlot) throw new BadRequestException('Yeni slot müsait değil');
+
+    // Free old slot
+    if (booking.resourceSlotId) {
+      await this.slotRepo.update({ id: booking.resourceSlotId }, { status: 'available' });
+    }
+
+    // Assign new slot
+    const oldDate = booking.resourceSlot?.date;
+    const oldTime = booking.resourceSlot?.startTime;
+    booking.resourceSlotId = newSlot.id;
+    booking.resourceId = newSlot.resourceId;
+    await this.bookingRepo.save(booking);
+
+    // Mark new slot as booked
+    newSlot.status = 'booked';
+    await this.slotRepo.save(newSlot);
+
+    // Notify user
+    if (booking.user) {
+      void this.pushService.sendToUser(
+        booking.userId,
+        '📅 Rezervasyon Taşındı',
+        `Yeni tarih: ${newSlot.date} ${newSlot.startTime}`,
+        { type: 'booking_rescheduled' },
+      );
+      if (booking.user.phone) {
+        void this.smsService.send(
+          booking.user.phone,
+          `Rezervasyonunuz tasindi: ${oldDate} ${oldTime} → ${newSlot.date} ${newSlot.startTime}. ${booking.resource?.name}`,
+        );
+      }
+    }
+
+    return { ok: true, newDate: newSlot.date, newTime: newSlot.startTime };
+  }
+
+  /** Admin: Kaynak güncelle (fiyat, isim, kapasite) */
+  async updateResource(
+    tenantId: string,
+    resourceId: string,
+    data: {
+      name?: string;
+      price?: number;
+      capacity?: number;
+      durationMinutes?: number;
+      active?: boolean;
+    },
+  ) {
+    const resource = await this.resourceRepo.findOne({ where: { id: resourceId, tenantId } });
+    if (!resource) throw new NotFoundException('Kaynak bulunamadı');
+    if (data.name !== undefined) resource.name = data.name;
+    if (data.price !== undefined) resource.price = data.price.toFixed(2);
+    if (data.capacity !== undefined) resource.capacity = data.capacity;
+    if (data.durationMinutes !== undefined) resource.durationMinutes = data.durationMinutes;
+    if (data.active !== undefined) resource.active = data.active;
+    await this.resourceRepo.save(resource);
+    return resource;
+  }
+
+  /** Admin: Add-on güncelle */
+  async updateAddon(
+    tenantId: string,
+    addonId: string,
+    data: { name?: string; price?: number; active?: boolean },
+  ) {
+    const addon = await this.addonRepo.findOne({ where: { id: addonId, tenantId } });
+    if (!addon) throw new NotFoundException('Add-on bulunamadı');
+    if (data.name !== undefined) addon.name = data.name;
+    if (data.price !== undefined) addon.price = data.price.toFixed(2);
+    if (data.active !== undefined) addon.active = data.active;
+    await this.addonRepo.save(addon);
+    return addon;
+  }
+
+  /** Admin: Slot sil */
+  async deleteSlot(tenantId: string, slotId: string) {
+    const slot = await this.slotRepo.findOne({ where: { id: slotId, tenantId } });
+    if (!slot) throw new NotFoundException('Slot bulunamadı');
+    if (slot.status === 'booked')
+      throw new BadRequestException('Dolu slot silinemez. Önce rezervasyonu iptal edin.');
+    await this.slotRepo.remove(slot);
+    return { ok: true };
+  }
+
+  /** Admin: Belirli bir günün slotlarını listele */
+  async listAdminSlots(tenantId: string, resourceId: string, date: string) {
+    const slots = await this.slotRepo.find({
+      where: { tenantId, resourceId, date },
+      order: { startTime: 'ASC' },
+    });
+    return slots.map((s) => ({
+      id: s.id,
+      date: s.date,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      price: s.price,
+      status: s.status,
+    }));
   }
 }
