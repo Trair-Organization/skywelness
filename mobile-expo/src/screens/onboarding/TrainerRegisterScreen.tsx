@@ -68,8 +68,8 @@ const CERTIFICATION_OPTIONS = [
 // ─── Hizmet Tipleri ───────────────────────────────────────────────────────────
 const SESSION_TYPE_OPTIONS = [
   { id: 'personal_training', label: 'Özel Ders (PT)', icon: '🏋️' },
-  { id: 'massage', label: 'Masaj / Spa', icon: '💆' },
   { id: 'group_class', label: 'Grup Dersi', icon: '👥' },
+  { id: 'online', label: 'Online Ders', icon: '💻' },
 ];
 
 export function TrainerRegisterScreen() {
@@ -459,13 +459,6 @@ export function TrainerRegisterScreen() {
               onChangeText={setPricingNote}
               placeholder="Seans başı 500₺, 10'lu paket 4000₺..."
               multiline
-            />
-            <PremiumInput
-              label="Sosyal Medya Linkleri"
-              value={socialLinks}
-              onChangeText={setSocialLinks}
-              placeholder="instagram.com/..., youtube.com/..."
-              autoCapitalize="none"
             />
 
             {/* Kulüp Bağlantısı */}
