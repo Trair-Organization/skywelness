@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
+import { readStoredTenantSubdomain } from '../auth/storage';
 
 function timeAgo(iso: string) {
   const d = new Date(iso);
@@ -86,6 +87,9 @@ export function ClubDashboardPage() {
     });
   }, [load]);
 
+  const tenantSubdomain = readStoredTenantSubdomain();
+  const isWellness = tenantSubdomain === 'skyland-wellness';
+
   if (loading || !stats) {
     return (
       <div className="dashboard-page">
@@ -99,7 +103,7 @@ export function ClubDashboardPage() {
       <div className="dashboard-header">
         <div>
           <h1 className="dashboard-title">Dashboard</h1>
-          <p className="dashboard-subtitle">Skyland Wellness Club yönetim paneli</p>
+          <p className="dashboard-subtitle">{isWellness ? 'Skyland Wellness Club yönetim paneli' : 'Yönetim Paneli'}</p>
         </div>
         <button className="btn-refresh" onClick={() => void load()}>
           🔄 Yenile
@@ -131,13 +135,15 @@ export function ClubDashboardPage() {
           )}
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/trainers')}>
-          <div className="stat-icon">🏋️</div>
-          <div className="stat-content">
-            <span className="stat-value">{stats.totalTrainers}</span>
-            <span className="stat-label">Eğitmen</span>
+        {isWellness && (
+          <div className="stat-card" onClick={() => navigate('/trainers')}>
+            <div className="stat-icon">🏋️</div>
+            <div className="stat-content">
+              <span className="stat-value">{stats.totalTrainers}</span>
+              <span className="stat-label">Eğitmen</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="stat-card" onClick={() => navigate('/events')}>
           <div className="stat-icon">📅</div>
@@ -156,13 +162,25 @@ export function ClubDashboardPage() {
           </div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/spa')}>
-          <div className="stat-icon">🧖</div>
-          <div className="stat-content">
-            <span className="stat-value">Spa</span>
-            <span className="stat-label">Spa & Wellness</span>
+        {isWellness && (
+          <div className="stat-card" onClick={() => navigate('/spa')}>
+            <div className="stat-icon">🧖</div>
+            <div className="stat-content">
+              <span className="stat-value">Spa</span>
+              <span className="stat-label">Spa & Wellness</span>
+            </div>
           </div>
-        </div>
+        )}
+
+        {!isWellness && (
+          <div className="stat-card" onClick={() => navigate('/resource-management')}>
+            <div className="stat-icon">🏟️</div>
+            <div className="stat-content">
+              <span className="stat-value">Kaynaklar</span>
+              <span className="stat-label">Kort & Slotlar</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Kulüp Davet Kodu */}
@@ -243,10 +261,18 @@ export function ClubDashboardPage() {
             <span className="qa-icon">💬</span>
             <span>Mesajlar</span>
           </button>
-          <button className="quick-action-btn" onClick={() => navigate('/spa')}>
-            <span className="qa-icon">🧖</span>
-            <span>Spa Yönetimi</span>
-          </button>
+          {isWellness && (
+            <button className="quick-action-btn" onClick={() => navigate('/spa')}>
+              <span className="qa-icon">🧖</span>
+              <span>Spa Yönetimi</span>
+            </button>
+          )}
+          {!isWellness && (
+            <button className="quick-action-btn" onClick={() => navigate('/resource-management')}>
+              <span className="qa-icon">🏟️</span>
+              <span>Kort & Slotlar</span>
+            </button>
+          )}
           <button
             className="quick-action-btn"
             onClick={() => navigate('/club/reservation-requests')}
