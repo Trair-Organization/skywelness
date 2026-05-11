@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { readStoredTenantSubdomain } from '../auth/storage';
 
 type NavItem = { path: string; icon: string; label: string };
 
-const CLUB_NAV: NavItem[] = [
+const WELLNESS_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
   { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
@@ -13,9 +14,17 @@ const CLUB_NAV: NavItem[] = [
   { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
-  { path: '/resource-management', icon: '🏟️', label: 'Kaynaklar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
+];
+
+const GENERIC_NAV: NavItem[] = [
+  { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
+  { path: '/resource-management', icon: '🏟️', label: 'Kort & Slotlar' },
+  { path: '/members', icon: '👥', label: 'Üyeler' },
+  { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
+  { path: '/messages', icon: '💬', label: 'Mesajlar' },
+  { path: '/events', icon: '📅', label: 'Etkinlikler' },
 ];
 
 const PLATFORM_NAV: NavItem[] = [
@@ -43,12 +52,17 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   if (!user) return <>{children}</>;
 
+  const tenantSubdomain = readStoredTenantSubdomain();
+  const isWellness = tenantSubdomain === 'skyland-wellness';
+
   const nav =
     user.role === 'platform_admin'
       ? PLATFORM_NAV
       : user.role === 'trainer'
         ? TRAINER_NAV
-        : CLUB_NAV;
+        : isWellness
+          ? WELLNESS_NAV
+          : GENERIC_NAV;
 
   const roleLabel =
     user.role === 'platform_admin'
