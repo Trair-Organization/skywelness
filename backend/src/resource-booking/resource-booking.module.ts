@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { MailModule } from '../mail/mail.module';
 import { Resource } from '../database/entities/resource.entity';
 import { ResourceSlot } from '../database/entities/resource-slot.entity';
 import { Booking } from '../database/entities/booking.entity';
@@ -17,6 +18,7 @@ import { ResourceBookingService } from './resource-booking.service';
     TypeOrmModule.forFeature([Resource, ResourceSlot, Booking, Addon, BookingAddon, User, Tenant]),
     AuthModule,
     NotificationsModule,
+    MailModule,
   ],
   controllers: [ResourceBookingController],
   providers: [ResourceBookingService],
