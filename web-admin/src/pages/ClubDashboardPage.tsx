@@ -54,18 +54,21 @@ export function ClubDashboardPage() {
   const [recentMembers, setRecentMembers] = useState<RecentMember[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clubInviteCode, setClubInviteCode] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, members, acts] = await Promise.all([
+      const [s, members, acts, codeRes] = await Promise.all([
         apiJson<DashboardStats>('/admin/stats'),
         apiJson<RecentMember[]>('/admin/members?status=all'),
         apiJson<ActivityItem[]>('/admin/activity'),
+        apiJson<{ inviteCode: string }>('/admin/club-invite-code'),
       ]);
       setStats(s);
       setRecentMembers(members.slice(0, 5));
       setActivities(acts);
+      setClubInviteCode(codeRes.inviteCode);
     } catch {
       // ignore
     } finally {
@@ -157,6 +160,60 @@ export function ClubDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Kulüp Davet Kodu */}
+      {clubInviteCode && (
+        <div className="dashboard-section" style={{ marginTop: '1.5rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1rem',
+              background: 'rgba(56,189,248,0.06)',
+              border: '1px solid rgba(56,189,248,0.2)',
+              borderRadius: '12px',
+            }}
+          >
+            <div style={{ fontSize: '2rem' }}>🔗</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, color: '#e2e8f0' }}>Kulüp Davet Kodu</div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+                Eğitmenler bu kodla kulübünüze başvurabilir
+              </div>
+            </div>
+            <div
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: 900,
+                letterSpacing: '3px',
+                color: '#38bdf8',
+                fontFamily: 'monospace',
+              }}
+            >
+              {clubInviteCode}
+            </div>
+            <button
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(56,189,248,0.3)',
+                background: 'rgba(56,189,248,0.1)',
+                color: '#38bdf8',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+              }}
+              onClick={() => {
+                navigator.clipboard.writeText(clubInviteCode);
+                alert('Kod kopyalandı!');
+              }}
+            >
+              📋 Kopyala
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Hızlı Erişim */}
       <div className="dashboard-section">
