@@ -1143,14 +1143,10 @@ export function ClubConnectScreen() {
           <Pressable
             style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlinePressed]}
             onPress={() => {
-              navigation.navigate('RegistrationType');
+              navigation.navigate('Login');
             }}
           >
-            <Text style={styles.outlineTxt}>{t('onboarding.signUp')}</Text>
-          </Pressable>
-
-          <Pressable style={styles.secondaryBtn} onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.secondaryTxt}>{t('onboarding.signIn')}</Text>
+            <Text style={styles.outlineTxt}>{t('onboarding.signIn')}</Text>
           </Pressable>
 
           <Text style={styles.ctaChipsTitle}>Veya farklı bir yolla başla</Text>
@@ -1158,7 +1154,6 @@ export function ClubConnectScreen() {
             <Pressable
               onPress={() =>
                 navigation.navigate('Register', {
-                  preselectedSubdomain: 'demo',
                   preselectedGoal: selectedGoal ?? undefined,
                 })
               }
@@ -1168,9 +1163,9 @@ export function ClubConnectScreen() {
                 pressed && styles.ctaChipPressed,
               ]}
             >
-              <Text style={styles.ctaChipIcon}>🎬</Text>
-              <Text style={styles.ctaChipLabel}>Demo ile başla</Text>
-              <Text style={styles.ctaChipHint}>Kayıt olmadan tur at</Text>
+              <Text style={styles.ctaChipIcon}>👤</Text>
+              <Text style={styles.ctaChipLabel}>Kullanıcı Başvurusu</Text>
+              <Text style={styles.ctaChipHint}>Üye olarak kayıt ol</Text>
             </Pressable>
             <Pressable
               onPress={() => navigation.navigate('TrainerRegister')}
@@ -1183,18 +1178,6 @@ export function ClubConnectScreen() {
               <Text style={styles.ctaChipIcon}>👟</Text>
               <Text style={styles.ctaChipLabel}>Eğitmen başvurusu</Text>
               <Text style={styles.ctaChipHint}>Hizmet vermek istiyorum</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => navigation.navigate('CorporateEntry')}
-              style={({ pressed }) => [
-                styles.ctaChip,
-                styles.ctaChipCorporate,
-                pressed && styles.ctaChipPressed,
-              ]}
-            >
-              <Text style={styles.ctaChipIcon}>🏢</Text>
-              <Text style={styles.ctaChipLabel}>Kurumsal kayıt</Text>
-              <Text style={styles.ctaChipHint}>Kulüp / şirket olarak</Text>
             </Pressable>
           </View>
         </GlassCard>
