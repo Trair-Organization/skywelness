@@ -12,6 +12,7 @@ import { PushService } from '../notifications/push.service';
 import { SmsService } from '../notifications/sms.service';
 import { MailService } from '../mail/mail.service';
 import { emailShell, escapeHtml } from '../mail/mail-templates';
+import { StripeService } from '../payments/stripe.service';
 
 @Injectable()
 export class ResourceBookingService {
@@ -26,6 +27,7 @@ export class ResourceBookingService {
     private readonly pushService: PushService,
     private readonly smsService: SmsService,
     private readonly mailService: MailService,
+    private readonly stripeService: StripeService,
   ) {}
 
   // ─── Public: Kullanıcı tarafı ───────────────────────────────────────────────
@@ -198,6 +200,26 @@ export class ResourceBookingService {
       text: `Rezervasyonunuz onaylandi: ${slot.resource?.name} - ${slot.date} ${slot.startTime}. Toplam: ${totalAmount}₺`,
     }).catch(() => {});
 
+    // Stripe checkout session (if Stripe is configured)
+    let checkoutUrl: string | null = null;
+    if (this.stripeService.isEnabled && totalAmount > 0) {
+      const session = await this.stripeService.createCheckoutSession({
+        bookingId: booking.id,
+        amount: Math.round(totalAmount * 100), // TRY → kuruş
+        currency: booking.currency,
+        customerEmail: user.email,
+        description: `${slot.resource?.name} - ${slot.date} ${slot.startTime}`,
+        successUrl: `https://www.wellnessclub.tech/booking/success?bookingId=${booking.id}`,
+        cancelUrl: `https://www.wellnessclub.tech/booking/cancel?bookingId=${booking.id}`,
+        metadata: { tenantId: tenant.id, userId: user.id },
+      });
+      if (session) {
+        booking.stripeSessionId = session.sessionId;
+        await this.bookingRepo.save(booking);
+        checkoutUrl = session.url;
+      }
+    }
+
     return {
       id: booking.id,
       resourceName: slot.resource?.name,
@@ -207,6 +229,7 @@ export class ResourceBookingService {
       totalAmount,
       paymentStatus: booking.paymentStatus,
       status: booking.status,
+      checkoutUrl,
     };
   }
 

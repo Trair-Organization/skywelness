@@ -11,7 +11,7 @@ import { extractTenantSubdomain } from './common/tenant/subdomain.util';
 import { resolveUploadDir } from './common/uploads/upload.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(Logger));
   // Production'da Nginx/reverse-proxy arkasındayız. Gerçek client IP'yi almak için trust proxy.
   const httpAdapter = app.getHttpAdapter();
