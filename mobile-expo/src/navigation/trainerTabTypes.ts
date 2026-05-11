@@ -2,6 +2,7 @@ export type TrainerTabParamList = {
   Dashboard: undefined;
   Calendar: undefined;
   Students: undefined;
+  Discover: undefined;
   TrainerMessages: undefined;
   TrainerProfile: undefined;
   // Hidden routes

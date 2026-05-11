@@ -9,6 +9,7 @@ import { TrainerStudentsScreen } from '../screens/trainer/TrainerStudentsScreen'
 import { TrainerStudentDetailScreen } from '../screens/trainer/TrainerStudentDetailScreen';
 import { TrainerMessagesScreen } from '../screens/trainer/TrainerMessagesScreen';
 import { TrainerProfileScreen } from '../screens/trainer/TrainerProfileScreen';
+import { MemberDiscoverScreen } from '../screens/member/MemberDiscoverScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import type { TrainerTabParamList } from './trainerTabTypes';
 
@@ -87,12 +88,11 @@ export function TrainerTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="TrainerMessages"
-        component={TrainerMessagesScreen}
+        name="Discover"
+        component={MemberDiscoverScreen}
         options={{
-          tabBarLabel: 'Mesajlar',
-          tabBarIcon: ({ focused }) => tabIcon('💬', focused),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarLabel: 'Keşfet',
+          tabBarIcon: ({ focused }) => tabIcon('🔍', focused),
         }}
       />
       <Tab.Screen
@@ -104,6 +104,11 @@ export function TrainerTabNavigator() {
         }}
       />
       {/* Hidden routes */}
+      <Tab.Screen
+        name="TrainerMessages"
+        component={TrainerMessagesScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
       <Tab.Screen
         name="StudentDetail"
         component={TrainerStudentDetailScreen}
