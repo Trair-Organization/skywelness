@@ -12,6 +12,7 @@ import { MemberReservationsScreen } from '../screens/member/MemberReservationsSc
 import { MessagesScreen } from '../screens/member/MessagesScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import { LegalScreen } from '../screens/member/LegalScreen';
+import { ConnectionsScreen } from '../screens/shared/ConnectionsScreen';
 import { SpaScreen } from '../screens/member/SpaScreen';
 import { PtScreen } from '../screens/member/PtScreen';
 import type { MemberTabParamList } from './memberTabTypes';
@@ -122,6 +123,11 @@ export function MemberTabNavigator() {
           tabBarButton: () => null,
           tabBarItemStyle: { display: 'none' },
         }}
+      />
+      <Tab.Screen
+        name="Connections"
+        component={ConnectionsScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tab.Screen
         name="Chat"

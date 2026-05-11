@@ -10,6 +10,7 @@ import { TrainerStudentDetailScreen } from '../screens/trainer/TrainerStudentDet
 import { TrainerMessagesScreen } from '../screens/trainer/TrainerMessagesScreen';
 import { TrainerProfileScreen } from '../screens/trainer/TrainerProfileScreen';
 import { MemberDiscoverScreen } from '../screens/member/MemberDiscoverScreen';
+import { ConnectionsScreen } from '../screens/shared/ConnectionsScreen';
 import { ChatScreen } from '../screens/member/ChatScreen';
 import type { TrainerTabParamList } from './trainerTabTypes';
 
@@ -108,6 +109,11 @@ export function TrainerTabNavigator() {
       <Tab.Screen
         name="Students"
         component={TrainerStudentsScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tab.Screen
+        name="Connections"
+        component={ConnectionsScreen}
         options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tab.Screen

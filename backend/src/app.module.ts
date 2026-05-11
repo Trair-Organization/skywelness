@@ -23,6 +23,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
 import { PlatformAdminModule } from './platform-admin/platform-admin.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { TrainerPanelModule } from './trainer-panel/trainer-panel.module';
+import { ConnectionsModule } from './connections/connections.module';
 import { AppService } from './app.service';
 import { typeOrmEntities } from './database/typeorm-entities';
 
@@ -78,6 +79,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     TicketModule,
     HealthModule,
     TrainerPanelModule,
+    ConnectionsModule,
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {

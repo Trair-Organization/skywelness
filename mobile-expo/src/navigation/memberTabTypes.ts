@@ -6,6 +6,7 @@ export type MemberTabParamList = {
   Profile: undefined;
   // Hidden routes
   Messages: undefined;
+  Connections: undefined;
   Chat: {
     conversationId: string;
     otherUser: {

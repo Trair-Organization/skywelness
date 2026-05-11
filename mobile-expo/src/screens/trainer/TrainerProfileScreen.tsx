@@ -436,6 +436,14 @@ export function TrainerProfileScreen() {
             <Text style={styles.quickAccessText}>Öğrencilerim</Text>
             <Text style={styles.quickAccessArrow}>›</Text>
           </Pressable>
+          <Pressable
+            style={[styles.quickAccessItem, { borderBottomWidth: 0 }]}
+            onPress={() => navigation.navigate('Connections')}
+          >
+            <Text style={styles.quickAccessIcon}>🔗</Text>
+            <Text style={styles.quickAccessText}>Bağlantılarım</Text>
+            <Text style={styles.quickAccessArrow}>›</Text>
+          </Pressable>
         </GlassCard>
 
         {/* ─── Language ─── */}

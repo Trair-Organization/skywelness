@@ -5,6 +5,7 @@ export type TrainerTabParamList = {
   Discover: undefined;
   TrainerMessages: undefined;
   TrainerProfile: undefined;
+  Connections: undefined;
   // Hidden routes
   StudentDetail: { userId: string };
   Chat: {
