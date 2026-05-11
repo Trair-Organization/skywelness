@@ -65,6 +65,10 @@ export class Tenant {
   @Column({ type: 'varchar', length: 20, nullable: true, unique: true, name: 'invite_code' })
   inviteCode!: string | null;
 
+  /** Benzersiz herkese açık ID: CLB-0001 */
+  @Column({ type: 'varchar', length: 12, nullable: true, unique: true, name: 'public_id' })
+  publicId!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

@@ -31,6 +31,10 @@ export class User {
   @Column({ type: 'varchar', length: 40 })
   username!: string;
 
+  /** Benzersiz herkese açık ID: MBR-0001, TRN-0001 */
+  @Column({ type: 'varchar', length: 12, nullable: true, unique: true, name: 'public_id' })
+  publicId!: string | null;
+
   @Column({ type: 'varchar', length: 255, name: 'password_hash' })
   passwordHash!: string;
 

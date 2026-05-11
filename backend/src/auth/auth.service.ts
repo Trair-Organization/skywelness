@@ -88,6 +88,31 @@ export class AuthService {
     return value.trim().toLocaleLowerCase('tr-TR');
   }
 
+  /** Benzersiz public ID oluştur: MBR-0001, TRN-0001, CLB-0001 */
+  private async generatePublicId(prefix: 'MBR' | 'TRN' | 'CLB'): Promise<string> {
+    let lastNum = 0;
+    if (prefix === 'CLB') {
+      const last = await this.tenantsRepo.findOne({
+        where: {},
+        order: { publicId: 'DESC' },
+        select: ['publicId'],
+      });
+      if (last?.publicId?.startsWith(prefix)) {
+        lastNum = parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0;
+      }
+    } else {
+      const last = await this.usersRepo.findOne({
+        where: {},
+        order: { publicId: 'DESC' },
+        select: ['publicId'],
+      });
+      if (last?.publicId?.startsWith(prefix)) {
+        lastNum = parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0;
+      }
+    }
+    return `${prefix}-${String(lastNum + 1).padStart(4, '0')}`;
+  }
+
   private trimUsername(value: string): string {
     return value.replace(/[^a-z0-9çğıöşü_.-]/g, '').slice(0, 40);
   }
@@ -222,10 +247,12 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const publicId = await this.generatePublicId('MBR');
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email: dto.email.toLowerCase(),
       username,
+      publicId,
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -307,12 +334,17 @@ export class AuthService {
       settings: { workspaceType: 'independent_trainer' },
     });
     await this.tenantsRepo.save(tenant);
+    // Assign CLB public ID to tenant
+    tenant.publicId = await this.generatePublicId('CLB');
+    await this.tenantsRepo.save(tenant);
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const trainerPublicId = await this.generatePublicId('TRN');
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email,
       username,
+      publicId: trainerPublicId,
       passwordHash,
       firstName: dto.firstName.trim(),
       lastName: dto.lastName.trim(),
@@ -691,6 +723,7 @@ export class AuthService {
   sanitizeUser(user: User) {
     return {
       id: user.id,
+      publicId: user.publicId,
       tenantId: user.tenantId,
       email: user.email,
       username: user.username,
