@@ -508,100 +508,88 @@ export function ClubConnectScreen() {
         </View>
 
         <View style={styles.goalsBlock}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.goalsDropdownBtn,
-              pressed && styles.goalsDropdownBtnPressed,
-              selectedGoal && styles.goalsDropdownBtnActive,
-            ]}
-            onPress={() => setGoalsOpen((v) => !v)}
-          >
-            <Text style={styles.goalsDropdownIcon}>
-              {selectedGoal ? (GOALS.find((g) => g.id === selectedGoal)?.icon ?? '🎯') : '🎯'}
-            </Text>
-            <View style={styles.goalsDropdownTextWrap}>
-              <Text style={styles.goalsTitle}>Hedefin ne?</Text>
-              <Text style={styles.goalsSubtitle}>
-                {selectedGoal
-                  ? (GOALS.find((g) => g.id === selectedGoal)?.label ?? '')
-                  : 'Sana uygun kulüp ve eğitmenleri öne çıkaralım'}
-              </Text>
-            </View>
-            <Text style={styles.goalsDropdownArrow}>{goalsOpen ? '▲' : '▼'}</Text>
-          </Pressable>
-
-          {goalsOpen && (
-            <View style={styles.goalsGrid}>
-              {GOALS.map((goal) => {
-                const active = selectedGoal === goal.id;
-                return (
+          {/* Arama Çubuğu */}
+          <View style={styles.searchBlock}>
+            <View style={styles.searchRow2}>
+              <View style={styles.searchBox}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    if (text.trim().length >= 2) {
+                      setSubmittedQuery(text.trim());
+                    } else if (!text.trim()) {
+                      setSubmittedQuery(null);
+                    }
+                  }}
+                  onSubmitEditing={handleRunSearch}
+                  placeholder="Kulüp, eğitmen veya etkinlik ara..."
+                  placeholderTextColor={premium.textMuted}
+                  style={styles.searchInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                />
+                {searchQuery ? (
                   <Pressable
-                    key={goal.id}
+                    hitSlop={8}
                     onPress={() => {
-                      setSelectedGoal(active ? null : goal.id);
-                      setGoalsOpen(false);
+                      setSearchQuery('');
+                      setSubmittedQuery(null);
                     }}
-                    style={({ pressed }) => [
-                      styles.goalChip,
-                      active && styles.goalChipActive,
-                      pressed && styles.goalChipPressed,
-                    ]}
                   >
-                    <Text style={styles.goalIcon}>{goal.icon}</Text>
-                    <View style={styles.goalTextWrap}>
-                      <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>
-                        {goal.label}
-                      </Text>
-                      <Text style={styles.goalHint}>{goal.hint}</Text>
-                    </View>
-                    {active ? <Text style={styles.goalCheck}>✓</Text> : null}
+                    <Text style={styles.searchClear}>×</Text>
                   </Pressable>
-                );
-              })}
-            </View>
-          )}
-
-          {selectedGoal ? (
-            <View style={styles.searchBlock}>
-              <View style={styles.searchRow2}>
-                <View style={styles.searchBox}>
-                  <Text style={styles.searchIcon}>🔍</Text>
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    onSubmitEditing={handleRunSearch}
-                    placeholder="Eğitmen, kulüp veya semt ara..."
-                    placeholderTextColor={premium.textMuted}
-                    style={styles.searchInput}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    returnKeyType="search"
-                  />
-                  {searchQuery ? (
-                    <Pressable hitSlop={8} onPress={() => setSearchQuery('')}>
-                      <Text style={styles.searchClear}>×</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-                <Pressable
-                  onPress={handleRunSearch}
-                  disabled={!searchQuery.trim()}
-                  style={({ pressed }) => [
-                    styles.searchBtn,
-                    !searchQuery.trim() && styles.searchBtnDisabled,
-                    pressed && styles.searchBtnPressed,
-                  ]}
-                >
-                  <Text style={styles.searchBtnTxt}>Ara</Text>
-                </Pressable>
+                ) : null}
               </View>
-              {!submittedQuery ? (
-                <Text style={styles.searchHelp}>
-                  Otomatik olarak hedefine göre dolduruldu — istersen değiştir, sonra Ara'ya bas.
-                </Text>
-              ) : null}
+              <Pressable
+                onPress={handleRunSearch}
+                disabled={!searchQuery.trim()}
+                style={({ pressed }) => [
+                  styles.searchBtn,
+                  !searchQuery.trim() && styles.searchBtnDisabled,
+                  pressed && styles.searchBtnPressed,
+                ]}
+              >
+                <Text style={styles.searchBtnTxt}>Ara</Text>
+              </Pressable>
             </View>
-          ) : null}
+
+            {/* Kategori Chip'leri */}
+            <View style={styles.catChipsRow}>
+              {['Tümü', 'Kulüpler', 'Eğitmenler', 'Etkinlikler'].map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[styles.catChip, !selectedGoal && cat === 'Tümü' && styles.catChipActive]}
+                  onPress={() => {
+                    if (cat === 'Tümü') { setSelectedGoal(null); setSearchQuery(''); setSubmittedQuery(null); }
+                    else if (cat === 'Kulüpler') { setSearchQuery('kulüp'); setSubmittedQuery('kulüp'); setSelectedGoal('fitness' as never); }
+                    else if (cat === 'Eğitmenler') { setSearchQuery('eğitmen'); setSubmittedQuery('eğitmen'); setSelectedGoal('fitness' as never); }
+                    else if (cat === 'Etkinlikler') { setSearchQuery('etkinlik'); setSubmittedQuery('etkinlik'); setSelectedGoal('fitness' as never); }
+                  }}
+                >
+                  <Text style={[styles.catChipText, !selectedGoal && cat === 'Tümü' && styles.catChipTextActive]}>
+                    {cat === 'Kulüpler' ? '🏢' : cat === 'Eğitmenler' ? '🏋️' : cat === 'Etkinlikler' ? '📅' : '✨'} {cat}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Popüler Aramalar */}
+            {!submittedQuery && (
+              <View style={styles.popSearches}>
+                <Text style={styles.popSearchTitle}>Popüler</Text>
+                <View style={styles.popSearchRow}>
+                  {['Yoga', 'Pilates', 'Fitness', 'Masaj', 'CrossFit'].map((term) => (
+                    <Pressable key={term} style={styles.popSearchChip} onPress={() => { setSearchQuery(term); setSubmittedQuery(term); setSelectedGoal('fitness' as never); }}>
+                      <Text style={styles.popSearchChipText}>{term}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
         </View>
 
         {selectedGoal && submittedQuery ? (
@@ -1618,6 +1606,59 @@ const styles = StyleSheet.create({
   },
   searchBlock: {
     marginTop: 14,
+  },
+  catChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    flexWrap: 'wrap',
+  },
+  catChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.15)',
+    backgroundColor: 'rgba(148,163,184,0.04)',
+  },
+  catChipActive: {
+    borderColor: 'rgba(56,189,248,0.4)',
+    backgroundColor: 'rgba(56,189,248,0.1)',
+  },
+  catChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: premium.textMuted,
+  },
+  catChipTextActive: {
+    color: premium.accentBlue,
+  },
+  popSearches: {
+    marginTop: 14,
+  },
+  popSearchTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: premium.textMuted,
+    marginBottom: 8,
+  },
+  popSearchRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  popSearchChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(56,189,248,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.15)',
+  },
+  popSearchChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: premium.accentBlue,
   },
   searchRow2: {
     flexDirection: 'row',
