@@ -64,11 +64,11 @@ export function TrainerTabNavigator() {
       }}
     >
       <Tab.Screen
-        name="Dashboard"
-        component={TrainerDashboardScreen}
+        name="Discover"
+        component={MemberDiscoverScreen}
         options={{
-          tabBarLabel: 'Panel',
-          tabBarIcon: ({ focused }) => tabIcon('🏠', focused),
+          tabBarLabel: 'Keşfet',
+          tabBarIcon: ({ focused }) => tabIcon('🔍', focused),
         }}
       />
       <Tab.Screen
@@ -88,11 +88,11 @@ export function TrainerTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Discover"
-        component={MemberDiscoverScreen}
+        name="Dashboard"
+        component={TrainerDashboardScreen}
         options={{
-          tabBarLabel: 'Keşfet',
-          tabBarIcon: ({ focused }) => tabIcon('🔍', focused),
+          tabBarLabel: 'Panel',
+          tabBarIcon: ({ focused }) => tabIcon('🏠', focused),
         }}
       />
       <Tab.Screen
