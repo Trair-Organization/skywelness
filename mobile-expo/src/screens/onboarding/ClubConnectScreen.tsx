@@ -1609,13 +1609,12 @@ const styles = StyleSheet.create({
   },
   catChipsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     marginTop: 12,
-    flexWrap: 'wrap',
   },
   catChip: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.15)',
@@ -1626,7 +1625,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56,189,248,0.1)',
   },
   catChipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: premium.textMuted,
   },
@@ -1644,19 +1643,18 @@ const styles = StyleSheet.create({
   },
   popSearchRow: {
     flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
+    gap: 6,
   },
   popSearchChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 16,
     backgroundColor: 'rgba(56,189,248,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(56,189,248,0.15)',
   },
   popSearchChipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: premium.accentBlue,
   },
