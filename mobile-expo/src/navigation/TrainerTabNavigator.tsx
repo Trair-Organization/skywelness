@@ -80,19 +80,19 @@ export function TrainerTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Students"
-        component={TrainerStudentsScreen}
-        options={{
-          tabBarLabel: 'Öğrenciler',
-          tabBarIcon: ({ focused }) => tabIcon('👥', focused),
-        }}
-      />
-      <Tab.Screen
         name="Dashboard"
         component={TrainerDashboardScreen}
         options={{
           tabBarLabel: 'Panel',
           tabBarIcon: ({ focused }) => tabIcon('🏠', focused),
+        }}
+      />
+      <Tab.Screen
+        name="Students"
+        component={TrainerStudentsScreen}
+        options={{
+          tabBarLabel: 'Öğrenciler',
+          tabBarIcon: ({ focused }) => tabIcon('👥', focused),
         }}
       />
       <Tab.Screen
