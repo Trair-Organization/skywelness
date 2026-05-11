@@ -14,6 +14,7 @@ const CLUB_NAV: NavItem[] = [
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
   { path: '/spa', icon: '🧴', label: 'Spa Hizmetleri' },
   { path: '/leads', icon: '📋', label: 'Gelen Talepler' },
+  { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
   { path: '/club/reservation-requests', icon: '📝', label: 'PT Rezervasyonları' },
