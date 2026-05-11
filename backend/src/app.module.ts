@@ -24,6 +24,7 @@ import { PlatformAdminModule } from './platform-admin/platform-admin.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { TrainerPanelModule } from './trainer-panel/trainer-panel.module';
 import { ConnectionsModule } from './connections/connections.module';
+import { ResourceBookingModule } from './resource-booking/resource-booking.module';
 import { AppService } from './app.service';
 import { typeOrmEntities } from './database/typeorm-entities';
 
@@ -80,6 +81,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     HealthModule,
     TrainerPanelModule,
     ConnectionsModule,
+    ResourceBookingModule,
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {

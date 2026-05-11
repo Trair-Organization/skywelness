@@ -29,6 +29,11 @@ import { TimeSlot } from './entities/time-slot.entity';
 import { TrainerApplication } from './entities/trainer-application.entity';
 import { TrainerMemberLink } from './entities/trainer-member-link.entity';
 import { ConnectionRequest } from './entities/connection-request.entity';
+import { Resource } from './entities/resource.entity';
+import { ResourceSlot } from './entities/resource-slot.entity';
+import { Booking } from './entities/booking.entity';
+import { Addon } from './entities/addon.entity';
+import { BookingAddon } from './entities/booking-addon.entity';
 import { TrainerMemberNote } from './entities/trainer-member-note.entity';
 import { TrainerProfile } from './entities/trainer-profile.entity';
 import { Trainer } from './entities/trainer.entity';
@@ -56,6 +61,11 @@ export const typeOrmEntities = [
   TrainerApplication,
   TrainerMemberLink,
   ConnectionRequest,
+  Resource,
+  ResourceSlot,
+  Booking,
+  Addon,
+  BookingAddon,
   TrainerMemberNote,
   PackageType,
   PackageRequest,

@@ -69,6 +69,10 @@ export class Tenant {
   @Column({ type: 'varchar', length: 12, nullable: true, unique: true, name: 'public_id' })
   publicId!: string | null;
 
+  /** İş alanı: wellness, padel, beauty, fitness, medical, other */
+  @Column({ type: 'varchar', length: 30, default: 'wellness' })
+  vertical!: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
