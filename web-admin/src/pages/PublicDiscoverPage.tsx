@@ -84,7 +84,7 @@ export function PublicDiscoverPage() {
     if (banners.length <= 1) return;
     slideInterval.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length);
-    }, 5000);
+    }, 3000);
     return () => {
       if (slideInterval.current) clearInterval(slideInterval.current);
     };
@@ -95,7 +95,7 @@ export function PublicDiscoverPage() {
     if (slideInterval.current) clearInterval(slideInterval.current);
     slideInterval.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length);
-    }, 5000);
+    }, 3000);
   }
 
   return (
@@ -124,15 +124,17 @@ export function PublicDiscoverPage() {
                 className={`hero-slide ${idx === currentSlide ? 'hero-slide-active' : ''}`}
                 style={{ backgroundImage: `url(${banner.imageUrl})` }}
               >
-                <div className="hero-slide-overlay">
-                  <h1>{banner.title}</h1>
-                  {banner.subtitle && <p>{banner.subtitle}</p>}
-                  {banner.buttonText && banner.linkUrl && (
-                    <Link to={banner.linkUrl} className="btn-primary">
-                      {banner.buttonText}
-                    </Link>
-                  )}
-                </div>
+                {(banner.title || banner.subtitle || banner.buttonText) && (
+                  <div className="hero-slide-overlay">
+                    {banner.title && <h1>{banner.title}</h1>}
+                    {banner.subtitle && <p>{banner.subtitle}</p>}
+                    {banner.buttonText && banner.linkUrl && (
+                      <Link to={banner.linkUrl} className="btn-primary">
+                        {banner.buttonText}
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
