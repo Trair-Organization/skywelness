@@ -33,7 +33,6 @@ export function ClubProfileEditPage() {
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState('');
-  const [newGalleryUrl, setNewGalleryUrl] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);

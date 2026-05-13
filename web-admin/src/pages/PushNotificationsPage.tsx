@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
-
-type EventRow = { id: string; title: string; startsAt: string };
 
 export function PushNotificationsPage() {
   const { user } = useAuth();
@@ -17,21 +15,8 @@ export function PushNotificationsPage() {
   const [tenantId, setTenantId] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; total: number } | null>(null);
-  const [events, setEvents] = useState<EventRow[]>([]);
   const [selectedEvent, setSelectedEvent] = useState('');
   const [uploading, setUploading] = useState(false);
-
-  // Etkinlikleri yükle (kulüp admin için)
-  useEffect(() => {
-    if (isTrainer || isPlatformAdmin) return;
-    apiJson<EventRow[]>('/admin/activity')
-      .then(() => {})
-      .catch(() => {});
-    // Etkinlikleri ayrı endpoint'ten çek
-    apiJson<EventRow[]>('/resource-booking/admin/bookings')
-      .then(() => {})
-      .catch(() => {});
-  }, [isTrainer, isPlatformAdmin]);
 
   const handleUploadImage = async (file: File) => {
     setUploading(true);
