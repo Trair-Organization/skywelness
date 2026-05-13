@@ -16,19 +16,19 @@ export class HomeBanner {
   title!: string;
 
   /** Alt başlık / açıklama. */
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, default: null })
   subtitle!: string | null;
 
   /** Banner görseli URL. */
-  @Column({ length: 2048 })
+  @Column({ type: 'varchar', length: 2048 })
   imageUrl!: string;
 
   /** Tıklanınca gidilecek link (opsiyonel). */
-  @Column({ length: 2048, nullable: true })
+  @Column({ type: 'varchar', length: 2048, nullable: true, default: null })
   linkUrl!: string | null;
 
   /** CTA buton metni (opsiyonel). */
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
   buttonText!: string | null;
 
   /** Sıralama (küçük = önce). */
