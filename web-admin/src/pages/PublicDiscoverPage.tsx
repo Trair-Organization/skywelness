@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiJson } from '../lib/api';
+import { useAuth } from '../auth/AuthContext';
 
 type Club = {
   id: string;
@@ -36,6 +37,8 @@ type Event = {
   endsAt: string | null;
   capacity: number;
   clubName: string | null;
+  clubSubdomain: string | null;
+  isJoined?: boolean;
 };
 type Banner = {
   id: string;
@@ -53,7 +56,10 @@ export function PublicDiscoverPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [joining, setJoining] = useState(false);
   const slideInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { token } = useAuth();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -285,7 +291,7 @@ export function PublicDiscoverPage() {
           </div>
           <div className="discover-grid events-grid">
             {events.map((ev) => (
-              <article key={ev.id} className="discover-card event-card">
+              <article key={ev.id} className="discover-card event-card" onClick={() => setSelectedEvent(ev)} style={{ cursor: 'pointer' }}>
                 {ev.imageUrl && (
                   <div className="event-card-img">
                     <img src={ev.imageUrl} alt={ev.title} />
@@ -310,6 +316,74 @@ export function PublicDiscoverPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="modal-backdrop" onClick={() => setSelectedEvent(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedEvent.title}</h2>
+              <button className="modal-close" onClick={() => setSelectedEvent(null)}>×</button>
+            </div>
+            {selectedEvent.imageUrl && (
+              <img src={selectedEvent.imageUrl} alt={selectedEvent.title} className="modal-event-img" />
+            )}
+            <div className="modal-body">
+              <p className="modal-meta">
+                📅{' '}
+                {new Date(selectedEvent.startsAt).toLocaleDateString('tr-TR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+              {selectedEvent.endsAt && (
+                <p className="modal-meta">
+                  🕐 Bitiş: {new Date(selectedEvent.endsAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+              {selectedEvent.location && <p className="modal-meta">📍 {selectedEvent.location}</p>}
+              {selectedEvent.clubName && <p className="modal-meta">🏢 {selectedEvent.clubName}</p>}
+              {selectedEvent.coachName && <p className="modal-meta">🏋️ Eğitmen: {selectedEvent.coachName}</p>}
+              <p className="modal-meta">👥 Kapasite: {selectedEvent.capacity} kişi</p>
+              {selectedEvent.description && (
+                <p className="modal-description">{selectedEvent.description}</p>
+              )}
+            </div>
+            <div className="modal-actions">
+              {token ? (
+                <button
+                  className="btn-primary"
+                  disabled={joining}
+                  onClick={async () => {
+                    setJoining(true);
+                    try {
+                      await apiJson(`/events/${selectedEvent.id}/join`, { method: 'POST' });
+                      alert('Etkinliğe katıldınız! ✅');
+                      setSelectedEvent(null);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'Katılım başarısız');
+                    } finally { setJoining(false); }
+                  }}
+                >
+                  {joining ? 'Katılınıyor...' : '✓ Etkinliğe Katıl'}
+                </button>
+              ) : (
+                <div className="login-required-box">
+                  <p>Etkinliğe katılmak için üye olmanız gerekiyor.</p>
+                  <div className="login-required-actions">
+                    <Link to="/register" className="btn-primary" onClick={() => setSelectedEvent(null)}>Üye Ol</Link>
+                    <Link to="/login" className="btn-outline" onClick={() => setSelectedEvent(null)}>Giriş Yap</Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* CTA */}

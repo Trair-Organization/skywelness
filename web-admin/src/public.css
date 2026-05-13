@@ -864,6 +864,85 @@
   font-size: 0.8rem;
 }
 
+/* ===== Modal ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+.modal-card {
+  background: #111;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 16px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+.modal-header h2 {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.modal-event-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+.modal-body {
+  padding: 1.25rem 1.5rem;
+}
+.modal-meta {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.modal-description {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+.modal-actions {
+  padding: 1rem 1.5rem 1.5rem;
+}
+.modal-actions .btn-primary {
+  width: 100%;
+  text-align: center;
+}
+
 /* ===== Profile Pages ===== */
 .profile-loading { text-align: center; padding: 5rem 2rem; color: #64748b; font-size: 1.1rem; }
 .profile-page { max-width: 900px; margin: 0 auto; padding: 0 2rem 3rem; }
