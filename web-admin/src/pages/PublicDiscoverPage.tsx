@@ -264,15 +264,6 @@ export function PublicDiscoverPage() {
                     ★ {Number(tr.avgRating).toFixed(1)} · {tr.totalSessions} seans
                   </p>
                   <p className="discover-meta">{tr.clubName}</p>
-                  {tr.specialties.length > 0 && (
-                    <div className="discover-tags">
-                      {tr.specialties.slice(0, 2).map((s) => (
-                        <span key={s} className="discover-tag">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </Link>
             ))}
