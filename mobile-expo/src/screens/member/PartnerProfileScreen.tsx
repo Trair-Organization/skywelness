@@ -427,8 +427,8 @@ export function PartnerProfileScreen() {
           </View>
         )}
 
-        {/* ═══ Eğitmenler ═══ */}
-        {profile.trainers.length > 0 && (
+        {/* ═══ Eğitmenler (kulüp profili) ═══ */}
+        {profile.profileType === 'club' && profile.trainers.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>👥 Eğitmenler</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -462,6 +462,41 @@ export function PartnerProfileScreen() {
                 </View>
               ))}
             </ScrollView>
+          </View>
+        )}
+
+        {/* ═══ Eğitmen Bio (trainer profili) ═══ */}
+        {profile.profileType === 'trainer' && profile.trainers.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🏋️ Eğitmen Hakkında</Text>
+            {profile.trainers.map((t) => (
+              <View key={t.id} style={styles.trainerBioCard}>
+                <View style={styles.trainerBioHeader}>
+                  <View style={styles.trainerBioPhoto}>
+                    {t.photoUrl ? (
+                      <Image source={{ uri: t.photoUrl }} style={{ width: '100%', height: '100%', borderRadius: 30 }} resizeMode="cover" />
+                    ) : (
+                      <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>
+                        {t.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.trainerBioName}>{t.name}</Text>
+                    <Text style={styles.trainerBioSpec}>{t.specializations.join(' · ')}</Text>
+                    {t.totalSessions > 0 && (
+                      <Text style={styles.trainerBioSessions}>✅ {t.totalSessions} tamamlanan seans</Text>
+                    )}
+                  </View>
+                  {t.avgRating !== '0.00' && (
+                    <View style={styles.trainerRatingBadge}>
+                      <Text style={styles.trainerRatingTxt}>★ {t.avgRating}</Text>
+                    </View>
+                  )}
+                </View>
+                {t.bio && <Text style={styles.trainerBioText}>{t.bio}</Text>}
+              </View>
+            ))}
           </View>
         )}
 
@@ -588,6 +623,14 @@ const styles = StyleSheet.create({
   trainerNameTxt: { fontSize: 14, fontWeight: '800', color: premium.text },
   trainerSpecTxt: { fontSize: 11, color: premium.textMuted, fontWeight: '600' },
   trainerSessionsTxt: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', marginTop: 2 },
+  // Trainer Bio (trainer profile type)
+  trainerBioCard: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: premium.glass },
+  trainerBioHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  trainerBioPhoto: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#1e3a5f', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  trainerBioName: { fontSize: 16, fontWeight: '800', color: premium.text },
+  trainerBioSpec: { fontSize: 12, color: premium.textMuted, marginTop: 2 },
+  trainerBioSessions: { fontSize: 11, color: premium.accentGreen, fontWeight: '700', marginTop: 4 },
+  trainerBioText: { fontSize: 14, color: premium.textMuted, lineHeight: 22, marginTop: 12 },
   // Location
   locationText: { fontSize: 14, color: premium.textMuted, lineHeight: 20 },
   // Sticky CTA
