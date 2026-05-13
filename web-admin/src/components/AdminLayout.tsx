@@ -7,6 +7,7 @@ type NavItem = { path: string; icon: string; label: string };
 
 const WELLNESS_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
+  { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
   { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
   { path: '/spa', icon: '💆', label: 'Spa Yönetimi' },
@@ -20,6 +21,7 @@ const WELLNESS_NAV: NavItem[] = [
 
 const GENERIC_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
+  { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
   { path: '/resource-management', icon: '🏟️', label: 'Kort & Slotlar' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },

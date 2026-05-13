@@ -15,6 +15,7 @@ import { UnifiedSchedulePage } from './pages/UnifiedSchedulePage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
+import { ClubProfileEditPage } from './pages/ClubProfileEditPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
 import { MarketingPricingPage } from './pages/MarketingPricingPage';
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
+        <Route path="/club/profile" element={<ClubProfileEditPage />} />
         <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/club/cafe-orders" element={<ClubCafeOrdersPage />} />
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
