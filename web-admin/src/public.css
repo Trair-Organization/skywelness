@@ -73,10 +73,7 @@
   font-weight: 800;
   letter-spacing: -0.5px;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #e2e8f0, #38bdf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
 }
 .discover-hero p {
   color: #94a3b8;
@@ -260,6 +257,7 @@
   font-size: 1.5rem;
   font-weight: 800;
   margin-bottom: 0.3rem;
+  color: #ffffff;
 }
 .discover-section-header p {
   color: #64748b;
@@ -301,6 +299,7 @@
   font-size: 1rem;
   font-weight: 700;
   margin-bottom: 0.4rem;
+  color: #ffffff;
 }
 .discover-meta {
   color: #64748b;
@@ -394,6 +393,7 @@
   font-size: 1.8rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
+  color: #ffffff;
 }
 .discover-cta-section p {
   color: #64748b;
@@ -476,6 +476,7 @@
   font-size: 1.8rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
+  color: #ffffff;
 }
 .auth-subtitle {
   color: #64748b;
@@ -786,6 +787,7 @@
   font-size: 2rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
+  color: #ffffff;
 }
 .legal-updated {
   color: #64748b;

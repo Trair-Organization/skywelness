@@ -1,17 +1,17 @@
 :root {
-  --bg: #f8f9fb;
-  --surface: #ffffff;
-  --text: #1a1d23;
-  --muted: #6b7280;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
+  --bg: #000000;
+  --surface: #111111;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-hover: #7dd3fc;
   --danger: #ef4444;
-  --border: #e5e7eb;
+  --border: rgba(148, 163, 184, 0.15);
   --radius: 10px;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
   color: var(--text);
-  background: var(--surface);
+  background: var(--bg);
 }
 
 * {
