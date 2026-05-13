@@ -1,0 +1,490 @@
+/* ===== Public Website Styles ===== */
+
+.public-shell {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1a 0%, #0d1525 50%, #0a1628 100%);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Navigation */
+.public-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+.public-nav-brand {
+  color: #38bdf8;
+  text-decoration: none;
+  font-size: 1.2rem;
+}
+.public-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.public-nav-links a {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+.public-nav-links a:hover {
+  color: #e2e8f0;
+}
+.public-nav-login {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  color: #38bdf8 !important;
+}
+.public-nav-login:hover {
+  background: rgba(56, 189, 248, 0.25);
+}
+
+/* Hero */
+.discover-hero {
+  text-align: center;
+  padding: 4rem 2rem 3rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.discover-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #e2e8f0, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.discover-hero p {
+  color: #94a3b8;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+.discover-hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn-primary {
+  display: inline-block;
+  background: #38bdf8;
+  color: #0a0f1a;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.15s;
+}
+.btn-primary:hover {
+  background: #7dd3fc;
+  transform: translateY(-1px);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-outline {
+  display: inline-block;
+  background: transparent;
+  color: #e2e8f0;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.15s;
+}
+.btn-outline:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+/* Loading */
+.discover-loading {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+}
+
+/* Sections */
+.discover-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 2rem 3rem;
+}
+.discover-section-header {
+  margin-bottom: 1.5rem;
+}
+.discover-section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 0.3rem;
+}
+.discover-section-header p {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* Grid */
+.discover-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+.clubs-grid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.trainers-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.events-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* Cards */
+.discover-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.discover-card:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.discover-card-body {
+  padding: 1rem;
+}
+.discover-card-body h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.discover-meta {
+  color: #64748b;
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+.discover-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.discover-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+/* Club Card */
+.club-card-cover {
+  width: 100%;
+  height: 140px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.club-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.club-card-cover-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+/* Trainer Card */
+.trainer-card-photo {
+  width: 100%;
+  height: 160px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.trainer-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.trainer-card-photo-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Event Card */
+.event-card-img {
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+}
+.event-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* CTA Section */
+.discover-cta-section {
+  text-align: center;
+  padding: 4rem 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.discover-cta-section h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+.discover-cta-section p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+/* Footer */
+.public-footer {
+  text-align: center;
+  padding: 2rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.public-footer-links {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.public-footer-links a {
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.public-footer-links a:hover {
+  color: #e2e8f0;
+}
+.public-footer p {
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+/* ===== Auth Pages ===== */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  padding: 2.5rem;
+}
+.auth-card-wide {
+  max-width: 640px;
+}
+.auth-card h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+.auth-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.auth-form label span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.auth-form input,
+.auth-form textarea,
+.auth-form select {
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  transition: border-color 0.15s;
+}
+.auth-form input:focus,
+.auth-form textarea:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.5);
+}
+.auth-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+.auth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.auth-hint {
+  font-size: 0.75rem;
+  color: #475569;
+  margin-top: 0.2rem;
+}
+.auth-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+.auth-submit {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1rem;
+}
+.auth-footer-text {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.auth-footer-text a {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-footer-text a:hover {
+  text-decoration: underline;
+}
+.auth-success {
+  text-align: center;
+  padding: 2rem 0;
+}
+.auth-success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+}
+.auth-success h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.auth-success p {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* Partner Benefits */
+.partner-benefits {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+}
+.partner-benefits h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #38bdf8;
+}
+.partner-benefits ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.partner-benefits li {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .public-nav {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .public-nav-links {
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .discover-hero h1 {
+    font-size: 1.8rem;
+  }
+  .discover-hero {
+    padding: 2.5rem 1.5rem 2rem;
+  }
+  .auth-row {
+    grid-template-columns: 1fr;
+  }
+  .auth-card {
+    padding: 1.5rem;
+  }
+  .partner-benefits ul {
+    grid-template-columns: 1fr;
+  }
+}

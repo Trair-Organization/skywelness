@@ -3,6 +3,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import i18n from './i18n';
 import { AuthProvider } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
+import { PublicDiscoverPage } from './pages/PublicDiscoverPage';
+import { PublicRegisterPage } from './pages/PublicRegisterPage';
+import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
@@ -40,11 +43,16 @@ import { SuperAdminTrainersPage } from './pages/SuperAdminTrainersPage';
 import { SuperAdminAuditPage } from './pages/SuperAdminAuditPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import './admin.css';
+import './public.css';
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<MarketingHomePage />} />
+      <Route path="/" element={<PublicDiscoverPage />} />
+      <Route path="/discover" element={<PublicDiscoverPage />} />
+      <Route path="/register" element={<PublicRegisterPage />} />
+      <Route path="/partner-register" element={<PartnerRegisterPage />} />
+      <Route path="/marketing" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
       <Route path="/contact" element={<MarketingContactPage />} />
       <Route path="/privacy" element={<MarketingPrivacyPage />} />
