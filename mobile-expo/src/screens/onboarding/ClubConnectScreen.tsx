@@ -1396,10 +1396,10 @@ export function ClubConnectScreen() {
                 <View key={`${trainer.id}-${idx}`} style={styles.trainerCardWrapper}>
                   <Pressable
                     onPress={() => {
-                      // Eğitmenin profil sayfasına git (tenant subdomain ile)
+                      // Eğitmenin detay sayfasına git
                       (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                        'PartnerProfile',
-                        { subdomain: trainer.clubSubdomain },
+                        'TrainerDetail',
+                        { trainerId: trainer.id },
                       );
                     }}
                     style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}

@@ -433,7 +433,16 @@ export function PartnerProfileScreen() {
             <Text style={styles.sectionTitle}>👥 Eğitmenler</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {profile.trainers.map((t) => (
-                <View key={t.id} style={styles.trainerCardWrapper}>
+                <Pressable
+                  key={t.id}
+                  style={styles.trainerCardWrapper}
+                  onPress={() => {
+                    (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                      'TrainerDetail',
+                      { trainerId: t.id },
+                    );
+                  }}
+                >
                   <View style={styles.trainerCard}>
                     {t.avgRating !== '0.00' && (
                       <View style={styles.trainerRatingBadge}>
@@ -459,7 +468,7 @@ export function PartnerProfileScreen() {
                       )}
                     </View>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </ScrollView>
           </View>

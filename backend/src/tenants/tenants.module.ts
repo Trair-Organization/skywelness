@@ -17,6 +17,7 @@ import { TenantJoinRequestController } from './tenant-join-request.controller';
 import { TenantJoinRequestService } from './tenant-join-request.service';
 import { TenantProfileController } from './tenant-profile.controller';
 import { TenantProfileService } from './tenant-profile.service';
+import { TrainerPublicProfileController } from './trainer-profile.controller';
 import {
   PlatformAdminTenantVisibilityController,
   TenantVisibilityAdminController,
@@ -43,6 +44,7 @@ import { TenantVisibilityService } from './tenant-visibility.service';
     TenantsController,
     TenantJoinRequestController,
     TenantProfileController,
+    TrainerPublicProfileController,
     TenantVisibilityAdminController,
     PlatformAdminTenantVisibilityController,
   ],
