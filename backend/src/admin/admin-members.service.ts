@@ -7,6 +7,7 @@ import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
+import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
@@ -42,6 +43,8 @@ export class AdminMembersService {
     private readonly spaServicesRepo: Repository<SpaService>,
     @InjectRepository(ClubEvent)
     private readonly eventsRepo: Repository<ClubEvent>,
+    @InjectRepository(Tenant)
+    private readonly tenantsRepo: Repository<Tenant>,
     private readonly smsService: SmsService,
     private readonly notifier: NotificationDispatcher,
   ) {}
@@ -1900,6 +1903,65 @@ export class AdminMembersService {
       { accountStatus: MemberAccountStatus.REJECTED },
     );
 
+    return { ok: true };
+  }
+
+  // ─── Kulüp Profil Yönetimi ────────────────────────────────────────────────────
+
+  /** Admin: Kulüp profil bilgilerini getir */
+  async getTenantProfile(tenantId: string) {
+    const tenant = await this.tenantsRepo.findOne({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant bulunamadı');
+    return {
+      id: tenant.id,
+      name: tenant.name,
+      subdomain: tenant.subdomain,
+      description: tenant.description,
+      location: tenant.location,
+      logoUrl: tenant.logoUrl,
+      coverImageUrl: tenant.coverImageUrl,
+      galleryImages: tenant.galleryImages ?? [],
+      services: tenant.services ?? [],
+      phone: tenant.phone,
+      email: tenant.email,
+      website: tenant.website,
+      priceRange: tenant.priceRange,
+      visibilityMode: tenant.visibilityMode,
+      vertical: tenant.vertical,
+    };
+  }
+
+  /** Admin: Kulüp profil bilgilerini güncelle */
+  async updateTenantProfile(
+    tenantId: string,
+    data: {
+      description?: string;
+      location?: string;
+      services?: string[];
+      logoUrl?: string;
+      coverImageUrl?: string;
+      galleryImages?: string[];
+      phone?: string;
+      email?: string;
+      website?: string;
+      priceRange?: string;
+    },
+  ) {
+    const tenant = await this.tenantsRepo.findOne({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant bulunamadı');
+
+    if (data.description !== undefined) tenant.description = data.description?.trim() || null;
+    if (data.location !== undefined) tenant.location = data.location?.trim() || null;
+    if (data.services !== undefined) tenant.services = data.services;
+    if (data.logoUrl !== undefined) tenant.logoUrl = data.logoUrl?.trim() || null;
+    if (data.coverImageUrl !== undefined) tenant.coverImageUrl = data.coverImageUrl?.trim() || null;
+    if (data.galleryImages !== undefined) tenant.galleryImages = data.galleryImages;
+    if (data.phone !== undefined) tenant.phone = data.phone?.trim() || null;
+    if (data.email !== undefined) tenant.email = data.email?.trim() || null;
+    if (data.website !== undefined) tenant.website = data.website?.trim() || null;
+    if (data.priceRange !== undefined) tenant.priceRange = data.priceRange?.trim() || null;
+
+    await this.tenantsRepo.save(tenant);
     return { ok: true };
   }
 }

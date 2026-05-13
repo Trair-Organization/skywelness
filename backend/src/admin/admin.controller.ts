@@ -708,4 +708,37 @@ export class AdminController {
     if (!date) throw new BadRequestException('date zorunlu');
     return this.adminMembers.getDailyScheduleSummary(admin.tenantId, date);
   }
+
+  // ─── Kulüp Profil Yönetimi ───────────────────────────────────────────────────
+
+  /** Kulüp profil bilgilerini getir */
+  @Get('tenant/profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getTenantProfile(@CurrentUser() admin: User) {
+    return this.adminMembers.getTenantProfile(admin.tenantId);
+  }
+
+  /** Kulüp profil bilgilerini güncelle */
+  @Patch('tenant/profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updateTenantProfile(
+    @CurrentUser() admin: User,
+    @Body()
+    body: {
+      description?: string;
+      location?: string;
+      services?: string[];
+      logoUrl?: string;
+      coverImageUrl?: string;
+      galleryImages?: string[];
+      phone?: string;
+      email?: string;
+      website?: string;
+      priceRange?: string;
+    },
+  ) {
+    return this.adminMembers.updateTenantProfile(admin.tenantId, body);
+  }
 }

@@ -13,6 +13,7 @@ import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { SpaService } from '../database/entities/spa-service.entity';
 import { SpaTherapist } from '../database/entities/spa-therapist.entity';
+import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
@@ -33,6 +34,7 @@ import { AdminMembersService } from './admin-members.service';
       Package,
       PackageType,
       Reservation,
+      Tenant,
       Trainer,
       TrainerApplication,
       TrainerProfile,
