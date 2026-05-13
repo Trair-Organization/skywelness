@@ -199,7 +199,7 @@ export function PublicDiscoverPage() {
           </div>
           <div className="discover-grid clubs-grid">
             {clubs.map((club) => (
-              <article key={club.id} className="discover-card club-card">
+              <Link key={club.id} to={`/club/${club.subdomain}`} className="discover-card club-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="club-card-cover">
                   {club.coverImageUrl || club.logoUrl ? (
                     <img
@@ -233,7 +233,7 @@ export function PublicDiscoverPage() {
                     </div>
                   )}
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         </section>
@@ -248,7 +248,7 @@ export function PublicDiscoverPage() {
           </div>
           <div className="discover-grid trainers-grid">
             {trainers.map((tr) => (
-              <article key={tr.id} className="discover-card trainer-card">
+              <Link key={tr.id} to={`/trainer/${tr.id}`} className="discover-card trainer-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="trainer-card-photo">
                   {tr.photoUrl ? (
                     <img src={tr.photoUrl} alt={tr.name} />
@@ -274,7 +274,7 @@ export function PublicDiscoverPage() {
                     </div>
                   )}
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         </section>
