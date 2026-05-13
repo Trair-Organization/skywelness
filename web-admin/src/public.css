@@ -292,6 +292,15 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
+.trainer-card {
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+}
+.trainer-card .discover-card-body {
+  flex: 1;
+  overflow: hidden;
+}
 .discover-card-body {
   padding: 1rem;
 }
@@ -349,7 +358,7 @@
 /* Trainer Card */
 .trainer-card-photo {
   width: 100%;
-  aspect-ratio: 1;
+  height: 180px;
   background: rgba(20, 20, 20, 0.8);
   overflow: hidden;
 }
