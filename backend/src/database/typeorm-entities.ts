@@ -1,5 +1,6 @@
 import { Campaign } from './entities/campaign.entity';
 import { Conversation } from './entities/conversation.entity';
+import { HomeBanner } from './entities/home-banner.entity';
 import { Lead } from './entities/lead.entity';
 import { Message } from './entities/message.entity';
 import { SpaBooking } from './entities/spa-booking.entity';
@@ -87,4 +88,5 @@ export const typeOrmEntities = [
   ApiKey,
   PartnerApplication,
   PlatformAdminAuditLog,
+  HomeBanner,
 ];
