@@ -3,6 +3,64 @@ import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
+type SlotData = { id: string; resourceId: string; resourceName: string; startTime: string; endTime: string; price: string };
+
+function BookingCalendar({ subdomain }: { subdomain: string }) {
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [slots, setSlots] = useState<SlotData[]>([]);
+  const [booking, setBooking] = useState(false);
+  const [booked, setBooked] = useState<string | null>(null);
+  const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    return { value: d.toISOString().slice(0, 10), dayName: dayNames[d.getDay()], label: `${d.getDate()}/${d.getMonth() + 1}` };
+  });
+
+  useEffect(() => {
+    apiJson<{ date: string; slots: SlotData[] }>(
+      `/tenants/${encodeURIComponent(subdomain)}/profile/slots?date=${selectedDate}`
+    ).then(r => setSlots(r.slots)).catch(() => setSlots([]));
+  }, [subdomain, selectedDate]);
+
+  async function handleBook(slotId: string) {
+    setBooking(true);
+    try {
+      await apiJson(`/resource-booking/book?tenant=${encodeURIComponent(subdomain)}`, {
+        method: 'POST', body: JSON.stringify({ resourceSlotId: slotId }),
+      });
+      setBooked(slotId);
+      setSlots(prev => prev.filter(s => s.id !== slotId));
+    } catch (err) { alert(err instanceof Error ? err.message : 'Rezervasyon başarısız'); }
+    finally { setBooking(false); }
+  }
+
+  return (
+    <div>
+      <div className="date-tabs">
+        {dates.map(d => (
+          <button key={d.value} className={`date-tab ${selectedDate === d.value ? 'active' : ''}`} onClick={() => setSelectedDate(d.value)}>
+            <span className="date-day">{d.dayName}</span>
+            <span className="date-num">{d.label}</span>
+          </button>
+        ))}
+      </div>
+      {booked && <div className="event-joined-box" style={{ marginBottom: '1rem' }}><span>✅</span><p>Rezervasyon talebi gönderildi!</p></div>}
+      {slots.length === 0 ? (
+        <p className="no-slots">Bu tarihte müsait saat yok</p>
+      ) : (
+        <div className="slots-grid">
+          {slots.map(s => (
+            <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
+              <span className="slot-time">{s.startTime}</span>
+              <span className="slot-price">{s.price}₺</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type TrainerProfile = {
   id: string;
   userId: string;
@@ -157,19 +215,26 @@ export function TrainerProfilePage() {
           </section>
         )}
 
-        {/* PT Paket */}
+        {/* Paketler & Rezervasyon - PT eğitmenleri için */}
+        {profile.offersSessionTypes.includes('personal_training') && (
         <section className="profile-section">
-          <h2>💎 Eğitim Paketi</h2>
-          <div className="pt-package-card">
-            <div className="pt-package-info">
-              <h3>10 PT Eğitim</h3>
-              <p>Kişisel antrenman programı · Birebir eğitim</p>
+          <h2>💎 Eğitim Paketleri</h2>
+          {profile.packages.filter(p => p.sessionType === 'personal_training').length > 0 ? (
+            <div className="packages-grid">
+              {profile.packages.filter(p => p.sessionType === 'personal_training').map(pkg => (
+                <div key={pkg.id} className="pt-package-card">
+                  <div className="pt-package-info">
+                    <h3>{pkg.name}</h3>
+                    <p>{pkg.sessionCount} seans · {pkg.validityDays} gün geçerli</p>
+                  </div>
+                  <div className="pt-package-price">
+                    <strong>{pkg.price}₺</strong>
+                    <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="pt-package-price">
-              <strong>15.000₺</strong>
-              <span>1.500₺/seans</span>
-            </div>
-          </div>
+          ) : null}
           {requested ? (
             <div className="event-joined-box" style={{ marginTop: '1rem' }}>
               <span>✅</span>
@@ -188,7 +253,7 @@ export function TrainerProfilePage() {
                     method: 'POST',
                     body: JSON.stringify({
                       sessionType: 'personal_training',
-                      message: `${profile.name} ile 10 PT Eğitim paketi talebi (web)`,
+                      message: `${profile.name} ile PT Eğitim paketi talebi (web)`,
                       preferredTrainerId: profile.id,
                     }),
                   });
@@ -209,7 +274,37 @@ export function TrainerProfilePage() {
               </div>
             </div>
           )}
+          {/* PT Slot Takvimi */}
+          {profile.club && (
+            <>
+              <h3 style={{ color: '#fff', marginTop: '2rem', marginBottom: '0.75rem' }}>📅 Müsait PT Saatleri</h3>
+              {token ? (
+                <BookingCalendar subdomain={profile.club.subdomain} />
+              ) : (
+                <p className="no-slots">Müsait saatleri görmek için <Link to="/login">giriş yapın</Link></p>
+              )}
+            </>
+          )}
         </section>
+        )}
+
+        {/* Masöz Ajanda - sadece masaj sunanlar için */}
+        {profile.offersSessionTypes.includes('massage') && !profile.offersSessionTypes.includes('personal_training') && profile.club && (
+        <section className="profile-section">
+          <h2>📅 Müsait Masaj Saatleri</h2>
+          {token ? (
+            <BookingCalendar subdomain={profile.club.subdomain} />
+          ) : (
+            <div className="login-required-box">
+              <p>Müsait saatleri görmek ve rezervasyon yapmak için üye olmanız gerekiyor.</p>
+              <div className="login-required-actions">
+                <Link to="/register" className="btn-primary">Üye Ol</Link>
+                <Link to="/login" className="btn-outline">Giriş Yap</Link>
+              </div>
+            </div>
+          )}
+        </section>
+        )}
 
         {/* CTA */}
         <section className="profile-section profile-cta">

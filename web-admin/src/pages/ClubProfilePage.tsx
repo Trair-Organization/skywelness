@@ -3,6 +3,56 @@ import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
+type MassageSlot = { id: string; resourceId: string; resourceName: string; startTime: string; endTime: string; price: string };
+
+function TodayMassageSlots({ subdomain }: { subdomain: string }) {
+  const [slots, setSlots] = useState<MassageSlot[]>([]);
+  const [booking, setBooking] = useState(false);
+  const [booked, setBooked] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    apiJson<{ date: string; slots: MassageSlot[] }>(
+      `/tenants/${encodeURIComponent(subdomain)}/profile/slots?date=${today}`
+    ).then(r => {
+      // Masaj slotlarını filtrele (resource adında "Masaj" geçenler)
+      const massageSlots = r.slots.filter(s => s.resourceName.toLowerCase().includes('masaj'));
+      setSlots(massageSlots);
+    }).catch(() => setSlots([]));
+  }, [subdomain, today]);
+
+  async function handleBook(slotId: string) {
+    setBooking(true);
+    try {
+      await apiJson(`/resource-booking/book?tenant=${encodeURIComponent(subdomain)}`, {
+        method: 'POST', body: JSON.stringify({ resourceSlotId: slotId }),
+      });
+      setBooked(slotId);
+      setSlots(prev => prev.filter(s => s.id !== slotId));
+    } catch (err) { alert(err instanceof Error ? err.message : 'Rezervasyon başarısız'); }
+    finally { setBooking(false); }
+  }
+
+  if (booked) {
+    return <div className="event-joined-box"><span>✅</span><p>Masaj randevunuz oluşturuldu!</p></div>;
+  }
+
+  if (slots.length === 0) {
+    return <p className="no-slots">Bugün müsait masaj saati bulunmuyor.</p>;
+  }
+
+  return (
+    <div className="slots-grid">
+      {slots.map(s => (
+        <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
+          <span className="slot-time">{s.startTime} - {s.endTime}</span>
+          <span className="slot-price">{s.price}₺</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 type ProfileData = {
   id: string;
   name: string;
@@ -227,6 +277,27 @@ export function ClubProfilePage() {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Bugünkü Boş Masaj Seansları */}
+        {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('massage')).length > 0 && (
+          <section className="profile-section">
+            <h2>💆 Bugünkü Boş Masaj Seansları</h2>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              Bugün müsait masaj saatlerini görüntüleyin ve hemen randevu alın.
+            </p>
+            {token ? (
+              <TodayMassageSlots subdomain={subdomain!} />
+            ) : (
+              <div className="login-required-box">
+                <p>Müsait saatleri görmek ve randevu almak için üye olmanız gerekiyor.</p>
+                <div className="login-required-actions">
+                  <Link to="/register" className="btn-primary">Üye Ol</Link>
+                  <Link to="/login" className="btn-outline">Giriş Yap</Link>
+                </div>
+              </div>
+            )}
           </section>
         )}
 
