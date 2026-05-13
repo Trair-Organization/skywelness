@@ -36,6 +36,9 @@ export function LoginPage() {
     if (user.role === 'platform_admin') {
       return <Navigate to="/super-admin/dashboard" replace />;
     }
+    if (user.role === 'member') {
+      return <Navigate to={from === '/login' || from === '/' ? '/dashboard' : from} replace />;
+    }
     return <Navigate to={from === '/login' || from === '/' ? '/club/dashboard' : from} replace />;
   }
 

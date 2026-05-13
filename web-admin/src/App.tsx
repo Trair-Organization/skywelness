@@ -9,6 +9,7 @@ import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
 import { ClubProfilePage } from './pages/ClubProfilePage';
 import { TrainerProfilePage } from './pages/TrainerProfilePage';
 import { EventDetailPage } from './pages/EventDetailPage';
+import { MemberDashboardPage } from './pages/MemberDashboardPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
@@ -59,6 +60,7 @@ function AppRoutes() {
       <Route path="/club/:subdomain" element={<ClubProfilePage />} />
       <Route path="/trainer/:trainerId" element={<TrainerProfilePage />} />
       <Route path="/event/:eventId" element={<EventDetailPage />} />
+      <Route path="/dashboard" element={<MemberDashboardPage />} />
       <Route path="/marketing" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
       <Route path="/contact" element={<MarketingContactPage />} />
