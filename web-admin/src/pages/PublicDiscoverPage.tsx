@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 
@@ -37,24 +37,37 @@ type Event = {
   capacity: number;
   clubName: string | null;
 };
+type Banner = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+  buttonText: string | null;
+};
 
 export function PublicDiscoverPage() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const slideInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, t, e] = await Promise.all([
+      const [c, t, e, b] = await Promise.all([
         apiJson<Club[]>('/discovery/clubs?limit=20', { auth: false }),
         apiJson<Trainer[]>('/discovery/trainers?limit=20', { auth: false }),
         apiJson<Event[]>('/discovery/events?limit=12', { auth: false }),
+        apiJson<Banner[]>('/home-banners', { auth: false }),
       ]);
       setClubs(c);
       setTrainers(t);
       setEvents(e);
+      setBanners(b);
     } catch {
       /* ignore */
     } finally {
@@ -64,8 +77,26 @@ export function PublicDiscoverPage() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [load]);
+
+  // Auto-slide
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    slideInterval.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => {
+      if (slideInterval.current) clearInterval(slideInterval.current);
+    };
+  }, [banners.length]);
+
+  function goToSlide(idx: number) {
+    setCurrentSlide(idx);
+    if (slideInterval.current) clearInterval(slideInterval.current);
+    slideInterval.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 5000);
+  }
 
   return (
     <div className="public-shell">
@@ -83,22 +114,76 @@ export function PublicDiscoverPage() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <header className="discover-hero">
-        <h1>Sağlıklı Yaşamın Merkezi</h1>
-        <p>
-          En iyi spor kulüpleri, sertifikalı eğitmenler ve wellness hizmetleri tek platformda.
-          Hemen keşfet, üye ol veya partner başvurusu yap.
-        </p>
-        <div className="discover-hero-actions">
-          <Link to="/register" className="btn-primary">
-            Ücretsiz Üye Ol
-          </Link>
-          <Link to="/partner-register" className="btn-outline">
-            Partner Başvurusu
-          </Link>
-        </div>
-      </header>
+      {/* Hero Slider */}
+      {banners.length > 0 ? (
+        <section className="hero-slider">
+          <div className="hero-slider-track">
+            {banners.map((banner, idx) => (
+              <div
+                key={banner.id}
+                className={`hero-slide ${idx === currentSlide ? 'hero-slide-active' : ''}`}
+                style={{ backgroundImage: `url(${banner.imageUrl})` }}
+              >
+                <div className="hero-slide-overlay">
+                  <h1>{banner.title}</h1>
+                  {banner.subtitle && <p>{banner.subtitle}</p>}
+                  {banner.buttonText && banner.linkUrl && (
+                    <Link to={banner.linkUrl} className="btn-primary">
+                      {banner.buttonText}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {banners.length > 1 && (
+            <div className="hero-slider-dots">
+              {banners.map((_, idx) => (
+                <button
+                  key={idx}
+                  className={`hero-dot ${idx === currentSlide ? 'hero-dot-active' : ''}`}
+                  onClick={() => goToSlide(idx)}
+                  aria-label={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
+          {banners.length > 1 && (
+            <>
+              <button
+                className="hero-slider-arrow hero-slider-prev"
+                onClick={() => goToSlide((currentSlide - 1 + banners.length) % banners.length)}
+                aria-label="Önceki"
+              >
+                ‹
+              </button>
+              <button
+                className="hero-slider-arrow hero-slider-next"
+                onClick={() => goToSlide((currentSlide + 1) % banners.length)}
+                aria-label="Sonraki"
+              >
+                ›
+              </button>
+            </>
+          )}
+        </section>
+      ) : (
+        <header className="discover-hero">
+          <h1>Sağlıklı Yaşamın Merkezi</h1>
+          <p>
+            En iyi spor kulüpleri, sertifikalı eğitmenler ve wellness hizmetleri tek platformda.
+            Hemen keşfet, üye ol veya partner başvurusu yap.
+          </p>
+          <div className="discover-hero-actions">
+            <Link to="/register" className="btn-primary">
+              Ücretsiz Üye Ol
+            </Link>
+            <Link to="/partner-register" className="btn-outline">
+              Partner Başvurusu
+            </Link>
+          </div>
+        </header>
+      )}
 
       {loading && <div className="discover-loading">Yükleniyor...</div>}
 
