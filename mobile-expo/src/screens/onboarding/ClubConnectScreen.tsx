@@ -896,7 +896,7 @@ export function ClubConnectScreen() {
               <View style={styles.popSearches}>
                 <Text style={styles.popSearchTitle}>Popüler</Text>
                 <View style={styles.popSearchRow}>
-                  {['Yoga', 'Pilates', 'Fitness', 'Masaj', 'CrossFit'].map((term) => (
+                  {['Yoga', 'Pilates', 'Fitness', 'Masaj', 'Padel'].map((term) => (
                     <Pressable
                       key={term}
                       style={styles.popSearchChip}
@@ -1269,9 +1269,14 @@ export function ClubConnectScreen() {
                         )}
                       </View>
                       <View style={styles.clubCardBody}>
-                        <Text style={styles.clubCardName} numberOfLines={2}>
-                          {club.name}
-                        </Text>
+                        <View style={styles.trainerNameRow}>
+                          <Text style={styles.clubCardName} numberOfLines={1}>
+                            {club.name}
+                          </Text>
+                          {club.avgRating && club.avgRating !== '0.00' && (
+                            <Text style={styles.trainerRatingInline}>★ {club.avgRating}</Text>
+                          )}
+                        </View>
                         <Text style={styles.clubCardLocation} numberOfLines={1}>
                           {club.location ?? ''}
                         </Text>
@@ -1279,9 +1284,6 @@ export function ClubConnectScreen() {
                           <Text style={styles.clubCardServices} numberOfLines={2}>
                             {club.services.slice(0, 4).join(' · ')}
                           </Text>
-                        )}
-                        {club.avgRating && club.avgRating !== '0.00' && (
-                          <Text style={styles.clubCardRating}>★ {club.avgRating}</Text>
                         )}
                       </View>
                     </Pressable>
@@ -1405,9 +1407,6 @@ export function ClubConnectScreen() {
                     style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
                   >
                     {/* Rating badge */}
-                    <View style={styles.trainerRatingRow}>
-                      <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
-                    </View>
                     {/* Photo / Avatar area */}
                     <View style={styles.trainerPhotoArea}>
                       {trainer.photoUrl ? (
@@ -1428,9 +1427,14 @@ export function ClubConnectScreen() {
                     </View>
                     {/* Info */}
                     <View style={styles.trainerInfoArea}>
-                      <Text style={styles.trainerName} numberOfLines={1}>
-                        {trainer.name}
-                      </Text>
+                      <View style={styles.trainerNameRow}>
+                        <Text style={styles.trainerName} numberOfLines={1}>
+                          {trainer.name}
+                        </Text>
+                        {trainer.avgRating && trainer.avgRating !== '0.00' && (
+                          <Text style={styles.trainerRatingInline}>★ {trainer.avgRating}</Text>
+                        )}
+                      </View>
                       <Text style={styles.trainerSpecLine} numberOfLines={1}>
                         {trainer.specialties.slice(0, 3).join(' · ')}
                       </Text>
@@ -2094,6 +2098,7 @@ const styles = StyleSheet.create({
   },
   popSearchRow: {
     flexDirection: 'row',
+    flexWrap: 'nowrap',
     gap: 6,
   },
   popSearchChip: {
@@ -2525,6 +2530,16 @@ const styles = StyleSheet.create({
     color: premium.text,
     fontSize: 14,
     fontWeight: '800',
+  },
+  trainerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  trainerRatingInline: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '900',
   },
   trainerSpecLine: {
     color: premium.textMuted,

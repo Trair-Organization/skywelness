@@ -524,7 +524,11 @@ export function PartnerProfileScreen() {
           style={styles.stickyCtaBtn}
           onPress={() => {
             if (!token) {
-              showToast('Giriş yapmalısınız', 'warning');
+              // Kayıt olmamış kullanıcıyı kayıt ekranına yönlendir
+              (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                'Register',
+                { preselectedSubdomain: profile.subdomain },
+              );
               return;
             }
             if (profile.visibilityMode === 'public' && profile.resources.length > 0) {
@@ -535,7 +539,11 @@ export function PartnerProfileScreen() {
           }}
         >
           <Text style={styles.stickyCtaBtnTxt}>
-            {profile.visibilityMode === 'public' ? '🎾 Rezervasyon Yap' : '💬 Mesaj Gönder'}
+            {!token
+              ? '👤 Kayıt Ol & Başla'
+              : profile.visibilityMode === 'public'
+                ? '🎾 Rezervasyon Yap'
+                : '💬 Mesaj Gönder'}
           </Text>
         </Pressable>
       </View>

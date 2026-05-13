@@ -223,8 +223,19 @@ export function TrainerDetailScreen() {
 
       {/* Sticky CTA */}
       <View style={[styles.stickyCta, { paddingBottom: insets.bottom + 12 }]}>
-        <Pressable style={styles.stickyCtaBtn} onPress={handleContact}>
-          <Text style={styles.stickyCtaBtnTxt}>💬 İletişime Geç</Text>
+        <Pressable
+          style={styles.stickyCtaBtn}
+          onPress={() => {
+            if (!token) {
+              (navigation as unknown as { navigate: (n: string) => void }).navigate('Register');
+              return;
+            }
+            handleContact();
+          }}
+        >
+          <Text style={styles.stickyCtaBtnTxt}>
+            {!token ? '👤 Kayıt Ol & İletişime Geç' : '💬 İletişime Geç'}
+          </Text>
         </Pressable>
       </View>
     </GradientBackground>
