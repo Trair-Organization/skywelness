@@ -433,23 +433,32 @@ export function PartnerProfileScreen() {
             <Text style={styles.sectionTitle}>👥 Eğitmenler</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {profile.trainers.map((t) => (
-                <View key={t.id} style={styles.trainerMiniCard}>
-                  <View style={styles.trainerMiniPhoto}>
-                    {t.photoUrl ? (
-                      <Image source={{ uri: t.photoUrl }} style={styles.trainerMiniImg} resizeMode="cover" />
-                    ) : (
-                      <Text style={styles.trainerMiniInitials}>
-                        {t.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                      </Text>
+                <View key={t.id} style={styles.trainerCardWrapper}>
+                  <View style={styles.trainerCard}>
+                    {t.avgRating !== '0.00' && (
+                      <View style={styles.trainerRatingBadge}>
+                        <Text style={styles.trainerRatingTxt}>★ {t.avgRating}</Text>
+                      </View>
                     )}
+                    <View style={styles.trainerPhotoArea}>
+                      {t.photoUrl ? (
+                        <Image source={{ uri: t.photoUrl }} style={styles.trainerPhotoImg} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.trainerInitialsTxt}>
+                          {t.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.trainerInfoArea}>
+                      <Text style={styles.trainerNameTxt} numberOfLines={1}>{t.name}</Text>
+                      <Text style={styles.trainerSpecTxt} numberOfLines={1}>
+                        {t.specializations.slice(0, 3).join(' · ')}
+                      </Text>
+                      {t.totalSessions > 0 && (
+                        <Text style={styles.trainerSessionsTxt}>{t.totalSessions} seans</Text>
+                      )}
+                    </View>
                   </View>
-                  <Text style={styles.trainerMiniName} numberOfLines={1}>{t.name}</Text>
-                  <Text style={styles.trainerMiniSpec} numberOfLines={1}>
-                    {t.specializations.slice(0, 2).join(' · ')}
-                  </Text>
-                  {t.totalSessions > 0 && (
-                    <Text style={styles.trainerMiniSessions}>{t.totalSessions} seans</Text>
-                  )}
                 </View>
               ))}
             </ScrollView>
@@ -567,14 +576,18 @@ const styles = StyleSheet.create({
   slotChip: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, backgroundColor: premium.glass, borderWidth: 1, borderColor: premium.glassBorder, alignItems: 'center', minWidth: 80 },
   slotTime: { fontSize: 15, fontWeight: '700', color: premium.text },
   slotPrice: { fontSize: 11, color: premium.accentGreen, marginTop: 2, fontWeight: '600' },
-  // Trainers
-  trainerMiniCard: { width: 120, alignItems: 'center', marginRight: 12, padding: 12, borderRadius: 14, backgroundColor: premium.glass, borderWidth: 1, borderColor: premium.glassBorder },
-  trainerMiniPhoto: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#1e3a5f', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 8 },
-  trainerMiniImg: { width: '100%', height: '100%' },
-  trainerMiniInitials: { color: '#fff', fontSize: 18, fontWeight: '900' },
-  trainerMiniName: { fontSize: 12, fontWeight: '700', color: premium.text, textAlign: 'center' },
-  trainerMiniSpec: { fontSize: 10, color: premium.textMuted, textAlign: 'center', marginTop: 2 },
-  trainerMiniSessions: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', marginTop: 4 },
+  // Trainers (keşif ekranı stili)
+  trainerCardWrapper: { width: 184, marginRight: 12 },
+  trainerCard: { width: '100%', height: 200, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(8,16,28,0.7)', overflow: 'hidden', position: 'relative' },
+  trainerRatingBadge: { position: 'absolute', top: 8, right: 8, zIndex: 10, backgroundColor: 'rgba(251,191,36,0.2)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3 },
+  trainerRatingTxt: { color: '#fbbf24', fontSize: 11, fontWeight: '900' },
+  trainerPhotoArea: { width: '100%', height: 100, backgroundColor: '#1e3a5f', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  trainerPhotoImg: { width: '100%', height: 160, position: 'absolute', top: 0 },
+  trainerInitialsTxt: { color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: 1 },
+  trainerInfoArea: { flex: 1, padding: 12, gap: 3, justifyContent: 'center' },
+  trainerNameTxt: { fontSize: 14, fontWeight: '800', color: premium.text },
+  trainerSpecTxt: { fontSize: 11, color: premium.textMuted, fontWeight: '600' },
+  trainerSessionsTxt: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', marginTop: 2 },
   // Location
   locationText: { fontSize: 14, color: premium.textMuted, lineHeight: 20 },
   // Sticky CTA
