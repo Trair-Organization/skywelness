@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { PublicDiscoverPage } from './pages/PublicDiscoverPage';
 import { PublicRegisterPage } from './pages/PublicRegisterPage';
 import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
+import { TrainerRegisterPage } from './pages/TrainerRegisterPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
@@ -52,6 +53,7 @@ function AppRoutes() {
       <Route path="/discover" element={<PublicDiscoverPage />} />
       <Route path="/register" element={<PublicRegisterPage />} />
       <Route path="/partner-register" element={<PartnerRegisterPage />} />
+      <Route path="/trainer-register" element={<TrainerRegisterPage />} />
       <Route path="/marketing" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
       <Route path="/contact" element={<MarketingContactPage />} />

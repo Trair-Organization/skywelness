@@ -330,12 +330,22 @@ export function PublicDiscoverPage() {
       </section>
 
       <footer className="public-footer">
-        <div className="public-footer-links">
-          <Link to="/privacy">Gizlilik</Link>
-          <Link to="/terms">Kullanım Koşulları</Link>
-          <Link to="/contact">İletişim</Link>
+        <div className="public-footer-brand">
+          <strong>Wellness Club</strong>
+          <p>Sağlıklı yaşamın dijital platformu</p>
         </div>
-        <p>© 2025 Wellness Club. Tüm hakları saklıdır.</p>
+        <div className="public-footer-contact">
+          <a href="https://instagram.com/wellnessclub.tr" target="_blank" rel="noopener noreferrer">📸 @wellnessclub.tr</a>
+          <a href="mailto:info@wellnessclub.com">✉️ info@wellnessclub.com</a>
+        </div>
+        <div className="public-footer-links">
+          <Link to="/privacy">Gizlilik Sözleşmesi</Link>
+          <Link to="/terms">Kullanım Şartları</Link>
+          <Link to="/contact">İletişim</Link>
+          <Link to="/trainer-register">Eğitmen Başvurusu</Link>
+          <Link to="/partner-register">Partner Başvurusu</Link>
+        </div>
+        <p className="public-footer-copy">© 2025 Wellness Club. Tüm hakları saklıdır.</p>
       </footer>
     </div>
   );
