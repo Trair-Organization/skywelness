@@ -183,6 +183,7 @@ export function TrainerProfilePage() {
               💬 İletişime Geç
             </a>
           )}
+          <p className="cta-note">Ders planlamak ve paket satın almak için <Link to="/register">üye olmanız</Link> gerekiyor.</p>
         </section>
       </div>
     </div>

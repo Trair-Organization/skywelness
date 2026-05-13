@@ -153,7 +153,7 @@ export function ClubProfilePage() {
 
       <div className="profile-page">
         {/* Galeri */}
-        {images.length > 0 && (
+        {images.length > 0 ? (
           <div className="profile-gallery">
             <img src={images[galleryIdx]} alt={profile.name} className="profile-gallery-img" />
             {images.length > 1 && (
@@ -167,6 +167,10 @@ export function ClubProfilePage() {
                 </div>
               </>
             )}
+          </div>
+        ) : (
+          <div className="profile-gallery profile-gallery-ph">
+            <span>{profile.name.slice(0, 2).toUpperCase()}</span>
           </div>
         )}
 
@@ -260,7 +264,13 @@ export function ClubProfilePage() {
                 )}
               </>
             ) : (
-              <p className="no-slots">Müsait saatleri görmek için <Link to="/login">giriş yapın</Link></p>
+              <div className="login-required-box">
+                <p>📋 Müsait saatleri görmek ve rezervasyon yapmak için üye olmanız gerekiyor.</p>
+                <div className="login-required-actions">
+                  <Link to="/register" className="btn-primary">Üye Ol</Link>
+                  <Link to="/login" className="btn-outline">Giriş Yap</Link>
+                </div>
+              </div>
             )}
           </section>
         )}

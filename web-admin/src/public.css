@@ -273,7 +273,7 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 .trainers-grid {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 .events-grid {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -349,7 +349,7 @@
 /* Trainer Card */
 .trainer-card-photo {
   width: 100%;
-  height: 160px;
+  aspect-ratio: 1;
   background: rgba(20, 20, 20, 0.8);
   overflow: hidden;
 }
@@ -854,6 +854,11 @@
 .service-price { color: #10b981; font-weight: 700; font-size: 1.1rem; }
 .profile-cta { text-align: center; padding-top: 1rem; }
 .profile-cta .btn-primary { padding: 1rem 2rem; font-size: 1.05rem; }
+.cta-note { margin-top: 1rem; font-size: 0.85rem; color: #64748b; }
+.cta-note a { color: #38bdf8; text-decoration: none; font-weight: 600; }
+.login-required-box { padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(56,189,248,0.2); background: rgba(56,189,248,0.05); text-align: center; }
+.login-required-box p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1rem; }
+.login-required-actions { display: flex; gap: 0.75rem; justify-content: center; }
 
 /* Legal Pages */
 .legal-container {
