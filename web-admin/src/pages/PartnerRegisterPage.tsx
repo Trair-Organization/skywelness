@@ -53,7 +53,7 @@ export function PartnerRegisterPage() {
       <div className="public-shell">
         <nav className="public-nav">
           <Link to="/" className="public-nav-brand">
-            <strong>Wellness Club</strong>
+            <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
           </Link>
         </nav>
         <div className="auth-container">
@@ -79,7 +79,7 @@ export function PartnerRegisterPage() {
     <div className="public-shell">
       <nav className="public-nav">
         <Link to="/" className="public-nav-brand">
-          <strong>Wellness Club</strong>
+          <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
         </Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>

@@ -102,7 +102,7 @@ export function PublicDiscoverPage() {
     <div className="public-shell">
       <nav className="public-nav">
         <Link to="/" className="public-nav-brand">
-          <strong>Wellness Club</strong>
+          <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
         </Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>
@@ -331,7 +331,7 @@ export function PublicDiscoverPage() {
 
       <footer className="public-footer">
         <div className="public-footer-brand">
-          <strong>Wellness Club</strong>
+          <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
           <p>Sağlıklı yaşamın dijital platformu</p>
         </div>
         <div className="public-footer-contact">

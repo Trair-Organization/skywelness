@@ -9,7 +9,7 @@ export function MarketingHomePage() {
   return (
     <div className="shell marketing">
       <nav className="marketingNav">
-        <strong>Wellness Club</strong>
+        <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
         <div className="marketingNavLinks">
           <a href="#features">{t('marketing.featuresCta')}</a>
           <a href="#contact">{t('marketing.contactLink')}</a>
