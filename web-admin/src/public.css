@@ -2,7 +2,7 @@
 
 .public-shell {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a0f1a 0%, #0d1525 50%, #0a1628 100%);
+  background: #000000;
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -279,7 +279,7 @@
 .discover-card {
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(20, 20, 20, 0.8);
   overflow: hidden;
   transition: all 0.2s;
 }
@@ -321,7 +321,7 @@
 .club-card-cover {
   width: 100%;
   height: 140px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(20, 20, 20, 0.8);
   overflow: hidden;
 }
 .club-card-cover img {
@@ -345,7 +345,7 @@
 .trainer-card-photo {
   width: 100%;
   height: 160px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(20, 20, 20, 0.8);
   overflow: hidden;
 }
 .trainer-card-photo img {
@@ -458,7 +458,7 @@
 .auth-card {
   width: 100%;
   max-width: 480px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(20, 20, 20, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 16px;
   padding: 2.5rem;
@@ -498,7 +498,7 @@
   padding: 0.7rem 0.9rem;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(20, 20, 20, 0.8);
   color: #e2e8f0;
   font-size: 0.9rem;
   transition: border-color 0.15s;
@@ -757,7 +757,7 @@
   padding: 0.6rem 0.8rem;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(20, 20, 20, 0.8);
   color: #e2e8f0;
   font-size: 0.85rem;
 }
