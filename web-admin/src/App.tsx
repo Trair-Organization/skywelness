@@ -8,6 +8,7 @@ import { PublicRegisterPage } from './pages/PublicRegisterPage';
 import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
 import { ClubProfilePage } from './pages/ClubProfilePage';
 import { TrainerProfilePage } from './pages/TrainerProfilePage';
+import { EventDetailPage } from './pages/EventDetailPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/trainer-register" element={<PartnerRegisterPage />} />
       <Route path="/club/:subdomain" element={<ClubProfilePage />} />
       <Route path="/trainer/:trainerId" element={<TrainerProfilePage />} />
+      <Route path="/event/:eventId" element={<EventDetailPage />} />
       <Route path="/marketing" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
       <Route path="/contact" element={<MarketingContactPage />} />
