@@ -10,6 +10,7 @@ import { SpaTherapist } from './entities/spa-therapist.entity';
 import { ClubEvent } from './entities/club-event.entity';
 import { ClubEventRegistration } from './entities/club-event-registration.entity';
 import { CafeOrder } from './entities/cafe-order.entity';
+import { CafeProduct } from './entities/cafe-product.entity';
 import { ApiKey } from './entities/api-key.entity';
 import { Availability } from './entities/availability.entity';
 import { DiscountCode } from './entities/discount-code.entity';
@@ -55,6 +56,7 @@ export const typeOrmEntities = [
   SpaService,
   SpaTherapist,
   CafeOrder,
+  CafeProduct,
   ClubEvent,
   ClubEventRegistration,
   User,

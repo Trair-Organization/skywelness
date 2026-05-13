@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { Availability } from '../database/entities/availability.entity';
 import { AppNotification } from '../database/entities/notification.entity';
 import { CafeOrder } from '../database/entities/cafe-order.entity';
+import { CafeProduct } from '../database/entities/cafe-product.entity';
 import { PackageRequest } from '../database/entities/package-request.entity';
 import { Package } from '../database/entities/package.entity';
 import { Reservation } from '../database/entities/reservation.entity';
@@ -29,6 +30,8 @@ import { NotificationsController } from './notifications.controller';
 import { WaitingListController } from './waiting-list.controller';
 import { CafeOrdersController } from './cafe-orders.controller';
 import { CafeOrdersService } from './cafe-orders.service';
+import { CafeProductsController } from './cafe-products.controller';
+import { CafeProductsService } from './cafe-products.service';
 
 @Module({
   imports: [
@@ -43,6 +46,7 @@ import { CafeOrdersService } from './cafe-orders.service';
       Tenant,
       AppNotification,
       CafeOrder,
+      CafeProduct,
       TrainerMemberLink,
       TrainerMemberNote,
       Availability,
@@ -60,9 +64,10 @@ import { CafeOrdersService } from './cafe-orders.service';
     TrainerNetworkController,
     NotificationsController,
     CafeOrdersController,
+    CafeProductsController,
     PtMemberController,
   ],
-  providers: [BookingService, CafeOrdersService, PtMemberService, RolesGuard],
-  exports: [CafeOrdersService, BookingService],
+  providers: [BookingService, CafeOrdersService, CafeProductsService, PtMemberService, RolesGuard],
+  exports: [CafeOrdersService, CafeProductsService, BookingService],
 })
 export class BookingModule {}
