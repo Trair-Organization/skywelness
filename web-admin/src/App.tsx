@@ -17,6 +17,7 @@ import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicatio
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
 import { ClubProfileEditPage } from './pages/ClubProfileEditPage';
 import { PushNotificationsPage } from './pages/PushNotificationsPage';
+import { CafeProductsPage } from './pages/CafeProductsPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { TrainerServicesPage } from './pages/TrainerServicesPage';
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
         <Route path="/club/profile" element={<ClubProfileEditPage />} />
         <Route path="/push-notifications" element={<PushNotificationsPage />} />
+        <Route path="/cafe-products" element={<CafeProductsPage />} />
         <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/club/cafe-orders" element={<ClubCafeOrdersPage />} />
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />

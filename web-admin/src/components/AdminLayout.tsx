@@ -23,6 +23,7 @@ const WELLNESS_NAV: NavItem[] = [
 const GENERIC_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
+  { path: '/cafe-products', icon: '☕', label: 'Ürün Yönetimi' },
   { path: '/resource-management', icon: '🏟️', label: 'Kort & Slotlar' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
   { path: '/push-notifications', icon: '🔔', label: 'Bildirimler' },
