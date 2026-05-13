@@ -86,6 +86,10 @@ export class Tenant {
   @Column({ type: 'varchar', length: 10, default: 'private', name: 'visibility_mode' })
   visibilityMode!: TenantVisibilityMode;
 
+  /** Profil sayfası galeri fotoğrafları (slider). URL array. */
+  @Column({ type: 'jsonb', default: '[]', name: 'gallery_images' })
+  galleryImages!: string[];
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
