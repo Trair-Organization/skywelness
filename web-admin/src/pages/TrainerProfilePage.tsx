@@ -3,31 +3,44 @@ import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
-type SlotData = { id: string; resourceId: string; resourceName: string; startTime: string; endTime: string; price: string };
+type V2Slot = { id: string; serviceId: string; serviceName: string; startTime: string; endTime: string; price: string; remainingCapacity: number };
 
-function BookingCalendar({ subdomain }: { subdomain: string }) {
+function getWeekDays(weekOffset: number) {
+  const days = [];
+  const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const start = new Date();
+  start.setDate(start.getDate() + weekOffset * 7);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    days.push({
+      value: d.toISOString().slice(0, 10),
+      dayName: dayNames[d.getDay()],
+      label: `${d.getDate()}/${d.getMonth() + 1}`,
+    });
+  }
+  return days;
+}
+
+function ProviderSchedule({ subdomain, providerId }: { subdomain: string; providerId: string }) {
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [slots, setSlots] = useState<SlotData[]>([]);
+  const [slots, setSlots] = useState<V2Slot[]>([]);
   const [booking, setBooking] = useState(false);
   const [booked, setBooked] = useState<string | null>(null);
-  const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() + i);
-    return { value: d.toISOString().slice(0, 10), dayName: dayNames[d.getDay()], label: `${d.getDate()}/${d.getMonth() + 1}` };
-  });
+  const days = getWeekDays(weekOffset);
 
   useEffect(() => {
-    apiJson<{ date: string; slots: SlotData[] }>(
-      `/tenants/${encodeURIComponent(subdomain)}/profile/slots?date=${selectedDate}`
-    ).then(r => setSlots(r.slots)).catch(() => setSlots([]));
-  }, [subdomain, selectedDate]);
+    apiJson<V2Slot[]>(
+      `/v2/schedule/provider?tenant=${encodeURIComponent(subdomain)}&providerId=${providerId}&date=${selectedDate}`,
+      { auth: false },
+    ).then(setSlots).catch(() => setSlots([]));
+  }, [subdomain, providerId, selectedDate]);
 
   async function handleBook(slotId: string) {
     setBooking(true);
     try {
-      await apiJson(`/resource-booking/book?tenant=${encodeURIComponent(subdomain)}`, {
-        method: 'POST', body: JSON.stringify({ resourceSlotId: slotId }),
-      });
+      await apiJson('/v2/appointments', { method: 'POST', body: JSON.stringify({ slotId }) });
       setBooked(slotId);
       setSlots(prev => prev.filter(s => s.id !== slotId));
     } catch (err) { alert(err instanceof Error ? err.message : 'Rezervasyon başarısız'); }
@@ -36,22 +49,30 @@ function BookingCalendar({ subdomain }: { subdomain: string }) {
 
   return (
     <div>
+      <div className="week-nav">
+        <button className="week-nav-btn" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} disabled={weekOffset === 0}>← Önceki</button>
+        <span className="week-nav-label">
+          {weekOffset === 0 ? 'Bu Hafta' : weekOffset === 1 ? 'Gelecek Hafta' : `${weekOffset + 1}. Hafta`}
+        </span>
+        <button className="week-nav-btn" onClick={() => setWeekOffset(Math.min(3, weekOffset + 1))} disabled={weekOffset >= 3}>Sonraki →</button>
+      </div>
       <div className="date-tabs">
-        {dates.map(d => (
-          <button key={d.value} className={`date-tab ${selectedDate === d.value ? 'active' : ''}`} onClick={() => setSelectedDate(d.value)}>
+        {days.map(d => (
+          <button key={d.value} className={`date-tab ${selectedDate === d.value ? 'active' : ''}`} onClick={() => { setSelectedDate(d.value); setBooked(null); }}>
             <span className="date-day">{d.dayName}</span>
             <span className="date-num">{d.label}</span>
           </button>
         ))}
       </div>
-      {booked && <div className="event-joined-box" style={{ marginBottom: '1rem' }}><span>✅</span><p>Rezervasyon talebi gönderildi!</p></div>}
-      {slots.length === 0 ? (
+      {booked ? (
+        <div className="event-joined-box"><span>✅</span><p>Rezervasyon talebiniz oluşturuldu!</p></div>
+      ) : slots.length === 0 ? (
         <p className="no-slots">Bu tarihte müsait saat yok</p>
       ) : (
         <div className="slots-grid">
           {slots.map(s => (
             <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
-              <span className="slot-time">{s.startTime}</span>
+              <span className="slot-time">{s.startTime} - {s.endTime}</span>
               <span className="slot-price">{s.price}₺</span>
             </button>
           ))}
@@ -158,7 +179,8 @@ export function TrainerProfilePage() {
                 ))}
               </div>
             )}
-            {profile.club && (
+            {/* Kulüp linki - sadece PT eğitmenleri için */}
+            {profile.club && profile.offersSessionTypes.includes('personal_training') && (
               <Link to={`/club/${profile.club.subdomain}`} className="trainer-club-link">
                 {profile.club.logoUrl && <img src={profile.club.logoUrl} alt="" className="trainer-club-logo" />}
                 <span>{profile.club.name}</span>
@@ -196,8 +218,8 @@ export function TrainerProfilePage() {
           </section>
         )}
 
-        {/* Hizmetler */}
-        {profile.services.length > 0 && (
+        {/* Hizmetler - sadece PT eğitmenleri için */}
+        {profile.offersSessionTypes.includes('personal_training') && profile.services.length > 0 && (
           <section className="profile-section">
             <h2>🛍️ Hizmetler</h2>
             <div className="services-list">
@@ -279,7 +301,7 @@ export function TrainerProfilePage() {
             <>
               <h3 style={{ color: '#fff', marginTop: '2rem', marginBottom: '0.75rem' }}>📅 Müsait PT Saatleri</h3>
               {token ? (
-                <BookingCalendar subdomain={profile.club.subdomain} />
+                <ProviderSchedule subdomain={profile.club.subdomain} providerId={profile.id} />
               ) : (
                 <p className="no-slots">Müsait saatleri görmek için <Link to="/login">giriş yapın</Link></p>
               )}
@@ -293,7 +315,7 @@ export function TrainerProfilePage() {
         <section className="profile-section">
           <h2>📅 Müsait Masaj Saatleri</h2>
           {token ? (
-            <BookingCalendar subdomain={profile.club.subdomain} />
+            <ProviderSchedule subdomain={profile.club.subdomain} providerId={profile.id} />
           ) : (
             <div className="login-required-box">
               <p>Müsait saatleri görmek ve rezervasyon yapmak için üye olmanız gerekiyor.</p>
@@ -306,18 +328,20 @@ export function TrainerProfilePage() {
         </section>
         )}
 
-        {/* CTA */}
-        <section className="profile-section profile-cta">
-          {profile.club ? (
-            <Link to={`/club/${profile.club.subdomain}`} className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
-              🏢 {profile.club.name} Sayfasını Görüntüle
-            </Link>
-          ) : (
-            <a href="mailto:info@wellnessclub.com" className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
-              💬 İletişime Geç
-            </a>
-          )}
-        </section>
+        {/* CTA - sadece PT eğitmenleri için kulüp linki */}
+        {profile.offersSessionTypes.includes('personal_training') && (
+          <section className="profile-section profile-cta">
+            {profile.club ? (
+              <Link to={`/club/${profile.club.subdomain}`} className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
+                🏢 {profile.club.name} Sayfasını Görüntüle
+              </Link>
+            ) : (
+              <a href="mailto:info@wellnessclub.com" className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
+                💬 İletişime Geç
+              </a>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );
