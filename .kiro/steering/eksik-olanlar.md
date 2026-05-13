@@ -15,6 +15,9 @@ Projeyi açtığında "eksik olanlar belgesini incele ve listeye önüme getir" 
 
 | # | Özellik | Açıklama | Etkilenen Alan |
 |---|---------|----------|----------------|
+| 0a | **Skyland Home — Eğitmen Kartları** | Keşif ekranındaki yeni kart tasarımına geçir (fotoğraf üstte, rating ismin yanında) | Mobil |
+| 0b | **Skyland Home — SkyCafe Kartları** | Ürün kartlarını profesyonel tasarıma çevir (eğitmen kartı gibi), "Tümünü Göster" butonu ekle → SkyCafe sipariş ekranına yönlendir | Mobil |
+| 0c | **SkyCafe Tanıtım Sayfası** | Kategorili menü (Yiyecek, İçecek, Kokteyl) — PartnerProfile'da gösterilmeli | Mobil |
 | 1 | **Çalışma Saatleri** | Tenant seviyesinde "Pzt-Cum 07:00-22:00, Cmt 09:00-18:00" — admin panelden girilmeli, mobil profil sayfasında gösterilmeli | Backend + Admin + Mobil |
 | 2 | **Stripe Tam Entegrasyon** | Altyapı hazır (checkout session + webhook) ama production key'leri eklenmedi. Stripe Dashboard'da webhook URL tanımlanmalı | Backend config |
 | 3 | **Bulk Slot Oluşturma (Resource)** | Resource slotları için "önümüzdeki 30 gün boyunca her gün 06:00-24:00 arası slot oluştur" — şu an admin tek tek gün seçiyor | Backend + Admin |
