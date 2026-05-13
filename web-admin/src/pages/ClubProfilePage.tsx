@@ -3,53 +3,145 @@ import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
-type MassageSlot = { id: string; resourceId: string; resourceName: string; startTime: string; endTime: string; price: string };
+// ═══ Unified Booking Component (v2 API) ═══
+type V2Service = {
+  id: string;
+  name: string;
+  category: string;
+  providerType: string;
+  providerId: string | null;
+  providerName: string | null;
+  durationMinutes: number;
+  price: string;
+  currency: string;
+};
+type V2Slot = {
+  id: string;
+  serviceId: string;
+  startTime: string;
+  endTime: string;
+  price: string;
+  remainingCapacity: number;
+};
 
-function TodayMassageSlots({ subdomain }: { subdomain: string }) {
-  const [slots, setSlots] = useState<MassageSlot[]>([]);
+function getWeekDays(weekOffset: number) {
+  const days = [];
+  const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const start = new Date();
+  start.setDate(start.getDate() + weekOffset * 7);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    days.push({
+      value: d.toISOString().slice(0, 10),
+      dayName: dayNames[d.getDay()],
+      label: `${d.getDate()}/${d.getMonth() + 1}`,
+    });
+  }
+  return days;
+}
+
+function ProviderBooking({ subdomain, category, title }: { subdomain: string; category: string; title: string }) {
+  const { token } = useAuth();
+  const [services, setServices] = useState<V2Service[]>([]);
+  const [selectedService, setSelectedService] = useState<string>('');
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [slots, setSlots] = useState<V2Slot[]>([]);
   const [booking, setBooking] = useState(false);
   const [booked, setBooked] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
 
+  // Hizmetleri yükle
   useEffect(() => {
-    apiJson<{ date: string; slots: MassageSlot[] }>(
-      `/tenants/${encodeURIComponent(subdomain)}/profile/slots?date=${today}`
-    ).then(r => {
-      // Masaj slotlarını filtrele (resource adında "Masaj" geçenler)
-      const massageSlots = r.slots.filter(s => s.resourceName.toLowerCase().includes('masaj'));
-      setSlots(massageSlots);
-    }).catch(() => setSlots([]));
-  }, [subdomain, today]);
+    apiJson<V2Service[]>(`/v2/services?tenant=${encodeURIComponent(subdomain)}&category=${category}`, { auth: false })
+      .then(list => {
+        setServices(list);
+        if (list.length > 0 && !selectedService) setSelectedService(list[0].id);
+      })
+      .catch(() => {});
+  }, [subdomain, category, selectedService]);
+
+  // Slotları yükle
+  useEffect(() => {
+    if (!selectedService || !selectedDate) return;
+    apiJson<V2Slot[]>(`/v2/schedule?tenant=${encodeURIComponent(subdomain)}&serviceId=${selectedService}&date=${selectedDate}`, { auth: false })
+      .then(setSlots)
+      .catch(() => setSlots([]));
+  }, [subdomain, selectedService, selectedDate]);
+
+  const days = getWeekDays(weekOffset);
 
   async function handleBook(slotId: string) {
+    if (!token) return;
     setBooking(true);
     try {
-      await apiJson(`/resource-booking/book?tenant=${encodeURIComponent(subdomain)}`, {
-        method: 'POST', body: JSON.stringify({ resourceSlotId: slotId }),
-      });
+      await apiJson('/v2/appointments', { method: 'POST', body: JSON.stringify({ slotId }) });
       setBooked(slotId);
       setSlots(prev => prev.filter(s => s.id !== slotId));
     } catch (err) { alert(err instanceof Error ? err.message : 'Rezervasyon başarısız'); }
     finally { setBooking(false); }
   }
 
-  if (booked) {
-    return <div className="event-joined-box"><span>✅</span><p>Masaj randevunuz oluşturuldu!</p></div>;
-  }
-
-  if (slots.length === 0) {
-    return <p className="no-slots">Bugün müsait masaj saati bulunmuyor.</p>;
-  }
+  if (services.length === 0) return null;
 
   return (
-    <div className="slots-grid">
-      {slots.map(s => (
-        <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
-          <span className="slot-time">{s.startTime} - {s.endTime}</span>
-          <span className="slot-price">{s.price}₺</span>
-        </button>
-      ))}
-    </div>
+    <section className="profile-section">
+      <h2>{title}</h2>
+
+      {/* Dropdown: Eğitmen/Masöz seçimi */}
+      <select
+        className="provider-select"
+        value={selectedService}
+        onChange={(e) => { setSelectedService(e.target.value); setBooked(null); }}
+      >
+        {services.map(s => (
+          <option key={s.id} value={s.id}>{s.providerName || s.name} — {s.price}₺/{s.durationMinutes}dk</option>
+        ))}
+      </select>
+
+      {/* Hafta navigasyonu */}
+      <div className="week-nav">
+        <button className="week-nav-btn" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} disabled={weekOffset === 0}>← Önceki</button>
+        <span className="week-nav-label">
+          {weekOffset === 0 ? 'Bu Hafta' : weekOffset === 1 ? 'Gelecek Hafta' : `${weekOffset + 1}. Hafta`}
+        </span>
+        <button className="week-nav-btn" onClick={() => setWeekOffset(Math.min(3, weekOffset + 1))} disabled={weekOffset >= 3}>Sonraki →</button>
+      </div>
+
+      {/* Gün seçimi */}
+      <div className="date-tabs">
+        {days.map(d => (
+          <button key={d.value} className={`date-tab ${selectedDate === d.value ? 'active' : ''}`} onClick={() => { setSelectedDate(d.value); setBooked(null); }}>
+            <span className="date-day">{d.dayName}</span>
+            <span className="date-num">{d.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Slotlar */}
+      {!token ? (
+        <div className="login-required-box">
+          <p>Müsait saatleri görmek ve randevu almak için üye olmanız gerekiyor.</p>
+          <div className="login-required-actions">
+            <Link to="/register" className="btn-primary">Üye Ol</Link>
+            <Link to="/login" className="btn-outline">Giriş Yap</Link>
+          </div>
+        </div>
+      ) : booked ? (
+        <div className="event-joined-box"><span>✅</span><p>Rezervasyon talebiniz oluşturuldu!</p></div>
+      ) : slots.length === 0 ? (
+        <p className="no-slots">Bu tarihte müsait saat yok</p>
+      ) : (
+        <div className="slots-grid">
+          {slots.map(s => (
+            <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
+              <span className="slot-time">{s.startTime} - {s.endTime}</span>
+              <span className="slot-price">{s.price}₺</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -107,39 +199,11 @@ type ProfileData = {
   };
 };
 
-type SlotData = {
-  id: string;
-  resourceId: string;
-  resourceName: string;
-  startTime: string;
-  endTime: string;
-  price: string;
-};
-
-function getNext7Days() {
-  const days = [];
-  const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    days.push({
-      value: d.toISOString().slice(0, 10),
-      dayName: dayNames[d.getDay()],
-      label: `${d.getDate()}/${d.getMonth() + 1}`,
-    });
-  }
-  return days;
-}
-
 export function ClubProfilePage() {
   const { subdomain } = useParams<{ subdomain: string }>();
-  const { token } = useAuth();
+  useAuth(); // context needed by ProviderBooking children
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [slots, setSlots] = useState<SlotData[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [selectedResource, setSelectedResource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
 
   const loadProfile = useCallback(async () => {
@@ -147,42 +211,11 @@ export function ClubProfilePage() {
     try {
       const data = await apiJson<ProfileData>(`/tenants/${encodeURIComponent(subdomain)}/profile`, { auth: false });
       setProfile(data);
-      if (data.resources.length > 0 && !selectedResource) {
-        setSelectedResource(data.resources[0].id);
-      }
     } catch { /* */ }
     finally { setLoading(false); }
-  }, [subdomain, selectedResource]);
-
-  const loadSlots = useCallback(async () => {
-    if (!subdomain || !token || !selectedResource) return;
-    try {
-      const res = await apiJson<{ date: string; slots: SlotData[] }>(
-        `/tenants/${encodeURIComponent(subdomain)}/profile/slots?date=${selectedDate}${selectedResource ? `&resourceId=${selectedResource}` : ''}`,
-      );
-      setSlots(res.slots);
-    } catch { setSlots([]); }
-  }, [subdomain, selectedDate, selectedResource, token]);
+  }, [subdomain]);
 
   useEffect(() => { void loadProfile(); }, [loadProfile]);
-  useEffect(() => { if (profile && token) void loadSlots(); }, [profile, selectedDate, selectedResource, loadSlots, token]);
-
-  async function handleBook(slotId: string) {
-    if (!token || !subdomain) return;
-    setBooking(true);
-    try {
-      await apiJson(`/resource-booking/book?tenant=${encodeURIComponent(subdomain)}`, {
-        method: 'POST',
-        body: JSON.stringify({ resourceSlotId: slotId }),
-      });
-      alert('Rezervasyon oluşturuldu! ✅');
-      void loadSlots();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Rezervasyon başarısız');
-    } finally { setBooking(false); }
-  }
-
-  const dates = getNext7Days();
 
   if (loading) return <div className="public-shell"><div className="profile-loading">Yükleniyor...</div></div>;
   if (!profile) return <div className="public-shell"><div className="profile-loading">Profil bulunamadı</div></div>;
@@ -280,72 +313,14 @@ export function ClubProfilePage() {
           </section>
         )}
 
-        {/* Bugünkü Boş Masaj Seansları */}
-        {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('massage')).length > 0 && (
-          <section className="profile-section">
-            <h2>💆 Bugünkü Boş Masaj Seansları</h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
-              Bugün müsait masaj saatlerini görüntüleyin ve hemen randevu alın.
-            </p>
-            {token ? (
-              <TodayMassageSlots subdomain={subdomain!} />
-            ) : (
-              <div className="login-required-box">
-                <p>Müsait saatleri görmek ve randevu almak için üye olmanız gerekiyor.</p>
-                <div className="login-required-actions">
-                  <Link to="/register" className="btn-primary">Üye Ol</Link>
-                  <Link to="/login" className="btn-outline">Giriş Yap</Link>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
+        {/* 🏋️ PT Randevu */}
+        <ProviderBooking subdomain={subdomain!} category="personal_training" title="🏋️ PT Randevu — Eğitmen Seç" />
 
-        {/* Rezervasyon */}
-        {profile.resources.length > 0 && (
-          <section className="profile-section">
-            <h2>📅 Rezervasyon</h2>
-            <div className="resource-tabs">
-              {profile.resources.map((r) => (
-                <button key={r.id} className={`resource-tab ${selectedResource === r.id ? 'active' : ''}`} onClick={() => setSelectedResource(r.id)}>
-                  {r.name} · {r.price}₺
-                </button>
-              ))}
-            </div>
-            {token ? (
-              <>
-                <div className="date-tabs">
-                  {dates.map((d) => (
-                    <button key={d.value} className={`date-tab ${selectedDate === d.value ? 'active' : ''}`} onClick={() => setSelectedDate(d.value)}>
-                      <span className="date-day">{d.dayName}</span>
-                      <span className="date-num">{d.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {slots.length === 0 ? (
-                  <p className="no-slots">Bu tarihte müsait slot yok</p>
-                ) : (
-                  <div className="slots-grid">
-                    {slots.map((s) => (
-                      <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
-                        <span className="slot-time">{s.startTime}</span>
-                        <span className="slot-price">{s.price}₺</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="login-required-box">
-                <p>📋 Müsait saatleri görmek ve rezervasyon yapmak için üye olmanız gerekiyor.</p>
-                <div className="login-required-actions">
-                  <Link to="/register" className="btn-primary">Üye Ol</Link>
-                  <Link to="/login" className="btn-outline">Giriş Yap</Link>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
+        {/* 💆 Masaj Randevu */}
+        <ProviderBooking subdomain={subdomain!} category="massage" title="💆 Masaj Randevu — Masöz Seç" />
+
+        {/* 🎾 Kort Kiralama (O'Padel gibi) */}
+        <ProviderBooking subdomain={subdomain!} category="court_rental" title="🎾 Kort Rezervasyonu" />
 
         {/* Eğitmenler */}
         {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('personal_training')).length > 0 && (
