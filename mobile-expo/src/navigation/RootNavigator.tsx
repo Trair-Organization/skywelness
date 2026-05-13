@@ -14,6 +14,7 @@ import { TrainerRegisterScreen } from '../screens/onboarding/TrainerRegisterScre
 import { MemberTabNavigator } from './MemberTabNavigator';
 import { TrainerTabNavigator } from './TrainerTabNavigator';
 import { MemberPendingApprovalScreen } from '../screens/MemberPendingApprovalScreen';
+import { PartnerProfileScreen } from '../screens/member/PartnerProfileScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -114,6 +115,7 @@ export function RootNavigator() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="TrainerRegister" component={TrainerRegisterScreen} />
         <Stack.Screen name="PendingApproval" component={MemberPendingApprovalScreen} />
+        <Stack.Screen name="PartnerProfile" component={PartnerProfileScreen} />
         <Stack.Screen name="Main" component={MemberTabNavigator} />
         <Stack.Screen name="TrainerMain" component={TrainerTabNavigator} />
       </Stack.Navigator>

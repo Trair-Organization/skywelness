@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Register: { preselectedSubdomain?: string; preselectedGoal?: string } | undefined;
   TrainerRegister: undefined;
   PendingApproval: undefined;
+  PartnerProfile: { subdomain: string };
   Main: undefined;
   TrainerMain: undefined;
 };

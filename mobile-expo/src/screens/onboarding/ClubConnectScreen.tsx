@@ -1241,21 +1241,11 @@ export function ClubConnectScreen() {
             <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: clubX }] }]}>
               {[...apiClubs, ...apiClubs].map((club, idx) => {
                 const handlePress = () => {
-                  if (isAuthenticated) {
-                    // Giriş yapmış kullanıcı → profil sayfasına git
-                    (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                      'Main',
-                      { screen: 'PartnerProfile', params: { subdomain: club.subdomain } },
-                    );
-                  } else {
-                    // Giriş yapmamış → eski modal davranışı
-                    setPreviewClub({
-                      id: club.id,
-                      name: club.name,
-                      subdomain: club.subdomain,
-                      logoUrl: club.logoUrl,
-                    });
-                  }
+                  // Profil sayfasına git — hem root stack hem tab navigator'dan çalışır
+                  (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                    'PartnerProfile',
+                    { subdomain: club.subdomain },
+                  );
                 };
                 const cta = resolveClubCta(club);
                 const ctaDisabled = cta === 'pending' || cta === 'rejected';
