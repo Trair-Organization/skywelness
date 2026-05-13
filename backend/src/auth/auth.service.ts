@@ -513,9 +513,25 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
       if (matches.length > 1) {
-        throw new BadRequestException(
-          'This email is registered in more than one club. Please select your club or enter your club code.',
-        );
+        // Şifreyi doğrula (ilk eşleşen ile)
+        const firstMatch = matches[0];
+        const passwordValid = await bcrypt.compare(dto.password, firstMatch.passwordHash);
+        if (!passwordValid) {
+          throw new UnauthorizedException('Invalid credentials');
+        }
+        // Birden fazla kulüp — kulüp seçim ekranı için liste dön (token yok)
+        return {
+          multiTenant: true as const,
+          tenants: matches
+            .filter((m) => m.tenant)
+            .map((m) => ({
+              id: m.tenant.id,
+              name: m.tenant.name,
+              subdomain: m.tenant.subdomain,
+              logoUrl: m.tenant.logoUrl,
+              role: m.role,
+            })),
+        };
       }
       user = matches[0] ?? null;
     }
