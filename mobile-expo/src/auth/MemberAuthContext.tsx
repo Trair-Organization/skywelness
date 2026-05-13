@@ -318,7 +318,10 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
 
     setLoadingAuth(true);
     try {
-      const res = await apiJson<AuthRes>('/auth/login', {
+      const rawRes = await apiJson<
+        | AuthRes
+        | { multiTenant: true; tenants: Array<{ id: string; name: string; subdomain: string; role: string }> }
+      >('/auth/login', {
         method: 'POST',
         auth: false,
         body: JSON.stringify({
@@ -326,6 +329,41 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
           password: normalizedPassword,
         }),
       });
+
+      // Multi-tenant response — birden fazla kulüp, otomatik seç
+      if ('multiTenant' in rawRes && rawRes.multiTenant) {
+        // Mevcut tenant varsa onu seç, yoksa ilk admin rolünü, yoksa ilk olanı
+        const currentSub = subdomain;
+        const match =
+          rawRes.tenants.find((t) => t.subdomain === currentSub) ??
+          rawRes.tenants.find((t) => t.role === 'administrator') ??
+          rawRes.tenants[0];
+        if (!match) {
+          Alert.alert(t('login.section'), t('login.failed'));
+          return;
+        }
+        // Seçilen tenant ile tekrar login
+        const res = await apiJson<AuthRes>('/auth/login', {
+          method: 'POST',
+          auth: false,
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password: normalizedPassword,
+            tenantSubdomain: match.subdomain,
+          }),
+        });
+        const resolvedSub = (res.tenantSubdomain ?? match.subdomain).trim().toLowerCase();
+        const tenantInfo = await apiJson<TenantInfo>(
+          `/tenants/by-subdomain/${encodeURIComponent(resolvedSub)}`,
+          { auth: false },
+        );
+        setTenant(tenantInfo);
+        setSubdomain(resolvedSub);
+        await completeSignIn(res, tenantInfo);
+        return;
+      }
+
+      const res = rawRes as AuthRes;
       console.log('[AUTH] login response', {
         hasToken: !!res.accessToken,
         hasRefresh: !!res.refreshToken,
