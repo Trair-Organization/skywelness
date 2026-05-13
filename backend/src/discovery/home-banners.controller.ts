@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { HomeBanner } from '../database/entities/home-banner.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../database/entities/user.entity';
+import { UserRole } from '../database/enums';
 
 @SkipThrottle()
 @Controller('home-banners')
