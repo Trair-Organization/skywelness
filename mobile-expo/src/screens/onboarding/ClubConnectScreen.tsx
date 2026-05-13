@@ -305,6 +305,7 @@ export function ClubConnectScreen() {
   const sliderX = useRef(new Animated.Value(0)).current;
   const trainerX = useRef(new Animated.Value(0)).current;
   const eventX = useRef(new Animated.Value(0)).current;
+  const clubX = useRef(new Animated.Value(0)).current;
   const headlineOpacity = useRef(new Animated.Value(1)).current;
   const testimonialOpacity = useRef(new Animated.Value(1)).current;
   const runSafe = (fn?: () => Promise<unknown> | unknown) => {
@@ -617,6 +618,23 @@ export function ClubConnectScreen() {
     animation.start();
     return () => animation.stop();
   }, [trainerX, apiTrainers.length]);
+
+  useEffect(() => {
+    if (apiClubs.length === 0) return;
+    const trackWidth = TRAINER_STEP * apiClubs.length;
+    const duration = 10000 * apiClubs.length;
+    clubX.setValue(0);
+    const animation = Animated.loop(
+      Animated.timing(clubX, {
+        toValue: -trackWidth,
+        duration,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [clubX, apiClubs.length]);
 
   useEffect(() => {
     if (apiEvents.length === 0) return;
@@ -946,13 +964,9 @@ export function ClubConnectScreen() {
                     <Text style={styles.trainerName} numberOfLines={1}>
                       {trainer.name}
                     </Text>
-                    <View style={styles.trainerSpecRow}>
-                      {trainer.specialties.map((spec) => (
-                        <View key={spec} style={styles.trainerSpecChip}>
-                          <Text style={styles.trainerSpecTxt}>{spec}</Text>
-                        </View>
-                      ))}
-                    </View>
+                    <Text style={styles.trainerSpecLine} numberOfLines={1}>
+                      {trainer.specialties.join(' · ')}
+                    </Text>
                     <View style={styles.trainerRatingRow}>
                       <Text style={styles.trainerRatingValue}>★ {trainer.ratingValue}</Text>
                       <Text style={styles.trainerRatingMeta}>· {trainer.reviewCount}</Text>
@@ -1223,100 +1237,80 @@ export function ClubConnectScreen() {
         </View>
 
         {apiClubs.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.trainerScrollContent}
-          >
-            {apiClubs.map((club) => {
-              const handlePress = () => {
-                setPreviewClub({
-                  id: club.id,
-                  name: club.name,
-                  subdomain: club.subdomain,
-                  logoUrl: club.logoUrl,
-                });
-              };
-              return (
-                <Pressable
-                  key={club.id}
-                  onPress={handlePress}
-                  style={({ pressed }) => [styles.clubCardNew, pressed && styles.cardPressed]}
-                >
-                  <View style={styles.clubCardLogoArea}>
-                    {club.logoUrl ? (
-                      <Image
-                        source={{ uri: club.logoUrl }}
-                        style={styles.clubCardLogoImg}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <Text style={styles.clubLogoFallback}>
-                        {club.name.slice(0, 2).toUpperCase()}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.clubCardBody}>
-                    <View>
-                      <Text style={styles.clubCardName} numberOfLines={2}>
-                        {club.name}
-                      </Text>
-                      <Text style={styles.clubCardLocation} numberOfLines={1}>
-                        {club.location ?? ''}
-                      </Text>
-                      {club.services.length > 0 && (
-                        <Text style={styles.clubCardServices} numberOfLines={1}>
-                          {club.services.slice(0, 3).join(' · ')}
+          <View style={styles.sliderViewport} pointerEvents="box-none">
+            <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: clubX }] }]}>
+              {[...apiClubs, ...apiClubs].map((club, idx) => {
+                const handlePress = () => {
+                  setPreviewClub({
+                    id: club.id,
+                    name: club.name,
+                    subdomain: club.subdomain,
+                    logoUrl: club.logoUrl,
+                  });
+                };
+                const cta = resolveClubCta(club);
+                const ctaDisabled = cta === 'pending' || cta === 'rejected';
+                return (
+                  <View key={`${club.id}-${idx}`} style={styles.clubCardWrapper}>
+                    <Pressable
+                      onPress={handlePress}
+                      style={({ pressed }) => [styles.clubCardNew, pressed && styles.cardPressed]}
+                    >
+                      <View style={styles.clubCardLogoArea}>
+                        {club.logoUrl ? (
+                          <Image
+                            source={{ uri: club.logoUrl }}
+                            style={styles.clubCardLogoImg}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Text style={styles.clubLogoFallback}>
+                            {club.name.slice(0, 2).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.clubCardBody}>
+                        <Text style={styles.clubCardName} numberOfLines={2}>
+                          {club.name}
                         </Text>
-                      )}
-                    </View>
-                    <View style={styles.clubCardCtas}>
-                      {(() => {
-                        const cta = resolveClubCta(club);
-                        const disabled = cta === 'pending' || cta === 'rejected';
-                        return (
-                          <Pressable
-                            style={[
-                              styles.clubCardCtaJoin,
-                              disabled && { opacity: 0.5 },
-                              cta === 'book' && {
-                                borderColor: 'rgba(52,211,153,0.4)',
-                                backgroundColor: 'rgba(52,211,153,0.1)',
-                              },
-                            ]}
-                            onPress={() => handleClubCta(club, cta)}
-                          >
-                            <Text
-                              style={[
-                                styles.clubCardCtaJoinTxt,
-                                cta === 'book' && { color: premium.accentGreen },
-                              ]}
-                            >
-                              {ctaLabel(cta)}
-                            </Text>
-                          </Pressable>
-                        );
-                      })()}
-                      <Pressable
-                        style={styles.trainerCtaPill}
-                        onPress={() => {
-                          void contactClub({
-                            clubSubdomain: club.subdomain,
-                            clubName: club.name,
-                            clubId: club.id,
-                            prefillMessage: `${club.name} hakkında bilgi almak istiyorum.`,
-                          });
-                        }}
+                        <Text style={styles.clubCardLocation} numberOfLines={1}>
+                          {club.location ?? ''}
+                        </Text>
+                        {club.services.length > 0 && (
+                          <Text style={styles.clubCardServices} numberOfLines={2}>
+                            {club.services.slice(0, 4).join(' · ')}
+                          </Text>
+                        )}
+                        {club.avgRating && club.avgRating !== '0.00' && (
+                          <Text style={styles.clubCardRating}>★ {club.avgRating}</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.clubCardCtaBtn,
+                        ctaDisabled && { opacity: 0.5 },
+                        cta === 'book' && styles.clubCardCtaBtnBook,
+                        cta === 'enter' && styles.clubCardCtaBtnEnter,
+                      ]}
+                      onPress={() => handleClubCta(club, cta)}
+                      disabled={ctaDisabled}
+                    >
+                      <Text
+                        style={[
+                          styles.clubCardCtaBtnTxt,
+                          cta === 'book' && { color: premium.accentGreen },
+                          cta === 'enter' && { color: premium.accentBlue },
+                        ]}
                       >
-                        <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                        <Text style={styles.trainerCtaPillTxt}>{t('onboarding.clubCardCta')}</Text>
-                      </Pressable>
-                    </View>
+                        {ctaLabel(cta)}
+                      </Text>
+                    </Pressable>
                   </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                );
+              })}
+            </Animated.View>
+          </View>
         )}
 
         <View style={styles.sectionHeader}>
@@ -1342,20 +1336,23 @@ export function ClubConnectScreen() {
                   minute: '2-digit',
                 });
                 return (
-                  <Pressable
-                    key={`${evt.id}-${idx}`}
-                    onPress={() => setSelectedEvent(evt)}
-                    style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
-                  >
-                    {evt.imageUrl && (
-                      <Image
-                        source={{ uri: evt.imageUrl }}
-                        style={styles.eventCardApiImage}
-                        resizeMode="cover"
-                      />
-                    )}
-                    <View style={styles.eventCardApiBody}>
-                      <View>
+                  <View key={`${evt.id}-${idx}`} style={styles.eventCardWrapper}>
+                    <Pressable
+                      onPress={() => setSelectedEvent(evt)}
+                      style={({ pressed }) => [styles.eventCardApi, pressed && styles.cardPressed]}
+                    >
+                      {evt.imageUrl ? (
+                        <Image
+                          source={{ uri: evt.imageUrl }}
+                          style={styles.eventCardApiImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.eventCardApiImagePlaceholder}>
+                          <Text style={{ fontSize: 24 }}>📅</Text>
+                        </View>
+                      )}
+                      <View style={styles.eventCardApiBody}>
                         <View style={styles.eventCardApiHeader}>
                           <Text style={styles.eventCardApiDate}>{dateStr}</Text>
                           <Text style={styles.eventCardApiTime}>{timeStr}</Text>
@@ -1366,13 +1363,18 @@ export function ClubConnectScreen() {
                         {evt.coachName && (
                           <Text style={styles.eventCardApiCoach}>🏋️ {evt.coachName}</Text>
                         )}
+                        {evt.clubName && (
+                          <Text style={styles.eventCardApiClub}>{evt.clubName}</Text>
+                        )}
                       </View>
-                      <View style={styles.trainerCtaPill}>
-                        <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                        <Text style={styles.trainerCtaPillTxt}>Katıl</Text>
-                      </View>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                    <Pressable
+                      style={styles.eventCardCtaBtn}
+                      onPress={() => setSelectedEvent(evt)}
+                    >
+                      <Text style={styles.eventCardCtaBtnTxt}>📅 Detay & Katıl</Text>
+                    </Pressable>
+                  </View>
                 );
               })}
             </Animated.View>
@@ -1392,52 +1394,76 @@ export function ClubConnectScreen() {
           <View style={styles.sliderViewport} pointerEvents="box-none">
             <Animated.View style={[styles.sliderTrack, { transform: [{ translateX: trainerX }] }]}>
               {[...apiTrainers, ...apiTrainers].map((trainer, idx) => (
-                <Pressable
-                  key={`${trainer.id}-${idx}`}
-                  onPress={() => {
-                    void contactTrainer({
-                      trainerId: trainer.id,
-                      trainerUserId: trainer.userId,
-                      trainerName: trainer.name,
-                      clubName: trainer.clubName,
-                      clubSubdomain: trainer.clubSubdomain,
-                    });
-                  }}
-                  style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
-                >
-                  <View style={[styles.trainerAvatar, { backgroundColor: '#2563eb' }]}>
-                    <Text style={styles.trainerAvatarTxt}>
-                      {trainer.name
-                        .split(' ')
-                        .map((n: string) => n[0])
-                        .join('')
-                        .slice(0, 2)}
-                    </Text>
-                  </View>
-                  <Text style={styles.trainerName} numberOfLines={1}>
-                    {trainer.name}
-                  </Text>
-                  <View style={styles.trainerSpecRow}>
-                    {trainer.specialties.slice(0, 2).map((spec: string) => (
-                      <View key={spec} style={styles.trainerSpecChip}>
-                        <Text style={styles.trainerSpecTxt}>{spec}</Text>
+                <View key={`${trainer.id}-${idx}`} style={styles.trainerCardWrapper}>
+                  <Pressable
+                    onPress={() => {
+                      void contactTrainer({
+                        trainerId: trainer.id,
+                        trainerUserId: trainer.userId,
+                        trainerName: trainer.name,
+                        clubName: trainer.clubName,
+                        clubSubdomain: trainer.clubSubdomain,
+                      });
+                    }}
+                    style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
+                  >
+                    {/* Rating badge */}
+                    <View style={styles.trainerRatingRow}>
+                      <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
+                    </View>
+                    {/* Photo / Avatar area */}
+                    <View style={styles.trainerPhotoArea}>
+                      {trainer.photoUrl ? (
+                        <Image
+                          source={{ uri: trainer.photoUrl }}
+                          style={styles.trainerPhotoImg}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={styles.trainerAvatarTxt}>
+                          {trainer.name
+                            .split(' ')
+                            .map((n: string) => n[0])
+                            .join('')
+                            .slice(0, 2)}
+                        </Text>
+                      )}
+                    </View>
+                    {/* Info */}
+                    <View style={styles.trainerInfoArea}>
+                      <Text style={styles.trainerName} numberOfLines={1}>
+                        {trainer.name}
+                      </Text>
+                      <Text style={styles.trainerSpecLine} numberOfLines={1}>
+                        {trainer.specialties.slice(0, 3).join(' · ')}
+                      </Text>
+                      <View style={styles.trainerMetaRow}>
+                        <Text style={styles.trainerClub} numberOfLines={1}>
+                          {trainer.clubName}
+                        </Text>
+                        {trainer.totalSessions > 0 && (
+                          <Text style={styles.trainerSessionsTxt}>
+                            {trainer.totalSessions} seans
+                          </Text>
+                        )}
                       </View>
-                    ))}
-                  </View>
-                  <View style={styles.trainerRatingRow}>
-                    <Text style={styles.trainerRatingValue}>★ {trainer.avgRating}</Text>
-                  </View>
-                  <View style={styles.trainerSessionsBadge}>
-                    <Text style={styles.trainerSessionsTxt}>{trainer.totalSessions} seans</Text>
-                  </View>
-                  <Text style={styles.trainerClub} numberOfLines={1}>
-                    {trainer.clubName}
-                  </Text>
-                  <View style={styles.trainerCtaPill}>
-                    <Text style={styles.trainerCtaPillIcon}>💬</Text>
-                    <Text style={styles.trainerCtaPillTxt}>İletişime Geç</Text>
-                  </View>
-                </Pressable>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    style={styles.trainerCtaBtn}
+                    onPress={() => {
+                      void contactTrainer({
+                        trainerId: trainer.id,
+                        trainerUserId: trainer.userId,
+                        trainerName: trainer.name,
+                        clubName: trainer.clubName,
+                        clubSubdomain: trainer.clubSubdomain,
+                      });
+                    }}
+                  >
+                    <Text style={styles.trainerCtaBtnTxt}>💬 İletişime Geç</Text>
+                  </Pressable>
+                </View>
               ))}
             </Animated.View>
           </View>
@@ -2450,16 +2476,31 @@ const styles = StyleSheet.create({
   },
   trainerCard: {
     width: TRAINER_CARD_WIDTH,
+    height: 200,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(8,16,28,0.7)',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 220,
+    overflow: 'hidden',
     position: 'relative',
+  },
+  trainerCardWrapper: {
+    width: TRAINER_CARD_WIDTH,
+    gap: 8,
+  },
+  trainerPhotoArea: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#1e3a5f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  trainerPhotoImg: {
+    width: '100%',
+    height: 160,
+    position: 'absolute',
+    top: 0,
   },
   trainerAvatar: {
     width: 56,
@@ -2467,61 +2508,78 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
-    marginTop: 8,
+    backgroundColor: '#2563eb',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.15)',
   },
   trainerAvatarTxt: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+  },
+  trainerInfoArea: {
+    flex: 1,
+    padding: 12,
+    gap: 3,
+    justifyContent: 'center',
   },
   trainerName: {
     color: premium.text,
     fontSize: 14,
     fontWeight: '800',
-    marginBottom: 4,
-    textAlign: 'center',
   },
-  trainerSpecRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  trainerSpecChip: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-  },
-  trainerSpecTxt: {
+  trainerSpecLine: {
     color: premium.textMuted,
-    fontSize: 9,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  trainerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  trainerClub: {
+    color: premium.accentBlue,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.2,
+  },
+  trainerSessionsTxt: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
   },
   trainerRatingRow: {
     position: 'absolute',
     top: 8,
     right: 8,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: 'rgba(251,191,36,0.15)',
+    backgroundColor: 'rgba(251,191,36,0.2)',
     borderRadius: 8,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
   },
   trainerRatingValue: {
     color: '#fbbf24',
     fontSize: 11,
     fontWeight: '900',
+  },
+  trainerCtaBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.4)',
+    backgroundColor: 'rgba(34,197,94,0.06)',
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  trainerCtaBtnTxt: {
+    color: premium.accentGreen,
+    fontSize: 12,
+    fontWeight: '800',
   },
   trainerRatingMeta: {
     color: premium.textMuted,
@@ -2536,17 +2594,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
-  },
-  trainerSessionsTxt: {
-    color: premium.accentBlue,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  trainerClub: {
-    color: premium.accentBlue,
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'center',
   },
   trainerCtaPill: {
     flexDirection: 'row',
@@ -2577,13 +2624,16 @@ const styles = StyleSheet.create({
   },
   clubCardNew: {
     width: TRAINER_CARD_WIDTH,
-    minHeight: 220,
+    height: 200,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.3)',
+    borderColor: premium.glassBorder,
     backgroundColor: 'rgba(8,16,28,0.85)',
     overflow: 'hidden',
-    justifyContent: 'space-between',
+  },
+  clubCardWrapper: {
+    width: TRAINER_CARD_WIDTH,
+    gap: 8,
   },
   clubCardLogoArea: {
     width: '100%',
@@ -2598,10 +2648,8 @@ const styles = StyleSheet.create({
     height: '80%',
   },
   clubCardBody: {
-    flex: 1,
     padding: 12,
     gap: 4,
-    justifyContent: 'space-between',
   },
   clubCardName: {
     color: premium.text,
@@ -2617,6 +2665,35 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     fontSize: 9,
     fontWeight: '600',
+    marginTop: 2,
+    lineHeight: 13,
+  },
+  clubCardRating: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  clubCardCtaBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.4)',
+    backgroundColor: 'rgba(251,191,36,0.08)',
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  clubCardCtaBtnBook: {
+    borderColor: 'rgba(52,211,153,0.4)',
+    backgroundColor: 'rgba(52,211,153,0.08)',
+  },
+  clubCardCtaBtnEnter: {
+    borderColor: 'rgba(56,189,248,0.4)',
+    backgroundColor: 'rgba(56,189,248,0.08)',
+  },
+  clubCardCtaBtnTxt: {
+    color: '#fbbf24',
+    fontSize: 12,
+    fontWeight: '800',
   },
   clubCardCtas: {
     gap: 6,
@@ -2635,26 +2712,53 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
-  eventCardApi: {
+  eventCardWrapper: {
     width: TRAINER_CARD_WIDTH,
-    minHeight: 220,
+    gap: 8,
+  },
+  eventCardApi: {
+    width: '100%',
+    height: 180,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(8,16,28,0.7)',
     overflow: 'hidden',
-    justifyContent: 'space-between',
+  },
+  eventCardCtaBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    backgroundColor: 'rgba(56,189,248,0.06)',
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  eventCardCtaBtnTxt: {
+    color: premium.accentBlue,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  eventCardApiClub: {
+    color: premium.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
   },
   eventCardApiImage: {
     width: '100%',
     height: 80,
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
+  eventCardApiImagePlaceholder: {
+    width: '100%',
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   eventCardApiBody: {
-    flex: 1,
     padding: 12,
-    gap: 4,
-    justifyContent: 'space-between',
+    gap: 6,
   },
   eventCardApiHeader: {
     flexDirection: 'row',
@@ -2680,11 +2784,6 @@ const styles = StyleSheet.create({
   eventCardApiCoach: {
     color: premium.textMuted,
     fontSize: 10,
-    fontWeight: '600',
-  },
-  eventCardApiClub: {
-    color: premium.textMuted,
-    fontSize: 9,
     fontWeight: '600',
   },
   modalRatingRow: {
