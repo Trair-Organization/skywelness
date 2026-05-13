@@ -29,7 +29,9 @@ export class DiscoveryService {
           !t.subdomain.startsWith('coach-') &&
           !t.subdomain.startsWith('e2e') &&
           t.subdomain !== 'independent-hub' &&
-          t.subdomain !== 'demo',
+          t.subdomain !== 'demo' &&
+          // Private + non-featured kulüpleri keşif'ten gizle (ör. SkyCafe — sadece üyelerine görünür)
+          !(t.visibilityMode === 'private' && !t.featured),
       )
       .map((t) => ({
         id: t.id,
