@@ -264,6 +264,11 @@ export function PublicDiscoverPage() {
                     ★ {Number(tr.avgRating).toFixed(1)} · {tr.totalSessions} seans
                   </p>
                   <p className="discover-meta">{tr.clubName}</p>
+                  {tr.specialties.length > 0 && (
+                    <p className="discover-meta trainer-specialties">
+                      {tr.specialties.slice(0, 3).join(' · ')}
+                    </p>
+                  )}
                 </div>
               </Link>
             ))}
