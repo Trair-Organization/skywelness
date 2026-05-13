@@ -1,17 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { ResourceSlot } from '../database/entities/resource-slot.entity';
 import { Booking } from '../database/entities/booking.entity';
 import { User } from '../database/entities/user.entity';
+import { ClubEvent } from '../database/entities/club-event.entity';
+import { PackageType } from '../database/entities/package-type.entity';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 
 /**
  * Partner profil sayfası için tüm verileri toplayan servis.
- * Tek endpoint'te: tenant info, galeri, eğitmenler, kaynaklar, metrikler.
+ * Tek endpoint'te: tenant info, galeri, eğitmenler, kaynaklar, etkinlikler,
+ * paketler, metrikler.
  */
 @Injectable()
 export class TenantProfileService {
@@ -22,6 +25,8 @@ export class TenantProfileService {
     @InjectRepository(ResourceSlot) private readonly slotsRepo: Repository<ResourceSlot>,
     @InjectRepository(Booking) private readonly bookingsRepo: Repository<Booking>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
+    @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
   ) {}
 
   async getProfile(subdomain: string) {
@@ -41,14 +46,40 @@ export class TenantProfileService {
       order: { sortOrder: 'ASC' },
     });
 
+    // Yaklaşan etkinlikler
+    const now = new Date();
+    const events = await this.eventsRepo.find({
+      where: { tenantId: tenant.id, startsAt: MoreThanOrEqual(now) },
+      order: { startsAt: 'ASC' },
+      take: 10,
+    });
+
+    // Paketler (aktif)
+    const packages = await this.packageTypesRepo.find({
+      where: { tenantId: tenant.id, active: true },
+      order: { createdAt: 'ASC' },
+    });
+
     // Sosyal kanıt metrikleri
     const [memberCount, totalBookings, completedBookings] = await Promise.all([
       this.usersRepo.count({
-        where: { tenantId: tenant.id, role: UserRole.MEMBER, accountStatus: MemberAccountStatus.ACTIVE },
+        where: {
+          tenantId: tenant.id,
+          role: UserRole.MEMBER,
+          accountStatus: MemberAccountStatus.ACTIVE,
+        },
       }),
       this.bookingsRepo.count({ where: { tenantId: tenant.id } }),
       this.bookingsRepo.count({ where: { tenantId: tenant.id, status: 'completed' } }),
     ]);
+
+    // Bu ay yapılan rezervasyon sayısı (sosyal kanıt)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthBookings = await this.bookingsRepo
+      .createQueryBuilder('b')
+      .where('b.tenantId = :tid', { tid: tenant.id })
+      .andWhere('b.createdAt >= :start', { start: monthStart })
+      .getCount();
 
     // Workspace type'a göre profil tipi belirle
     const workspaceType = (tenant.settings as { workspaceType?: string } | null)?.workspaceType;
@@ -68,23 +99,17 @@ export class TenantProfileService {
       services: tenant.services ?? [],
       vertical: tenant.vertical,
       visibilityMode: tenant.visibilityMode,
-      phone: tenant.phone,
-      email: tenant.email,
-      website: tenant.website,
       avgRating: tenant.avgRating,
       reviewCount: tenant.reviewCount,
       priceRange: tenant.priceRange,
 
       // Profil tipi
-      profileType: isIndependentTrainer
-        ? 'trainer'
-        : isPartnerClub
-          ? 'club'
-          : 'other',
+      profileType: isIndependentTrainer ? 'trainer' : isPartnerClub ? 'club' : 'other',
 
-      // Eğitmenler (kulüp için)
+      // Eğitmenler
       trainers: trainers.map((t) => ({
         id: t.id,
+        userId: t.userId,
         name: `${t.user.firstName} ${t.user.lastName}`.trim(),
         photoUrl: t.photoUrl ?? t.user.photoUrl,
         specializations: t.specializations ?? [],
@@ -106,22 +131,47 @@ export class TenantProfileService {
         imageUrl: r.imageUrl,
       })),
 
+      // Yaklaşan etkinlikler
+      events: events.map((e) => ({
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        coachName: e.coachName,
+        location: e.location,
+        imageUrl: e.imageUrl,
+        startsAt: e.startsAt,
+        endsAt: e.endsAt,
+        capacity: e.capacity,
+        category: e.category ?? 'general',
+      })),
+
+      // Paketler & Fiyatlar
+      packages: packages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        sessionCount: p.sessionCount,
+        price: p.price,
+        currency: p.currency,
+        validityDays: p.validityDays,
+        sessionType: p.sessionType,
+      })),
+
       // Sosyal kanıt
       metrics: {
         memberCount,
         totalBookings,
         completedBookings,
         trainerCount: trainers.length,
+        thisMonthBookings,
       },
     };
   }
 
   /**
    * Profil sayfasındaki ajanda — belirli bir gün için müsait slotlar.
-   * Public kulüpte herkes görebilir, private'da membership check yapılır.
    */
   async getAvailableSlots(
-    user: User,
+    _user: User,
     subdomain: string,
     date?: string,
     resourceId?: string,
@@ -131,20 +181,19 @@ export class TenantProfileService {
 
     const targetDate = date || new Date().toISOString().slice(0, 10);
 
-    const where: Record<string, unknown> = {
-      tenantId: tenant.id,
-      date: targetDate,
-      status: 'available',
-    };
+    const qb = this.slotsRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.resource', 'r')
+      .where('s.tenantId = :tid', { tid: tenant.id })
+      .andWhere('s.date = :date', { date: targetDate })
+      .andWhere('s.status = :status', { status: 'available' })
+      .orderBy('s.startTime', 'ASC');
+
     if (resourceId) {
-      where.resourceId = resourceId;
+      qb.andWhere('s.resourceId = :rid', { rid: resourceId });
     }
 
-    const slots = await this.slotsRepo.find({
-      where: where as never,
-      relations: ['resource'],
-      order: { startTime: 'ASC' },
-    });
+    const slots = await qb.getMany();
 
     return {
       date: targetDate,

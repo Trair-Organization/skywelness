@@ -9,6 +9,8 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { ResourceSlot } from '../database/entities/resource-slot.entity';
 import { Booking } from '../database/entities/booking.entity';
+import { ClubEvent } from '../database/entities/club-event.entity';
+import { PackageType } from '../database/entities/package-type.entity';
 import { TenantsController } from './tenants.controller';
 import { TenantsService } from './tenants.service';
 import { TenantJoinRequestController } from './tenant-join-request.controller';
@@ -31,6 +33,8 @@ import { TenantVisibilityService } from './tenant-visibility.service';
       Resource,
       ResourceSlot,
       Booking,
+      ClubEvent,
+      PackageType,
     ]),
     AuthModule,
     NotificationsModule,

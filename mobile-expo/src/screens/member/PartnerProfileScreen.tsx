@@ -5,6 +5,8 @@ import {
   Dimensions,
   Easing,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,7 +24,7 @@ import { premium } from '../../theme/premiumTheme';
 import type { MemberTabParamList } from '../../navigation/memberTabTypes';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SLIDER_HEIGHT = 220;
+const SLIDER_HEIGHT = 240;
 
 type ProfileData = {
   id: string;
@@ -36,15 +38,13 @@ type ProfileData = {
   services: string[];
   vertical: string;
   visibilityMode: 'public' | 'private';
-  phone: string | null;
-  email: string | null;
-  website: string | null;
   avgRating: string;
   reviewCount: number;
   priceRange: string | null;
   profileType: 'club' | 'trainer' | 'other';
   trainers: Array<{
     id: string;
+    userId: string;
     name: string;
     photoUrl: string | null;
     specializations: string[];
@@ -63,11 +63,33 @@ type ProfileData = {
     description: string | null;
     imageUrl: string | null;
   }>;
+  events: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    coachName: string | null;
+    location: string | null;
+    imageUrl: string | null;
+    startsAt: string;
+    endsAt: string | null;
+    capacity: number;
+    category: string;
+  }>;
+  packages: Array<{
+    id: string;
+    name: string;
+    sessionCount: number;
+    price: string;
+    currency: string;
+    validityDays: number;
+    sessionType: string;
+  }>;
   metrics: {
     memberCount: number;
     totalBookings: number;
     completedBookings: number;
     trainerCount: number;
+    thisMonthBookings: number;
   };
 };
 
@@ -92,7 +114,7 @@ export function PartnerProfileScreen() {
   const [selectedResource, setSelectedResource] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const sliderIndex = useRef(new Animated.Value(0)).current;
+  const [sliderPage, setSliderPage] = useState(0);
 
   const loadProfile = useCallback(async () => {
     if (!subdomain) return;
@@ -125,29 +147,8 @@ export function PartnerProfileScreen() {
     }
   }, [subdomain, selectedDate, selectedResource, token, tenant?.subdomain]);
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
-
-  useEffect(() => {
-    if (profile && token) loadSlots();
-  }, [profile, selectedDate, selectedResource, loadSlots, token]);
-
-  // Slider animation
-  useEffect(() => {
-    const images = profile?.galleryImages ?? [];
-    if (images.length <= 1) return;
-    const interval = setInterval(() => {
-      sliderIndex.setValue(0);
-      Animated.timing(sliderIndex, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: false,
-      }).start();
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [profile?.galleryImages, sliderIndex]);
+  useEffect(() => { loadProfile(); }, [loadProfile]);
+  useEffect(() => { if (profile && token) loadSlots(); }, [profile, selectedDate, selectedResource, loadSlots, token]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -175,6 +176,11 @@ export function PartnerProfileScreen() {
     }
   };
 
+  const onSliderScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setSliderPage(page);
+  };
+
   const dates = getNext7Days();
 
   if (loading) {
@@ -191,7 +197,7 @@ export function PartnerProfileScreen() {
     return (
       <GradientBackground>
         <View style={[styles.center, { paddingTop: insets.top + 80 }]}>
-          <Text style={styles.errorText}>Profil bulunamadı</Text>
+          <Text style={{ color: premium.textMuted, fontSize: 16 }}>Profil bulunamadı</Text>
         </View>
       </GradientBackground>
     );
@@ -199,9 +205,7 @@ export function PartnerProfileScreen() {
 
   const sliderImages = profile.galleryImages.length > 0
     ? profile.galleryImages
-    : profile.coverImageUrl
-      ? [profile.coverImageUrl]
-      : [];
+    : profile.coverImageUrl ? [profile.coverImageUrl] : [];
 
   return (
     <GradientBackground>
@@ -211,38 +215,43 @@ export function PartnerProfileScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={premium.accentBlue} />}
       >
         {/* Back button */}
-        <Pressable
-          style={[styles.backBtn, { top: insets.top + 10 }]}
-          onPress={() => navigation.goBack()}
-        >
+        <Pressable style={[styles.backBtn, { top: insets.top + 10 }]} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnTxt}>← Geri</Text>
         </Pressable>
 
-        {/* ═══ Slider / Galeri ═══ */}
+        {/* ═══ Slider ═══ */}
         <View style={styles.sliderContainer}>
           {sliderImages.length > 0 ? (
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              style={styles.slider}
-            >
-              {sliderImages.map((img, i) => (
-                <Image key={i} source={{ uri: img }} style={styles.sliderImage} resizeMode="cover" />
-              ))}
-            </ScrollView>
+            <>
+              <ScrollView
+                horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={onSliderScroll}
+                style={styles.slider}
+              >
+                {sliderImages.map((img, i) => (
+                  <Image key={i} source={{ uri: img }} style={styles.sliderImage} resizeMode="cover" />
+                ))}
+              </ScrollView>
+              {/* Dots */}
+              {sliderImages.length > 1 && (
+                <View style={styles.dotsRow}>
+                  {sliderImages.map((_, i) => (
+                    <View key={i} style={[styles.dot, sliderPage === i && styles.dotActive]} />
+                  ))}
+                </View>
+              )}
+            </>
           ) : (
             <View style={styles.sliderPlaceholder}>
               <Text style={{ fontSize: 48 }}>
                 {profile.vertical === 'padel' ? '🎾' : profile.profileType === 'trainer' ? '🏋️' : '🏢'}
               </Text>
+              <Text style={{ color: premium.textMuted, marginTop: 8, fontSize: 14 }}>{profile.name}</Text>
             </View>
           )}
-          {/* Gradient overlay */}
-          <View style={styles.sliderGradient} />
         </View>
 
-        {/* ═══ Header: Logo + İsim + Rating ═══ */}
+        {/* ═══ Header ═══ */}
         <View style={styles.headerSection}>
           <View style={styles.headerRow}>
             {profile.logoUrl && (
@@ -250,9 +259,7 @@ export function PartnerProfileScreen() {
             )}
             <View style={{ flex: 1 }}>
               <Text style={styles.headerName}>{profile.name}</Text>
-              {profile.location && (
-                <Text style={styles.headerLocation}>📍 {profile.location}</Text>
-              )}
+              {profile.location && <Text style={styles.headerLocation}>📍 {profile.location}</Text>}
             </View>
             {profile.avgRating !== '0.00' && (
               <View style={styles.ratingBadge}>
@@ -280,6 +287,12 @@ export function PartnerProfileScreen() {
                 <Text style={styles.metricLabel}>Eğitmen</Text>
               </View>
             )}
+            {profile.metrics.thisMonthBookings > 0 && (
+              <View style={styles.metricItem}>
+                <Text style={styles.metricValue}>{profile.metrics.thisMonthBookings}</Text>
+                <Text style={styles.metricLabel}>Bu ay</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -291,7 +304,7 @@ export function PartnerProfileScreen() {
           </View>
         )}
 
-        {/* ═══ Uzmanlık Alanları / Servisler ═══ */}
+        {/* ═══ Hizmetler ═══ */}
         {profile.services.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🎯 Hizmetler</Text>
@@ -305,63 +318,111 @@ export function PartnerProfileScreen() {
           </View>
         )}
 
-        {/* ═══ Kaynaklar & Fiyatlar ═══ */}
-        {profile.resources.length > 0 && (
+        {/* ═══ Etkinlikler ═══ */}
+        {profile.events.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🛍️ Ürün & Hizmetler</Text>
-            {profile.resources.map((r) => (
-              <Pressable
-                key={r.id}
-                style={[
-                  styles.resourceCard,
-                  selectedResource === r.id && styles.resourceCardActive,
-                ]}
-                onPress={() => setSelectedResource(r.id)}
-              >
+            <Text style={styles.sectionTitle}>📅 Etkinlikler</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {profile.events.map((evt) => {
+                const d = new Date(evt.startsAt);
+                return (
+                  <View key={evt.id} style={styles.eventMiniCard}>
+                    {evt.imageUrl ? (
+                      <Image source={{ uri: evt.imageUrl }} style={styles.eventMiniImg} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.eventMiniImgPlaceholder}><Text style={{ fontSize: 20 }}>📅</Text></View>
+                    )}
+                    <View style={styles.eventMiniBody}>
+                      <Text style={styles.eventMiniDate}>
+                        {d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} · {d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                      <Text style={styles.eventMiniTitle} numberOfLines={2}>{evt.title}</Text>
+                      {evt.coachName && <Text style={styles.eventMiniCoach}>🏋️ {evt.coachName}</Text>}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ═══ Paketler & Fiyatlar ═══ */}
+        {profile.packages.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>💎 Paketler & Fiyatlar</Text>
+            {profile.packages.map((pkg) => (
+              <View key={pkg.id} style={styles.packageCard}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.resourceName}>{r.name}</Text>
-                  <Text style={styles.resourceMeta}>
-                    👥 {r.capacity} kişi · ⏱ {r.durationMinutes} dk
+                  <Text style={styles.packageName}>{pkg.name}</Text>
+                  <Text style={styles.packageMeta}>
+                    {pkg.sessionCount} seans · {pkg.validityDays} gün geçerli
                   </Text>
-                  {r.description && (
-                    <Text style={styles.resourceDesc} numberOfLines={2}>{r.description}</Text>
-                  )}
+                  <Text style={styles.packageType}>
+                    {pkg.sessionType === 'personal_training' ? '🏋️ Personal Training' : '💆 Masaj'}
+                  </Text>
                 </View>
-                <Text style={styles.resourcePrice}>{r.price}₺</Text>
-              </Pressable>
+                <View style={styles.packagePriceBox}>
+                  <Text style={styles.packagePrice}>{pkg.price}₺</Text>
+                  <Text style={styles.packagePerSession}>
+                    {Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans
+                  </Text>
+                </View>
+              </View>
             ))}
           </View>
         )}
 
-        {/* ═══ Ajanda / Takvim ═══ */}
-        {profile.resources.length > 0 && token && (
+        {/* ═══ Kaynaklar & Ajanda ═══ */}
+        {profile.resources.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📅 Müsait Saatler</Text>
-            {/* Date picker */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateRow}>
-              {dates.map((d) => (
+            <Text style={styles.sectionTitle}>🛍️ Rezervasyon</Text>
+            {/* Resource seçimi */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              {profile.resources.map((r) => (
                 <Pressable
-                  key={d.value}
-                  onPress={() => setSelectedDate(d.value)}
-                  style={[styles.dateChip, selectedDate === d.value && styles.dateChipActive]}
+                  key={r.id}
+                  style={[styles.resourceChip, selectedResource === r.id && styles.resourceChipActive]}
+                  onPress={() => setSelectedResource(r.id)}
                 >
-                  <Text style={[styles.dateChipDay, selectedDate === d.value && styles.dateChipTxtActive]}>{d.dayName}</Text>
-                  <Text style={[styles.dateChipDate, selectedDate === d.value && styles.dateChipTxtActive]}>{d.label}</Text>
+                  <Text style={[styles.resourceChipTxt, selectedResource === r.id && { color: premium.accentBlue }]}>
+                    {r.name}
+                  </Text>
+                  <Text style={styles.resourceChipPrice}>{r.price}₺</Text>
                 </Pressable>
               ))}
             </ScrollView>
-            {/* Slots */}
-            {slots.length === 0 ? (
-              <Text style={styles.noSlots}>Bu tarihte müsait slot yok</Text>
-            ) : (
-              <View style={styles.slotsGrid}>
-                {slots.map((s) => (
-                  <Pressable key={s.id} style={styles.slotChip} onPress={() => handleBookSlot(s.id)}>
-                    <Text style={styles.slotTime}>{s.startTime}</Text>
-                    <Text style={styles.slotPrice}>{s.price}₺</Text>
-                  </Pressable>
-                ))}
-              </View>
+            {/* Tarih seçimi */}
+            {token && (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  {dates.map((d) => (
+                    <Pressable
+                      key={d.value}
+                      onPress={() => setSelectedDate(d.value)}
+                      style={[styles.dateChip, selectedDate === d.value && styles.dateChipActive]}
+                    >
+                      <Text style={[styles.dateChipDay, selectedDate === d.value && styles.dateChipTxtActive]}>{d.dayName}</Text>
+                      <Text style={[styles.dateChipDate, selectedDate === d.value && styles.dateChipTxtActive]}>{d.label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                {/* Slotlar */}
+                {slots.length === 0 ? (
+                  <Text style={styles.noSlots}>Bu tarihte müsait slot yok</Text>
+                ) : (
+                  <View style={styles.slotsGrid}>
+                    {slots.map((s) => (
+                      <Pressable key={s.id} style={styles.slotChip} onPress={() => handleBookSlot(s.id)}>
+                        <Text style={styles.slotTime}>{s.startTime}</Text>
+                        <Text style={styles.slotPrice}>{s.price}₺</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+            {!token && (
+              <Text style={styles.noSlots}>Müsait saatleri görmek için giriş yapın</Text>
             )}
           </View>
         )}
@@ -386,8 +447,8 @@ export function PartnerProfileScreen() {
                   <Text style={styles.trainerMiniSpec} numberOfLines={1}>
                     {t.specializations.slice(0, 2).join(' · ')}
                   </Text>
-                  {t.avgRating !== '0.00' && (
-                    <Text style={styles.trainerMiniRating}>★ {t.avgRating}</Text>
+                  {t.totalSessions > 0 && (
+                    <Text style={styles.trainerMiniSessions}>{t.totalSessions} seans</Text>
                   )}
                 </View>
               ))}
@@ -395,13 +456,11 @@ export function PartnerProfileScreen() {
           </View>
         )}
 
-        {/* ═══ İletişim ═══ */}
-        {(profile.phone || profile.email) && (
+        {/* ═══ Konum ═══ */}
+        {profile.location && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 İletişim</Text>
-            {profile.phone && <Text style={styles.contactText}>📞 {profile.phone}</Text>}
-            {profile.email && <Text style={styles.contactText}>✉️ {profile.email}</Text>}
-            {profile.website && <Text style={styles.contactText}>🌐 {profile.website}</Text>}
+            <Text style={styles.sectionTitle}>📍 Konum</Text>
+            <Text style={styles.locationText}>{profile.location}</Text>
           </View>
         )}
       </ScrollView>
@@ -416,15 +475,14 @@ export function PartnerProfileScreen() {
               return;
             }
             if (profile.visibilityMode === 'public' && profile.resources.length > 0) {
-              // Scroll to ajanda section
-              showToast('Yukarıdan saat seçip rezervasyon yapabilirsiniz', 'info');
+              showToast('Yukarıdan saat seçip rezervasyon yapabilirsiniz ↑', 'info');
             } else {
-              showToast('Kulüple iletişime geçin', 'info');
+              showToast('💬 Mesaj göndermek için kulüp kartındaki butonu kullanın', 'info');
             }
           }}
         >
           <Text style={styles.stickyCtaBtnTxt}>
-            {profile.visibilityMode === 'public' ? '🎾 Rezervasyon Yap' : '📨 İletişime Geç'}
+            {profile.visibilityMode === 'public' ? '🎾 Rezervasyon Yap' : '💬 Mesaj Gönder'}
           </Text>
         </Pressable>
       </View>
@@ -432,36 +490,30 @@ export function PartnerProfileScreen() {
   );
 }
 
-function getTodayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
+function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 
 function getNext7Days() {
   const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
   const result = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    result.push({
-      value: d.toISOString().slice(0, 10),
-      label: `${d.getDate()}/${d.getMonth() + 1}`,
-      dayName: days[d.getDay()],
-    });
+    const d = new Date(); d.setDate(d.getDate() + i);
+    result.push({ value: d.toISOString().slice(0, 10), label: `${d.getDate()}/${d.getMonth() + 1}`, dayName: days[d.getDay()] });
   }
   return result;
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: premium.textMuted, fontSize: 16 },
-  backBtn: { position: 'absolute', left: 16, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+  backBtn: { position: 'absolute', left: 16, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   backBtnTxt: { color: '#fff', fontSize: 14, fontWeight: '700' },
   // Slider
   sliderContainer: { width: '100%', height: SLIDER_HEIGHT, position: 'relative' },
   slider: { width: '100%', height: SLIDER_HEIGHT },
   sliderImage: { width: SCREEN_WIDTH, height: SLIDER_HEIGHT },
-  sliderPlaceholder: { width: '100%', height: SLIDER_HEIGHT, backgroundColor: '#1e3a5f', alignItems: 'center', justifyContent: 'center' },
-  sliderGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, backgroundColor: 'transparent' },
+  sliderPlaceholder: { width: '100%', height: SLIDER_HEIGHT, backgroundColor: '#0f1a2e', alignItems: 'center', justifyContent: 'center' },
+  dotsRow: { position: 'absolute', bottom: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)' },
+  dotActive: { backgroundColor: '#fff', width: 20 },
   // Header
   headerSection: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -482,15 +534,28 @@ const styles = StyleSheet.create({
   servicesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   serviceChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: premium.glass, borderWidth: 1, borderColor: premium.glassBorder },
   serviceChipTxt: { color: premium.text, fontSize: 12, fontWeight: '600' },
+  // Events
+  eventMiniCard: { width: 200, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: premium.glass, overflow: 'hidden', marginRight: 10 },
+  eventMiniImg: { width: '100%', height: 80 },
+  eventMiniImgPlaceholder: { width: '100%', height: 80, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
+  eventMiniBody: { padding: 10, gap: 3 },
+  eventMiniDate: { fontSize: 11, color: premium.accentBlue, fontWeight: '700' },
+  eventMiniTitle: { fontSize: 13, fontWeight: '700', color: premium.text, lineHeight: 17 },
+  eventMiniCoach: { fontSize: 10, color: premium.textMuted },
+  // Packages
+  packageCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: premium.glass, marginBottom: 8 },
+  packageName: { fontSize: 14, fontWeight: '700', color: premium.text },
+  packageMeta: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  packageType: { fontSize: 11, color: premium.accentBlue, marginTop: 4, fontWeight: '600' },
+  packagePriceBox: { alignItems: 'flex-end' },
+  packagePrice: { fontSize: 18, fontWeight: '900', color: premium.accentGreen },
+  packagePerSession: { fontSize: 10, color: premium.textMuted, marginTop: 2 },
   // Resources
-  resourceCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: premium.glass, marginBottom: 8 },
-  resourceCardActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.06)' },
-  resourceName: { fontSize: 14, fontWeight: '700', color: premium.text },
-  resourceMeta: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
-  resourceDesc: { fontSize: 11, color: premium.textMuted, marginTop: 4 },
-  resourcePrice: { fontSize: 18, fontWeight: '900', color: premium.accentBlue },
+  resourceChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: premium.glass, borderWidth: 1, borderColor: premium.glassBorder, marginRight: 8, alignItems: 'center' },
+  resourceChipActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.08)' },
+  resourceChipTxt: { fontSize: 12, fontWeight: '700', color: premium.text },
+  resourceChipPrice: { fontSize: 10, color: premium.accentGreen, marginTop: 2, fontWeight: '600' },
   // Date picker
-  dateRow: { marginBottom: 12 },
   dateChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: premium.glass, borderWidth: 1, borderColor: premium.glassBorder, marginRight: 8, alignItems: 'center' },
   dateChipActive: { backgroundColor: 'rgba(56,189,248,0.12)', borderColor: premium.accentBlue },
   dateChipDay: { fontSize: 11, fontWeight: '700', color: premium.textMuted },
@@ -509,9 +574,9 @@ const styles = StyleSheet.create({
   trainerMiniInitials: { color: '#fff', fontSize: 18, fontWeight: '900' },
   trainerMiniName: { fontSize: 12, fontWeight: '700', color: premium.text, textAlign: 'center' },
   trainerMiniSpec: { fontSize: 10, color: premium.textMuted, textAlign: 'center', marginTop: 2 },
-  trainerMiniRating: { fontSize: 10, color: '#fbbf24', fontWeight: '800', marginTop: 4 },
-  // Contact
-  contactText: { fontSize: 14, color: premium.textMuted, marginBottom: 6 },
+  trainerMiniSessions: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', marginTop: 4 },
+  // Location
+  locationText: { fontSize: 14, color: premium.textMuted, lineHeight: 20 },
   // Sticky CTA
   stickyCta: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(5,8,16,0.95)', borderTopWidth: 1, borderTopColor: premium.glassBorder },
   stickyCtaBtn: { backgroundColor: premium.accentBlue, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
