@@ -35,6 +35,24 @@ type TrainerProfile = {
     logoUrl: string | null;
     location: string | null;
   } | null;
+  services: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    durationMinutes: number;
+    price: string;
+    currency: string;
+    capacity: number;
+  }>;
+  packages: Array<{
+    id: string;
+    name: string;
+    sessionCount: number;
+    price: string;
+    currency: string;
+    validityDays: number;
+    sessionType: string;
+  }>;
 };
 
 export function TrainerDetailScreen() {
@@ -130,6 +148,7 @@ export function TrainerDetailScreen() {
               {profile.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </Text>
           )}
+          <View style={styles.photoGradient} />
         </View>
 
         {/* Header */}
@@ -219,6 +238,40 @@ export function TrainerDetailScreen() {
             </View>
           </View>
         )}
+
+        {/* Hizmetler (fiyatlı) */}
+        {profile.services && profile.services.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🛍️ Hizmetler & Fiyatlar</Text>
+            {profile.services.map((s) => (
+              <View key={s.id} style={styles.serviceCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.serviceName}>{s.name}</Text>
+                  <Text style={styles.serviceMeta}>⏱ {s.durationMinutes} dk · 👥 {s.capacity} kişi</Text>
+                  {s.description && <Text style={styles.serviceDesc}>{s.description}</Text>}
+                </View>
+                <Text style={styles.servicePrice}>{s.price}₺</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Paketler */}
+        {profile.packages && profile.packages.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>💎 Paketler</Text>
+            {profile.packages.map((p) => (
+              <View key={p.id} style={styles.packageCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.packageName}>{p.name}</Text>
+                  <Text style={styles.packageMeta}>{p.sessionCount} seans · {p.validityDays} gün geçerli</Text>
+                  <Text style={styles.packagePerSession}>{Math.round(parseFloat(p.price) / p.sessionCount)}₺/seans</Text>
+                </View>
+                <Text style={styles.packagePrice}>{p.price}₺</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Sticky CTA */}
@@ -246,8 +299,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backBtn: { position: 'absolute', left: 16, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   backBtnTxt: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  photoArea: { width: '100%', height: 280, backgroundColor: '#1e3a5f', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  photoImg: { width: '100%', height: '100%' },
+  photoArea: { width: '100%', aspectRatio: 3 / 4, maxHeight: 420, backgroundColor: '#0f1a2e', overflow: 'hidden', position: 'relative' },
+  photoImg: { width: '100%', height: '100%', position: 'absolute', top: 0 },
+  photoGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, backgroundColor: 'transparent' },
   photoInitials: { color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: 2 },
   headerSection: { paddingHorizontal: 20, paddingTop: 20 },
   name: { fontSize: 26, fontWeight: '900', color: premium.text },
@@ -265,6 +319,18 @@ const styles = StyleSheet.create({
   chipCert: { borderColor: 'rgba(52,211,153,0.3)' },
   chipService: { borderColor: 'rgba(56,189,248,0.3)' },
   chipTxt: { color: premium.text, fontSize: 12, fontWeight: '600' },
+  // Services
+  serviceCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 8 },
+  serviceName: { fontSize: 14, fontWeight: '700', color: premium.text },
+  serviceMeta: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  serviceDesc: { fontSize: 11, color: premium.textMuted, marginTop: 4, fontStyle: 'italic' },
+  servicePrice: { fontSize: 18, fontWeight: '900', color: premium.accentBlue },
+  // Packages
+  packageCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(52,211,153,0.2)', backgroundColor: 'rgba(52,211,153,0.04)', marginBottom: 8 },
+  packageName: { fontSize: 14, fontWeight: '700', color: premium.text },
+  packageMeta: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  packagePerSession: { fontSize: 11, color: premium.accentGreen, fontWeight: '600', marginTop: 2 },
+  packagePrice: { fontSize: 18, fontWeight: '900', color: premium.accentGreen },
   stickyCta: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(5,8,16,0.95)', borderTopWidth: 1, borderTopColor: premium.glassBorder },
   stickyCtaBtn: { backgroundColor: premium.accentGreen, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   stickyCtaBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },

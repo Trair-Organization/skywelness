@@ -19,6 +19,7 @@ import { ClubProfileEditPage } from './pages/ClubProfileEditPage';
 import { PushNotificationsPage } from './pages/PushNotificationsPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
+import { TrainerServicesPage } from './pages/TrainerServicesPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
 import { MarketingPricingPage } from './pages/MarketingPricingPage';
 import { MarketingContactPage } from './pages/MarketingContactPage';
@@ -85,6 +86,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
         <Route path="/trainer/profile" element={<TrainerProfileEditPage />} />
+        <Route path="/trainer/services" element={<TrainerServicesPage />} />
         <Route path="/trainer/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/trainer/students" element={<TrainerStudentsPage />} />
         <Route path="/trainer/messages" element={<MessagesPage />} />

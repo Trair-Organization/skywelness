@@ -8,11 +8,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { Availability } from '../database/entities/availability.entity';
 import { Reservation } from '../database/entities/reservation.entity';
+import { Resource } from '../database/entities/resource.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
 import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
 import { Package } from '../database/entities/package.entity';
+import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
 import { Conversation } from '../database/entities/conversation.entity';
 import { ReservationStatus, SessionType, MemberAccountStatus, UserRole } from '../database/enums';
@@ -31,6 +33,8 @@ export class TrainerPanelService {
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
+    @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
+    @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     private readonly pushService: PushService,
     private readonly notifier: NotificationDispatcher,
   ) {}
@@ -1240,5 +1244,162 @@ export class TrainerPanelService {
       data.imageUrl?.trim() ?? null,
     );
     return { ok: true, sent: result.sent, total: result.total };
+  }
+
+  // ─── Hizmetlerim (Resource CRUD) ──────────────────────────────────────────────
+
+  /** PT: kendi hizmetlerini listele */
+  async listMyServices(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const resources = await this.resourcesRepo.find({
+      where: { tenantId: trainer.tenantId },
+      order: { sortOrder: 'ASC', createdAt: 'ASC' },
+    });
+    return resources.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      resourceType: r.resourceType,
+      durationMinutes: r.durationMinutes,
+      price: r.price,
+      currency: r.currency,
+      capacity: r.capacity,
+      active: r.active,
+    }));
+  }
+
+  /** PT: hizmet oluştur */
+  async createService(
+    user: User,
+    data: { name: string; description?: string; durationMinutes: number; price: number; capacity?: number },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.name?.trim()) throw new BadRequestException('Hizmet adı zorunludur');
+    if (!data.price || data.price <= 0) throw new BadRequestException('Fiyat zorunludur');
+
+    const resource = this.resourcesRepo.create({
+      tenantId: trainer.tenantId,
+      name: data.name.trim(),
+      resourceType: 'personal_training',
+      description: data.description?.trim() || null,
+      durationMinutes: data.durationMinutes || 60,
+      price: data.price.toFixed(2),
+      capacity: data.capacity || 1,
+      active: true,
+      sortOrder: 0,
+    });
+    await this.resourcesRepo.save(resource);
+    return { id: resource.id, name: resource.name, price: resource.price };
+  }
+
+  /** PT: hizmet güncelle */
+  async updateService(
+    user: User,
+    resourceId: string,
+    data: { name?: string; description?: string; durationMinutes?: number; price?: number; capacity?: number; active?: boolean },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const resource = await this.resourcesRepo.findOne({
+      where: { id: resourceId, tenantId: trainer.tenantId },
+    });
+    if (!resource) throw new NotFoundException('Hizmet bulunamadı');
+
+    if (data.name !== undefined) resource.name = data.name.trim();
+    if (data.description !== undefined) resource.description = data.description?.trim() || null;
+    if (data.durationMinutes !== undefined) resource.durationMinutes = data.durationMinutes;
+    if (data.price !== undefined) resource.price = data.price.toFixed(2);
+    if (data.capacity !== undefined) resource.capacity = data.capacity;
+    if (data.active !== undefined) resource.active = data.active;
+
+    await this.resourcesRepo.save(resource);
+    return { ok: true };
+  }
+
+  /** PT: hizmet sil */
+  async deleteService(user: User, resourceId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const resource = await this.resourcesRepo.findOne({
+      where: { id: resourceId, tenantId: trainer.tenantId },
+    });
+    if (!resource) throw new NotFoundException('Hizmet bulunamadı');
+    await this.resourcesRepo.remove(resource);
+    return { ok: true };
+  }
+
+  // ─── Paketlerim (PackageType CRUD) ────────────────────────────────────────────
+
+  /** PT: kendi paketlerini listele */
+  async listMyPackages(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const packages = await this.packageTypesRepo.find({
+      where: { tenantId: trainer.tenantId },
+      order: { createdAt: 'ASC' },
+    });
+    return packages.map((p) => ({
+      id: p.id,
+      name: p.name,
+      sessionCount: p.sessionCount,
+      price: p.price,
+      currency: p.currency,
+      validityDays: p.validityDays,
+      sessionType: p.sessionType,
+      active: p.active,
+    }));
+  }
+
+  /** PT: paket oluştur */
+  async createPackage(
+    user: User,
+    data: { name: string; sessionCount: number; price: number; validityDays: number; sessionType: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.name?.trim()) throw new BadRequestException('Paket adı zorunludur');
+    if (!data.price || data.price <= 0) throw new BadRequestException('Fiyat zorunludur');
+    if (!data.sessionCount || data.sessionCount <= 0) throw new BadRequestException('Seans sayısı zorunludur');
+
+    const pkg = this.packageTypesRepo.create({
+      tenantId: trainer.tenantId,
+      name: data.name.trim(),
+      sessionCount: data.sessionCount,
+      price: data.price.toFixed(2),
+      validityDays: data.validityDays || 30,
+      sessionType: (data.sessionType || 'personal_training') as SessionType,
+      active: true,
+    });
+    await this.packageTypesRepo.save(pkg);
+    return { id: pkg.id, name: pkg.name, price: pkg.price };
+  }
+
+  /** PT: paket güncelle */
+  async updatePackage(
+    user: User,
+    packageId: string,
+    data: { name?: string; sessionCount?: number; price?: number; validityDays?: number; active?: boolean },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const pkg = await this.packageTypesRepo.findOne({
+      where: { id: packageId, tenantId: trainer.tenantId },
+    });
+    if (!pkg) throw new NotFoundException('Paket bulunamadı');
+
+    if (data.name !== undefined) pkg.name = data.name.trim();
+    if (data.sessionCount !== undefined) pkg.sessionCount = data.sessionCount;
+    if (data.price !== undefined) pkg.price = data.price.toFixed(2);
+    if (data.validityDays !== undefined) pkg.validityDays = data.validityDays;
+    if (data.active !== undefined) pkg.active = data.active;
+
+    await this.packageTypesRepo.save(pkg);
+    return { ok: true };
+  }
+
+  /** PT: paket sil */
+  async deletePackage(user: User, packageId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const pkg = await this.packageTypesRepo.findOne({
+      where: { id: packageId, tenantId: trainer.tenantId },
+    });
+    if (!pkg) throw new NotFoundException('Paket bulunamadı');
+    await this.packageTypesRepo.remove(pkg);
+    return { ok: true };
   }
 }

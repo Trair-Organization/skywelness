@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Trainer } from '../database/entities/trainer.entity';
 import { Tenant } from '../database/entities/tenant.entity';
+import { Resource } from '../database/entities/resource.entity';
+import { PackageType } from '../database/entities/package-type.entity';
 
 /**
  * Public eğitmen profil endpoint'i.
@@ -13,6 +15,8 @@ export class TrainerPublicProfileController {
   constructor(
     @InjectRepository(Trainer) private readonly trainersRepo: Repository<Trainer>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
+    @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
+    @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
   ) {}
 
   @Get(':trainerId/profile')
@@ -28,6 +32,18 @@ export class TrainerPublicProfileController {
     }
 
     const tenant = await this.tenantsRepo.findOne({ where: { id: trainer.tenantId } });
+
+    // Eğitmenin hizmetleri
+    const services = await this.resourcesRepo.find({
+      where: { tenantId: trainer.tenantId, active: true },
+      order: { sortOrder: 'ASC' },
+    });
+
+    // Eğitmenin paketleri
+    const packages = await this.packageTypesRepo.find({
+      where: { tenantId: trainer.tenantId, active: true },
+      order: { createdAt: 'ASC' },
+    });
 
     return {
       id: trainer.id,
@@ -49,6 +65,24 @@ export class TrainerPublicProfileController {
             location: tenant.location,
           }
         : null,
+      services: services.map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        durationMinutes: r.durationMinutes,
+        price: r.price,
+        currency: r.currency,
+        capacity: r.capacity,
+      })),
+      packages: packages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        sessionCount: p.sessionCount,
+        price: p.price,
+        currency: p.currency,
+        validityDays: p.validityDays,
+        sessionType: p.sessionType,
+      })),
     };
   }
 }

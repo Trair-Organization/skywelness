@@ -294,4 +294,76 @@ export class TrainerPanelController {
   ) {
     return this.service.sendPushToStudents(user, body);
   }
+
+  // ─── Hizmetlerim (Resource CRUD) ───────────────────────────────────────────
+
+  /** PT: hizmetlerimi listele */
+  @Get('services')
+  listMyServices(@CurrentUser() user: User) {
+    return this.service.listMyServices(user);
+  }
+
+  /** PT: hizmet ekle */
+  @Post('services')
+  createService(
+    @CurrentUser() user: User,
+    @Body() body: { name: string; description?: string; durationMinutes: number; price: number; capacity?: number },
+  ) {
+    return this.service.createService(user, body);
+  }
+
+  /** PT: hizmet güncelle */
+  @Patch('services/:id')
+  updateService(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { name?: string; description?: string; durationMinutes?: number; price?: number; capacity?: number; active?: boolean },
+  ) {
+    return this.service.updateService(user, id, body);
+  }
+
+  /** PT: hizmet sil */
+  @Delete('services/:id')
+  deleteService(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteService(user, id);
+  }
+
+  // ─── Paketlerim (PackageType CRUD) ─────────────────────────────────────────
+
+  /** PT: paketlerimi listele */
+  @Get('packages')
+  listMyPackages(@CurrentUser() user: User) {
+    return this.service.listMyPackages(user);
+  }
+
+  /** PT: paket ekle */
+  @Post('packages')
+  createPackage(
+    @CurrentUser() user: User,
+    @Body() body: { name: string; sessionCount: number; price: number; validityDays: number; sessionType: string },
+  ) {
+    return this.service.createPackage(user, body);
+  }
+
+  /** PT: paket güncelle */
+  @Patch('packages/:id')
+  updatePackage(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { name?: string; sessionCount?: number; price?: number; validityDays?: number; active?: boolean },
+  ) {
+    return this.service.updatePackage(user, id, body);
+  }
+
+  /** PT: paket sil */
+  @Delete('packages/:id')
+  deletePackage(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deletePackage(user, id);
+  }
 }
