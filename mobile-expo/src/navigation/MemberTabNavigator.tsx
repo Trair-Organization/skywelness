@@ -14,6 +14,7 @@ import { ChatScreen } from '../screens/member/ChatScreen';
 import { LegalScreen } from '../screens/member/LegalScreen';
 import { ConnectionsScreen } from '../screens/shared/ConnectionsScreen';
 import { PadelBookingScreen } from '../screens/member/PadelBookingScreen';
+import { PartnerProfileScreen } from '../screens/member/PartnerProfileScreen';
 import { SpaScreen } from '../screens/member/SpaScreen';
 import { PtScreen } from '../screens/member/PtScreen';
 import type { MemberTabParamList } from './memberTabTypes';
@@ -120,6 +121,11 @@ export function MemberTabNavigator() {
       <Tab.Screen
         name="Padel"
         component={PadelBookingScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tab.Screen
+        name="PartnerProfile"
+        component={PartnerProfileScreen}
         options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tab.Screen
