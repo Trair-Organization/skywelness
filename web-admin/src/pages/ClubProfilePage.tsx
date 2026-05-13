@@ -22,6 +22,7 @@ type ProfileData = {
     name: string;
     photoUrl: string | null;
     specializations: string[];
+    offersSessionTypes: string[];
     avgRating: string;
   }>;
   packages: Array<{
@@ -276,11 +277,11 @@ export function ClubProfilePage() {
         )}
 
         {/* Eğitmenler */}
-        {profile.trainers.length > 0 && (
+        {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('personal_training')).length > 0 && (
           <section className="profile-section">
-            <h2>👥 Eğitmenler</h2>
+            <h2>🏋️ Eğitmenler</h2>
             <div className="trainers-grid">
-              {profile.trainers.map((t) => (
+              {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('personal_training')).map((t) => (
                 <Link key={t.id} to={`/trainer/${t.id}`} className="trainer-profile-card">
                   <div className="trainer-profile-photo">
                     {t.photoUrl ? <img src={t.photoUrl} alt={t.name} /> : <span>{t.name.charAt(0)}</span>}
@@ -290,6 +291,24 @@ export function ClubProfilePage() {
                   {t.specializations.length > 0 && (
                     <p className="trainer-specs">{t.specializations.slice(0, 2).join(', ')}</p>
                   )}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Masözler */}
+        {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('massage')).length > 0 && (
+          <section className="profile-section">
+            <h2>💆 Masözler</h2>
+            <div className="trainers-grid">
+              {profile.trainers.filter(t => (t.offersSessionTypes || []).includes('massage')).map((t) => (
+                <Link key={t.id} to={`/trainer/${t.id}`} className="trainer-profile-card">
+                  <div className="trainer-profile-photo">
+                    {t.photoUrl ? <img src={t.photoUrl} alt={t.name} /> : <span>{t.name.charAt(0)}</span>}
+                  </div>
+                  <h3>{t.name}</h3>
+                  {t.avgRating !== '0.00' && <p className="trainer-rating">★ {Number(t.avgRating).toFixed(1)}</p>}
                 </Link>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
+import { useAuth } from '../auth/AuthContext';
 
 type TrainerProfile = {
   id: string;
@@ -41,8 +42,11 @@ type TrainerProfile = {
 
 export function TrainerProfilePage() {
   const { trainerId } = useParams<{ trainerId: string }>();
+  const { token } = useAuth();
   const [profile, setProfile] = useState<TrainerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
 
   const load = useCallback(async () => {
     if (!trainerId) return;
@@ -153,37 +157,71 @@ export function TrainerProfilePage() {
           </section>
         )}
 
-        {/* Paketler */}
-        {profile.packages.length > 0 && (
-          <section className="profile-section">
-            <h2>💎 Paketler</h2>
-            <div className="packages-grid">
-              {profile.packages.map((pkg) => (
-                <div key={pkg.id} className="package-card">
-                  <h3>{pkg.name}</h3>
-                  <p>{pkg.sessionCount} seans · {pkg.validityDays} gün geçerli</p>
-                  <div className="package-price">
-                    <strong>{pkg.price}₺</strong>
-                    <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
-                  </div>
-                </div>
-              ))}
+        {/* PT Paket */}
+        <section className="profile-section">
+          <h2>💎 Eğitim Paketi</h2>
+          <div className="pt-package-card">
+            <div className="pt-package-info">
+              <h3>10 PT Eğitim</h3>
+              <p>Kişisel antrenman programı · Birebir eğitim</p>
             </div>
-          </section>
-        )}
+            <div className="pt-package-price">
+              <strong>15.000₺</strong>
+              <span>1.500₺/seans</span>
+            </div>
+          </div>
+          {requested ? (
+            <div className="event-joined-box" style={{ marginTop: '1rem' }}>
+              <span>✅</span>
+              <p>Talebiniz kulübe iletildi!</p>
+            </div>
+          ) : token ? (
+            <button
+              className="btn-primary"
+              style={{ width: '100%', marginTop: '1rem', padding: '0.9rem' }}
+              disabled={requesting}
+              onClick={async () => {
+                if (!profile) return;
+                setRequesting(true);
+                try {
+                  await apiJson('/package-requests', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      sessionType: 'personal_training',
+                      message: `${profile.name} ile 10 PT Eğitim paketi talebi (web)`,
+                      preferredTrainerId: profile.id,
+                    }),
+                  });
+                  setRequested(true);
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : 'Talep gönderilemedi');
+                } finally { setRequesting(false); }
+              }}
+            >
+              {requesting ? 'Gönderiliyor...' : '📋 Paket Talep Et'}
+            </button>
+          ) : (
+            <div className="login-required-box" style={{ marginTop: '1rem' }}>
+              <p>Paket talep etmek için üye olmanız gerekiyor.</p>
+              <div className="login-required-actions">
+                <Link to="/register" className="btn-primary">Üye Ol</Link>
+                <Link to="/login" className="btn-outline">Giriş Yap</Link>
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* CTA */}
         <section className="profile-section profile-cta">
           {profile.club ? (
-            <Link to={`/club/${profile.club.subdomain}`} className="btn-primary">
-              📅 {profile.club.name} Ajandası — Ders Planla
+            <Link to={`/club/${profile.club.subdomain}`} className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
+              🏢 {profile.club.name} Sayfasını Görüntüle
             </Link>
           ) : (
-            <a href="mailto:info@wellnessclub.com" className="btn-primary">
+            <a href="mailto:info@wellnessclub.com" className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
               💬 İletişime Geç
             </a>
           )}
-          <p className="cta-note">Ders planlamak ve paket satın almak için <Link to="/register">üye olmanız</Link> gerekiyor.</p>
         </section>
       </div>
     </div>

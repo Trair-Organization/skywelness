@@ -113,6 +113,7 @@ export class TenantProfileService {
         name: `${t.user.firstName} ${t.user.lastName}`.trim(),
         photoUrl: t.photoUrl ?? t.user.photoUrl,
         specializations: t.specializations ?? [],
+        offersSessionTypes: t.offersSessionTypes ?? [],
         avgRating: t.avgRating,
         totalSessions: t.totalSessions,
         bio: t.bio,
