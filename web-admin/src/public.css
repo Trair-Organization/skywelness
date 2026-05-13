@@ -604,6 +604,73 @@
   line-height: 1.6;
 }
 
+/* Partner Type Selection */
+.partner-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+.partner-type-card {
+  padding: 1.5rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(20, 20, 20, 0.8);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.partner-type-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.05);
+  transform: translateY(-2px);
+}
+.partner-type-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.25rem;
+}
+.partner-type-card h3 {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+.partner-type-card > p {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0;
+}
+.partner-type-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.partner-type-card li {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+.back-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+  transition: color 0.15s;
+}
+.back-btn:hover {
+  color: #38bdf8;
+}
+
 /* Partner Benefits */
 .partner-benefits {
   margin-top: 2rem;
@@ -1013,6 +1080,9 @@
     grid-template-columns: 1fr;
   }
   .partner-benefits ul {
+    grid-template-columns: 1fr;
+  }
+  .partner-type-grid {
     grid-template-columns: 1fr;
   }
   /* Profile pages mobile */
