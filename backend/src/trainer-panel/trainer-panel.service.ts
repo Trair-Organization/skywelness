@@ -1212,4 +1212,33 @@ export class TrainerPanelService {
 
     return { ok: true };
   }
+
+  // ─── Push Bildirim ────────────────────────────────────────────────────────────
+
+  /** PT: öğrencilerine toplu push bildirim gönder */
+  async sendPushToStudents(
+    user: User,
+    data: { title: string; message: string; imageUrl?: string },
+  ) {
+    if (!data.title?.trim() || !data.message?.trim()) {
+      throw new BadRequestException('Başlık ve mesaj zorunludur');
+    }
+    const trainer = await this.resolveTrainer(user);
+    const links = await this.linksRepo.find({
+      where: { trainerId: trainer.id, status: 'active' },
+      select: ['memberUserId'],
+    });
+    const studentIds = links.map((l) => l.memberUserId);
+    if (studentIds.length === 0) {
+      return { ok: true, sent: 0, total: 0, message: 'Henüz öğrenciniz yok' };
+    }
+    const result = await this.pushService.sendToMany(
+      studentIds,
+      data.title.trim(),
+      data.message.trim(),
+      { type: 'trainer_notification', trainerId: trainer.id },
+      data.imageUrl?.trim() ?? null,
+    );
+    return { ok: true, sent: result.sent, total: result.total };
+  }
 }

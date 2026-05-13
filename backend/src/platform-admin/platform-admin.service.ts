@@ -7,6 +7,7 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
 import { User } from '../database/entities/user.entity';
+import { PushService } from '../notifications/push.service';
 import type { CreateTenantDto } from './dto/create-tenant.dto';
 import type { ManageUserDto } from './dto/manage-user.dto';
 import type { UpdateTenantDto } from './dto/update-tenant.dto';
@@ -24,6 +25,7 @@ export class PlatformAdminService {
     private readonly trainersRepo: Repository<Trainer>,
     @InjectRepository(PlatformAdminAuditLog)
     private readonly auditLogsRepo: Repository<PlatformAdminAuditLog>,
+    private readonly pushService: PushService,
   ) {}
 
   private async logAction(params: {
@@ -401,5 +403,71 @@ export class PlatformAdminService {
       details: { note: note?.trim() || null },
     });
     return { ok: true };
+  }
+
+  async sendGlobalPush(
+    admin: User,
+    data: {
+      title: string;
+      message: string;
+      imageUrl?: string;
+      target: 'all' | 'members' | 'trainers' | 'tenant';
+      tenantId?: string;
+    },
+  ) {
+    if (!data.title?.trim() || !data.message?.trim()) {
+      throw new BadRequestException('Başlık ve mesaj zorunludur');
+    }
+
+    let userIds: string[] = [];
+
+    if (data.target === 'tenant' && data.tenantId) {
+      const users = await this.usersRepo.find({
+        where: { tenantId: data.tenantId },
+        select: ['id'],
+      });
+      userIds = users.map((u) => u.id);
+    } else if (data.target === 'members') {
+      const users = await this.usersRepo.find({
+        where: { role: UserRole.MEMBER },
+        select: ['id'],
+      });
+      userIds = users.map((u) => u.id);
+    } else if (data.target === 'trainers') {
+      const users = await this.usersRepo.find({
+        where: [
+          { role: UserRole.TRAINER },
+          { role: UserRole.INDEPENDENT_TRAINER },
+        ],
+        select: ['id'],
+      });
+      userIds = users.map((u) => u.id);
+    } else {
+      // all
+      const users = await this.usersRepo.find({ select: ['id'] });
+      userIds = users.map((u) => u.id);
+    }
+
+    if (userIds.length === 0) {
+      return { ok: true, sent: 0, total: 0 };
+    }
+
+    const result = await this.pushService.sendToMany(
+      userIds,
+      data.title.trim(),
+      data.message.trim(),
+      { type: 'platform_notification', sentBy: admin.id },
+      data.imageUrl?.trim() ?? null,
+    );
+
+    await this.logAction({
+      action: 'push.send',
+      targetType: 'notification',
+      targetId: 'bulk',
+      actorUserId: admin.id,
+      details: { target: data.target, sent: result.sent, total: result.total },
+    });
+
+    return { ok: true, sent: result.sent, total: result.total, target: data.target };
   }
 }

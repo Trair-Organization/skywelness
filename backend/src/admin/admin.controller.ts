@@ -741,4 +741,25 @@ export class AdminController {
   ) {
     return this.adminMembers.updateTenantProfile(admin.tenantId, body);
   }
+
+  // ─── Push Bildirim Yönetimi ───────────────────────────────────────────────────
+
+  /** Kulüp admin: üyelerine/eğitmenlerine push bildirim gönder */
+  @Post('push-notifications/send')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  sendPushNotification(
+    @CurrentUser() admin: User,
+    @Body()
+    body: {
+      title: string;
+      message: string;
+      imageUrl?: string;
+      target: 'members' | 'trainers' | 'all';
+      /** Opsiyonel: etkinlik ID'si (etkinlik duyurusu olarak gönderilir) */
+      eventId?: string;
+    },
+  ) {
+    return this.adminMembers.sendPushNotification(admin.tenantId, body);
+  }
 }

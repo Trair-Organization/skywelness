@@ -14,6 +14,7 @@ const WELLNESS_NAV: NavItem[] = [
   { path: '/schedule', icon: '🗓️', label: 'Ajanda' },
   { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
+  { path: '/push-notifications', icon: '🔔', label: 'Bildirimler' },
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
@@ -24,6 +25,7 @@ const GENERIC_NAV: NavItem[] = [
   { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
   { path: '/resource-management', icon: '🏟️', label: 'Kort & Slotlar' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
+  { path: '/push-notifications', icon: '🔔', label: 'Bildirimler' },
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
@@ -35,6 +37,7 @@ const PLATFORM_NAV: NavItem[] = [
   { path: '/super-admin/users', icon: '👥', label: 'Kullanıcılar' },
   { path: '/super-admin/trainers', icon: '🏋️', label: 'Eğitmenler' },
   { path: '/super-admin/discovery', icon: '🌐', label: 'Keşif Yönetimi' },
+  { path: '/super-admin/push-notifications', icon: '🔔', label: 'Bildirimler' },
   { path: '/super-admin/leads', icon: '📋', label: 'Talepler' },
   { path: '/super-admin/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/super-admin/audit', icon: '📜', label: 'Audit Log' },
@@ -45,6 +48,7 @@ const TRAINER_NAV: NavItem[] = [
   { path: '/trainer/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/trainer/profile', icon: '🏋️', label: 'Profilim' },
   { path: '/trainer/students', icon: '👥', label: 'Öğrencilerim' },
+  { path: '/trainer/push-notifications', icon: '🔔', label: 'Bildirimler' },
   { path: '/trainer/messages', icon: '💬', label: 'Mesajlar' },
 ];
 

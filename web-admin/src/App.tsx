@@ -16,6 +16,7 @@ import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
 import { ClubProfileEditPage } from './pages/ClubProfileEditPage';
+import { PushNotificationsPage } from './pages/PushNotificationsPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
@@ -50,6 +51,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
         <Route path="/club/profile" element={<ClubProfileEditPage />} />
+        <Route path="/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/club/insights" element={<ClubInsightsPage />} />
         <Route path="/club/cafe-orders" element={<ClubCafeOrdersPage />} />
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
@@ -74,6 +76,7 @@ function AppRoutes() {
         <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
         <Route path="/super-admin/trainers" element={<SuperAdminTrainersPage />} />
         <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+        <Route path="/super-admin/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/super-admin/discovery" element={<DiscoveryManagementPage />} />
         <Route path="/super-admin/messages" element={<MessagesPage />} />
         <Route path="/super-admin/leads" element={<LeadsPage />} />
@@ -82,6 +85,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
         <Route path="/trainer/profile" element={<TrainerProfileEditPage />} />
+        <Route path="/trainer/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/trainer/students" element={<TrainerStudentsPage />} />
         <Route path="/trainer/messages" element={<MessagesPage />} />
       </Route>

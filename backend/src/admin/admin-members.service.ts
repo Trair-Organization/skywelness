@@ -15,6 +15,7 @@ import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { MemberAccountStatus, ReservationStatus, SessionType, UserRole } from '../database/enums';
 import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
+import { PushService } from '../notifications/push.service';
 import { SmsService } from '../notifications/sms.service';
 import * as bcrypt from 'bcrypt';
 
@@ -45,6 +46,7 @@ export class AdminMembersService {
     private readonly eventsRepo: Repository<ClubEvent>,
     @InjectRepository(Tenant)
     private readonly tenantsRepo: Repository<Tenant>,
+    private readonly pushService: PushService,
     private readonly smsService: SmsService,
     private readonly notifier: NotificationDispatcher,
   ) {}
@@ -1963,5 +1965,48 @@ export class AdminMembersService {
 
     await this.tenantsRepo.save(tenant);
     return { ok: true };
+  }
+
+  // ─── Push Bildirim ────────────────────────────────────────────────────────────
+
+  /** Kulüp admin: toplu push bildirim gönder */
+  async sendPushNotification(
+    tenantId: string,
+    data: {
+      title: string;
+      message: string;
+      imageUrl?: string;
+      target: 'members' | 'trainers' | 'all';
+      eventId?: string;
+    },
+  ) {
+    if (!data.title?.trim() || !data.message?.trim()) {
+      throw new BadRequestException('Başlık ve mesaj zorunludur');
+    }
+
+    const targetRole =
+      data.target === 'members' ? 'member' as const :
+      data.target === 'trainers' ? 'trainer' as const :
+      'all' as const;
+
+    const result = await this.pushService.sendToTenantMembers(
+      tenantId,
+      data.title.trim(),
+      data.message.trim(),
+      {
+        type: data.eventId ? 'event_announcement' : 'custom_notification',
+        eventId: data.eventId ?? undefined,
+        imageUrl: data.imageUrl?.trim() ?? undefined,
+      },
+      data.imageUrl?.trim() ?? null,
+      targetRole,
+    );
+
+    return {
+      ok: true,
+      sent: result.sent,
+      total: result.total,
+      target: data.target,
+    };
   }
 }

@@ -90,6 +90,21 @@ export class PlatformAdminController {
     return this.platformAdminService.listAuditLogs(limit ? Number(limit) : 100);
   }
 
+  @Post('push-notifications/send')
+  sendGlobalPush(
+    @CurrentUser() admin: User,
+    @Body()
+    body: {
+      title: string;
+      message: string;
+      imageUrl?: string;
+      target: 'all' | 'members' | 'trainers' | 'tenant';
+      tenantId?: string;
+    },
+  ) {
+    return this.platformAdminService.sendGlobalPush(admin, body);
+  }
+
   @Get('trainer-applications/pending')
   listPendingTrainerApplications() {
     return this.platformAdminService.listPendingTrainerApplications();

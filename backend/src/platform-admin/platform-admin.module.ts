@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PlatformAdminAuditLog } from '../database/entities/platform-admin-audit-log.entity';
 import { Tenant } from '../database/entities/tenant.entity';
@@ -13,6 +14,7 @@ import { PlatformAdminService } from './platform-admin.service';
 @Module({
   imports: [
     AuthModule,
+    NotificationsModule,
     TypeOrmModule.forFeature([TrainerApplication, User, Tenant, Trainer, PlatformAdminAuditLog]),
   ],
   controllers: [PlatformAdminController],

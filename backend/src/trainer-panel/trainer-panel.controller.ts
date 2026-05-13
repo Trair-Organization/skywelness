@@ -278,4 +278,20 @@ export class TrainerPanelController {
   ) {
     return this.service.updateMyProfile(user, body);
   }
+
+  // ─── Push Bildirim ──────────────────────────────────────────────────────────
+
+  /** PT: öğrencilerine push bildirim gönder */
+  @Post('push-notifications/send')
+  sendPushToStudents(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      title: string;
+      message: string;
+      imageUrl?: string;
+    },
+  ) {
+    return this.service.sendPushToStudents(user, body);
+  }
 }
