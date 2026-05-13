@@ -220,7 +220,7 @@ export class UnifiedBookingService {
     let created = 0;
     for (let i = 0; i < slotsToCreate.length; i += batchSize) {
       const batch = slotsToCreate.slice(i, i + batchSize);
-      await this.slotsRepo.insert(batch as ScheduleSlot[]);
+      await this.slotsRepo.save(batch as ScheduleSlot[]);
       created += batch.length;
     }
 
