@@ -43,6 +43,7 @@ const PLATFORM_NAV: NavItem[] = [
 
 const TRAINER_NAV: NavItem[] = [
   { path: '/trainer/dashboard', icon: '📊', label: 'Dashboard' },
+  { path: '/trainer/profile', icon: '🏋️', label: 'Profilim' },
   { path: '/trainer/students', icon: '👥', label: 'Öğrencilerim' },
   { path: '/trainer/messages', icon: '💬', label: 'Mesajlar' },
 ];

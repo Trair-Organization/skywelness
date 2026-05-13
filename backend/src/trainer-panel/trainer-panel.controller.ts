@@ -253,4 +253,29 @@ export class TrainerPanelController {
   joinClubByCode(@CurrentUser() user: User, @Body() body: { clubCode: string }) {
     return this.service.joinClubByCode(user, body.clubCode);
   }
+
+  // ─── Profil Düzenleme ───────────────────────────────────────────────────────
+
+  /** Eğitmen kendi profil bilgilerini getirir */
+  @Get('profile')
+  getMyProfile(@CurrentUser() user: User) {
+    return this.service.getMyProfile(user);
+  }
+
+  /** Eğitmen kendi profil bilgilerini günceller */
+  @Patch('profile')
+  updateMyProfile(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      bio?: string;
+      specializations?: string[];
+      certifications?: string[];
+      photoUrl?: string;
+      offersSessionTypes?: string[];
+      pricingNote?: string;
+    },
+  ) {
+    return this.service.updateMyProfile(user, body);
+  }
 }

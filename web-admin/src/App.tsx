@@ -17,6 +17,7 @@ import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicatio
 import { ClubDashboardPage } from './pages/ClubDashboardPage';
 import { ClubProfileEditPage } from './pages/ClubProfileEditPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
+import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
 import { MarketingPricingPage } from './pages/MarketingPricingPage';
 import { MarketingContactPage } from './pages/MarketingContactPage';
@@ -80,6 +81,7 @@ function AppRoutes() {
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
+        <Route path="/trainer/profile" element={<TrainerProfileEditPage />} />
         <Route path="/trainer/students" element={<TrainerStudentsPage />} />
         <Route path="/trainer/messages" element={<MessagesPage />} />
       </Route>

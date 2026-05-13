@@ -1152,4 +1152,64 @@ export class TrainerPanelService {
 
     return { ok: true };
   }
+
+  // ─── Profil Yönetimi ──────────────────────────────────────────────────────────
+
+  /** Eğitmen kendi profil bilgilerini getirir */
+  async getMyProfile(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const profile = await this.profilesRepo.findOne({ where: { trainerId: trainer.id } });
+    return {
+      id: trainer.id,
+      bio: trainer.bio,
+      photoUrl: trainer.photoUrl ?? user.photoUrl,
+      specializations: trainer.specializations ?? [],
+      certifications: trainer.certifications ?? [],
+      offersSessionTypes: trainer.offersSessionTypes ?? [],
+      avgRating: trainer.avgRating,
+      totalSessions: trainer.totalSessions,
+      pricingNote: profile?.pricingNote ?? null,
+      city: profile?.city ?? null,
+      experienceYears: profile?.experienceYears ?? null,
+    };
+  }
+
+  /** Eğitmen kendi profil bilgilerini günceller */
+  async updateMyProfile(
+    user: User,
+    data: {
+      bio?: string;
+      specializations?: string[];
+      certifications?: string[];
+      photoUrl?: string;
+      offersSessionTypes?: string[];
+      pricingNote?: string;
+    },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+
+    if (data.bio !== undefined) trainer.bio = data.bio.trim();
+    if (data.specializations !== undefined) trainer.specializations = data.specializations;
+    if (data.certifications !== undefined) trainer.certifications = data.certifications;
+    if (data.photoUrl !== undefined) {
+      trainer.photoUrl = data.photoUrl.trim() || null;
+      // User tablosunu da güncelle
+      await this.usersRepo.update({ id: user.id }, { photoUrl: trainer.photoUrl });
+    }
+    if (data.offersSessionTypes !== undefined) trainer.offersSessionTypes = data.offersSessionTypes;
+    await this.trainersRepo.save(trainer);
+
+    // TrainerProfile varsa onu da güncelle
+    const profile = await this.profilesRepo.findOne({ where: { trainerId: trainer.id } });
+    if (profile) {
+      if (data.bio !== undefined) profile.bio = data.bio.trim();
+      if (data.specializations !== undefined) profile.specialties = data.specializations;
+      if (data.certifications !== undefined) profile.certifications = data.certifications;
+      if (data.photoUrl !== undefined) profile.photoUrl = trainer.photoUrl;
+      if (data.pricingNote !== undefined) profile.pricingNote = data.pricingNote.trim() || null;
+      await this.profilesRepo.save(profile);
+    }
+
+    return { ok: true };
+  }
 }
