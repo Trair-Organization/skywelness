@@ -6,6 +6,7 @@ export type MemberTabParamList = {
   Padel: { subdomain?: string; clubName?: string } | undefined;
   PartnerProfile: { subdomain: string };
   TrainerDetail: { trainerId: string };
+  SkyCafe: undefined;
   Profile: undefined;
   // Hidden routes
   Messages: undefined;
