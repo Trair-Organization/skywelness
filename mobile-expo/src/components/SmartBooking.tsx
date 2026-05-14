@@ -224,6 +224,7 @@ type V2Slot = {
 type Props = {
   subdomain: string;
   category?: string; // 'court_rental' | 'personal_training' | 'massage' | undefined (all)
+  providerId?: string; // Belirli bir eğitmen/masöz için filtrele
 };
 
 const DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
@@ -243,7 +244,7 @@ function getWeekDays() {
   return days;
 }
 
-export function SmartBooking({ subdomain, category }: Props) {
+export function SmartBooking({ subdomain, category, providerId }: Props) {
   const { token, tenant, user } = useMemberAuth();
   const navigation = useNavigation();
   const [services, setServices] = useState<V2Service[]>([]);
@@ -262,31 +263,52 @@ export function SmartBooking({ subdomain, category }: Props) {
     apiJson<V2Service[]>(`/v2/services?tenant=${encodeURIComponent(subdomain)}${q}`, {
       auth: false,
     })
-      .then(setServices)
+      .then((data) => {
+        // providerId varsa sadece o eğitmenin hizmetlerini göster
+        if (providerId) {
+          setServices(data.filter((s) => s.providerId === providerId));
+        } else {
+          setServices(data);
+        }
+      })
       .catch(() => setServices([]));
     apiJson<AddonItem[]>(`/v2/addons?tenant=${encodeURIComponent(subdomain)}`, { auth: false })
       .then(setAddons)
       .catch(() => setAddons([]));
-  }, [subdomain, category]);
+  }, [subdomain, category, providerId]);
 
-  // Slotları yükle (tüm hizmetler için)
+  // Slotları yükle
   const loadSlots = useCallback(async () => {
-    if (services.length === 0) return;
+    if (services.length === 0) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const results = await Promise.all(
-        services.map((svc) =>
-          apiJson<V2Slot[]>(
-            `/v2/schedule?tenant=${encodeURIComponent(subdomain)}&serviceId=${svc.id}&date=${selectedDate}`,
-            { auth: false },
-          ).catch(() => [] as V2Slot[]),
-        ),
-      );
-      setAllSlots(results.flat());
+      let slots: V2Slot[];
+      if (providerId) {
+        // Provider bazlı slot yükleme
+        slots = await apiJson<V2Slot[]>(
+          `/v2/schedule/provider?tenant=${encodeURIComponent(subdomain)}&providerId=${providerId}&date=${selectedDate}`,
+          { auth: false },
+        ).catch(() => [] as V2Slot[]);
+      } else {
+        // Tüm hizmetler için slot yükleme
+        const results = await Promise.all(
+          services.map((svc) =>
+            apiJson<V2Slot[]>(
+              `/v2/schedule?tenant=${encodeURIComponent(subdomain)}&serviceId=${svc.id}&date=${selectedDate}`,
+              { auth: false },
+            ).catch(() => [] as V2Slot[]),
+          ),
+        );
+        slots = results.flat();
+      }
+      setAllSlots(slots);
     } finally {
       setLoading(false);
     }
-  }, [services, subdomain, selectedDate]);
+  }, [services, subdomain, selectedDate, providerId]);
 
   useEffect(() => {
     void loadSlots();

@@ -299,6 +299,7 @@ export function TrainerDetailScreen() {
           <View style={styles.section}>
             <SmartBooking
               subdomain={profile.club.subdomain}
+              providerId={profile.id}
               category={
                 profile.offersSessionTypes.includes('massage') ? 'massage' : 'personal_training'
               }

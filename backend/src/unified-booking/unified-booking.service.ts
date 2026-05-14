@@ -711,6 +711,8 @@ export class UnifiedBookingService {
         date: s.date,
         startTime: s.startTime,
         endTime: s.endTime,
+        capacity: s.capacity,
+        bookedCount: s.bookedCount,
         remainingCapacity: s.capacity - s.bookedCount,
         price: s.price,
         currency: s.currency,
