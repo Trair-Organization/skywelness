@@ -15,6 +15,8 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Addon } from '../database/entities/addon.entity';
+import { ClubEvent } from '../database/entities/club-event.entity';
+import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { UserRole } from '../database/enums';
 import { MailService } from '../mail/mail.service';
 
@@ -34,6 +36,9 @@ export class UnifiedBookingService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     @InjectRepository(Addon) private readonly addonsRepo: Repository<Addon>,
+    @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
+    @InjectRepository(ClubEventRegistration)
+    private readonly eventRegsRepo: Repository<ClubEventRegistration>,
     private readonly mailService: MailService,
   ) {}
 
@@ -272,6 +277,17 @@ export class UnifiedBookingService {
     const tenantId = md.tenantId;
     const serviceId = md.serviceId;
 
+    // Event checkout mu?
+    if (md.type === 'event') {
+      return this.handleEventPaymentCompleted(
+        session as unknown as {
+          id: string;
+          metadata: Record<string, string>;
+          customer_details?: { email?: string };
+        },
+      );
+    }
+
     if (!slotId || !tenantId || !serviceId) {
       this.logger.error(`Stripe webhook missing required metadata: ${JSON.stringify(md)}`);
       return { ok: false, error: 'missing metadata' };
@@ -424,6 +440,179 @@ export class UnifiedBookingService {
     }
 
     return { ok: true, appointmentId: saved.id };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // EVENT CHECKOUT (Ücretli Etkinlikler)
+  // ═══════════════════════════════════════════════════════════
+
+  /** Ücretli etkinlik için Stripe Checkout session oluştur (kapora modeli) */
+  async createEventCheckout(data: {
+    eventId: string;
+    guestName?: string;
+    guestPhone?: string;
+    guestEmail?: string;
+    userId?: string; // Giriş yapmış üye için
+  }) {
+    const event = await this.eventsRepo.findOne({ where: { id: data.eventId, published: true } });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const price = parseFloat(event.price);
+    if (price <= 0) throw new BadRequestException('This event is free — use join endpoint');
+
+    // Kapasite kontrolü
+    const regCount = await this.eventRegsRepo.count({ where: { clubEventId: event.id } });
+    if (regCount >= event.capacity) throw new BadRequestException('Event is full');
+
+    // Komisyon oranı
+    const tenant = await this.tenantsRepo.findOne({ where: { id: event.tenantId } });
+    const COMMISSION_RATE = tenant ? parseFloat(tenant.commissionRate) : 0.15;
+
+    const totalCents = Math.round(price * 100);
+    const kaporaCents = Math.ceil(totalCents * COMMISSION_RATE);
+    const kaporaTRY = (kaporaCents / 100).toFixed(2);
+
+    const startDate = new Date(event.startsAt);
+    const dateStr = startDate.toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+    const timeStr = startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: event.currency.toLowerCase(),
+            product_data: {
+              name: `Kapora — ${event.title}`,
+              description: `${dateStr} · ${timeStr} | Toplam: ${price}₺ · Kapora: ${kaporaTRY}₺`,
+            },
+            unit_amount: kaporaCents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `https://www.wellnessclub.tech/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.wellnessclub.tech/booking-cancel`,
+      metadata: {
+        type: 'event',
+        eventId: event.id,
+        tenantId: event.tenantId,
+        guestName: data.guestName || '',
+        guestPhone: data.guestPhone || '',
+        guestEmail: data.guestEmail || '',
+        userId: data.userId || '',
+        totalAmount: String(price),
+        kaporaAmount: kaporaTRY,
+        commissionRate: String(COMMISSION_RATE),
+      },
+      ...(data.guestEmail ? { customer_email: data.guestEmail } : {}),
+    });
+
+    return {
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      eventTitle: event.title,
+      totalAmount: String(price),
+      kaporaAmount: kaporaTRY,
+      currency: event.currency,
+    };
+  }
+
+  /** Stripe webhook'tan gelen event ödeme onayını işle */
+  async handleEventPaymentCompleted(session: {
+    id: string;
+    metadata: Record<string, string>;
+    customer_details?: { email?: string };
+  }) {
+    const md = session.metadata;
+    const eventId = md.eventId;
+    const tenantId = md.tenantId;
+
+    if (!eventId || !tenantId) return { ok: false, error: 'missing event metadata' };
+
+    const event = await this.eventsRepo.findOne({ where: { id: eventId } });
+    if (!event) return { ok: false, error: 'event not found' };
+
+    const guestName = md.guestName || 'Misafir';
+    const guestPhone = md.guestPhone || '';
+    const guestEmail = (session.customer_details?.email || md.guestEmail || '').toLowerCase();
+
+    // Kullanıcı resolve
+    const userId =
+      md.userId || (await this.resolveGuestUserId(tenantId, guestEmail, guestName, guestPhone));
+
+    // Zaten kayıtlı mı?
+    const existing = await this.eventRegsRepo.findOne({ where: { clubEventId: eventId, userId } });
+    if (existing) return { ok: true, duplicate: true };
+
+    // Kapasite kontrolü
+    const regCount = await this.eventRegsRepo.count({ where: { clubEventId: eventId } });
+    if (regCount >= event.capacity) {
+      this.logger.error(`Event ${eventId} full but payment received — manual refund needed`);
+      return { ok: false, error: 'event full', requiresRefund: true };
+    }
+
+    // Kayıt oluştur
+    await this.eventRegsRepo.insert({ clubEventId: eventId, userId });
+
+    // Bilet maili gönder
+    if (guestEmail) {
+      try {
+        const tenant = await this.tenantsRepo.findOne({ where: { id: tenantId } });
+        const startDate = new Date(event.startsAt);
+        const endDate = event.endsAt ? new Date(event.endsAt) : null;
+        const cancellationDeadline = new Date(startDate.getTime() - 3 * 60 * 60 * 1000);
+
+        await this.mailService.sendBookingConfirmation({
+          to: guestEmail,
+          guestName,
+          clubName: tenant?.name || 'Wellness Club',
+          serviceName: event.title,
+          providerName: event.coachName,
+          date: startDate.toISOString().slice(0, 10),
+          startTime: startDate.toLocaleTimeString('tr-TR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Europe/Istanbul',
+          }),
+          endTime: endDate
+            ? endDate.toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/Istanbul',
+              })
+            : '',
+          totalAmount: md.totalAmount || event.price,
+          kaporaAmount: md.kaporaAmount || null,
+          remainingAmount:
+            md.totalAmount && md.kaporaAmount
+              ? String((parseFloat(md.totalAmount) - parseFloat(md.kaporaAmount)).toFixed(0))
+              : null,
+          currency: event.currency,
+          appointmentId: `EVT-${eventId.slice(0, 8)}`,
+          cancellationDeadline: cancellationDeadline.toLocaleString('tr-TR', {
+            timeZone: 'Europe/Istanbul',
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        });
+        this.logger.log(`Event confirmation email sent to ${guestEmail} for event ${eventId}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Failed to send event confirmation email: ${msg}`);
+      }
+    }
+
+    return { ok: true, eventId, userId };
   }
 
   /**

@@ -127,6 +127,8 @@ export class DiscoveryService {
       category: e.category ?? 'general',
       requirements: e.requirements,
       schedule: e.schedule,
+      price: e.price ?? '0',
+      currency: e.currency ?? 'TRY',
       clubName: e.tenant?.name ?? null,
       clubSubdomain: e.tenant?.subdomain ?? null,
     }));

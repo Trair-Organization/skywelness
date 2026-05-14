@@ -17,6 +17,8 @@ type EventData = {
   requirements?: string | null;
   schedule?: ScheduleItem[] | null;
   clubName?: string | null;
+  price?: string | null;
+  currency?: string | null;
 };
 
 type Props = {
@@ -59,6 +61,9 @@ export function EventDetailModal({
   const startTime = startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   const endTime = endDate?.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   const cat = CATEGORY_LABELS[event.category ?? 'general'] ?? CATEGORY_LABELS.general;
+  const eventPrice = parseFloat(event.price || '0');
+  const isPaid = eventPrice > 0;
+  const kaporaAmount = isPaid ? Math.ceil(eventPrice * 0.15) : 0;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -125,6 +130,20 @@ export function EventDetailModal({
                   <Text style={styles.metaText}>{event.clubName}</Text>
                 </View>
               )}
+              {isPaid && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>💰 Katılım Ücreti</Text>
+                  <Text style={styles.priceValue}>{eventPrice.toLocaleString('tr-TR')}₺</Text>
+                </View>
+              )}
+              {!isPaid && (
+                <View style={styles.metaRow}>
+                  <Text style={styles.metaIcon}>🎫</Text>
+                  <Text style={[styles.metaText, { color: '#10b981', fontWeight: '700' }]}>
+                    Ücretsiz
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Açıklama */}
@@ -165,7 +184,11 @@ export function EventDetailModal({
                 style={({ pressed }) => [styles.joinBtn, pressed && styles.joinBtnPressed]}
                 onPress={() => onJoin(event.id)}
               >
-                <Text style={styles.joinBtnTxt}>✓ Etkinliğe Katıl</Text>
+                <Text style={styles.joinBtnTxt}>
+                  {isPaid
+                    ? `💳 Kapora Öde · ${kaporaAmount.toLocaleString('tr-TR')}₺`
+                    : '✓ Etkinliğe Katıl'}
+                </Text>
               </Pressable>
             ) : (
               <>
@@ -176,7 +199,11 @@ export function EventDetailModal({
                   ]}
                   onPress={onRegister}
                 >
-                  <Text style={styles.registerBtnTxt}>Katılmak için Kayıt Ol</Text>
+                  <Text style={styles.registerBtnTxt}>
+                    {isPaid
+                      ? `Katılmak için Kayıt Ol · ${kaporaAmount.toLocaleString('tr-TR')}₺ kapora`
+                      : 'Katılmak için Kayıt Ol'}
+                  </Text>
                 </Pressable>
                 <View style={styles.guestSecondaryRow}>
                   <Pressable style={styles.loginLink} onPress={onLogin}>
@@ -247,6 +274,20 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   metaIcon: { fontSize: 16, width: 24 },
   metaText: { color: premium.textMuted, fontSize: 14, fontWeight: '600', flex: 1 },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(99,102,241,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  priceLabel: { color: '#a5b4fc', fontSize: 14, fontWeight: '700' },
+  priceValue: { color: '#fff', fontSize: 18, fontWeight: '900' },
   section: { paddingHorizontal: 20, marginTop: 20 },
   sectionTitle: { color: premium.text, fontSize: 16, fontWeight: '800', marginBottom: 8 },
   sectionBody: { color: premium.textMuted, fontSize: 14, lineHeight: 21 },

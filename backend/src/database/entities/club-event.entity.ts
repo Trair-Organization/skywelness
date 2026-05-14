@@ -60,6 +60,13 @@ export class ClubEvent {
   @Column({ type: 'jsonb', nullable: true })
   schedule!: Array<{ time: string; title: string }> | null;
 
+  /** Katılım ücreti. 0 = ücretsiz etkinlik. */
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
+  price!: string;
+
+  @Column({ type: 'varchar', length: 3, default: 'TRY' })
+  currency!: string;
+
   @Column({ type: 'boolean', default: true })
   published!: boolean;
 
