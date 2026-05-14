@@ -1812,6 +1812,15 @@ export function ClubConnectScreen() {
       <EventDetailModal
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
+        isAuthenticated={isAuthenticated}
+        onRegister={() => {
+          setSelectedEvent(null);
+          navigation.navigate('Register');
+        }}
+        onLogin={() => {
+          setSelectedEvent(null);
+          navigation.navigate('Login');
+        }}
         onJoin={(eventId) => {
           const evt = apiEvents.find((e) => e.id === eventId);
           if (evt) {

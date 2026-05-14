@@ -244,7 +244,9 @@ export function MemberDiscoverScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.padelTitle}>O'Padel</Text>
-                  <Text style={styles.padelDesc}>İstanbul'un en modern padel tesisi. Hemen kort rezervasyonu yapın!</Text>
+                  <Text style={styles.padelDesc}>
+                    İstanbul'un en modern padel tesisi. Hemen kort rezervasyonu yapın!
+                  </Text>
                 </View>
                 <Text style={styles.padelArrow}>→</Text>
               </View>
@@ -424,6 +426,7 @@ export function MemberDiscoverScreen() {
       <EventDetailModal
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
+        isAuthenticated={!!token}
         onJoin={(id) => handleJoinEvent(id)}
       />
     </GradientBackground>

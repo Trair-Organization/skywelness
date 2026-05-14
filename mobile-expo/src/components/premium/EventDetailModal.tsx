@@ -23,6 +23,9 @@ type Props = {
   event: EventData | null;
   onClose: () => void;
   onJoin: (eventId: string) => void;
+  isAuthenticated?: boolean;
+  onRegister?: () => void;
+  onLogin?: () => void;
 };
 
 const CATEGORY_LABELS: Record<string, { icon: string; label: string }> = {
@@ -35,7 +38,14 @@ const CATEGORY_LABELS: Record<string, { icon: string; label: string }> = {
   general: { icon: '📅', label: 'Etkinlik' },
 };
 
-export function EventDetailModal({ event, onClose, onJoin }: Props) {
+export function EventDetailModal({
+  event,
+  onClose,
+  onJoin,
+  isAuthenticated = true,
+  onRegister,
+  onLogin,
+}: Props) {
   if (!event) return null;
 
   const startDate = new Date(event.startsAt);
@@ -150,12 +160,34 @@ export function EventDetailModal({ event, onClose, onJoin }: Props) {
 
           {/* CTA */}
           <View style={styles.ctaBar}>
-            <Pressable
-              style={({ pressed }) => [styles.joinBtn, pressed && styles.joinBtnPressed]}
-              onPress={() => onJoin(event.id)}
-            >
-              <Text style={styles.joinBtnTxt}>💬 Katıl</Text>
-            </Pressable>
+            {isAuthenticated ? (
+              <Pressable
+                style={({ pressed }) => [styles.joinBtn, pressed && styles.joinBtnPressed]}
+                onPress={() => onJoin(event.id)}
+              >
+                <Text style={styles.joinBtnTxt}>✓ Etkinliğe Katıl</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.guestCtaContainer}>
+                <Text style={styles.guestCtaText}>Katılmak için hesap oluşturun</Text>
+                <View style={styles.guestCtaRow}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.registerBtn,
+                      pressed && styles.registerBtnPressed,
+                    ]}
+                    onPress={onRegister}
+                  >
+                    <Text style={styles.registerBtnTxt}>Kayıt Ol</Text>
+                  </Pressable>
+                  <Pressable style={styles.loginLink} onPress={onLogin}>
+                    <Text style={styles.loginLinkTxt}>
+                      Zaten hesabın var mı? <Text style={styles.loginLinkBold}>Giriş Yap</Text>
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
             <Pressable style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnTxt}>Kapat</Text>
             </Pressable>
@@ -254,4 +286,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeBtnTxt: { color: premium.textMuted, fontSize: 14, fontWeight: '600' },
+  // Guest CTA
+  guestCtaContainer: { flex: 1, gap: 8 },
+  guestCtaText: { color: premium.textMuted, fontSize: 12, textAlign: 'center' },
+  guestCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  registerBtn: {
+    flex: 1,
+    backgroundColor: premium.accentBlue,
+    borderRadius: 14,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  registerBtnPressed: { opacity: 0.8 },
+  registerBtnTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  loginLink: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  loginLinkTxt: { color: premium.textMuted, fontSize: 11, textAlign: 'center' },
+  loginLinkBold: { color: premium.accentBlue, fontWeight: '700' },
 });
