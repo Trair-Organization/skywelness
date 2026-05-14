@@ -5,6 +5,7 @@ import {
   Dimensions,
   Easing,
   Image,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -115,6 +116,7 @@ export function PartnerProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sliderPage, setSliderPage] = useState(0);
+  const [selectedEvent, setSelectedEvent] = useState<ProfileData['events'][0] | null>(null);
 
   const loadProfile = useCallback(async () => {
     if (!subdomain) return;
@@ -373,20 +375,22 @@ export function PartnerProfileScreen() {
               {profile.events.map((evt) => {
                 const d = new Date(evt.startsAt);
                 return (
-                  <View key={evt.id} style={styles.eventMiniCard}>
-                    {evt.imageUrl ? (
-                      <Image source={{ uri: evt.imageUrl }} style={styles.eventMiniImg} resizeMode="cover" />
-                    ) : (
-                      <View style={styles.eventMiniImgPlaceholder}><Text style={{ fontSize: 20 }}>📅</Text></View>
-                    )}
-                    <View style={styles.eventMiniBody}>
-                      <Text style={styles.eventMiniDate}>
-                        {d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} · {d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
-                      <Text style={styles.eventMiniTitle} numberOfLines={2}>{evt.title}</Text>
-                      {evt.coachName && <Text style={styles.eventMiniCoach}>🏋️ {evt.coachName}</Text>}
+                  <Pressable key={evt.id} onPress={() => setSelectedEvent(evt)}>
+                    <View style={styles.eventMiniCard}>
+                      {evt.imageUrl ? (
+                        <Image source={{ uri: evt.imageUrl }} style={styles.eventMiniImg} resizeMode="cover" />
+                      ) : (
+                        <View style={styles.eventMiniImgPlaceholder}><Text style={{ fontSize: 20 }}>📅</Text></View>
+                      )}
+                      <View style={styles.eventMiniBody}>
+                        <Text style={styles.eventMiniDate}>
+                          {d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} · {d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        <Text style={styles.eventMiniTitle} numberOfLines={2}>{evt.title}</Text>
+                        {evt.coachName && <Text style={styles.eventMiniCoach}>🏋️ {evt.coachName}</Text>}
+                      </View>
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </ScrollView>
@@ -535,6 +539,76 @@ export function PartnerProfileScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ═══ Etkinlik Detay Modal ═══ */}
+      <Modal visible={!!selectedEvent} transparent animationType="slide" onRequestClose={() => setSelectedEvent(null)}>
+        <Pressable style={styles.eventModalBackdrop} onPress={() => setSelectedEvent(null)}>
+          <Pressable style={styles.eventModalCard} onPress={() => {}}>
+            {selectedEvent && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {selectedEvent.imageUrl && (
+                  <Image source={{ uri: selectedEvent.imageUrl }} style={styles.eventModalImg} resizeMode="cover" />
+                )}
+                <View style={styles.eventModalBody}>
+                  <Text style={styles.eventModalTitle}>{selectedEvent.title}</Text>
+                  <Text style={styles.eventModalMeta}>
+                    📅 {new Date(selectedEvent.startsAt).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </Text>
+                  <Text style={styles.eventModalMeta}>
+                    🕐 {new Date(selectedEvent.startsAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    {selectedEvent.endsAt && ` — ${new Date(selectedEvent.endsAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`}
+                  </Text>
+                  {selectedEvent.location && <Text style={styles.eventModalMeta}>📍 {selectedEvent.location}</Text>}
+                  {selectedEvent.coachName && <Text style={styles.eventModalMeta}>🏋️ {selectedEvent.coachName}</Text>}
+                  <Text style={styles.eventModalMeta}>👥 Kapasite: {selectedEvent.capacity} kişi</Text>
+                  {selectedEvent.description && (
+                    <Text style={styles.eventModalDesc}>{selectedEvent.description}</Text>
+                  )}
+
+                  {/* CTA */}
+                  {token ? (
+                    <Pressable
+                      style={styles.eventModalJoinBtn}
+                      onPress={async () => {
+                        try {
+                          await apiJson(`/events/${selectedEvent.id}/join`, { method: 'POST', token, tenantSubdomain: tenant?.subdomain });
+                          showToast('Etkinliğe katıldınız! ✅', 'success');
+                          setSelectedEvent(null);
+                        } catch (e) {
+                          showToast(e instanceof Error ? e.message : 'Katılım başarısız', 'error');
+                        }
+                      }}
+                    >
+                      <Text style={styles.eventModalJoinTxt}>✓ Etkinliğe Katıl</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={styles.eventModalLoginBox}>
+                      <Text style={styles.eventModalLoginTxt}>Etkinliğe katılmak için üye olmanız gerekiyor.</Text>
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                        <Pressable
+                          style={[styles.eventModalJoinBtn, { flex: 1 }]}
+                          onPress={() => {
+                            setSelectedEvent(null);
+                            (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Register', { preselectedSubdomain: profile.subdomain });
+                          }}
+                        >
+                          <Text style={styles.eventModalJoinTxt}>Hesap Oluştur</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.eventModalLoginBtn, { flex: 1 }]}
+                          onPress={() => { setSelectedEvent(null); (navigation as unknown as { navigate: (n: string) => void }).navigate('Login'); }}
+                        >
+                          <Text style={styles.eventModalLoginBtnTxt}>Giriş Yap</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </ScrollView>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ═══ Sticky CTA ═══ */}
       <View style={[styles.stickyCta, { paddingBottom: insets.bottom + 12 }]}>
@@ -696,4 +770,18 @@ const styles = StyleSheet.create({
   exclusiveIcon: { fontSize: 36, marginBottom: 12 },
   exclusiveTitle: { fontSize: 20, fontWeight: '800', color: premium.text, marginBottom: 12 },
   exclusiveDesc: { fontSize: 14, lineHeight: 22, color: premium.textMuted, textAlign: 'center' },
+  // Event Detail Modal
+  eventModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  eventModalCard: { backgroundColor: '#0b1220', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', borderWidth: 1, borderColor: premium.glassBorder },
+  eventModalImg: { width: '100%', height: 200, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  eventModalBody: { padding: 20 },
+  eventModalTitle: { fontSize: 22, fontWeight: '900', color: premium.text, marginBottom: 14 },
+  eventModalMeta: { fontSize: 14, color: premium.textMuted, marginBottom: 6 },
+  eventModalDesc: { fontSize: 14, lineHeight: 22, color: premium.textMuted, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: premium.glassBorder },
+  eventModalJoinBtn: { backgroundColor: premium.accentBlue, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 20 },
+  eventModalJoinTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  eventModalLoginBox: { marginTop: 20, padding: 16, borderRadius: 14, backgroundColor: 'rgba(56,189,248,0.06)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)' },
+  eventModalLoginTxt: { color: premium.textMuted, fontSize: 14, textAlign: 'center' },
+  eventModalLoginBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.05)' },
+  eventModalLoginBtnTxt: { color: premium.text, fontSize: 16, fontWeight: '800' },
 });
