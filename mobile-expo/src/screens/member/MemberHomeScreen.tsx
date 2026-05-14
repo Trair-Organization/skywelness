@@ -966,7 +966,28 @@ export function MemberHomeScreen() {
           </View>
         )}
 
-        <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            marginBottom: 8,
+          }}
+        >
+          <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+          <Pressable
+            onPress={() =>
+              (navigation as unknown as { navigate: (n: string) => void }).navigate(
+                'AllEvents' as never,
+              )
+            }
+          >
+            <Text style={{ color: premium.accentBlue, fontSize: 13, fontWeight: '700' }}>
+              Tümünü Gör →
+            </Text>
+          </Pressable>
+        </View>
         {eventNotice ? <Text style={styles.eventsNotice}>{eventNotice}</Text> : null}
         {loadingEvents && clubEvents.length === 0 ? (
           <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
