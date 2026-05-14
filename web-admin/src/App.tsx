@@ -40,6 +40,8 @@ import { ConnectionsPage } from './pages/ConnectionsPage';
 import { PtManagementPage } from './pages/PtManagementPage';
 import { ResourceManagementPage } from './pages/ResourceManagementPage';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
+import { AppointmentsPage } from './pages/AppointmentsPage';
+import { ScheduleSlotsPage } from './pages/ScheduleSlotsPage';
 import { SuperAdminDashboardPage } from './pages/SuperAdminDashboardPage';
 import { SuperAdminTenantsPage } from './pages/SuperAdminTenantsPage';
 import { SuperAdminUsersPage } from './pages/SuperAdminUsersPage';
@@ -89,6 +91,8 @@ function AppRoutes() {
         <Route path="/leads" element={<LeadsPage />} />
         <Route path="/connections" element={<ConnectionsPage />} />
         <Route path="/resource-management" element={<ResourceManagementPage />} />
+        <Route path="/appointments" element={<AppointmentsPage />} />
+        <Route path="/schedule-slots" element={<ScheduleSlotsPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboardPage />} />
