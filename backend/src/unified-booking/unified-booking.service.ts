@@ -17,7 +17,9 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { Addon } from '../database/entities/addon.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
-import { UserRole } from '../database/enums';
+import { Package } from '../database/entities/package.entity';
+import { PackageType } from '../database/entities/package-type.entity';
+import { UserRole, PackageStatus, SessionType } from '../database/enums';
 import { MailService } from '../mail/mail.service';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -39,6 +41,8 @@ export class UnifiedBookingService {
     @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
     @InjectRepository(ClubEventRegistration)
     private readonly eventRegsRepo: Repository<ClubEventRegistration>,
+    @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
+    @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     private readonly mailService: MailService,
   ) {}
 
@@ -613,6 +617,115 @@ export class UnifiedBookingService {
     }
 
     return { ok: true, eventId, userId };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // PACKAGE MANAGEMENT (Paket Kullanımı)
+  // ═══════════════════════════════════════════════════════════
+
+  /** Üyenin aktif paketlerini listele (mobil: hangi buton gösterilecek kararı için) */
+  async listMyPackages(user: User) {
+    const now = new Date().toISOString().slice(0, 10);
+    const packages = await this.packagesRepo.find({
+      where: { userId: user.id, status: PackageStatus.ACTIVE },
+      relations: ['packageType', 'assignedTrainer', 'assignedTrainer.user'],
+    });
+
+    return packages
+      .filter((p) => p.expiresAt >= now && p.remainingSessions > 0)
+      .map((p) => ({
+        id: p.id,
+        packageTypeName: p.packageType?.name ?? '',
+        sessionType: p.packageType?.sessionType ?? '',
+        remainingSessions: p.remainingSessions,
+        totalSessions: p.packageType?.sessionCount ?? 0,
+        expiresAt: p.expiresAt,
+        assignedTrainerId: p.assignedTrainerId,
+        assignedTrainerName: p.assignedTrainer?.user
+          ? `${p.assignedTrainer.user.firstName} ${p.assignedTrainer.user.lastName}`.trim()
+          : null,
+        tenantId: p.packageType?.tenantId ?? '',
+      }));
+  }
+
+  /** Paketten seans düş + randevu oluştur (ödeme yok) */
+  async usePackageForAppointment(user: User, data: { slotId: string; packageId: string }) {
+    const pkg = await this.packagesRepo.findOne({
+      where: { id: data.packageId, userId: user.id, status: PackageStatus.ACTIVE },
+      relations: ['packageType'],
+    });
+    if (!pkg) throw new NotFoundException('Package not found or not active');
+    if (pkg.remainingSessions <= 0) throw new BadRequestException('No remaining sessions');
+
+    const now = new Date().toISOString().slice(0, 10);
+    if (pkg.expiresAt < now) throw new BadRequestException('Package expired');
+
+    const slot = await this.slotsRepo.findOne({
+      where: { id: data.slotId },
+      relations: ['service'],
+    });
+    if (!slot) throw new NotFoundException('Slot not found');
+    if (slot.status !== 'available') throw new BadRequestException('Slot is not available');
+    if (slot.bookedCount >= slot.capacity) throw new BadRequestException('Slot is full');
+
+    // PT paketi: eğitmen eşleşmesi kontrolü
+    if (pkg.packageType?.sessionType === SessionType.PERSONAL_TRAINING && pkg.assignedTrainerId) {
+      if (slot.providerId !== pkg.assignedTrainerId) {
+        throw new BadRequestException('Bu paket sadece atanmış eğitmeninizle kullanılabilir');
+      }
+    }
+
+    // Aynı slot'a tekrar rezervasyon kontrolü
+    const existing = await this.appointmentsRepo.findOne({
+      where: { userId: user.id, slotId: data.slotId },
+    });
+    if (existing && existing.status !== 'cancelled') {
+      throw new BadRequestException('You already have a reservation for this slot');
+    }
+
+    // Paketten seans düş
+    pkg.remainingSessions -= 1;
+    if (pkg.remainingSessions <= 0) {
+      pkg.status = PackageStatus.DEPLETED;
+    }
+    await this.packagesRepo.save(pkg);
+
+    // Appointment oluştur
+    const appointment = this.appointmentsRepo.create({
+      tenantId: slot.tenantId,
+      userId: user.id,
+      slotId: slot.id,
+      serviceId: slot.serviceId,
+      providerType: slot.providerType,
+      providerId: slot.providerId,
+      status: 'confirmed',
+      totalAmount: '0',
+      currency: slot.currency,
+      paymentStatus: 'package',
+      paymentMethod: 'package',
+      packageId: pkg.id,
+      notes: `Paket kullanımı: ${pkg.packageType?.name ?? 'Paket'}`,
+      participantCount: 1,
+    });
+    const saved = await this.appointmentsRepo.save(appointment);
+
+    // Slot güncelle
+    await this.slotsRepo.increment({ id: slot.id }, 'bookedCount', 1);
+    if (slot.bookedCount + 1 >= slot.capacity) {
+      await this.slotsRepo.update({ id: slot.id }, { status: 'booked' });
+    }
+
+    return {
+      id: saved.id,
+      status: 'confirmed',
+      service: slot.service?.name,
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      packageName: pkg.packageType?.name,
+      remainingSessions: pkg.remainingSessions,
+      paymentMethod: 'package',
+    };
   }
 
   /**

@@ -11,6 +11,8 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { Addon } from '../database/entities/addon.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
+import { Package } from '../database/entities/package.entity';
+import { PackageType } from '../database/entities/package-type.entity';
 import { UnifiedBookingController } from './unified-booking.controller';
 import { UnifiedBookingService } from './unified-booking.service';
 
@@ -26,6 +28,8 @@ import { UnifiedBookingService } from './unified-booking.service';
       Addon,
       ClubEvent,
       ClubEventRegistration,
+      Package,
+      PackageType,
     ]),
     AuthModule,
     MailModule,

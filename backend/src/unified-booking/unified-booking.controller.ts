@@ -175,6 +175,20 @@ export class UnifiedBookingController {
     return this.service.createAppointment(user, body);
   }
 
+  /** Üye: Aktif paketlerini listele */
+  @Get('my-packages')
+  @UseGuards(JwtAuthGuard)
+  listMyPackages(@CurrentUser() user: User) {
+    return this.service.listMyPackages(user);
+  }
+
+  /** Üye: Paketten seans kullanarak randevu oluştur (ödeme yok) */
+  @Post('appointments/use-package')
+  @UseGuards(JwtAuthGuard)
+  usePackage(@CurrentUser() user: User, @Body() body: { slotId: string; packageId: string }) {
+    return this.service.usePackageForAppointment(user, body);
+  }
+
   /** Üye: Kendi randevularını listele */
   @Get('appointments/my')
   @UseGuards(JwtAuthGuard)

@@ -244,6 +244,15 @@ function getWeekDays() {
   return days;
 }
 
+type MyPackage = {
+  id: string;
+  packageTypeName: string;
+  sessionType: string;
+  remainingSessions: number;
+  assignedTrainerId: string | null;
+  assignedTrainerName: string | null;
+};
+
 export function SmartBooking({ subdomain, category, providerId }: Props) {
   const { token, tenant, user } = useMemberAuth();
   const navigation = useNavigation();
@@ -255,7 +264,16 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
   const [addons, setAddons] = useState<AddonItem[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
+  const [myPackages, setMyPackages] = useState<MyPackage[]>([]);
   const days = getWeekDays();
+
+  // Paketleri yükle (giriş yapmış üye için)
+  useEffect(() => {
+    if (!token) return;
+    apiJson<MyPackage[]>('/v2/my-packages', { token, tenantSubdomain: tenant?.subdomain })
+      .then(setMyPackages)
+      .catch(() => setMyPackages([]));
+  }, [token, tenant?.subdomain]);
 
   // Hizmetleri ve add-on'ları yükle
   useEffect(() => {
@@ -382,43 +400,95 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const successAnim = useRef(new Animated.Value(0)).current;
 
+  // Seçili slot için uygun paket var mı?
+  function findMatchingPackage(slotId: string): MyPackage | null {
+    if (!token || myPackages.length === 0) return null;
+    const slot = allSlots.find((s) => s.id === slotId);
+    if (!slot) return null;
+    const svc = services.find((s) => s.id === slot.serviceId);
+    if (!svc) return null;
+
+    // Kategori eşleşmesi: PT paketi → personal_training, Masaj paketi → massage
+    const matchingPkgs = myPackages.filter((p) => {
+      if (p.remainingSessions <= 0) return false;
+      if (svc.category === 'personal_training' && p.sessionType === 'personal_training') {
+        // PT: eğitmen eşleşmesi zorunlu
+        return !p.assignedTrainerId || p.assignedTrainerId === slot.providerId;
+      }
+      if (svc.category === 'massage' && p.sessionType === 'massage') {
+        // Masaj: herhangi masözden kullanılabilir
+        return true;
+      }
+      return false;
+    });
+
+    return matchingPkgs.length > 0 ? matchingPkgs[0] : null;
+  }
+
   async function confirmBooking() {
     if (!selectedSlotId) return;
     setBooking(true);
     try {
-      const addonsList = Object.entries(selectedAddons)
-        .filter(([, qty]) => qty > 0)
-        .map(([addonId, quantity]) => ({ addonId, quantity }));
+      // Paket kontrolü
+      const matchedPkg = findMatchingPackage(selectedSlotId);
 
-      // Kayıtlı üye de kapora öder — Stripe checkout
-      const res = await apiJson<{ checkoutUrl: string }>('/v2/checkout', {
-        method: 'POST',
-        token,
-        tenantSubdomain: tenant?.subdomain,
-        body: JSON.stringify({
-          slotId: selectedSlotId,
-          addons: addonsList.length > 0 ? addonsList : undefined,
-          // Üye bilgileri backend'den alınacak (token ile)
-          guestEmail: user?.email,
-          guestName: user ? `${user.firstName} ${user.lastName}`.trim() : undefined,
-          guestPhone: user?.phone || undefined,
-        }),
-      });
-      if (res.checkoutUrl) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          res.checkoutUrl,
-          'wellnessclubai://booking-success',
+      if (matchedPkg) {
+        // Paketten seans düş — ödeme yok
+        const res = await apiJson<{ id: string; remainingSessions: number }>(
+          '/v2/appointments/use-package',
+          {
+            method: 'POST',
+            token,
+            tenantSubdomain: tenant?.subdomain,
+            body: JSON.stringify({
+              slotId: selectedSlotId,
+              packageId: matchedPkg.id,
+            }),
+          },
         );
         setSelectedSlotId(null);
-        if (result.type === 'success') {
-          showToast('Ödeme başarılı! Biletiniz e-postanıza gönderildi 🎉', 'success');
-          void loadSlots();
-        } else if (result.type === 'cancel') {
-          showToast('Ödeme iptal edildi', 'warning');
+        showToast(`Randevu oluşturuldu! Kalan seans: ${res.remainingSessions} ✓`, 'success');
+        // Paket listesini güncelle
+        setMyPackages((prev) =>
+          prev.map((p) =>
+            p.id === matchedPkg.id ? { ...p, remainingSessions: res.remainingSessions } : p,
+          ),
+        );
+        void loadSlots();
+      } else {
+        // Kapora öde — Stripe checkout
+        const addonsList = Object.entries(selectedAddons)
+          .filter(([, qty]) => qty > 0)
+          .map(([addonId, quantity]) => ({ addonId, quantity }));
+
+        const res = await apiJson<{ checkoutUrl: string }>('/v2/checkout', {
+          method: 'POST',
+          token,
+          tenantSubdomain: tenant?.subdomain,
+          body: JSON.stringify({
+            slotId: selectedSlotId,
+            addons: addonsList.length > 0 ? addonsList : undefined,
+            guestEmail: user?.email,
+            guestName: user ? `${user.firstName} ${user.lastName}`.trim() : undefined,
+            guestPhone: user?.phone || undefined,
+          }),
+        });
+        if (res.checkoutUrl) {
+          const result = await WebBrowser.openAuthSessionAsync(
+            res.checkoutUrl,
+            'wellnessclubai://booking-success',
+          );
+          setSelectedSlotId(null);
+          if (result.type === 'success') {
+            showToast('Ödeme başarılı! Biletiniz e-postanıza gönderildi 🎉', 'success');
+            void loadSlots();
+          } else if (result.type === 'cancel') {
+            showToast('Ödeme iptal edildi', 'warning');
+          }
         }
       }
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Ödeme başlatılamadı', 'error');
+      showToast(e instanceof Error ? e.message : 'İşlem başarısız', 'error');
     } finally {
       setBooking(false);
     }
@@ -670,12 +740,19 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
                         </Animated.View>
                       ) : (
                         <Pressable
-                          style={styles.modalConfirmBtn}
+                          style={[
+                            styles.modalConfirmBtn,
+                            findMatchingPackage(selectedSlotId!) && { backgroundColor: '#10b981' },
+                          ]}
                           onPress={confirmBooking}
                           disabled={booking}
                         >
                           <Text style={styles.modalConfirmTxt}>
-                            {booking ? 'Yönlendiriliyor...' : '💳 Kapora Öde'}
+                            {booking
+                              ? 'İşleniyor...'
+                              : findMatchingPackage(selectedSlotId!)
+                                ? `✓ Paketten Kullan (Kalan: ${findMatchingPackage(selectedSlotId!)!.remainingSessions})`
+                                : '💳 Kapora Öde'}
                           </Text>
                         </Pressable>
                       )
