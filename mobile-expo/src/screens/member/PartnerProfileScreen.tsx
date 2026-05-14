@@ -269,7 +269,8 @@ export function PartnerProfileScreen() {
               </View>
             )}
           </View>
-          {/* Metrics */}
+          {/* Metrics — sadece public kulüpler veya giriş yapmış üyeler */}
+          {(profile.visibilityMode === 'public' || token) && (
           <View style={styles.metricsRow}>
             {profile.metrics.memberCount > 0 && (
               <View style={styles.metricItem}>
@@ -296,6 +297,7 @@ export function PartnerProfileScreen() {
               </View>
             )}
           </View>
+          )}
         </View>
 
         {/* ═══ Hakkımızda ═══ */}
