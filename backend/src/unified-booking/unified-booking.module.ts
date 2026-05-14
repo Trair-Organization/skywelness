@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
+import { MailModule } from '../mail/mail.module';
 import { ServiceCatalog } from '../database/entities/service-catalog.entity';
 import { ScheduleSlot } from '../database/entities/schedule-slot.entity';
 import { Appointment } from '../database/entities/appointment.entity';
@@ -23,6 +24,7 @@ import { UnifiedBookingService } from './unified-booking.service';
       Addon,
     ]),
     AuthModule,
+    MailModule,
   ],
   controllers: [UnifiedBookingController],
   providers: [UnifiedBookingService],

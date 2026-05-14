@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Stripe from 'stripe';
@@ -10,11 +16,16 @@ import { User } from '../database/entities/user.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Addon } from '../database/entities/addon.entity';
 import { UserRole } from '../database/enums';
+import { MailService } from '../mail/mail.service';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' as Stripe.LatestApiVersion });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
+});
 
 @Injectable()
 export class UnifiedBookingService {
+  private readonly logger = new Logger(UnifiedBookingService.name);
+
   constructor(
     @InjectRepository(ServiceCatalog) private readonly servicesRepo: Repository<ServiceCatalog>,
     @InjectRepository(ScheduleSlot) private readonly slotsRepo: Repository<ScheduleSlot>,
@@ -23,6 +34,7 @@ export class UnifiedBookingService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     @InjectRepository(Addon) private readonly addonsRepo: Repository<Addon>,
+    private readonly mailService: MailService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════
@@ -34,7 +46,8 @@ export class UnifiedBookingService {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
-    const qb = this.servicesRepo.createQueryBuilder('s')
+    const qb = this.servicesRepo
+      .createQueryBuilder('s')
       .where('s.tenantId = :tid', { tid: tenant.id })
       .andWhere('s.active = true')
       .orderBy('s.sortOrder', 'ASC');
@@ -46,49 +59,54 @@ export class UnifiedBookingService {
     const services = await qb.getMany();
 
     // Provider bilgilerini ekle
-    const result = await Promise.all(services.map(async (s) => {
-      let providerName: string | null = null;
-      if (s.providerType === 'trainer' && s.providerId) {
-        const trainer = await this.trainersRepo.findOne({
-          where: { id: s.providerId },
-          relations: ['user'],
-        });
-        if (trainer) providerName = `${trainer.user.firstName} ${trainer.user.lastName}`.trim();
-      }
-      return {
-        id: s.id,
-        name: s.name,
-        description: s.description,
-        category: s.category,
-        providerType: s.providerType,
-        providerId: s.providerId,
-        providerName,
-        durationMinutes: s.durationMinutes,
-        price: s.price,
-        currency: s.currency,
-        capacity: s.capacity,
-        imageUrl: s.imageUrl,
-        metadata: s.metadata,
-      };
-    }));
+    const result = await Promise.all(
+      services.map(async (s) => {
+        let providerName: string | null = null;
+        if (s.providerType === 'trainer' && s.providerId) {
+          const trainer = await this.trainersRepo.findOne({
+            where: { id: s.providerId },
+            relations: ['user'],
+          });
+          if (trainer) providerName = `${trainer.user.firstName} ${trainer.user.lastName}`.trim();
+        }
+        return {
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          category: s.category,
+          providerType: s.providerType,
+          providerId: s.providerId,
+          providerName,
+          durationMinutes: s.durationMinutes,
+          price: s.price,
+          currency: s.currency,
+          capacity: s.capacity,
+          imageUrl: s.imageUrl,
+          metadata: s.metadata,
+        };
+      }),
+    );
 
     return result;
   }
 
   /** Admin: Hizmet oluştur */
-  async createService(tenantId: string, data: {
-    name: string;
-    description?: string;
-    category: string;
-    providerType: string;
-    providerId?: string;
-    durationMinutes?: number;
-    price: number;
-    currency?: string;
-    capacity?: number;
-    imageUrl?: string;
-    metadata?: Record<string, unknown>;
-  }) {
+  async createService(
+    tenantId: string,
+    data: {
+      name: string;
+      description?: string;
+      category: string;
+      providerType: string;
+      providerId?: string;
+      durationMinutes?: number;
+      price: number;
+      currency?: string;
+      capacity?: number;
+      imageUrl?: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
     const service = this.servicesRepo.create({
       tenantId,
       name: data.name,
@@ -160,7 +178,9 @@ export class UnifiedBookingService {
     // Add-on'ları ekle
     if (data.addons && data.addons.length > 0) {
       for (const item of data.addons) {
-        const addon = await this.addonsRepo.findOne({ where: { id: item.addonId, tenantId: slot.tenantId, active: true } });
+        const addon = await this.addonsRepo.findOne({
+          where: { id: item.addonId, tenantId: slot.tenantId, active: true },
+        });
         if (addon && item.quantity > 0) {
           lineItems.push({
             price_data: {
@@ -199,48 +219,241 @@ export class UnifiedBookingService {
     };
   }
 
-  /** Stripe webhook — ödeme başarılı olunca rezervasyon oluştur */
-  async handleStripeWebhook(body: unknown, _sig: string) {
-    // Basit implementasyon — production'da webhook signature doğrulaması yapılmalı
-    const event = body as { type: string; data: { object: { metadata: Record<string, string>; payment_status: string } } };
+  /**
+   * Stripe webhook — ödeme başarılı olunca rezervasyon oluştur ve dijital bilet maili gönder.
+   * Production: STRIPE_WEBHOOK_SECRET env değişkeni zorunlu, signature header doğrulanır.
+   * Body raw Buffer olarak gelmeli (main.ts: rawBody:true + controller: @Req).
+   */
+  async handleStripeWebhook(rawBody: Buffer, signature: string | undefined) {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event: Stripe.Event;
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      if (session.payment_status === 'paid') {
-        const { slotId, tenantId, serviceId, guestName, guestPhone } = session.metadata;
-
-        const slot = await this.slotsRepo.findOne({ where: { id: slotId } });
-        if (!slot || slot.bookedCount >= slot.capacity) return { ok: false };
-
-        // Appointment oluştur
-        const appointment = this.appointmentsRepo.create({
-          tenantId,
-          userId: '00000000-0000-0000-0000-000000000000', // guest placeholder
-          slotId,
-          serviceId,
-          providerType: slot.providerType,
-          providerId: slot.providerId,
-          status: 'confirmed',
-          totalAmount: slot.price,
-          currency: slot.currency,
-          paymentStatus: 'paid',
-          paymentMethod: 'card',
-          notes: guestName ? `Misafir: ${guestName} · ${guestPhone}` : null,
-          participantCount: 1,
-        });
-        await this.appointmentsRepo.save(appointment);
-
-        // Slot güncelle
-        await this.slotsRepo.increment({ id: slotId }, 'bookedCount', 1);
-        if (slot.bookedCount + 1 >= slot.capacity) {
-          await this.slotsRepo.update({ id: slotId }, { status: 'booked' });
-        }
-
-        return { ok: true };
+    if (webhookSecret) {
+      if (!signature) {
+        this.logger.warn('Stripe webhook called without stripe-signature header');
+        throw new BadRequestException('Missing stripe-signature header');
+      }
+      try {
+        event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Stripe webhook signature verification failed: ${msg}`);
+        throw new BadRequestException(`Webhook signature verification failed: ${msg}`);
+      }
+    } else {
+      // Webhook secret henüz ayarlanmadıysa (yerel/staging) JSON parse fallback
+      this.logger.warn('STRIPE_WEBHOOK_SECRET not configured — skipping signature verification');
+      try {
+        event = JSON.parse(rawBody.toString('utf8')) as Stripe.Event;
+      } catch {
+        throw new BadRequestException('Invalid JSON body');
       }
     }
 
-    return { ok: true };
+    if (event.type !== 'checkout.session.completed') {
+      // Diğer event'leri görmezden gel
+      return { ok: true, ignored: event.type };
+    }
+
+    const session = event.data.object;
+    if (session.payment_status !== 'paid') {
+      return { ok: true, status: session.payment_status };
+    }
+
+    const md = session.metadata || {};
+    const slotId = md.slotId;
+    const tenantId = md.tenantId;
+    const serviceId = md.serviceId;
+
+    if (!slotId || !tenantId || !serviceId) {
+      this.logger.error(`Stripe webhook missing required metadata: ${JSON.stringify(md)}`);
+      return { ok: false, error: 'missing metadata' };
+    }
+
+    // Idempotency: aynı session ile çift kayıt oluşmasın
+    const existing = await this.appointmentsRepo.findOne({
+      where: { stripeSessionId: session.id },
+    });
+    if (existing) {
+      this.logger.log(
+        `Duplicate webhook for session ${session.id}; appointment ${existing.id} already exists`,
+      );
+      return { ok: true, duplicate: true, appointmentId: existing.id };
+    }
+
+    const slot = await this.slotsRepo.findOne({
+      where: { id: slotId },
+      relations: ['service'],
+    });
+    if (!slot) {
+      this.logger.error(`Slot not found for session ${session.id}: ${slotId}`);
+      return { ok: false, error: 'slot not found' };
+    }
+    if (slot.bookedCount >= slot.capacity) {
+      // Aşırı durumda: ödeme alındı ama slot dolmuş — manuel iade gerekir, log
+      this.logger.error(
+        `Slot ${slotId} full but payment received for session ${session.id} — manual refund needed`,
+      );
+      return { ok: false, error: 'slot full', requiresRefund: true };
+    }
+
+    const guestName = md.guestName || 'Misafir';
+    const guestPhone = md.guestPhone || '';
+    const guestEmail = (session.customer_details?.email || md.guestEmail || '').toLowerCase();
+
+    const addons: Array<{ addonId: string; quantity: number }> = (() => {
+      try {
+        const parsed: unknown = JSON.parse(md.addons || '[]');
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (x): x is { addonId: string; quantity: number } =>
+              x !== null && typeof x === 'object' && 'addonId' in x && 'quantity' in x,
+          );
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    })();
+
+    // Add-on detaylarını çek (mail için)
+    const addonDetails: Array<{ name: string; quantity: number }> = [];
+    let addonTotal = 0;
+    for (const item of addons) {
+      const addon = await this.addonsRepo.findOne({ where: { id: item.addonId } });
+      if (addon && item.quantity > 0) {
+        addonDetails.push({ name: addon.name, quantity: item.quantity });
+        addonTotal += parseFloat(String(addon.price)) * item.quantity;
+      }
+    }
+    const totalAmount = parseFloat(slot.price) + addonTotal;
+
+    // Misafir userId — guest user pattern (deterministic by email)
+    const userId = await this.resolveGuestUserId(tenantId, guestEmail, guestName, guestPhone);
+
+    // Appointment oluştur
+    const appointment = this.appointmentsRepo.create({
+      tenantId,
+      userId,
+      slotId,
+      serviceId,
+      providerType: slot.providerType,
+      providerId: slot.providerId,
+      status: 'confirmed',
+      totalAmount: String(totalAmount),
+      currency: slot.currency,
+      paymentStatus: 'paid',
+      paymentMethod: 'card',
+      stripeSessionId: session.id,
+      stripePaymentIntentId:
+        typeof session.payment_intent === 'string' ? session.payment_intent : null,
+      notes: guestName ? `Misafir: ${guestName} · ${guestPhone} · ${guestEmail}` : null,
+      participantCount: 1,
+      participants: addonDetails.length > 0 ? addonDetails : null,
+    });
+    const saved = await this.appointmentsRepo.save(appointment);
+
+    // Slot güncelle
+    await this.slotsRepo.increment({ id: slotId }, 'bookedCount', 1);
+    if (slot.bookedCount + 1 >= slot.capacity) {
+      await this.slotsRepo.update({ id: slotId }, { status: 'booked' });
+    }
+
+    // Bilet maili gönder
+    if (guestEmail) {
+      try {
+        const tenant = await this.tenantsRepo.findOne({ where: { id: tenantId } });
+        let providerName: string | null = null;
+        if (slot.providerId) {
+          const trainer = await this.trainersRepo.findOne({
+            where: { id: slot.providerId },
+            relations: ['user'],
+          });
+          if (trainer && trainer.user) {
+            providerName = `${trainer.user.firstName} ${trainer.user.lastName}`.trim();
+          }
+        }
+
+        // İptal son tarihi: seans başlangıcından 3 saat önce
+        const slotStart = new Date(`${slot.date}T${slot.startTime}:00`);
+        const cancellationDeadline = new Date(slotStart.getTime() - 3 * 60 * 60 * 1000);
+
+        await this.mailService.sendBookingConfirmation({
+          to: guestEmail,
+          guestName: guestName,
+          clubName: tenant?.name || 'Wellness Club',
+          serviceName: slot.service?.name || 'Rezervasyon',
+          providerName,
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          totalAmount: String(totalAmount),
+          currency: slot.currency,
+          appointmentId: saved.id,
+          addons: addonDetails,
+          cancellationDeadline: cancellationDeadline.toLocaleString('tr-TR', {
+            timeZone: 'Europe/Istanbul',
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        });
+        this.logger.log(
+          `Booking confirmation email sent to ${guestEmail} for appointment ${saved.id}`,
+        );
+      } catch (err) {
+        // Mail hatası rezervasyonu engellemesin — sadece logla
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Failed to send booking confirmation email: ${msg}`);
+      }
+    }
+
+    return { ok: true, appointmentId: saved.id };
+  }
+
+  /**
+   * Misafir kullanıcılar için deterministik kullanıcı kaydı:
+   * - Email varsa o email ile member rolünde user oluştur (zaten varsa onu kullan).
+   * - Email yoksa tenant başına global guest placeholder kullan.
+   */
+  private async resolveGuestUserId(
+    tenantId: string,
+    email: string,
+    name: string,
+    phone: string,
+  ): Promise<string> {
+    if (email) {
+      // Bu email ile kullanıcı var mı?
+      const existing = await this.usersRepo.findOne({ where: { email } });
+      if (existing) return existing.id;
+
+      // Yeni guest user oluştur — şifre yok, GUEST flag ile
+      const [firstName, ...rest] = (name || 'Misafir').split(' ');
+      // Username: email lokal kısmından + random suffix (unique constraint için)
+      const localPart = email.split('@')[0].slice(0, 24);
+      const suffix = Math.random().toString(36).slice(2, 8);
+      const username = `${localPart}_${suffix}`.slice(0, 40);
+
+      const newUser = this.usersRepo.create({
+        tenantId,
+        email,
+        username,
+        firstName: firstName || 'Misafir',
+        lastName: rest.join(' ') || '',
+        phone: phone || null,
+        role: UserRole.MEMBER,
+        passwordHash: '', // Login engellenmesi için boş — şifre sıfırlamadan giremez
+        isGuest: true,
+      } as Partial<User>);
+      const saved = await this.usersRepo.save(newUser);
+      return saved.id;
+    }
+
+    // Email de yok — tenant placeholder
+    return '00000000-0000-0000-0000-000000000000';
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -258,8 +471,8 @@ export class UnifiedBookingService {
     });
 
     return slots
-      .filter(s => s.bookedCount < s.capacity)
-      .map(s => ({
+      .filter((s) => s.bookedCount < s.capacity)
+      .map((s) => ({
         id: s.id,
         serviceId: s.serviceId,
         providerType: s.providerType,
@@ -287,8 +500,8 @@ export class UnifiedBookingService {
     });
 
     return slots
-      .filter(s => s.bookedCount < s.capacity)
-      .map(s => ({
+      .filter((s) => s.bookedCount < s.capacity)
+      .map((s) => ({
         id: s.id,
         serviceId: s.serviceId,
         serviceName: s.service?.name ?? '',
@@ -304,17 +517,20 @@ export class UnifiedBookingService {
   }
 
   /** Admin: Toplu slot oluştur (belirli tarih aralığı, saat aralığı) */
-  async generateSlots(tenantId: string, data: {
-    serviceId: string;
-    providerType: string;
-    providerId?: string;
-    startDate: string;
-    endDate: string;
-    startHour: number;
-    endHour: number;
-    durationMinutes?: number;
-    price?: number;
-  }) {
+  async generateSlots(
+    tenantId: string,
+    data: {
+      serviceId: string;
+      providerType: string;
+      providerId?: string;
+      startDate: string;
+      endDate: string;
+      startHour: number;
+      endHour: number;
+      durationMinutes?: number;
+      price?: number;
+    },
+  ) {
     const service = await this.servicesRepo.findOne({ where: { id: data.serviceId, tenantId } });
     if (!service) throw new NotFoundException('Service not found');
 
@@ -373,7 +589,15 @@ export class UnifiedBookingService {
   // ═══════════════════════════════════════════════════════════
 
   /** Üye: Randevu oluştur */
-  async createAppointment(user: User, data: { slotId: string; notes?: string; packageId?: string; addons?: Array<{ addonId: string; quantity: number }> }) {
+  async createAppointment(
+    user: User,
+    data: {
+      slotId: string;
+      notes?: string;
+      packageId?: string;
+      addons?: Array<{ addonId: string; quantity: number }>;
+    },
+  ) {
     if (user.role !== UserRole.MEMBER) {
       throw new ForbiddenException('Only members can create appointments');
     }
@@ -397,10 +621,16 @@ export class UnifiedBookingService {
     const addonDetails: Array<{ name: string; price: number; quantity: number }> = [];
     if (data.addons && data.addons.length > 0) {
       for (const item of data.addons) {
-        const addon = await this.addonsRepo.findOne({ where: { id: item.addonId, tenantId: slot.tenantId, active: true } });
+        const addon = await this.addonsRepo.findOne({
+          where: { id: item.addonId, tenantId: slot.tenantId, active: true },
+        });
         if (addon) {
           addonTotal += parseFloat(String(addon.price)) * item.quantity;
-          addonDetails.push({ name: addon.name, price: parseFloat(String(addon.price)), quantity: item.quantity });
+          addonDetails.push({
+            name: addon.name,
+            price: parseFloat(String(addon.price)),
+            quantity: item.quantity,
+          });
         }
       }
     }
@@ -422,7 +652,7 @@ export class UnifiedBookingService {
       packageId: data.packageId ?? null,
       notes: data.notes ?? null,
       participantCount: 1,
-      participants: addonDetails.length > 0 ? addonDetails as unknown as unknown[] : null,
+      participants: addonDetails.length > 0 ? addonDetails : null,
     });
     const saved = await this.appointmentsRepo.save(appointment);
 
@@ -489,7 +719,12 @@ export class UnifiedBookingService {
   }
 
   /** Admin: Randevu durumunu güncelle */
-  async updateAppointmentStatus(tenantId: string, appointmentId: string, status: string, adminNote?: string) {
+  async updateAppointmentStatus(
+    tenantId: string,
+    appointmentId: string,
+    status: string,
+    adminNote?: string,
+  ) {
     const appointment = await this.appointmentsRepo.findOne({
       where: { id: appointmentId, tenantId },
     });

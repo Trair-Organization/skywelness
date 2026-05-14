@@ -85,6 +85,9 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true, name: 'reset_password_expires_at' })
   resetPasswordExpiresAt!: Date | null;
 
+  @Column({ type: 'boolean', default: false, name: 'is_guest' })
+  isGuest!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

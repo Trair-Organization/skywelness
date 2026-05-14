@@ -381,6 +381,98 @@ ${extra}
     await this.send({ to: params.to, subject, html, text });
   }
 
+  /**
+   * Booking onayı + dijital bilet maili (üye veya misafir).
+   * Stripe Checkout başarısı sonrası webhook tarafından çağrılır.
+   */
+  async sendBookingConfirmation(params: {
+    to: string;
+    guestName: string;
+    clubName: string;
+    serviceName: string;
+    providerName?: string | null;
+    date: string; // YYYY-MM-DD
+    startTime: string; // HH:mm
+    endTime: string; // HH:mm
+    totalAmount: string;
+    currency: string;
+    appointmentId: string;
+    addons?: Array<{ name: string; quantity: number }>;
+    cancellationDeadline?: string | null; // ISO string; 3 saat öncesi
+  }): Promise<void> {
+    const subject = `${params.clubName} — Rezervasyonunuz onaylandı 🎫`;
+    const ticketCode = params.appointmentId.slice(0, 8).toUpperCase();
+    // Telefon ile gösterilebilen QR — appointment ID'yi kodluyoruz
+    const qrData = encodeURIComponent(`WC-${params.appointmentId}`);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${qrData}`;
+
+    const addonsHtml =
+      params.addons && params.addons.length > 0
+        ? `<p style="margin:8px 0 0;font-size:14px;color:#94a3b8;">Ek hizmetler: ${params.addons.map((a) => `${escapeHtml(a.name)} ×${a.quantity}`).join(', ')}</p>`
+        : '';
+
+    const cancelLine = params.cancellationDeadline
+      ? `<p style="margin:12px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Ücretsiz iptal için son tarih: <strong style="color:#475569;">${escapeHtml(params.cancellationDeadline)}</strong>. Bu tarihten sonra iptal edilen rezervasyonlar için iade yapılmaz.</p>`
+      : '';
+
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.guestName)},</p>
+<p style="margin:0 0 16px;">Ödemeniz alındı, rezervasyonunuz onaylandı. Bu mail dijital biletinizdir.</p>
+
+<div style="margin:24px 0;padding:20px;background:#0f172a;border-radius:14px;color:#f8fafc;text-align:center;">
+  <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">Rezervasyon Kodu</p>
+  <p style="margin:0;font-size:28px;font-weight:800;letter-spacing:0.18em;color:#fbbf24;font-family:'Courier New',monospace;">${escapeHtml(ticketCode)}</p>
+  <div style="margin:14px 0 0;padding:8px;background:#ffffff;border-radius:8px;display:inline-block;">
+    <img src="${qrUrl}" alt="QR" width="180" height="180" style="display:block;width:180px;height:180px;" />
+  </div>
+  <p style="margin:10px 0 0;font-size:12px;color:#94a3b8;">Kulüpte bu kodu veya QR'ı gösterin.</p>
+</div>
+
+<div style="margin:20px 0;padding:18px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+  <p style="margin:0 0 8px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${escapeHtml(params.serviceName)}</p>
+  ${params.providerName ? `<p style="margin:0 0 4px;font-weight:700;color:#0f172a;">${escapeHtml(params.providerName)}</p>` : ''}
+  <p style="margin:8px 0 0;color:#334155;">📅 ${escapeHtml(params.date)}</p>
+  <p style="margin:4px 0 0;color:#0ea5e9;font-weight:700;">🕐 ${escapeHtml(params.startTime)} – ${escapeHtml(params.endTime)}</p>
+  <p style="margin:12px 0 0;font-size:14px;color:#334155;">📍 ${escapeHtml(params.clubName)}</p>
+  ${addonsHtml}
+  <hr style="margin:14px 0;border:none;border-top:1px solid #e2e8f0;" />
+  <p style="margin:0;font-size:14px;color:#475569;">Toplam ödeme: <strong style="color:#0f172a;font-size:16px;">${escapeHtml(params.totalAmount)} ${escapeHtml(params.currency)}</strong></p>
+</div>
+
+${cancelLine}
+
+<p style="margin:24px 0 0;font-size:13px;color:#94a3b8;">Sorularınız için: <a href="mailto:info@wellnessclub.com" style="color:#38bdf8;">info@wellnessclub.com</a> · <a href="https://www.instagram.com/wellnessclub.tr" style="color:#38bdf8;">@wellnessclub.tr</a></p>`;
+
+    const html = emailShell({
+      title: 'Rezervasyon onaylandı',
+      previewText: `${params.serviceName} · ${params.date} ${params.startTime}`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+
+    const text = [
+      `Merhaba ${params.guestName},`,
+      '',
+      'Rezervasyonunuz onaylandı.',
+      `Rezervasyon Kodu: ${ticketCode}`,
+      '',
+      `Hizmet: ${params.serviceName}`,
+      params.providerName ? `Eğitmen/Terapist: ${params.providerName}` : '',
+      `Tarih: ${params.date}`,
+      `Saat: ${params.startTime} – ${params.endTime}`,
+      `Kulüp: ${params.clubName}`,
+      `Toplam: ${params.totalAmount} ${params.currency}`,
+      '',
+      params.cancellationDeadline ? `Ücretsiz iptal son tarih: ${params.cancellationDeadline}` : '',
+      '',
+      params.clubName,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
   async sendPasswordReset(params: {
     to: string;
     firstName: string;

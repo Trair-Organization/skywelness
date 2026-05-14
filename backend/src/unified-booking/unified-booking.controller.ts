@@ -1,4 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -9,7 +23,7 @@ import { UnifiedBookingService } from './unified-booking.service';
 
 /**
  * Unified Booking System API
- * 
+ *
  * Tüm sektörler için tek bir rezervasyon endpoint seti.
  * - /v2/services — Hizmet kataloğu
  * - /v2/schedule — Müsaitlik slotları
@@ -23,10 +37,7 @@ export class UnifiedBookingController {
 
   /** Public: Bir kulübün hizmetlerini listele */
   @Get('services')
-  listServices(
-    @Query('tenant') tenant: string,
-    @Query('category') category?: string,
-  ) {
+  listServices(@Query('tenant') tenant: string, @Query('category') category?: string) {
     return this.service.listServices(tenant, category);
   }
 
@@ -36,7 +47,8 @@ export class UnifiedBookingController {
   @Roles(UserRole.ADMINISTRATOR)
   createService(
     @CurrentUser() user: User,
-    @Body() body: {
+    @Body()
+    body: {
       name: string;
       description?: string;
       category: string;
@@ -81,7 +93,8 @@ export class UnifiedBookingController {
   @Roles(UserRole.ADMINISTRATOR)
   generateSlots(
     @CurrentUser() user: User,
-    @Body() body: {
+    @Body()
+    body: {
       serviceId: string;
       providerType: string;
       providerId?: string;
@@ -109,7 +122,8 @@ export class UnifiedBookingController {
   /** Üye veya Misafir: Stripe Checkout session oluştur */
   @Post('checkout')
   createCheckout(
-    @Body() body: {
+    @Body()
+    body: {
       slotId: string;
       addons?: Array<{ addonId: string; quantity: number }>;
       guestName?: string;
@@ -120,10 +134,14 @@ export class UnifiedBookingController {
     return this.service.createCheckoutSession(body);
   }
 
-  /** Stripe webhook callback */
+  /** Stripe webhook callback — raw body + stripe-signature header */
   @Post('checkout/webhook')
-  handleWebhook(@Body() body: unknown, @Query('sig') sig: string) {
-    return this.service.handleStripeWebhook(body, sig);
+  handleWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature: string,
+  ) {
+    const raw = req.rawBody ?? Buffer.from(JSON.stringify(req.body || {}));
+    return this.service.handleStripeWebhook(raw, signature);
   }
 
   /** Üye: Randevu oluştur */
@@ -131,7 +149,13 @@ export class UnifiedBookingController {
   @UseGuards(JwtAuthGuard)
   createAppointment(
     @CurrentUser() user: User,
-    @Body() body: { slotId: string; notes?: string; packageId?: string; addons?: Array<{ addonId: string; quantity: number }> },
+    @Body()
+    body: {
+      slotId: string;
+      notes?: string;
+      packageId?: string;
+      addons?: Array<{ addonId: string; quantity: number }>;
+    },
   ) {
     return this.service.createAppointment(user, body);
   }
@@ -154,10 +178,7 @@ export class UnifiedBookingController {
   @Get('appointments')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
-  listAppointments(
-    @CurrentUser() user: User,
-    @Query('status') status?: string,
-  ) {
+  listAppointments(@CurrentUser() user: User, @Query('status') status?: string) {
     return this.service.listTenantAppointments(user.tenantId, status);
   }
 

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -89,6 +90,13 @@ export class Appointment {
 
   @Column({ type: 'jsonb', nullable: true })
   participants!: unknown[] | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true, name: 'stripe_session_id' })
+  @Index({ unique: false })
+  stripeSessionId!: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true, name: 'stripe_payment_intent_id' })
+  stripePaymentIntentId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
