@@ -11,6 +11,8 @@ import { TrainerProfilePage } from './pages/TrainerProfilePage';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { MemberDashboardPage } from './pages/MemberDashboardPage';
 import { ServiceTermsPage } from './pages/ServiceTermsPage';
+import { BookingSuccessPage } from './pages/BookingSuccessPage';
+import { BookingCancelPage } from './pages/BookingCancelPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
@@ -70,6 +72,8 @@ function AppRoutes() {
       <Route path="/privacy" element={<MarketingPrivacyPage />} />
       <Route path="/terms" element={<MarketingTermsPage />} />
       <Route path="/service-terms" element={<ServiceTermsPage />} />
+      <Route path="/booking-success" element={<BookingSuccessPage />} />
+      <Route path="/booking-cancel" element={<BookingCancelPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
