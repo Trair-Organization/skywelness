@@ -46,6 +46,6 @@
       }
     },
     "owner": "trairx",
-    "plugins": ["@react-native-community/datetimepicker"]
+    "plugins": ["@react-native-community/datetimepicker", "expo-web-browser"]
   }
 }
