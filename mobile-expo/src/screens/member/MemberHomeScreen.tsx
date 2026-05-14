@@ -975,90 +975,6 @@ export function MemberHomeScreen() {
             justifyContent: 'space-between',
             alignItems: 'center',
             paddingHorizontal: 20,
-            marginBottom: 8,
-          }}
-        >
-          <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
-          <Pressable
-            onPress={() =>
-              (navigation as unknown as { navigate: (n: string) => void }).navigate(
-                'AllEvents' as never,
-              )
-            }
-          >
-            <Text style={{ color: premium.accentBlue, fontSize: 13, fontWeight: '700' }}>
-              Tümünü Gör →
-            </Text>
-          </Pressable>
-        </View>
-        {eventNotice ? <Text style={styles.eventsNotice}>{eventNotice}</Text> : null}
-        {loadingEvents && clubEvents.length === 0 ? (
-          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
-        ) : null}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.eventsRail}
-          contentContainerStyle={styles.eventsRailInner}
-        >
-          {clubEvents.map((ev) => {
-            const eventDate = new Date(ev.startsAt);
-            const dateStr = eventDate.toLocaleDateString('tr-TR', {
-              day: 'numeric',
-              month: 'short',
-            });
-            const timeStr = eventDate.toLocaleTimeString('tr-TR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            });
-            return (
-              <View key={ev.id} style={homeEventStyles.cardWrapper}>
-                <Pressable
-                  onPress={() => setSelectedEvent(ev)}
-                  style={({ pressed }) => [homeEventStyles.card, pressed && { opacity: 0.85 }]}
-                >
-                  {ev.imageUrl ? (
-                    <Image
-                      source={{ uri: ev.imageUrl }}
-                      style={homeEventStyles.image}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={homeEventStyles.imagePlaceholder}>
-                      <Text style={{ fontSize: 24 }}>📅</Text>
-                    </View>
-                  )}
-                  <View style={homeEventStyles.body}>
-                    <View style={homeEventStyles.header}>
-                      <Text style={homeEventStyles.date}>{dateStr}</Text>
-                      <Text style={homeEventStyles.time}>{timeStr}</Text>
-                    </View>
-                    <Text style={homeEventStyles.title} numberOfLines={2}>
-                      {ev.title}
-                    </Text>
-                    {ev.coachName && <Text style={homeEventStyles.coach}>🏋️ {ev.coachName}</Text>}
-                    <Text style={homeEventStyles.capacity}>
-                      👥 {ev.bookedCount}/{ev.capacity} katılım
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable style={homeEventStyles.ctaBtn} onPress={() => setSelectedEvent(ev)}>
-                  <Text style={homeEventStyles.ctaBtnTxt}>📅 Detay & Katıl</Text>
-                </Pressable>
-              </View>
-            );
-          })}
-        </ScrollView>
-        {!loadingEvents && clubEvents.length === 0 ? (
-          <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
-        ) : null}
-
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 20,
             marginTop: 12,
             marginBottom: 10,
           }}
@@ -1150,6 +1066,90 @@ export function MemberHomeScreen() {
             </Pressable>
           </View>
         )}
+
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            marginBottom: 8,
+          }}
+        >
+          <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
+          <Pressable
+            onPress={() =>
+              (navigation as unknown as { navigate: (n: string) => void }).navigate(
+                'AllEvents' as never,
+              )
+            }
+          >
+            <Text style={{ color: premium.accentBlue, fontSize: 13, fontWeight: '700' }}>
+              Tümünü Gör →
+            </Text>
+          </Pressable>
+        </View>
+        {eventNotice ? <Text style={styles.eventsNotice}>{eventNotice}</Text> : null}
+        {loadingEvents && clubEvents.length === 0 ? (
+          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
+        ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.eventsRail}
+          contentContainerStyle={styles.eventsRailInner}
+        >
+          {clubEvents.map((ev) => {
+            const eventDate = new Date(ev.startsAt);
+            const dateStr = eventDate.toLocaleDateString('tr-TR', {
+              day: 'numeric',
+              month: 'short',
+            });
+            const timeStr = eventDate.toLocaleTimeString('tr-TR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            return (
+              <View key={ev.id} style={homeEventStyles.cardWrapper}>
+                <Pressable
+                  onPress={() => setSelectedEvent(ev)}
+                  style={({ pressed }) => [homeEventStyles.card, pressed && { opacity: 0.85 }]}
+                >
+                  {ev.imageUrl ? (
+                    <Image
+                      source={{ uri: ev.imageUrl }}
+                      style={homeEventStyles.image}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={homeEventStyles.imagePlaceholder}>
+                      <Text style={{ fontSize: 24 }}>📅</Text>
+                    </View>
+                  )}
+                  <View style={homeEventStyles.body}>
+                    <View style={homeEventStyles.header}>
+                      <Text style={homeEventStyles.date}>{dateStr}</Text>
+                      <Text style={homeEventStyles.time}>{timeStr}</Text>
+                    </View>
+                    <Text style={homeEventStyles.title} numberOfLines={2}>
+                      {ev.title}
+                    </Text>
+                    {ev.coachName && <Text style={homeEventStyles.coach}>🏋️ {ev.coachName}</Text>}
+                    <Text style={homeEventStyles.capacity}>
+                      👥 {ev.bookedCount}/{ev.capacity} katılım
+                    </Text>
+                  </View>
+                </Pressable>
+                <Pressable style={homeEventStyles.ctaBtn} onPress={() => setSelectedEvent(ev)}>
+                  <Text style={homeEventStyles.ctaBtnTxt}>📅 Detay & Katıl</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </ScrollView>
+        {!loadingEvents && clubEvents.length === 0 ? (
+          <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
+        ) : null}
 
         <View
           style={{
