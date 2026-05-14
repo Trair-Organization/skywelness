@@ -128,15 +128,15 @@ export function SmartBooking({ subdomain, category }: Props) {
     return { ...slot, score, serviceName: svc?.providerName || svc?.name || '' };
   });
 
-  // Sırala ve farklı saatlerden seç (dağılım)
+  // Sırala ve her hizmet için en iyi 1 slot seç
   scored.sort((a, b) => b.score - a.score);
   const recommended: typeof scored = [];
-  const usedHours = new Set<string>();
+  const usedServices = new Set<string>();
   for (const slot of scored) {
-    if (recommended.length >= 3) break;
-    if (!usedHours.has(slot.startTime)) {
+    if (recommended.length >= services.length) break;
+    if (!usedServices.has(slot.serviceId)) {
       recommended.push(slot);
-      usedHours.add(slot.startTime);
+      usedServices.add(slot.serviceId);
     }
   }
 
