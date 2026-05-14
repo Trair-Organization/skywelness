@@ -444,8 +444,8 @@ export function PartnerProfileScreen() {
                 </Pressable>
               ))}
             </ScrollView>
-            {/* Tarih seçimi */}
-            {token && (
+            {/* Tarih seçimi — public kulüpte herkes görebilir */}
+            {(token || profile.visibilityMode === 'public') && (
               <>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                   {dates.map((d) => (
@@ -465,16 +465,25 @@ export function PartnerProfileScreen() {
                 ) : (
                   <View style={styles.slotsGrid}>
                     {slots.map((s) => (
-                      <Pressable key={s.id} style={styles.slotChip} onPress={() => handleBookSlot(s.id)}>
+                      <Pressable key={s.id} style={styles.slotChip} onPress={() => {
+                        if (!token) {
+                          showToast('Rezervasyon için giriş yapmalısınız', 'warning');
+                          return;
+                        }
+                        handleBookSlot(s.id);
+                      }}>
                         <Text style={styles.slotTime}>{s.startTime}</Text>
                         <Text style={styles.slotPrice}>{s.price}₺</Text>
                       </Pressable>
                     ))}
                   </View>
                 )}
+                {!token && (
+                  <Text style={[styles.noSlots, { marginTop: 8 }]}>Rezervasyon yapmak için giriş yapın</Text>
+                )}
               </>
             )}
-            {!token && (
+            {!token && profile.visibilityMode !== 'public' && (
               <Text style={styles.noSlots}>Müsait saatleri görmek için giriş yapın</Text>
             )}
           </View>
