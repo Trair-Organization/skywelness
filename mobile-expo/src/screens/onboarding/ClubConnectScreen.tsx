@@ -494,16 +494,11 @@ export function ClubConnectScreen() {
 
   const handleClubCta = (club: DiscoveryClub, cta: ClubCta) => {
     if (cta === 'book') {
-      if (!isAuthenticated) {
-        // Girişsiz kullanıcıyı önce login'e yönlendir
-        navigation.navigate('Login');
-        return;
-      }
-      // Public kulübün booking ekranına git (Padel route'u generic resource booking)
-      (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Main', {
-        screen: 'Padel',
-        params: { subdomain: club.subdomain, clubName: club.name },
-      });
+      // Giriş yapmamış olsa bile kulüp detay sayfasına git — orada misafir ödeme akışı var
+      (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+        'PartnerProfile',
+        { subdomain: club.subdomain },
+      );
       return;
     }
     if (cta === 'enter') {
@@ -1242,10 +1237,9 @@ export function ClubConnectScreen() {
               {[...apiClubs, ...apiClubs].map((club, idx) => {
                 const handlePress = () => {
                   // Profil sayfasına git — hem root stack hem tab navigator'dan çalışır
-                  (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                    'PartnerProfile',
-                    { subdomain: club.subdomain },
-                  );
+                  (
+                    navigation as unknown as { navigate: (n: string, p?: unknown) => void }
+                  ).navigate('PartnerProfile', { subdomain: club.subdomain });
                 };
                 const cta = resolveClubCta(club);
                 const ctaDisabled = cta === 'pending' || cta === 'rejected';
@@ -1374,10 +1368,7 @@ export function ClubConnectScreen() {
                         )}
                       </View>
                     </Pressable>
-                    <Pressable
-                      style={styles.eventCardCtaBtn}
-                      onPress={() => setSelectedEvent(evt)}
-                    >
+                    <Pressable style={styles.eventCardCtaBtn} onPress={() => setSelectedEvent(evt)}>
                       <Text style={styles.eventCardCtaBtnTxt}>📅 Detay & Katıl</Text>
                     </Pressable>
                   </View>
@@ -1404,10 +1395,9 @@ export function ClubConnectScreen() {
                   <Pressable
                     onPress={() => {
                       // Eğitmenin detay sayfasına git
-                      (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                        'TrainerDetail',
-                        { trainerId: trainer.id },
-                      );
+                      (
+                        navigation as unknown as { navigate: (n: string, p?: unknown) => void }
+                      ).navigate('TrainerDetail', { trainerId: trainer.id });
                     }}
                     style={({ pressed }) => [styles.trainerCard, pressed && styles.cardPressed]}
                   >

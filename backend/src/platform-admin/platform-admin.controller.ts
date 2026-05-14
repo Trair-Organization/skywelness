@@ -127,4 +127,13 @@ export class PlatformAdminController {
   ) {
     return this.platformAdminService.rejectTrainerApplication(applicationId, reviewer, body.note);
   }
+
+  /** Tenant komisyon oranını güncelle (0.00 – 1.00 arası) */
+  @Patch('tenants/:tenantId/commission')
+  updateCommissionRate(
+    @Param('tenantId') tenantId: string,
+    @Body() body: { commissionRate: number },
+  ) {
+    return this.platformAdminService.updateCommissionRate(tenantId, body.commissionRate);
+  }
 }

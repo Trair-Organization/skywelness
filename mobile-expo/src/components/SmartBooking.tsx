@@ -195,42 +195,42 @@ const guestStyles = StyleSheet.create({
   promoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: 'rgba(99,102,241,0.1)',
     borderWidth: 1,
     borderColor: 'rgba(99,102,241,0.3)',
-    marginBottom: 12,
-    gap: 10,
+    marginBottom: 8,
+    gap: 8,
   },
-  promoIcon: { fontSize: 24 },
-  promoTitle: { fontSize: 12, fontWeight: '800', color: '#a5b4fc', marginBottom: 2 },
-  promoList: { fontSize: 10, color: premium.textMuted },
+  promoIcon: { fontSize: 20 },
+  promoTitle: { fontSize: 11, fontWeight: '800', color: '#a5b4fc', marginBottom: 1 },
+  promoList: { fontSize: 9, color: premium.textMuted },
   promoBtn: {
     backgroundColor: '#6366f1',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  promoBtnTxt: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  divider: { textAlign: 'center', color: premium.textMuted, fontSize: 11, marginBottom: 12 },
-  title: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 4 },
-  subtitle: { fontSize: 11, color: premium.textMuted, marginBottom: 12, lineHeight: 16 },
+  promoBtnTxt: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  divider: { textAlign: 'center', color: premium.textMuted, fontSize: 10, marginBottom: 8 },
+  title: { fontSize: 14, fontWeight: '800', color: premium.text, marginBottom: 4 },
+  subtitle: { fontSize: 10, color: premium.textMuted, marginBottom: 8, lineHeight: 14 },
   input: {
     borderWidth: 1,
     borderColor: premium.glassBorder,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 8,
+    padding: 8,
     color: premium.text,
-    fontSize: 13,
-    marginBottom: 8,
+    fontSize: 12,
+    marginBottom: 6,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginVertical: 10 },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginVertical: 6 },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: premium.glassBorder,
     alignItems: 'center',
@@ -238,28 +238,28 @@ const guestStyles = StyleSheet.create({
     marginTop: 1,
   },
   checkboxChecked: { backgroundColor: premium.accentGreen, borderColor: premium.accentGreen },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  termsText: { flex: 1, fontSize: 11, color: premium.textMuted, lineHeight: 16 },
+  checkmark: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  termsText: { flex: 1, fontSize: 10, color: premium.textMuted, lineHeight: 14 },
   termsLink: { color: premium.accentBlue, fontWeight: '600' },
   payBtn: {
     backgroundColor: '#6366f1',
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     marginTop: 4,
   },
-  payBtnTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  payBtnTxt: { color: '#fff', fontSize: 14, fontWeight: '800' },
   policyBox: {
-    marginTop: 10,
-    padding: 10,
+    marginBottom: 8,
+    padding: 8,
     borderRadius: 8,
     backgroundColor: 'rgba(251,191,36,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(251,191,36,0.2)',
   },
-  policyTitle: { fontSize: 11, fontWeight: '700', color: '#fbbf24', marginBottom: 3 },
-  policyText: { fontSize: 10, color: premium.textMuted, lineHeight: 16 },
-  kaporaNote: { fontSize: 11, color: premium.textMuted, textAlign: 'center', marginTop: 8 },
+  policyTitle: { fontSize: 10, fontWeight: '700', color: '#fbbf24', marginBottom: 2 },
+  policyText: { fontSize: 9, color: premium.textMuted, lineHeight: 14 },
+  kaporaNote: { fontSize: 10, color: premium.textMuted, textAlign: 'center', marginTop: 6 },
 });
 
 type V2Service = {
@@ -625,112 +625,116 @@ export function SmartBooking({ subdomain, category }: Props) {
         <Pressable style={styles.modalBackdrop} onPress={() => setSelectedSlotId(null)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
             <Text style={styles.modalTitle}>Rezervasyon Onayı</Text>
-            {(() => {
-              const slot = allSlots.find((s) => s.id === selectedSlotId);
-              const svc = slot ? services.find((s) => s.id === slot.serviceId) : null;
-              const slotPrice = slot ? parseFloat(slot.price) : 0;
-              const addonTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
-                const addon = addons.find((a) => a.id === id);
-                return sum + (addon ? parseFloat(addon.price) * qty : 0);
-              }, 0);
-              return (
-                <>
-                  {slot && (
-                    <View style={styles.modalSlotInfo}>
-                      <Text style={styles.modalSlotTime}>
-                        {slot.startTime} - {slot.endTime}
-                      </Text>
-                      <Text style={styles.modalSlotName}>{svc?.providerName || svc?.name}</Text>
-                      <Text style={styles.modalSlotPrice}>{slot.price}₺</Text>
-                    </View>
-                  )}
-                  {addons.length > 0 && (
-                    <View style={styles.modalAddonSection}>
-                      <Text style={styles.modalAddonTitle}>
-                        Ekstra hizmet eklemek ister misiniz?
-                      </Text>
-                      {addons.map((addon) => (
-                        <View key={addon.id} style={styles.modalAddonRow}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.modalAddonName}>{addon.name}</Text>
-                            <Text style={styles.modalAddonPrice}>{addon.price}₺</Text>
-                          </View>
-                          <View style={styles.modalQtyRow}>
-                            <Pressable
-                              style={styles.modalQtyBtn}
-                              onPress={() =>
-                                setSelectedAddons((p) => ({
-                                  ...p,
-                                  [addon.id]: Math.max(0, (p[addon.id] || 0) - 1),
-                                }))
-                              }
-                            >
-                              <Text style={styles.modalQtyBtnTxt}>−</Text>
-                            </Pressable>
-                            <Text style={styles.modalQtyNum}>{selectedAddons[addon.id] || 0}</Text>
-                            <Pressable
-                              style={styles.modalQtyBtn}
-                              onPress={() =>
-                                setSelectedAddons((p) => ({
-                                  ...p,
-                                  [addon.id]: (p[addon.id] || 0) + 1,
-                                }))
-                              }
-                            >
-                              <Text style={styles.modalQtyBtnTxt}>+</Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  <View style={styles.modalTotalRow}>
-                    <Text style={styles.modalTotalLabel}>Toplam</Text>
-                    <Text style={styles.modalTotalPrice}>
-                      {(slotPrice + addonTotal).toLocaleString('tr-TR')}₺
-                    </Text>
-                  </View>
-                  <View style={styles.modalKaporaRow}>
-                    <Text style={styles.modalKaporaLabel}>💳 Kapora (%15)</Text>
-                    <Text style={styles.modalKaporaPrice}>
-                      {Math.ceil((slotPrice + addonTotal) * 0.15).toLocaleString('tr-TR')}₺
-                    </Text>
-                  </View>
-                  {token ? (
-                    bookingSuccess ? (
-                      <Animated.View
-                        style={[styles.successBox, { transform: [{ scale: successAnim }] }]}
-                      >
-                        <Text style={styles.successIcon}>🎉</Text>
-                        <Text style={styles.successTitle}>Rezervasyon Oluşturuldu!</Text>
-                        <Text style={styles.successSubtitle}>
-                          Detaylar bildirimlerinizde görünecek.
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              {(() => {
+                const slot = allSlots.find((s) => s.id === selectedSlotId);
+                const svc = slot ? services.find((s) => s.id === slot.serviceId) : null;
+                const slotPrice = slot ? parseFloat(slot.price) : 0;
+                const addonTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
+                  const addon = addons.find((a) => a.id === id);
+                  return sum + (addon ? parseFloat(addon.price) * qty : 0);
+                }, 0);
+                return (
+                  <>
+                    {slot && (
+                      <View style={styles.modalSlotInfo}>
+                        <Text style={styles.modalSlotTime}>
+                          {slot.startTime} - {slot.endTime}
                         </Text>
-                      </Animated.View>
+                        <Text style={styles.modalSlotName}>{svc?.providerName || svc?.name}</Text>
+                        <Text style={styles.modalSlotPrice}>{slot.price}₺</Text>
+                      </View>
+                    )}
+                    {addons.length > 0 && (
+                      <View style={styles.modalAddonSection}>
+                        <Text style={styles.modalAddonTitle}>
+                          Ekstra hizmet eklemek ister misiniz?
+                        </Text>
+                        {addons.map((addon) => (
+                          <View key={addon.id} style={styles.modalAddonRow}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.modalAddonName}>{addon.name}</Text>
+                              <Text style={styles.modalAddonPrice}>{addon.price}₺</Text>
+                            </View>
+                            <View style={styles.modalQtyRow}>
+                              <Pressable
+                                style={styles.modalQtyBtn}
+                                onPress={() =>
+                                  setSelectedAddons((p) => ({
+                                    ...p,
+                                    [addon.id]: Math.max(0, (p[addon.id] || 0) - 1),
+                                  }))
+                                }
+                              >
+                                <Text style={styles.modalQtyBtnTxt}>−</Text>
+                              </Pressable>
+                              <Text style={styles.modalQtyNum}>
+                                {selectedAddons[addon.id] || 0}
+                              </Text>
+                              <Pressable
+                                style={styles.modalQtyBtn}
+                                onPress={() =>
+                                  setSelectedAddons((p) => ({
+                                    ...p,
+                                    [addon.id]: (p[addon.id] || 0) + 1,
+                                  }))
+                                }
+                              >
+                                <Text style={styles.modalQtyBtnTxt}>+</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    <View style={styles.modalTotalRow}>
+                      <Text style={styles.modalTotalLabel}>Toplam</Text>
+                      <Text style={styles.modalTotalPrice}>
+                        {(slotPrice + addonTotal).toLocaleString('tr-TR')}₺
+                      </Text>
+                    </View>
+                    <View style={styles.modalKaporaRow}>
+                      <Text style={styles.modalKaporaLabel}>💳 Kapora (%15)</Text>
+                      <Text style={styles.modalKaporaPrice}>
+                        {Math.ceil((slotPrice + addonTotal) * 0.15).toLocaleString('tr-TR')}₺
+                      </Text>
+                    </View>
+                    {token ? (
+                      bookingSuccess ? (
+                        <Animated.View
+                          style={[styles.successBox, { transform: [{ scale: successAnim }] }]}
+                        >
+                          <Text style={styles.successIcon}>🎉</Text>
+                          <Text style={styles.successTitle}>Rezervasyon Oluşturuldu!</Text>
+                          <Text style={styles.successSubtitle}>
+                            Detaylar bildirimlerinizde görünecek.
+                          </Text>
+                        </Animated.View>
+                      ) : (
+                        <Pressable
+                          style={styles.modalConfirmBtn}
+                          onPress={confirmBooking}
+                          disabled={booking}
+                        >
+                          <Text style={styles.modalConfirmTxt}>
+                            {booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}
+                          </Text>
+                        </Pressable>
+                      )
                     ) : (
-                      <Pressable
-                        style={styles.modalConfirmBtn}
-                        onPress={confirmBooking}
-                        disabled={booking}
-                      >
-                        <Text style={styles.modalConfirmTxt}>
-                          {booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}
-                        </Text>
-                      </Pressable>
-                    )
-                  ) : (
-                    <GuestCheckout
-                      slotId={selectedSlotId!}
-                      subdomain={subdomain}
-                      addons={Object.entries(selectedAddons)
-                        .filter(([, qty]) => qty > 0)
-                        .map(([addonId, quantity]) => ({ addonId, quantity }))}
-                      onClose={() => setSelectedSlotId(null)}
-                    />
-                  )}
-                </>
-              );
-            })()}
+                      <GuestCheckout
+                        slotId={selectedSlotId!}
+                        subdomain={subdomain}
+                        addons={Object.entries(selectedAddons)
+                          .filter(([, qty]) => qty > 0)
+                          .map(([addonId, quantity]) => ({ addonId, quantity }))}
+                        onClose={() => setSelectedSlotId(null)}
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -844,62 +848,63 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b1220',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '85%',
+    padding: 16,
+    paddingBottom: 24,
+    maxHeight: '90%',
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: premium.text, marginBottom: 16 },
+  modalTitle: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 12 },
   modalSlotInfo: {
-    padding: 14,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: 'rgba(16,185,129,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(16,185,129,0.25)',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  modalSlotTime: { fontSize: 18, fontWeight: '800', color: premium.text },
-  modalSlotName: { fontSize: 13, color: premium.textMuted, marginTop: 2 },
-  modalSlotPrice: { fontSize: 16, fontWeight: '800', color: premium.accentGreen, marginTop: 4 },
-  modalAddonSection: { marginBottom: 16 },
-  modalAddonTitle: { fontSize: 14, fontWeight: '700', color: premium.text, marginBottom: 10 },
+  modalSlotTime: { fontSize: 16, fontWeight: '800', color: premium.text },
+  modalSlotName: { fontSize: 12, color: premium.textMuted, marginTop: 1 },
+  modalSlotPrice: { fontSize: 14, fontWeight: '800', color: premium.accentGreen, marginTop: 2 },
+  modalAddonSection: { marginBottom: 10 },
+  modalAddonTitle: { fontSize: 13, fontWeight: '700', color: premium.text, marginBottom: 8 },
   modalAddonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: premium.glassBorder,
   },
-  modalAddonName: { fontSize: 14, fontWeight: '600', color: premium.text },
-  modalAddonPrice: { fontSize: 12, color: premium.accentBlue, fontWeight: '700', marginTop: 2 },
-  modalQtyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  modalAddonName: { fontSize: 13, fontWeight: '600', color: premium.text },
+  modalAddonPrice: { fontSize: 11, color: premium.accentBlue, fontWeight: '700', marginTop: 1 },
+  modalQtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   modalQtyBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  modalQtyBtnTxt: { color: premium.text, fontSize: 18, fontWeight: '700' },
+  modalQtyBtnTxt: { color: premium.text, fontSize: 16, fontWeight: '700' },
   modalQtyNum: {
     color: premium.text,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
-    minWidth: 20,
+    minWidth: 18,
     textAlign: 'center',
   },
   modalTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: premium.glassBorder,
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  modalTotalLabel: { fontSize: 16, fontWeight: '700', color: premium.text },
-  modalTotalPrice: { fontSize: 22, fontWeight: '900', color: premium.accentGreen },
+  modalTotalLabel: { fontSize: 14, fontWeight: '700', color: premium.text },
+  modalTotalPrice: { fontSize: 20, fontWeight: '900', color: premium.accentGreen },
   modalKaporaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

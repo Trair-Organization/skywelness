@@ -435,10 +435,7 @@ export class PlatformAdminService {
       userIds = users.map((u) => u.id);
     } else if (data.target === 'trainers') {
       const users = await this.usersRepo.find({
-        where: [
-          { role: UserRole.TRAINER },
-          { role: UserRole.INDEPENDENT_TRAINER },
-        ],
+        where: [{ role: UserRole.TRAINER }, { role: UserRole.INDEPENDENT_TRAINER }],
         select: ['id'],
       });
       userIds = users.map((u) => u.id);
@@ -469,5 +466,25 @@ export class PlatformAdminService {
     });
 
     return { ok: true, sent: result.sent, total: result.total, target: data.target };
+  }
+
+  /** Tenant komisyon oranını güncelle */
+  async updateCommissionRate(tenantId: string, rate: number) {
+    if (rate < 0 || rate > 1) {
+      throw new BadRequestException('Komisyon oranı 0.00 ile 1.00 arasında olmalıdır');
+    }
+    const tenant = await this.tenantsRepo.findOne({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    tenant.commissionRate = String(rate);
+    await this.tenantsRepo.save(tenant);
+
+    return {
+      ok: true,
+      tenantId,
+      tenantName: tenant.name,
+      commissionRate: rate,
+      commissionPercent: `%${(rate * 100).toFixed(1)}`,
+    };
   }
 }

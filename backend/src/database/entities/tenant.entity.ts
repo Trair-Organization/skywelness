@@ -90,6 +90,14 @@ export class Tenant {
   @Column({ type: 'jsonb', default: '[]', name: 'gallery_images' })
   galleryImages!: string[];
 
+  /**
+   * Platform komisyon oranı (0.00 – 1.00).
+   * Varsayılan 0.15 (%15). Süper Admin panelinden partner bazlı ayarlanabilir.
+   * Checkout'ta toplam tutarın bu oranı kapora olarak alınır.
+   */
+  @Column({ type: 'numeric', precision: 4, scale: 3, default: 0.15, name: 'commission_rate' })
+  commissionRate!: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

@@ -160,8 +160,9 @@ export class UnifiedBookingService {
     if (slot.status !== 'available') throw new BadRequestException('Slot is not available');
     if (slot.bookedCount >= slot.capacity) throw new BadRequestException('Slot is full');
 
-    // Line items oluştur — KAPORA MODELİ: Toplam tutarın %15'i alınır (platform komisyonu)
-    const COMMISSION_RATE = 0.15;
+    // Line items oluştur — KAPORA MODELİ: Toplam tutarın komisyon oranı kadar alınır (platform komisyonu)
+    const tenant = await this.tenantsRepo.findOne({ where: { id: slot.tenantId } });
+    const COMMISSION_RATE = tenant ? parseFloat(tenant.commissionRate) : 0.15;
     const basePrice = Math.round(parseFloat(slot.price) * 100); // kuruş
     let totalCents = basePrice;
 
