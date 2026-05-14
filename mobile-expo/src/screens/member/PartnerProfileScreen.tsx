@@ -703,9 +703,9 @@ const styles = StyleSheet.create({
   serviceChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: premium.glass, borderWidth: 1, borderColor: premium.glassBorder },
   serviceChipTxt: { color: premium.text, fontSize: 12, fontWeight: '600' },
   // Events
-  eventMiniCard: { width: 200, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: premium.glass, overflow: 'hidden', marginRight: 10 },
-  eventMiniImg: { width: '100%', height: 80 },
-  eventMiniImgPlaceholder: { width: '100%', height: 80, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
+  eventMiniCard: { width: 184, height: 200, borderRadius: 14, borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: premium.glass, overflow: 'hidden', marginRight: 12 },
+  eventMiniImg: { width: '100%', height: 100 },
+  eventMiniImgPlaceholder: { width: '100%', height: 100, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
   eventMiniBody: { padding: 10, gap: 3 },
   eventMiniDate: { fontSize: 11, color: premium.accentBlue, fontWeight: '700' },
   eventMiniTitle: { fontSize: 13, fontWeight: '700', color: premium.text, lineHeight: 17 },
