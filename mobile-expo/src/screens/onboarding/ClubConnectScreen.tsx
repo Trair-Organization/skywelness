@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import type { TenantListRow } from '../../auth/memberAuthTypes';
 import { GradientBackground } from '../../components/premium/GradientBackground';
@@ -110,6 +111,8 @@ type DiscoveryEvent = {
   category?: string;
   requirements?: string | null;
   schedule?: Array<{ time: string; title: string }> | null;
+  price?: string | null;
+  currency?: string | null;
   clubName: string | null;
   clubSubdomain: string | null;
 };
@@ -431,26 +434,57 @@ export function ClubConnectScreen() {
     });
   };
 
-  /** Etkinliğe katıl: girişli → direkt katıl, girişsiz → lead modal */
+  /** Etkinliğe katıl: girişli → direkt katıl veya checkout, girişsiz → lead modal */
   const joinEventAction = async (evt: DiscoveryEvent) => {
+    const eventPrice = parseFloat(evt.price || '0');
+    const isPaidEvent = eventPrice > 0;
+
     if (isAuthenticated && token && tenant) {
-      try {
-        await apiJson(`/events/${evt.id}/join`, {
-          method: 'POST',
-          token,
-          tenantSubdomain: tenant.subdomain,
-        });
-        showToast('Etkinliğe katıldınız! ✓', 'success');
-        setSelectedEvent(null);
-      } catch (e) {
-        if (e instanceof ApiError && e.message.toLowerCase().includes('already')) {
-          showToast('Zaten katıldınız', 'info');
-        } else {
-          showToast(e instanceof ApiError ? e.message : 'Katılım başarısız', 'error');
+      if (isPaidEvent) {
+        // Ücretli etkinlik → Stripe checkout (kapora)
+        try {
+          const res = await apiJson<{ checkoutUrl: string }>(`/v2/events/${evt.id}/checkout`, {
+            method: 'POST',
+            token,
+            tenantSubdomain: tenant.subdomain,
+            body: JSON.stringify({ userId: user?.id }),
+          });
+          if (res.checkoutUrl) {
+            const result = await WebBrowser.openAuthSessionAsync(
+              res.checkoutUrl,
+              'wellnessclubai://booking-success',
+            );
+            setSelectedEvent(null);
+            if (result.type === 'success') {
+              showToast('Ödeme başarılı! Etkinlik biletiniz e-postanıza gönderildi 🎉', 'success');
+            } else if (result.type === 'cancel') {
+              showToast('Ödeme iptal edildi', 'warning');
+            }
+          }
+        } catch (e) {
+          showToast(e instanceof ApiError ? e.message : 'Ödeme başlatılamadı', 'error');
+        }
+      } else {
+        // Ücretsiz etkinlik → direkt katıl
+        try {
+          await apiJson(`/events/${evt.id}/join`, {
+            method: 'POST',
+            token,
+            tenantSubdomain: tenant.subdomain,
+          });
+          showToast('Etkinliğe katıldınız! ✓', 'success');
+          setSelectedEvent(null);
+        } catch (e) {
+          if (e instanceof ApiError && e.message.toLowerCase().includes('already')) {
+            showToast('Zaten katıldınız', 'info');
+          } else {
+            showToast(e instanceof ApiError ? e.message : 'Katılım başarısız', 'error');
+          }
         }
       }
       return;
     }
+    // Giriş yapmamış → register'a yönlendir (EventDetailModal'daki butonlar zaten bunu yapıyor)
     setSelectedEvent(null);
     setLeadModal({
       visible: true,
