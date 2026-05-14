@@ -180,51 +180,51 @@ export function SmartBooking({ subdomain, category }: Props) {
             </View>
           )}
 
-          {/* 📊 Grid: Tüm Hizmetler × Saatler */}
+          {/* 📊 Grid: Saatler dikey, Hizmetler yatay (üstte) */}
           <View style={styles.gridSection}>
             <Text style={styles.gridTitle}>📊 Tüm Saatler</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View>
-                {/* Header: Saatler */}
+                {/* Header: Hizmet/Kort isimleri */}
                 <View style={styles.gridRow}>
-                  <View style={styles.gridLabelCell} />
-                  {hours.map((h) => (
-                    <View key={h} style={styles.gridHeaderCell}>
-                      <Text style={styles.gridHeaderTxt}>{h.slice(0, 2)}</Text>
+                  <View style={styles.gridTimeCell}>
+                    <Text style={styles.gridHeaderTxt}>Saat</Text>
+                  </View>
+                  {services.map((svc) => (
+                    <View key={svc.id} style={styles.gridProviderCell}>
+                      <Text style={styles.gridProviderTxt} numberOfLines={2}>
+                        {svc.providerName || svc.name.replace(' (4 Kişilik)', '').replace(' (2 Kişilik)', '')}
+                      </Text>
                     </View>
                   ))}
                 </View>
-                {/* Rows: Her hizmet */}
-                {services.map((svc) => (
-                  <View key={svc.id} style={styles.gridRow}>
-                    <View style={styles.gridLabelCell}>
-                      <Text style={styles.gridLabelTxt} numberOfLines={1}>
-                        {svc.providerName || svc.name.split(' - ')[0]}
-                      </Text>
+                {/* Rows: Her saat */}
+                {hours.filter(h => !isToday || parseInt(h) > currentHour).map((h) => (
+                  <View key={h} style={styles.gridRow}>
+                    <View style={styles.gridTimeCell}>
+                      <Text style={styles.gridTimeTxt}>{h}</Text>
                     </View>
-                    {hours.map((h) => {
+                    {services.map((svc) => {
                       const slot = getSlotForServiceHour(svc.id, h);
                       const available = slot && slot.remainingCapacity > 0;
-                      const past = isToday && parseInt(h) <= currentHour;
                       return (
                         <Pressable
-                          key={h}
+                          key={svc.id}
                           style={[
                             styles.gridCell,
-                            available && !past && styles.gridCellAvailable,
+                            available && styles.gridCellAvailable,
                             !available && styles.gridCellBooked,
-                            past && styles.gridCellPast,
                           ]}
                           onPress={() => {
-                            if (available && !past && slot) handleBook(slot.id);
+                            if (available && slot) handleBook(slot.id);
                           }}
-                          disabled={!available || past || booking}
+                          disabled={!available || booking}
                         >
                           <Text style={[
                             styles.gridCellTxt,
-                            available && !past && styles.gridCellTxtAvailable,
+                            available && styles.gridCellTxtAvailable,
                           ]}>
-                            {past ? '·' : available ? '✓' : '✗'}
+                            {available ? '✓' : '—'}
                           </Text>
                         </Pressable>
                       );
@@ -269,15 +269,16 @@ const styles = StyleSheet.create({
   gridSection: { marginBottom: 16 },
   gridTitle: { fontSize: 14, fontWeight: '800', color: premium.text, marginBottom: 10, paddingHorizontal: 20 },
   gridRow: { flexDirection: 'row', alignItems: 'center' },
-  gridLabelCell: { width: 80, paddingHorizontal: 8, paddingVertical: 6 },
-  gridLabelTxt: { fontSize: 11, color: premium.textMuted, fontWeight: '600' },
-  gridHeaderCell: { width: 36, alignItems: 'center', paddingVertical: 4 },
+  gridTimeCell: { width: 52, paddingVertical: 8, paddingHorizontal: 4 },
+  gridTimeTxt: { fontSize: 12, color: premium.text, fontWeight: '700' },
+  gridProviderCell: { width: 60, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
+  gridProviderTxt: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', textAlign: 'center' },
   gridHeaderTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
-  gridCell: { width: 36, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 6, margin: 1, backgroundColor: 'rgba(0,0,0,0.2)' },
+  gridCell: { width: 60, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 8, margin: 2, backgroundColor: 'rgba(0,0,0,0.2)' },
   gridCellAvailable: { backgroundColor: 'rgba(16,185,129,0.2)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' },
-  gridCellBooked: { backgroundColor: 'rgba(100,116,139,0.15)' },
+  gridCellBooked: { backgroundColor: 'rgba(100,116,139,0.1)' },
   gridCellPast: { backgroundColor: 'rgba(0,0,0,0.1)' },
-  gridCellTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
+  gridCellTxt: { fontSize: 11, color: premium.textMuted, fontWeight: '700' },
   gridCellTxtAvailable: { color: '#10b981' },
   noSlots: { color: premium.textMuted, textAlign: 'center', padding: 16, fontSize: 13 },
 });
