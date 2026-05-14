@@ -318,6 +318,53 @@ export function PartnerProfileScreen() {
           </View>
         )}
 
+        {/* ═══ Eğitmenler (kulüp profili) — Etkinliklerden önce ═══ */}
+        {profile.profileType === 'club' && profile.trainers.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>👥 Eğitmenler</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {profile.trainers.map((t) => (
+                <Pressable
+                  key={t.id}
+                  style={styles.trainerCardWrapper}
+                  onPress={() => {
+                    (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                      'TrainerDetail',
+                      { trainerId: t.id },
+                    );
+                  }}
+                >
+                  <View style={styles.trainerCard}>
+                    {t.avgRating !== '0.00' && (
+                      <View style={styles.trainerRatingBadge}>
+                        <Text style={styles.trainerRatingTxt}>★ {t.avgRating}</Text>
+                      </View>
+                    )}
+                    <View style={styles.trainerPhotoArea}>
+                      {t.photoUrl ? (
+                        <Image source={{ uri: t.photoUrl }} style={styles.trainerPhotoImg} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.trainerInitialsTxt}>
+                          {t.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.trainerInfoArea}>
+                      <Text style={styles.trainerNameTxt} numberOfLines={1}>{t.name}</Text>
+                      <Text style={styles.trainerSpecTxt} numberOfLines={1}>
+                        {t.specializations.slice(0, 3).join(' · ')}
+                      </Text>
+                      {t.totalSessions > 0 && (
+                        <Text style={styles.trainerSessionsTxt}>{t.totalSessions} seans</Text>
+                      )}
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* ═══ Etkinlikler ═══ */}
         {profile.events.length > 0 && (
           <View style={styles.section}>
@@ -442,53 +489,6 @@ export function PartnerProfileScreen() {
                 • Online randevu sistemi
               </Text>
             </View>
-          </View>
-        )}
-
-        {/* ═══ Eğitmenler (kulüp profili) ═══ */}
-        {profile.profileType === 'club' && profile.trainers.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>👥 Eğitmenler</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {profile.trainers.map((t) => (
-                <Pressable
-                  key={t.id}
-                  style={styles.trainerCardWrapper}
-                  onPress={() => {
-                    (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                      'TrainerDetail',
-                      { trainerId: t.id },
-                    );
-                  }}
-                >
-                  <View style={styles.trainerCard}>
-                    {t.avgRating !== '0.00' && (
-                      <View style={styles.trainerRatingBadge}>
-                        <Text style={styles.trainerRatingTxt}>★ {t.avgRating}</Text>
-                      </View>
-                    )}
-                    <View style={styles.trainerPhotoArea}>
-                      {t.photoUrl ? (
-                        <Image source={{ uri: t.photoUrl }} style={styles.trainerPhotoImg} resizeMode="cover" />
-                      ) : (
-                        <Text style={styles.trainerInitialsTxt}>
-                          {t.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={styles.trainerInfoArea}>
-                      <Text style={styles.trainerNameTxt} numberOfLines={1}>{t.name}</Text>
-                      <Text style={styles.trainerSpecTxt} numberOfLines={1}>
-                        {t.specializations.slice(0, 3).join(' · ')}
-                      </Text>
-                      {t.totalSessions > 0 && (
-                        <Text style={styles.trainerSessionsTxt}>{t.totalSessions} seans</Text>
-                      )}
-                    </View>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
           </View>
         )}
 
