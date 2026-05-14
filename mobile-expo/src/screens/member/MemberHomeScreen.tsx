@@ -974,56 +974,52 @@ export function MemberHomeScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          snapToAlignment="start"
-          decelerationRate="fast"
           style={styles.eventsRail}
           contentContainerStyle={styles.eventsRailInner}
         >
           {clubEvents.map((ev) => {
+            const eventDate = new Date(ev.startsAt);
+            const dateStr = eventDate.toLocaleDateString('tr-TR', {
+              day: 'numeric',
+              month: 'short',
+            });
+            const timeStr = eventDate.toLocaleTimeString('tr-TR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
             return (
-              <View key={ev.id} style={styles.eventCard}>
+              <View key={ev.id} style={homeEventStyles.cardWrapper}>
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.eventTapArea,
-                    pressed && styles.eventTapAreaPressed,
-                  ]}
                   onPress={() => setSelectedEvent(ev)}
+                  style={({ pressed }) => [homeEventStyles.card, pressed && { opacity: 0.85 }]}
                 >
                   {ev.imageUrl ? (
                     <Image
                       source={{ uri: ev.imageUrl }}
-                      style={styles.eventImage}
+                      style={homeEventStyles.image}
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={[styles.eventImage, styles.eventImagePh]}>
-                      <Text style={styles.eventImagePhTxt}>{t('events.noImage')}</Text>
+                    <View style={homeEventStyles.imagePlaceholder}>
+                      <Text style={{ fontSize: 24 }}>📅</Text>
                     </View>
                   )}
-                  <View style={styles.eventCardBody}>
-                    <Text style={styles.eventTitle} numberOfLines={1}>
+                  <View style={homeEventStyles.body}>
+                    <View style={homeEventStyles.header}>
+                      <Text style={homeEventStyles.date}>{dateStr}</Text>
+                      <Text style={homeEventStyles.time}>{timeStr}</Text>
+                    </View>
+                    <Text style={homeEventStyles.title} numberOfLines={2}>
                       {ev.title}
                     </Text>
-                    <Text style={styles.eventMetaLine} numberOfLines={1}>
-                      {t('events.locationLabel')}: {ev.location || '-'}
-                    </Text>
-                    <Text style={styles.eventMetaLine} numberOfLines={1}>
-                      {t('events.dateLabel')}: {fmtDate(ev.startsAt)}
-                    </Text>
-                    <Text style={styles.eventMetaLine} numberOfLines={1}>
-                      {t('events.startLabel')}: {fmtTime(ev.startsAt)}
-                    </Text>
-                    <Text style={styles.eventMetaLine} numberOfLines={1}>
-                      {t('events.endLabel')}: {ev.endsAt ? fmtTime(ev.endsAt) : '-'}
-                    </Text>
-                    <Text style={styles.eventMetaLine} numberOfLines={1}>
-                      {t('events.coachLabel')}: {ev.coachName || '-'}
-                    </Text>
-                    <Text style={styles.eventCapacity}>
-                      {t('events.capacity', { booked: ev.bookedCount, capacity: ev.capacity })}
+                    {ev.coachName && <Text style={homeEventStyles.coach}>🏋️ {ev.coachName}</Text>}
+                    <Text style={homeEventStyles.capacity}>
+                      👥 {ev.bookedCount}/{ev.capacity} katılım
                     </Text>
                   </View>
+                </Pressable>
+                <Pressable style={homeEventStyles.ctaBtn} onPress={() => setSelectedEvent(ev)}>
+                  <Text style={homeEventStyles.ctaBtnTxt}>📅 Detay & Katıl</Text>
                 </Pressable>
               </View>
             );
@@ -2035,4 +2031,41 @@ const styles = StyleSheet.create({
     color: premium.textMuted,
     fontWeight: '600',
   },
+});
+
+const homeEventStyles = StyleSheet.create({
+  cardWrapper: { width: 180, gap: 8 },
+  card: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15,23,42,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.15)',
+    overflow: 'hidden',
+  },
+  image: { width: '100%', height: 80, backgroundColor: 'rgba(0,0,0,0.3)' },
+  imagePlaceholder: {
+    width: '100%',
+    height: 80,
+    backgroundColor: 'rgba(56,189,248,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: { padding: 10, gap: 4 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  date: { color: premium.accentBlue, fontSize: 11, fontWeight: '800' },
+  time: { color: premium.textMuted, fontSize: 10, fontWeight: '600' },
+  title: { color: premium.text, fontSize: 13, fontWeight: '800', lineHeight: 17 },
+  coach: { color: premium.textMuted, fontSize: 10 },
+  capacity: { color: premium.textMuted, fontSize: 10, marginTop: 2 },
+  ctaBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    backgroundColor: 'rgba(56,189,248,0.06)',
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  ctaBtnTxt: { color: premium.accentBlue, fontSize: 12, fontWeight: '800' },
 });
