@@ -1255,6 +1255,11 @@ export function ClubConnectScreen() {
                       onPress={handlePress}
                       style={({ pressed }) => [styles.clubCardNew, pressed && styles.cardPressed]}
                     >
+                      {club.visibilityMode === 'private' && (
+                        <View style={styles.privateBadge}>
+                          <Text style={styles.privateBadgeTxt}>🔒</Text>
+                        </View>
+                      )}
                       <View style={styles.clubCardLogoArea}>
                         {club.logoUrl ? (
                           <Image
@@ -2642,6 +2647,24 @@ const styles = StyleSheet.create({
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(8,16,28,0.85)',
     overflow: 'hidden',
+    position: 'relative',
+  },
+  privateBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.4)',
+  },
+  privateBadgeTxt: {
+    fontSize: 12,
   },
   clubCardWrapper: {
     width: TRAINER_CARD_WIDTH,
