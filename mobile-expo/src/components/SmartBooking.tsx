@@ -100,7 +100,11 @@ export function SmartBooking({ subdomain, category }: Props) {
   const recommended = availableSlots.slice(0, 3);
 
   // Grid: service × saat
-  const hours = Array.from({ length: 17 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`);
+  const hours = Array.from({ length: 17 }, (_, i) => ({
+    start: `${String(i + 7).padStart(2, '0')}:00`,
+    end: `${String(i + 8).padStart(2, '0')}:00`,
+    label: `${String(i + 7).padStart(2, '0')}:00-${String(i + 8).padStart(2, '0')}:00`,
+  }));
 
   async function handleBook(slotId: string) {
     if (!token) {
@@ -190,22 +194,27 @@ export function SmartBooking({ subdomain, category }: Props) {
                   <View style={styles.gridTimeCell}>
                     <Text style={styles.gridHeaderTxt}>Saat</Text>
                   </View>
-                  {services.map((svc) => (
-                    <View key={svc.id} style={styles.gridProviderCell}>
-                      <Text style={styles.gridProviderTxt} numberOfLines={2}>
-                        {svc.providerName || svc.name.replace(' (4 Kişilik)', '').replace(' (2 Kişilik)', '')}
-                      </Text>
-                    </View>
-                  ))}
+                  {services.map((svc) => {
+                    // Kort isimlerini kısa ama anlaşılır yap
+                    let shortName = svc.providerName || svc.name;
+                    shortName = shortName.replace('(4 Kişilik)', '(4K)').replace('(2 Kişilik)', '(2K)').replace(' - PT Seansı', '').replace(' - Masaj Seansı', '');
+                    return (
+                      <View key={svc.id} style={styles.gridProviderCell}>
+                        <Text style={styles.gridProviderTxt} numberOfLines={2}>
+                          {shortName}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
                 {/* Rows: Her saat */}
-                {hours.filter(h => !isToday || parseInt(h) > currentHour).map((h) => (
-                  <View key={h} style={styles.gridRow}>
+                {hours.filter(h => !isToday || parseInt(h.start) > currentHour).map((h) => (
+                  <View key={h.start} style={styles.gridRow}>
                     <View style={styles.gridTimeCell}>
-                      <Text style={styles.gridTimeTxt}>{h}</Text>
+                      <Text style={styles.gridTimeTxt}>{h.label}</Text>
                     </View>
                     {services.map((svc) => {
-                      const slot = getSlotForServiceHour(svc.id, h);
+                      const slot = getSlotForServiceHour(svc.id, h.start);
                       const available = slot && slot.remainingCapacity > 0;
                       return (
                         <Pressable
@@ -269,8 +278,8 @@ const styles = StyleSheet.create({
   gridSection: { marginBottom: 16 },
   gridTitle: { fontSize: 14, fontWeight: '800', color: premium.text, marginBottom: 10, paddingHorizontal: 20 },
   gridRow: { flexDirection: 'row', alignItems: 'center' },
-  gridTimeCell: { width: 52, paddingVertical: 8, paddingHorizontal: 4 },
-  gridTimeTxt: { fontSize: 12, color: premium.text, fontWeight: '700' },
+  gridTimeCell: { width: 80, paddingVertical: 8, paddingHorizontal: 4 },
+  gridTimeTxt: { fontSize: 11, color: premium.text, fontWeight: '700' },
   gridProviderCell: { width: 60, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
   gridProviderTxt: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', textAlign: 'center' },
   gridHeaderTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
