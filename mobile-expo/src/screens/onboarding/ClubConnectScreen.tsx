@@ -1265,7 +1265,16 @@ export function ClubConnectScreen() {
         )}
 
         <View style={styles.popularHeader}>
-          <Text style={styles.popularTitle}>Popüler Kulüpler</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.popularTitle}>Popüler Kulüpler</Text>
+            <Pressable
+              onPress={() =>
+                (navigation as unknown as { navigate: (n: string) => void }).navigate('AllClubs')
+              }
+            >
+              <Text style={styles.seeAllTxt}>Tümünü Gör →</Text>
+            </Pressable>
+          </View>
           <Text style={styles.popularSubtitle}>{t('onboarding.clubShowcaseSubtitle')}</Text>
         </View>
 
@@ -1352,8 +1361,17 @@ export function ClubConnectScreen() {
         )}
 
         <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>Yaklaşan Etkinlikler</Text>
+          <View style={{ flex: 1 }}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Yaklaşan Etkinlikler</Text>
+              <Pressable
+                onPress={() =>
+                  (navigation as unknown as { navigate: (n: string) => void }).navigate('AllEvents')
+                }
+              >
+                <Text style={styles.seeAllTxt}>Tümünü Gör →</Text>
+              </Pressable>
+            </View>
             <Text style={styles.sectionSubtitle}>
               Üye olmadan da incele, kontenjanı kapanmadan yerini ayır.
             </Text>
@@ -1417,8 +1435,19 @@ export function ClubConnectScreen() {
         )}
 
         <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>Öne çıkan eğitmenler</Text>
+          <View style={{ flex: 1 }}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Öne çıkan eğitmenler</Text>
+              <Pressable
+                onPress={() =>
+                  (navigation as unknown as { navigate: (n: string) => void }).navigate(
+                    'AllTrainers',
+                  )
+                }
+              >
+                <Text style={styles.seeAllTxt}>Tümünü Gör →</Text>
+              </Pressable>
+            </View>
             <Text style={styles.sectionSubtitle}>
               Sertifikalı, doğrulanmış ve kullanıcılar tarafından derecelendirilmiş.
             </Text>
@@ -2503,6 +2532,16 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginTop: 4,
     marginBottom: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  seeAllTxt: {
+    fontSize: 13,
+    color: premium.accentBlue,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 18,

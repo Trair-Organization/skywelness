@@ -10,6 +10,9 @@ export type RootStackParamList = {
   PendingApproval: undefined;
   PartnerProfile: { subdomain: string };
   TrainerDetail: { trainerId: string };
+  AllClubs: undefined;
+  AllEvents: undefined;
+  AllTrainers: undefined;
   Main: undefined;
   TrainerMain: undefined;
 };
