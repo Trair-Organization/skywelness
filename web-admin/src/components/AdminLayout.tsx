@@ -9,6 +9,7 @@ const WELLNESS_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
+  { path: '/services', icon: '📋', label: 'Hizmet Kataloğu' },
   { path: '/appointments', icon: '📅', label: 'Randevular (v2)' },
   { path: '/schedule-slots', icon: '🗓️', label: 'Slot Yönetimi' },
   { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
@@ -25,6 +26,7 @@ const WELLNESS_NAV: NavItem[] = [
 const GENERIC_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
+  { path: '/services', icon: '📋', label: 'Hizmet Kataloğu' },
   { path: '/appointments', icon: '📅', label: 'Randevular (v2)' },
   { path: '/schedule-slots', icon: '🗓️', label: 'Slot Yönetimi' },
   { path: '/cafe-products', icon: '☕', label: 'Ürün Yönetimi' },
