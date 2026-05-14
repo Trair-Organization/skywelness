@@ -26,8 +26,8 @@ export class MessagingService {
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.participantA', 'a')
       .leftJoinAndSelect('c.participantB', 'b')
-      .where('c.participant_a_id = :userId OR c.participant_b_id = :userId', { userId })
-      .orderBy('c.last_message_at', 'DESC', 'NULLS LAST')
+      .where('c.participantAId = :userId OR c.participantBId = :userId', { userId })
+      .orderBy('c.lastMessageAt', 'DESC', 'NULLS LAST')
       .take(50)
       .getMany();
 
