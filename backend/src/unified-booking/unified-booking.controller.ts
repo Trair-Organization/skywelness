@@ -96,6 +96,14 @@ export class UnifiedBookingController {
     return this.service.generateSlots(user.tenantId, body);
   }
 
+  // ═══ ADDONS ═══════════════════════════════════════════════
+
+  /** Public: Bir kulübün ek hizmetlerini listele */
+  @Get('addons')
+  listAddons(@Query('tenant') tenant: string) {
+    return this.service.listAddons(tenant);
+  }
+
   // ═══ APPOINTMENTS ═══════════════════════════════════════════
 
   /** Üye: Randevu oluştur */
@@ -103,7 +111,7 @@ export class UnifiedBookingController {
   @UseGuards(JwtAuthGuard)
   createAppointment(
     @CurrentUser() user: User,
-    @Body() body: { slotId: string; notes?: string; packageId?: string },
+    @Body() body: { slotId: string; notes?: string; packageId?: string; addons?: Array<{ addonId: string; quantity: number }> },
   ) {
     return this.service.createAppointment(user, body);
   }

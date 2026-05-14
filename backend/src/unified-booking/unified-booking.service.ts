@@ -7,6 +7,7 @@ import { Appointment } from '../database/entities/appointment.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { User } from '../database/entities/user.entity';
 import { Tenant } from '../database/entities/tenant.entity';
+import { Addon } from '../database/entities/addon.entity';
 import { UserRole } from '../database/enums';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class UnifiedBookingService {
     @InjectRepository(Trainer) private readonly trainersRepo: Repository<Trainer>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
+    @InjectRepository(Addon) private readonly addonsRepo: Repository<Addon>,
   ) {}
 
   // ═══════════════════════════════════════════════════════════
@@ -100,6 +102,21 @@ export class UnifiedBookingService {
       active: true,
     });
     return this.servicesRepo.save(service);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ADDONS
+  // ═══════════════════════════════════════════════════════════
+
+  /** Public: Bir tenant'ın aktif add-on'larını listele */
+  async listAddons(tenantSubdomain: string) {
+    const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    return this.addonsRepo.find({
+      where: { tenantId: tenant.id, active: true },
+      order: { sortOrder: 'ASC' },
+    });
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -232,7 +249,7 @@ export class UnifiedBookingService {
   // ═══════════════════════════════════════════════════════════
 
   /** Üye: Randevu oluştur */
-  async createAppointment(user: User, data: { slotId: string; notes?: string; packageId?: string }) {
+  async createAppointment(user: User, data: { slotId: string; notes?: string; packageId?: string; addons?: Array<{ addonId: string; quantity: number }> }) {
     if (user.role !== UserRole.MEMBER) {
       throw new ForbiddenException('Only members can create appointments');
     }
@@ -251,6 +268,21 @@ export class UnifiedBookingService {
     });
     if (existing) throw new BadRequestException('You already have a reservation for this slot');
 
+    // Add-on toplam hesapla
+    let addonTotal = 0;
+    const addonDetails: Array<{ name: string; price: number; quantity: number }> = [];
+    if (data.addons && data.addons.length > 0) {
+      for (const item of data.addons) {
+        const addon = await this.addonsRepo.findOne({ where: { id: item.addonId, tenantId: slot.tenantId, active: true } });
+        if (addon) {
+          addonTotal += parseFloat(String(addon.price)) * item.quantity;
+          addonDetails.push({ name: addon.name, price: parseFloat(String(addon.price)), quantity: item.quantity });
+        }
+      }
+    }
+
+    const totalAmount = parseFloat(slot.price) + addonTotal;
+
     // Appointment oluştur
     const appointment = this.appointmentsRepo.create({
       tenantId: slot.tenantId,
@@ -260,12 +292,13 @@ export class UnifiedBookingService {
       providerType: slot.providerType,
       providerId: slot.providerId,
       status: 'pending',
-      totalAmount: slot.price,
+      totalAmount: String(totalAmount),
       currency: slot.currency,
       paymentStatus: 'pending',
       packageId: data.packageId ?? null,
       notes: data.notes ?? null,
       participantCount: 1,
+      participants: addonDetails.length > 0 ? addonDetails as unknown as unknown[] : null,
     });
     const saved = await this.appointmentsRepo.save(appointment);
 
@@ -283,6 +316,8 @@ export class UnifiedBookingService {
       startTime: slot.startTime,
       endTime: slot.endTime,
       price: slot.price,
+      addons: addonDetails,
+      totalAmount: String(totalAmount),
     };
   }
 

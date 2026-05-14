@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { apiJson } from '../api/client';
 import { useMemberAuth } from '../auth/MemberAuthContext';
 import { showToast } from '../components/premium/Toast';
 import { premium } from '../theme/premiumTheme';
+
+type AddonItem = { id: string; name: string; price: string; description: string | null };
 
 type V2Service = {
   id: string;
@@ -62,14 +64,20 @@ export function SmartBooking({ subdomain, category }: Props) {
   const [allSlots, setAllSlots] = useState<V2Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [addons, setAddons] = useState<AddonItem[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const days = getWeekDays();
 
-  // Hizmetleri yükle
+  // Hizmetleri ve add-on'ları yükle
   useEffect(() => {
     const q = category ? `&category=${category}` : '';
     apiJson<V2Service[]>(`/v2/services?tenant=${encodeURIComponent(subdomain)}${q}`, { auth: false })
       .then(setServices)
       .catch(() => setServices([]));
+    apiJson<AddonItem[]>(`/v2/addons?tenant=${encodeURIComponent(subdomain)}`, { auth: false })
+      .then(setAddons)
+      .catch(() => setAddons([]));
   }, [subdomain, category]);
 
   // Slotları yükle (tüm hizmetler için)
@@ -147,20 +155,30 @@ export function SmartBooking({ subdomain, category }: Props) {
     label: `${String(i + 7).padStart(2, '0')}:00-${String(i + 8).padStart(2, '0')}:00`,
   }));
 
-  async function handleBook(slotId: string) {
+  function handleSlotSelect(slotId: string) {
     if (!token) {
       showToast('Rezervasyon için giriş yapmalısınız', 'warning');
       return;
     }
+    setSelectedSlotId(slotId);
+    setSelectedAddons({});
+  }
+
+  async function confirmBooking() {
+    if (!selectedSlotId) return;
     setBooking(true);
     try {
+      const addonsList = Object.entries(selectedAddons)
+        .filter(([, qty]) => qty > 0)
+        .map(([addonId, quantity]) => ({ addonId, quantity }));
       await apiJson('/v2/appointments', {
         method: 'POST',
         token,
         tenantSubdomain: tenant?.subdomain,
-        body: JSON.stringify({ slotId }),
+        body: JSON.stringify({ slotId: selectedSlotId, addons: addonsList.length > 0 ? addonsList : undefined }),
       });
       showToast('Rezervasyon oluşturuldu! ✅', 'success');
+      setSelectedSlotId(null);
       void loadSlots();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Rezervasyon başarısız', 'error');
@@ -211,7 +229,7 @@ export function SmartBooking({ subdomain, category }: Props) {
                   <Pressable
                     key={slot.id}
                     style={styles.recommendedCard}
-                    onPress={() => handleBook(slot.id)}
+                    onPress={() => handleSlotSelect(slot.id)}
                     disabled={booking}
                   >
                     <View style={styles.recommendedLeft}>
@@ -271,7 +289,7 @@ export function SmartBooking({ subdomain, category }: Props) {
                             !available && styles.gridCellBooked,
                           ]}
                           onPress={() => {
-                            if (available && slot) handleBook(slot.id);
+                            if (available && slot) handleSlotSelect(slot.id);
                           }}
                           disabled={!available || booking}
                         >
@@ -295,6 +313,64 @@ export function SmartBooking({ subdomain, category }: Props) {
           )}
         </>
       )}
+
+      {/* Add-on Onay Modal */}
+      <Modal visible={!!selectedSlotId} transparent animationType="slide" onRequestClose={() => setSelectedSlotId(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setSelectedSlotId(null)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Rezervasyon Onayı</Text>
+            {(() => {
+              const slot = allSlots.find(s => s.id === selectedSlotId);
+              const svc = slot ? services.find(s => s.id === slot.serviceId) : null;
+              const slotPrice = slot ? parseFloat(slot.price) : 0;
+              const addonTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
+                const addon = addons.find(a => a.id === id);
+                return sum + (addon ? parseFloat(addon.price) * qty : 0);
+              }, 0);
+              return (
+                <>
+                  {slot && (
+                    <View style={styles.modalSlotInfo}>
+                      <Text style={styles.modalSlotTime}>{slot.startTime} - {slot.endTime}</Text>
+                      <Text style={styles.modalSlotName}>{svc?.providerName || svc?.name}</Text>
+                      <Text style={styles.modalSlotPrice}>{slot.price}₺</Text>
+                    </View>
+                  )}
+                  {addons.length > 0 && (
+                    <View style={styles.modalAddonSection}>
+                      <Text style={styles.modalAddonTitle}>Ekstra hizmet eklemek ister misiniz?</Text>
+                      {addons.map(addon => (
+                        <View key={addon.id} style={styles.modalAddonRow}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.modalAddonName}>{addon.name}</Text>
+                            <Text style={styles.modalAddonPrice}>{addon.price}₺</Text>
+                          </View>
+                          <View style={styles.modalQtyRow}>
+                            <Pressable style={styles.modalQtyBtn} onPress={() => setSelectedAddons(p => ({ ...p, [addon.id]: Math.max(0, (p[addon.id] || 0) - 1) }))}>
+                              <Text style={styles.modalQtyBtnTxt}>−</Text>
+                            </Pressable>
+                            <Text style={styles.modalQtyNum}>{selectedAddons[addon.id] || 0}</Text>
+                            <Pressable style={styles.modalQtyBtn} onPress={() => setSelectedAddons(p => ({ ...p, [addon.id]: (p[addon.id] || 0) + 1 }))}>
+                              <Text style={styles.modalQtyBtnTxt}>+</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <View style={styles.modalTotalRow}>
+                    <Text style={styles.modalTotalLabel}>Toplam</Text>
+                    <Text style={styles.modalTotalPrice}>{(slotPrice + addonTotal).toLocaleString('tr-TR')}₺</Text>
+                  </View>
+                  <Pressable style={styles.modalConfirmBtn} onPress={confirmBooking} disabled={booking}>
+                    <Text style={styles.modalConfirmTxt}>{booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}</Text>
+                  </Pressable>
+                </>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -338,4 +414,26 @@ const styles = StyleSheet.create({
   gridCellTxt: { fontSize: 11, color: premium.textMuted, fontWeight: '700' },
   gridCellTxtAvailable: { color: '#10b981' },
   noSlots: { color: premium.textMuted, textAlign: 'center', padding: 16, fontSize: 13 },
+  // Modal
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#0b1220', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '70%' },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: premium.text, marginBottom: 16 },
+  modalSlotInfo: { padding: 14, borderRadius: 12, backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)', marginBottom: 16 },
+  modalSlotTime: { fontSize: 18, fontWeight: '800', color: premium.text },
+  modalSlotName: { fontSize: 13, color: premium.textMuted, marginTop: 2 },
+  modalSlotPrice: { fontSize: 16, fontWeight: '800', color: premium.accentGreen, marginTop: 4 },
+  modalAddonSection: { marginBottom: 16 },
+  modalAddonTitle: { fontSize: 14, fontWeight: '700', color: premium.text, marginBottom: 10 },
+  modalAddonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: premium.glassBorder },
+  modalAddonName: { fontSize: 14, fontWeight: '600', color: premium.text },
+  modalAddonPrice: { fontSize: 12, color: premium.accentBlue, fontWeight: '700', marginTop: 2 },
+  modalQtyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  modalQtyBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: premium.glassBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  modalQtyBtnTxt: { color: premium.text, fontSize: 18, fontWeight: '700' },
+  modalQtyNum: { color: premium.text, fontSize: 16, fontWeight: '800', minWidth: 20, textAlign: 'center' },
+  modalTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderTopWidth: 1, borderTopColor: premium.glassBorder, marginBottom: 12 },
+  modalTotalLabel: { fontSize: 16, fontWeight: '700', color: premium.text },
+  modalTotalPrice: { fontSize: 22, fontWeight: '900', color: premium.accentGreen },
+  modalConfirmBtn: { backgroundColor: premium.accentGreen, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  modalConfirmTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
 });
