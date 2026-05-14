@@ -140,7 +140,7 @@ export function TrainerDetailScreen() {
         </Pressable>
 
         {/* Photo */}
-        <View style={styles.photoArea}>
+        <View style={[styles.photoArea, { marginTop: insets.top }]}>
           {profile.photoUrl ? (
             <Image source={{ uri: profile.photoUrl }} style={styles.photoImg} resizeMode="cover" />
           ) : (
