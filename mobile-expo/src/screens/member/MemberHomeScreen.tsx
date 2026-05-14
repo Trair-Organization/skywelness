@@ -1323,26 +1323,29 @@ export function MemberHomeScreen() {
             }
           }}
           onRequestInfo={async (camp) => {
-            // Giriş yapmış üye → kulübe direkt mesaj başlat
+            // Giriş yapmış üye → kulübe direkt mesaj başlat (cross-tenant destekli)
             if (token && tenant) {
+              const targetSubdomain = camp.clubSubdomain || tenant.subdomain;
+              const targetClubName = camp.clubName ?? targetSubdomain;
               try {
                 const res = await apiJson<{ conversationId: string }>(
-                  '/messages/conversations/club',
+                  '/messages/conversations/club-by-subdomain',
                   {
                     method: 'POST',
                     token,
                     tenantSubdomain: tenant.subdomain,
+                    body: JSON.stringify({ subdomain: targetSubdomain }),
                   },
                 );
                 setSelectedCampaign(null);
-                showToast(`${tenant.name} ile sohbet başladı`, 'success');
+                showToast(`${targetClubName} ile sohbet başladı`, 'success');
                 (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
                   'Chat',
                   {
                     conversationId: res.conversationId,
                     otherUser: {
                       id: '',
-                      firstName: tenant.name,
+                      firstName: targetClubName,
                       lastName: '',
                       photoUrl: null,
                     },

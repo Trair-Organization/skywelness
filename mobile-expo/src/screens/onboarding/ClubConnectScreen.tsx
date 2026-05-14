@@ -357,11 +357,15 @@ export function ClubConnectScreen() {
   }) => {
     if (isAuthenticated && token && tenant) {
       try {
-        const res = await apiJson<{ conversationId: string }>('/messages/conversations/club', {
-          method: 'POST',
-          token,
-          tenantSubdomain: params.clubSubdomain,
-        });
+        const res = await apiJson<{ conversationId: string }>(
+          '/messages/conversations/club-by-subdomain',
+          {
+            method: 'POST',
+            token,
+            tenantSubdomain: tenant.subdomain, // header: kullanıcının kendi tenant'ı
+            body: JSON.stringify({ subdomain: params.clubSubdomain }), // body: hedef kulüp
+          },
+        );
         showToast(`${params.clubName} ile sohbet başladı`, 'success');
         navigateToChat({
           conversationId: res.conversationId,

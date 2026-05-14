@@ -33,6 +33,18 @@ export class MessagingController {
     return this.messagingService.getOrCreateConversationWithClubByTenantId(user.id, user.tenantId);
   }
 
+  /**
+   * Cross-tenant mesajlaşma: Başka kulübe mesaj başlat.
+   * Üye kendi kulübüne bağlı olsa bile, ekosistemdeki başka kulüple iletişim kurabilir.
+   */
+  @Post('conversations/club-by-subdomain')
+  startCrossTenantClubConversation(@CurrentUser() user: User, @Body() body: { subdomain: string }) {
+    return this.messagingService.getOrCreateConversationWithClubBySubdomain(
+      user.id,
+      body.subdomain,
+    );
+  }
+
   /** Mesaj gönder. */
   @Post('conversations/:conversationId')
   sendMessage(

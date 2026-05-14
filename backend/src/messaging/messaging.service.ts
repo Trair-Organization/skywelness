@@ -100,6 +100,11 @@ export class MessagingService {
     return this.getOrCreateConversation(userId, admin.id);
   }
 
+  /** Cross-tenant: Subdomain ile kulüp adminini bulup sohbet başlat. */
+  async getOrCreateConversationWithClubBySubdomain(userId: string, subdomain: string) {
+    return this.getOrCreateConversationWithClub(userId, subdomain);
+  }
+
   /** Mesaj gönder. */
   async sendMessage(
     userId: string,
