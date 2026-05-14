@@ -1050,7 +1050,29 @@ export function MemberHomeScreen() {
           <Text style={styles.eventsEmpty}>{t('home.noUpcomingEvents')}</Text>
         ) : null}
 
-        <Text style={styles.trainersSectionTitle}>{t('home.ourTrainersTitle')}</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            marginTop: 12,
+            marginBottom: 10,
+          }}
+        >
+          <Text style={styles.trainersSectionTitle}>Eğitmenlerimiz</Text>
+          <Pressable
+            onPress={() =>
+              (navigation as unknown as { navigate: (n: string) => void }).navigate(
+                'AllTrainers' as never,
+              )
+            }
+          >
+            <Text style={{ color: premium.accentBlue, fontSize: 13, fontWeight: '700' }}>
+              Tümünü Gör →
+            </Text>
+          </Pressable>
+        </View>
         {loadingTrainers && trainers.length === 0 ? (
           <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
         ) : null}
@@ -1066,46 +1088,45 @@ export function MemberHomeScreen() {
               .trim()
               .toUpperCase();
             return (
-              <View key={`showcase-${tr.id}`} style={styles.trainerCardWrap}>
+              <View key={`showcase-${tr.id}`} style={homeTrainerStyles.cardWrapper}>
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.trainerProfileCard,
-                    pressed && styles.trainerRowPressed,
-                  ]}
-                  onPress={() => selectTrainerAndScroll(tr.id)}
+                  onPress={() =>
+                    (
+                      navigation as unknown as { navigate: (n: string, p?: unknown) => void }
+                    ).navigate('TrainerDetail' as never, { trainerId: tr.id } as never)
+                  }
+                  style={({ pressed }) => [homeTrainerStyles.card, pressed && { opacity: 0.85 }]}
                 >
-                  <View style={styles.trainerAvatarRing}>
+                  <View style={homeTrainerStyles.photoArea}>
                     {tr.user.photoUrl ? (
-                      <Image source={{ uri: tr.user.photoUrl }} style={styles.trainerAvatarImage} />
+                      <Image
+                        source={{ uri: tr.user.photoUrl }}
+                        style={homeTrainerStyles.photo}
+                        resizeMode="cover"
+                      />
                     ) : (
-                      <Text style={styles.trainerAvatarFallback}>{initials || 'TR'}</Text>
+                      <Text style={homeTrainerStyles.avatarTxt}>{initials || 'TR'}</Text>
                     )}
                   </View>
-                  <Text style={styles.trainerProfileName} numberOfLines={2}>
-                    {fullName}
-                  </Text>
+                  <View style={homeTrainerStyles.infoArea}>
+                    <Text style={homeTrainerStyles.name} numberOfLines={1}>
+                      {fullName}
+                    </Text>
+                    <Text style={homeTrainerStyles.club} numberOfLines={1}>
+                      {tenant?.name ?? ''}
+                    </Text>
+                  </View>
                 </Pressable>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  style={styles.trainerPlanBtn}
-                  onPress={() => navigation.navigate('PT')}
-                >
-                  <Text style={styles.trainerPlanBtnTxt}>Özel Ders Planla</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  style={styles.trainerMsgBtn}
+                <Pressable
+                  style={homeTrainerStyles.ctaBtn}
                   onPress={() =>
-                    startConversationWith(
-                      tr.user.id,
-                      tr.user.firstName,
-                      tr.user.lastName,
-                      tr.user.photoUrl ?? null,
-                    )
+                    (
+                      navigation as unknown as { navigate: (n: string, p?: unknown) => void }
+                    ).navigate('TrainerDetail' as never, { trainerId: tr.id } as never)
                   }
                 >
-                  <Text style={styles.trainerMsgBtnTxt}>💬 Mesaj</Text>
-                </TouchableOpacity>
+                  <Text style={homeTrainerStyles.ctaBtnTxt}>📅 Randevu Al</Text>
+                </Pressable>
               </View>
             );
           })}
@@ -2080,6 +2101,40 @@ const homeEventStyles = StyleSheet.create({
   title: { color: premium.text, fontSize: 13, fontWeight: '800', lineHeight: 17 },
   coach: { color: premium.textMuted, fontSize: 10 },
   capacity: { color: premium.textMuted, fontSize: 10, marginTop: 2 },
+  ctaBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+    backgroundColor: 'rgba(56,189,248,0.06)',
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  ctaBtnTxt: { color: premium.accentBlue, fontSize: 12, fontWeight: '800' },
+});
+
+const homeTrainerStyles = StyleSheet.create({
+  cardWrapper: { width: 160, gap: 8 },
+  card: {
+    width: '100%',
+    height: 200,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15,23,42,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.15)',
+    overflow: 'hidden',
+  },
+  photoArea: {
+    width: '100%',
+    height: 120,
+    backgroundColor: 'rgba(56,189,248,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photo: { width: '100%', height: '100%' },
+  avatarTxt: { fontSize: 28, fontWeight: '900', color: premium.accentBlue },
+  infoArea: { padding: 10, gap: 2 },
+  name: { fontSize: 14, fontWeight: '800', color: premium.text },
+  club: { fontSize: 11, color: premium.textMuted },
   ctaBtn: {
     borderRadius: 10,
     borderWidth: 1,
