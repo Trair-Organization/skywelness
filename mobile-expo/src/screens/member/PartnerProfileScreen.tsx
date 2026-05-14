@@ -347,7 +347,7 @@ export function PartnerProfileScreen() {
         )}
 
         {/* ═══ Paketler & Fiyatlar ═══ */}
-        {profile.packages.length > 0 && (
+        {profile.packages.length > 0 && (profile.visibilityMode === 'public' || token) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>💎 Paketler & Fiyatlar</Text>
             {profile.packages.map((pkg) => (
@@ -373,7 +373,7 @@ export function PartnerProfileScreen() {
         )}
 
         {/* ═══ Kaynaklar & Ajanda ═══ */}
-        {profile.resources.length > 0 && (
+        {profile.resources.length > 0 && (profile.visibilityMode === 'public' || token) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🛍️ Rezervasyon</Text>
             {/* Resource seçimi */}
@@ -424,6 +424,24 @@ export function PartnerProfileScreen() {
             {!token && (
               <Text style={styles.noSlots}>Müsait saatleri görmek için giriş yapın</Text>
             )}
+          </View>
+        )}
+
+        {/* ═══ Özel Üyelik CTA (Private + Giriş yapmamış) ═══ */}
+        {profile.visibilityMode === 'private' && !token && (
+          <View style={styles.section}>
+            <View style={styles.exclusiveCta}>
+              <Text style={styles.exclusiveIcon}>🔒</Text>
+              <Text style={styles.exclusiveTitle}>Özel Üyelik</Text>
+              <Text style={styles.exclusiveDesc}>
+                {profile.name}, özel üyelik ile çalışmaktadır.{'\n\n'}
+                Üyelik avantajları:{'\n'}
+                • Kişisel antrenman programları{'\n'}
+                • Profesyonel masaj hizmetleri{'\n'}
+                • Özel etkinlikler ve workshoplar{'\n'}
+                • Online randevu sistemi
+              </Text>
+            </View>
           </View>
         )}
 
@@ -654,4 +672,9 @@ const styles = StyleSheet.create({
   stickyCta: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(5,8,16,0.95)', borderTopWidth: 1, borderTopColor: premium.glassBorder },
   stickyCtaBtn: { backgroundColor: premium.accentBlue, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   stickyCtaBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  // Exclusive CTA
+  exclusiveCta: { padding: 24, borderRadius: 16, backgroundColor: 'rgba(56,189,248,0.06)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)', alignItems: 'center' },
+  exclusiveIcon: { fontSize: 36, marginBottom: 12 },
+  exclusiveTitle: { fontSize: 20, fontWeight: '800', color: premium.text, marginBottom: 12 },
+  exclusiveDesc: { fontSize: 14, lineHeight: 22, color: premium.textMuted, textAlign: 'center' },
 });
