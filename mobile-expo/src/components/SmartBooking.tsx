@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { apiJson } from '../api/client';
 import { useMemberAuth } from '../auth/MemberAuthContext';
@@ -7,6 +7,63 @@ import { showToast } from '../components/premium/Toast';
 import { premium } from '../theme/premiumTheme';
 
 type AddonItem = { id: string; name: string; price: string; description: string | null };
+
+function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string; subdomain: string; addons: Array<{ addonId: string; quantity: number }>; onClose: () => void }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handlePay() {
+    if (!name.trim() || !phone.trim()) {
+      showToast('İsim ve telefon zorunludur', 'warning');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await apiJson<{ checkoutUrl: string }>('/v2/checkout', {
+        method: 'POST',
+        auth: false,
+        body: JSON.stringify({
+          slotId,
+          addons: addons.length > 0 ? addons : undefined,
+          guestName: name.trim(),
+          guestPhone: phone.trim(),
+          guestEmail: email.trim() || undefined,
+        }),
+      });
+      if (res.checkoutUrl) {
+        await Linking.openURL(res.checkoutUrl);
+        onClose();
+      }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Ödeme başlatılamadı', 'error');
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <View>
+      <Text style={guestStyles.title}>Misafir Rezervasyon</Text>
+      <Text style={guestStyles.subtitle}>Bilgilerinizi girin, ödeme sayfasına yönlendirileceksiniz.</Text>
+      <TextInput style={guestStyles.input} placeholder="Ad Soyad *" placeholderTextColor="#64748b" value={name} onChangeText={setName} />
+      <TextInput style={guestStyles.input} placeholder="Telefon *" placeholderTextColor="#64748b" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+      <TextInput style={guestStyles.input} placeholder="E-posta (opsiyonel)" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} keyboardType="email-address" />
+      <Pressable style={guestStyles.payBtn} onPress={handlePay} disabled={loading}>
+        <Text style={guestStyles.payBtnTxt}>{loading ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}</Text>
+      </Pressable>
+      <Text style={guestStyles.hint}>Hesabınız var mı? Giriş yaparak daha hızlı rezervasyon yapabilirsiniz.</Text>
+    </View>
+  );
+}
+
+const guestStyles = StyleSheet.create({
+  title: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 4 },
+  subtitle: { fontSize: 12, color: premium.textMuted, marginBottom: 14 },
+  input: { borderWidth: 1, borderColor: premium.glassBorder, borderRadius: 10, padding: 12, color: premium.text, fontSize: 14, marginBottom: 10, backgroundColor: 'rgba(0,0,0,0.2)' },
+  payBtn: { backgroundColor: '#6366f1', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 6 },
+  payBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  hint: { color: premium.textMuted, fontSize: 11, textAlign: 'center', marginTop: 12 },
+});
 
 type V2Service = {
   id: string;
@@ -366,29 +423,12 @@ export function SmartBooking({ subdomain, category }: Props) {
                       <Text style={styles.modalConfirmTxt}>{booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}</Text>
                     </Pressable>
                   ) : (
-                    <View>
-                      <Text style={styles.modalLoginMsg}>Bu slotu rezerve etmek için giriş yapmanız gerekiyor.</Text>
-                      <View style={styles.modalLoginRow}>
-                        <Pressable
-                          style={[styles.modalConfirmBtn, { flex: 1 }]}
-                          onPress={() => {
-                            setSelectedSlotId(null);
-                            (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Register', { preselectedSubdomain: subdomain });
-                          }}
-                        >
-                          <Text style={styles.modalConfirmTxt}>Hesap Oluştur</Text>
-                        </Pressable>
-                        <Pressable
-                          style={[styles.modalLoginBtn, { flex: 1 }]}
-                          onPress={() => {
-                            setSelectedSlotId(null);
-                            (navigation as unknown as { navigate: (n: string) => void }).navigate('Login');
-                          }}
-                        >
-                          <Text style={styles.modalLoginBtnTxt}>Giriş Yap</Text>
-                        </Pressable>
-                      </View>
-                    </View>
+                    <GuestCheckout
+                      slotId={selectedSlotId!}
+                      subdomain={subdomain}
+                      addons={Object.entries(selectedAddons).filter(([, qty]) => qty > 0).map(([addonId, quantity]) => ({ addonId, quantity }))}
+                      onClose={() => setSelectedSlotId(null)}
+                    />
                   )}
                 </>
               );

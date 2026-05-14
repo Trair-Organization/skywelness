@@ -106,6 +106,26 @@ export class UnifiedBookingController {
 
   // ═══ APPOINTMENTS ═══════════════════════════════════════════
 
+  /** Üye veya Misafir: Stripe Checkout session oluştur */
+  @Post('checkout')
+  createCheckout(
+    @Body() body: {
+      slotId: string;
+      addons?: Array<{ addonId: string; quantity: number }>;
+      guestName?: string;
+      guestPhone?: string;
+      guestEmail?: string;
+    },
+  ) {
+    return this.service.createCheckoutSession(body);
+  }
+
+  /** Stripe webhook callback */
+  @Post('checkout/webhook')
+  handleWebhook(@Body() body: unknown, @Query('sig') sig: string) {
+    return this.service.handleStripeWebhook(body, sig);
+  }
+
   /** Üye: Randevu oluştur */
   @Post('appointments')
   @UseGuards(JwtAuthGuard)

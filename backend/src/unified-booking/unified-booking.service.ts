@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import Stripe from 'stripe';
 import { ServiceCatalog } from '../database/entities/service-catalog.entity';
 import { ScheduleSlot } from '../database/entities/schedule-slot.entity';
 import { Appointment } from '../database/entities/appointment.entity';
@@ -9,6 +10,8 @@ import { User } from '../database/entities/user.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Addon } from '../database/entities/addon.entity';
 import { UserRole } from '../database/enums';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' as Stripe.LatestApiVersion });
 
 @Injectable()
 export class UnifiedBookingService {
@@ -117,6 +120,127 @@ export class UnifiedBookingService {
       where: { tenantId: tenant.id, active: true },
       order: { sortOrder: 'ASC' },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // STRIPE CHECKOUT
+  // ═══════════════════════════════════════════════════════════
+
+  /** Stripe Checkout session oluştur (üye veya misafir) */
+  async createCheckoutSession(data: {
+    slotId: string;
+    addons?: Array<{ addonId: string; quantity: number }>;
+    guestName?: string;
+    guestPhone?: string;
+    guestEmail?: string;
+  }) {
+    const slot = await this.slotsRepo.findOne({
+      where: { id: data.slotId },
+      relations: ['service'],
+    });
+    if (!slot) throw new NotFoundException('Slot not found');
+    if (slot.status !== 'available') throw new BadRequestException('Slot is not available');
+    if (slot.bookedCount >= slot.capacity) throw new BadRequestException('Slot is full');
+
+    // Line items oluştur
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        price_data: {
+          currency: 'try',
+          product_data: {
+            name: slot.service?.name || 'Rezervasyon',
+            description: `${slot.date} · ${slot.startTime}-${slot.endTime}`,
+          },
+          unit_amount: Math.round(parseFloat(slot.price) * 100), // kuruş
+        },
+        quantity: 1,
+      },
+    ];
+
+    // Add-on'ları ekle
+    if (data.addons && data.addons.length > 0) {
+      for (const item of data.addons) {
+        const addon = await this.addonsRepo.findOne({ where: { id: item.addonId, tenantId: slot.tenantId, active: true } });
+        if (addon && item.quantity > 0) {
+          lineItems.push({
+            price_data: {
+              currency: 'try',
+              product_data: { name: addon.name },
+              unit_amount: Math.round(parseFloat(String(addon.price)) * 100),
+            },
+            quantity: item.quantity,
+          });
+        }
+      }
+    }
+
+    // Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `https://www.wellnessclub.tech/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.wellnessclub.tech/booking-cancel`,
+      metadata: {
+        slotId: slot.id,
+        tenantId: slot.tenantId,
+        serviceId: slot.serviceId,
+        guestName: data.guestName || '',
+        guestPhone: data.guestPhone || '',
+        guestEmail: data.guestEmail || '',
+        addons: JSON.stringify(data.addons || []),
+      },
+      ...(data.guestEmail ? { customer_email: data.guestEmail } : {}),
+    });
+
+    return {
+      checkoutUrl: session.url,
+      sessionId: session.id,
+    };
+  }
+
+  /** Stripe webhook — ödeme başarılı olunca rezervasyon oluştur */
+  async handleStripeWebhook(body: unknown, _sig: string) {
+    // Basit implementasyon — production'da webhook signature doğrulaması yapılmalı
+    const event = body as { type: string; data: { object: { metadata: Record<string, string>; payment_status: string } } };
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      if (session.payment_status === 'paid') {
+        const { slotId, tenantId, serviceId, guestName, guestPhone } = session.metadata;
+
+        const slot = await this.slotsRepo.findOne({ where: { id: slotId } });
+        if (!slot || slot.bookedCount >= slot.capacity) return { ok: false };
+
+        // Appointment oluştur
+        const appointment = this.appointmentsRepo.create({
+          tenantId,
+          userId: '00000000-0000-0000-0000-000000000000', // guest placeholder
+          slotId,
+          serviceId,
+          providerType: slot.providerType,
+          providerId: slot.providerId,
+          status: 'confirmed',
+          totalAmount: slot.price,
+          currency: slot.currency,
+          paymentStatus: 'paid',
+          paymentMethod: 'card',
+          notes: guestName ? `Misafir: ${guestName} · ${guestPhone}` : null,
+          participantCount: 1,
+        });
+        await this.appointmentsRepo.save(appointment);
+
+        // Slot güncelle
+        await this.slotsRepo.increment({ id: slotId }, 'bookedCount', 1);
+        if (slot.bookedCount + 1 >= slot.capacity) {
+          await this.slotsRepo.update({ id: slotId }, { status: 'booked' });
+        }
+
+        return { ok: true };
+      }
+    }
+
+    return { ok: true };
   }
 
   // ═══════════════════════════════════════════════════════════
