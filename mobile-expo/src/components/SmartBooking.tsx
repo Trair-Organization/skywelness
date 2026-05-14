@@ -166,6 +166,12 @@ function GuestCheckout({
           ediyorum.
         </Text>
       </Pressable>
+      <View style={guestStyles.policyBox}>
+        <Text style={guestStyles.policyTitle}>📋 İptal Politikası</Text>
+        <Text style={guestStyles.policyText}>
+          • 3 saat öncesine kadar: %100 iade{'\n'}• 3 saatten az: İade yok{'\n'}• No-show: İade yok
+        </Text>
+      </View>
       <Pressable
         style={[
           guestStyles.payBtn,
@@ -175,15 +181,12 @@ function GuestCheckout({
         disabled={loading || !acceptedTerms || !name.trim() || !phone.trim() || !email.trim()}
       >
         <Text style={guestStyles.payBtnTxt}>
-          {loading ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
+          {loading ? 'Yönlendiriliyor...' : '💳 Kapora Öde'}
         </Text>
       </Pressable>
-      <View style={guestStyles.policyBox}>
-        <Text style={guestStyles.policyTitle}>📋 İptal Politikası</Text>
-        <Text style={guestStyles.policyText}>
-          • 3 saat öncesine kadar: %100 iade • 3 saatten az: İade yok • No-show: İade yok
-        </Text>
-      </View>
+      <Text style={guestStyles.kaporaNote}>
+        Sadece %15 kapora alınır. Kalan tutarı kulüpte ödersiniz.
+      </Text>
     </View>
   );
 }
@@ -256,6 +259,7 @@ const guestStyles = StyleSheet.create({
   },
   policyTitle: { fontSize: 11, fontWeight: '700', color: '#fbbf24', marginBottom: 3 },
   policyText: { fontSize: 10, color: premium.textMuted, lineHeight: 16 },
+  kaporaNote: { fontSize: 11, color: premium.textMuted, textAlign: 'center', marginTop: 8 },
 });
 
 type V2Service = {
@@ -621,110 +625,112 @@ export function SmartBooking({ subdomain, category }: Props) {
         <Pressable style={styles.modalBackdrop} onPress={() => setSelectedSlotId(null)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
             <Text style={styles.modalTitle}>Rezervasyon Onayı</Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
-              {(() => {
-                const slot = allSlots.find((s) => s.id === selectedSlotId);
-                const svc = slot ? services.find((s) => s.id === slot.serviceId) : null;
-                const slotPrice = slot ? parseFloat(slot.price) : 0;
-                const addonTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
-                  const addon = addons.find((a) => a.id === id);
-                  return sum + (addon ? parseFloat(addon.price) * qty : 0);
-                }, 0);
-                return (
-                  <>
-                    {slot && (
-                      <View style={styles.modalSlotInfo}>
-                        <Text style={styles.modalSlotTime}>
-                          {slot.startTime} - {slot.endTime}
-                        </Text>
-                        <Text style={styles.modalSlotName}>{svc?.providerName || svc?.name}</Text>
-                        <Text style={styles.modalSlotPrice}>{slot.price}₺</Text>
-                      </View>
-                    )}
-                    {addons.length > 0 && (
-                      <View style={styles.modalAddonSection}>
-                        <Text style={styles.modalAddonTitle}>
-                          Ekstra hizmet eklemek ister misiniz?
-                        </Text>
-                        {addons.map((addon) => (
-                          <View key={addon.id} style={styles.modalAddonRow}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.modalAddonName}>{addon.name}</Text>
-                              <Text style={styles.modalAddonPrice}>{addon.price}₺</Text>
-                            </View>
-                            <View style={styles.modalQtyRow}>
-                              <Pressable
-                                style={styles.modalQtyBtn}
-                                onPress={() =>
-                                  setSelectedAddons((p) => ({
-                                    ...p,
-                                    [addon.id]: Math.max(0, (p[addon.id] || 0) - 1),
-                                  }))
-                                }
-                              >
-                                <Text style={styles.modalQtyBtnTxt}>−</Text>
-                              </Pressable>
-                              <Text style={styles.modalQtyNum}>
-                                {selectedAddons[addon.id] || 0}
-                              </Text>
-                              <Pressable
-                                style={styles.modalQtyBtn}
-                                onPress={() =>
-                                  setSelectedAddons((p) => ({
-                                    ...p,
-                                    [addon.id]: (p[addon.id] || 0) + 1,
-                                  }))
-                                }
-                              >
-                                <Text style={styles.modalQtyBtnTxt}>+</Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                    <View style={styles.modalTotalRow}>
-                      <Text style={styles.modalTotalLabel}>Toplam</Text>
-                      <Text style={styles.modalTotalPrice}>
-                        {(slotPrice + addonTotal).toLocaleString('tr-TR')}₺
+            {(() => {
+              const slot = allSlots.find((s) => s.id === selectedSlotId);
+              const svc = slot ? services.find((s) => s.id === slot.serviceId) : null;
+              const slotPrice = slot ? parseFloat(slot.price) : 0;
+              const addonTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
+                const addon = addons.find((a) => a.id === id);
+                return sum + (addon ? parseFloat(addon.price) * qty : 0);
+              }, 0);
+              return (
+                <>
+                  {slot && (
+                    <View style={styles.modalSlotInfo}>
+                      <Text style={styles.modalSlotTime}>
+                        {slot.startTime} - {slot.endTime}
                       </Text>
+                      <Text style={styles.modalSlotName}>{svc?.providerName || svc?.name}</Text>
+                      <Text style={styles.modalSlotPrice}>{slot.price}₺</Text>
                     </View>
-                    {token ? (
-                      bookingSuccess ? (
-                        <Animated.View
-                          style={[styles.successBox, { transform: [{ scale: successAnim }] }]}
-                        >
-                          <Text style={styles.successIcon}>🎉</Text>
-                          <Text style={styles.successTitle}>Rezervasyon Oluşturuldu!</Text>
-                          <Text style={styles.successSubtitle}>
-                            Detaylar bildirimlerinizde görünecek.
-                          </Text>
-                        </Animated.View>
-                      ) : (
-                        <Pressable
-                          style={styles.modalConfirmBtn}
-                          onPress={confirmBooking}
-                          disabled={booking}
-                        >
-                          <Text style={styles.modalConfirmTxt}>
-                            {booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}
-                          </Text>
-                        </Pressable>
-                      )
+                  )}
+                  {addons.length > 0 && (
+                    <View style={styles.modalAddonSection}>
+                      <Text style={styles.modalAddonTitle}>
+                        Ekstra hizmet eklemek ister misiniz?
+                      </Text>
+                      {addons.map((addon) => (
+                        <View key={addon.id} style={styles.modalAddonRow}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.modalAddonName}>{addon.name}</Text>
+                            <Text style={styles.modalAddonPrice}>{addon.price}₺</Text>
+                          </View>
+                          <View style={styles.modalQtyRow}>
+                            <Pressable
+                              style={styles.modalQtyBtn}
+                              onPress={() =>
+                                setSelectedAddons((p) => ({
+                                  ...p,
+                                  [addon.id]: Math.max(0, (p[addon.id] || 0) - 1),
+                                }))
+                              }
+                            >
+                              <Text style={styles.modalQtyBtnTxt}>−</Text>
+                            </Pressable>
+                            <Text style={styles.modalQtyNum}>{selectedAddons[addon.id] || 0}</Text>
+                            <Pressable
+                              style={styles.modalQtyBtn}
+                              onPress={() =>
+                                setSelectedAddons((p) => ({
+                                  ...p,
+                                  [addon.id]: (p[addon.id] || 0) + 1,
+                                }))
+                              }
+                            >
+                              <Text style={styles.modalQtyBtnTxt}>+</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <View style={styles.modalTotalRow}>
+                    <Text style={styles.modalTotalLabel}>Toplam</Text>
+                    <Text style={styles.modalTotalPrice}>
+                      {(slotPrice + addonTotal).toLocaleString('tr-TR')}₺
+                    </Text>
+                  </View>
+                  <View style={styles.modalKaporaRow}>
+                    <Text style={styles.modalKaporaLabel}>💳 Kapora (%15)</Text>
+                    <Text style={styles.modalKaporaPrice}>
+                      {Math.ceil((slotPrice + addonTotal) * 0.15).toLocaleString('tr-TR')}₺
+                    </Text>
+                  </View>
+                  {token ? (
+                    bookingSuccess ? (
+                      <Animated.View
+                        style={[styles.successBox, { transform: [{ scale: successAnim }] }]}
+                      >
+                        <Text style={styles.successIcon}>🎉</Text>
+                        <Text style={styles.successTitle}>Rezervasyon Oluşturuldu!</Text>
+                        <Text style={styles.successSubtitle}>
+                          Detaylar bildirimlerinizde görünecek.
+                        </Text>
+                      </Animated.View>
                     ) : (
-                      <GuestCheckout
-                        slotId={selectedSlotId!}
-                        subdomain={subdomain}
-                        addons={Object.entries(selectedAddons)
-                          .filter(([, qty]) => qty > 0)
-                          .map(([addonId, quantity]) => ({ addonId, quantity }))}
-                        onClose={() => setSelectedSlotId(null)}
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </ScrollView>
+                      <Pressable
+                        style={styles.modalConfirmBtn}
+                        onPress={confirmBooking}
+                        disabled={booking}
+                      >
+                        <Text style={styles.modalConfirmTxt}>
+                          {booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}
+                        </Text>
+                      </Pressable>
+                    )
+                  ) : (
+                    <GuestCheckout
+                      slotId={selectedSlotId!}
+                      subdomain={subdomain}
+                      addons={Object.entries(selectedAddons)
+                        .filter(([, qty]) => qty > 0)
+                        .map(([addonId, quantity]) => ({ addonId, quantity }))}
+                      onClose={() => setSelectedSlotId(null)}
+                    />
+                  )}
+                </>
+              );
+            })()}
           </Pressable>
         </Pressable>
       </Modal>
@@ -894,6 +900,20 @@ const styles = StyleSheet.create({
   },
   modalTotalLabel: { fontSize: 16, fontWeight: '700', color: premium.text },
   modalTotalPrice: { fontSize: 22, fontWeight: '900', color: premium.accentGreen },
+  modalKaporaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(99,102,241,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.3)',
+    marginBottom: 12,
+  },
+  modalKaporaLabel: { fontSize: 13, fontWeight: '700', color: '#a5b4fc' },
+  modalKaporaPrice: { fontSize: 18, fontWeight: '900', color: '#a5b4fc' },
   modalConfirmBtn: {
     backgroundColor: premium.accentGreen,
     borderRadius: 14,

@@ -395,6 +395,8 @@ ${extra}
     startTime: string; // HH:mm
     endTime: string; // HH:mm
     totalAmount: string;
+    kaporaAmount?: string | null;
+    remainingAmount?: string | null;
     currency: string;
     appointmentId: string;
     addons?: Array<{ name: string; quantity: number }>;
@@ -414,6 +416,13 @@ ${extra}
     const cancelLine = params.cancellationDeadline
       ? `<p style="margin:12px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Ücretsiz iptal için son tarih: <strong style="color:#475569;">${escapeHtml(params.cancellationDeadline)}</strong>. Bu tarihten sonra iptal edilen rezervasyonlar için iade yapılmaz.</p>`
       : '';
+
+    // Kapora bilgisi
+    const paymentHtml = params.kaporaAmount
+      ? `<p style="margin:0;font-size:14px;color:#475569;">Toplam hizmet bedeli: <strong style="color:#0f172a;">${escapeHtml(params.totalAmount)} ${escapeHtml(params.currency)}</strong></p>
+         <p style="margin:4px 0 0;font-size:14px;color:#6366f1;font-weight:700;">✓ Kapora ödendi: ${escapeHtml(params.kaporaAmount)} ${escapeHtml(params.currency)}</p>
+         <p style="margin:4px 0 0;font-size:14px;color:#475569;">Kalan tutar (kulüpte ödenecek): <strong>${escapeHtml(params.remainingAmount || '0')} ${escapeHtml(params.currency)}</strong></p>`
+      : `<p style="margin:0;font-size:14px;color:#475569;">Toplam ödeme: <strong style="color:#0f172a;font-size:16px;">${escapeHtml(params.totalAmount)} ${escapeHtml(params.currency)}</strong></p>`;
 
     const inner = `
 <p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.guestName)},</p>
@@ -436,7 +445,7 @@ ${extra}
   <p style="margin:12px 0 0;font-size:14px;color:#334155;">📍 ${escapeHtml(params.clubName)}</p>
   ${addonsHtml}
   <hr style="margin:14px 0;border:none;border-top:1px solid #e2e8f0;" />
-  <p style="margin:0;font-size:14px;color:#475569;">Toplam ödeme: <strong style="color:#0f172a;font-size:16px;">${escapeHtml(params.totalAmount)} ${escapeHtml(params.currency)}</strong></p>
+  ${paymentHtml}
 </div>
 
 ${cancelLine}
@@ -462,6 +471,8 @@ ${cancelLine}
       `Saat: ${params.startTime} – ${params.endTime}`,
       `Kulüp: ${params.clubName}`,
       `Toplam: ${params.totalAmount} ${params.currency}`,
+      params.kaporaAmount ? `Kapora ödendi: ${params.kaporaAmount} ${params.currency}` : '',
+      params.remainingAmount ? `Kalan (kulüpte): ${params.remainingAmount} ${params.currency}` : '',
       '',
       params.cancellationDeadline ? `Ücretsiz iptal son tarih: ${params.cancellationDeadline}` : '',
       '',

@@ -160,39 +160,42 @@ export class UnifiedBookingService {
     if (slot.status !== 'available') throw new BadRequestException('Slot is not available');
     if (slot.bookedCount >= slot.capacity) throw new BadRequestException('Slot is full');
 
-    // Line items oluştur
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-      {
-        price_data: {
-          currency: 'try',
-          product_data: {
-            name: slot.service?.name || 'Rezervasyon',
-            description: `${slot.date} · ${slot.startTime}-${slot.endTime}`,
-          },
-          unit_amount: Math.round(parseFloat(slot.price) * 100), // kuruş
-        },
-        quantity: 1,
-      },
-    ];
+    // Line items oluştur — KAPORA MODELİ: Toplam tutarın %15'i alınır (platform komisyonu)
+    const COMMISSION_RATE = 0.15;
+    const basePrice = Math.round(parseFloat(slot.price) * 100); // kuruş
+    let totalCents = basePrice;
 
-    // Add-on'ları ekle
+    // Add-on'ları hesapla
+    const addonNames: string[] = [];
     if (data.addons && data.addons.length > 0) {
       for (const item of data.addons) {
         const addon = await this.addonsRepo.findOne({
           where: { id: item.addonId, tenantId: slot.tenantId, active: true },
         });
         if (addon && item.quantity > 0) {
-          lineItems.push({
-            price_data: {
-              currency: 'try',
-              product_data: { name: addon.name },
-              unit_amount: Math.round(parseFloat(String(addon.price)) * 100),
-            },
-            quantity: item.quantity,
-          });
+          totalCents += Math.round(parseFloat(String(addon.price)) * 100) * item.quantity;
+          addonNames.push(`${addon.name} ×${item.quantity}`);
         }
       }
     }
+
+    const kaporaCents = Math.ceil(totalCents * COMMISSION_RATE);
+    const totalTRY = (totalCents / 100).toFixed(2);
+    const kaporaTRY = (kaporaCents / 100).toFixed(2);
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        price_data: {
+          currency: 'try',
+          product_data: {
+            name: `Kapora — ${slot.service?.name || 'Rezervasyon'}`,
+            description: `${slot.date} · ${slot.startTime}-${slot.endTime} | Toplam: ${totalTRY}₺ · Kapora (%15): ${kaporaTRY}₺${addonNames.length > 0 ? ` · Ek: ${addonNames.join(', ')}` : ''}`,
+          },
+          unit_amount: kaporaCents,
+        },
+        quantity: 1,
+      },
+    ];
 
     // Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -209,6 +212,9 @@ export class UnifiedBookingService {
         guestPhone: data.guestPhone || '',
         guestEmail: data.guestEmail || '',
         addons: JSON.stringify(data.addons || []),
+        totalAmount: totalTRY,
+        kaporaAmount: kaporaTRY,
+        commissionRate: String(COMMISSION_RATE),
       },
       ...(data.guestEmail ? { customer_email: data.guestEmail } : {}),
     });
@@ -327,6 +333,7 @@ export class UnifiedBookingService {
       }
     }
     const totalAmount = parseFloat(slot.price) + addonTotal;
+    const kaporaAmount = md.kaporaAmount || String(Math.ceil(totalAmount * 0.15));
 
     // Misafir userId — guest user pattern (deterministic by email)
     const userId = await this.resolveGuestUserId(tenantId, guestEmail, guestName, guestPhone);
@@ -342,12 +349,14 @@ export class UnifiedBookingService {
       status: 'confirmed',
       totalAmount: String(totalAmount),
       currency: slot.currency,
-      paymentStatus: 'paid',
+      paymentStatus: 'deposit_paid',
       paymentMethod: 'card',
       stripeSessionId: session.id,
       stripePaymentIntentId:
         typeof session.payment_intent === 'string' ? session.payment_intent : null,
-      notes: guestName ? `Misafir: ${guestName} · ${guestPhone} · ${guestEmail}` : null,
+      notes: guestName
+        ? `Misafir: ${guestName} · ${guestPhone} · ${guestEmail} | Kapora: ${kaporaAmount}₺ ödendi, kalan: ${(totalAmount - parseFloat(kaporaAmount)).toFixed(0)}₺ kulüpte ödenecek`
+        : null,
       participantCount: 1,
       participants: addonDetails.length > 0 ? addonDetails : null,
     });
@@ -388,6 +397,8 @@ export class UnifiedBookingService {
           startTime: slot.startTime,
           endTime: slot.endTime,
           totalAmount: String(totalAmount),
+          kaporaAmount: kaporaAmount,
+          remainingAmount: String((totalAmount - parseFloat(kaporaAmount)).toFixed(0)),
           currency: slot.currency,
           appointmentId: saved.id,
           addons: addonDetails,
