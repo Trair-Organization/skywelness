@@ -908,29 +908,62 @@ export function MemberHomeScreen() {
           </View>
         )}
 
-        <Text style={styles.eventsSectionTitle}>Bugunun Musait Masaj Saatleri</Text>
-        {loadingMassageSlots ? (
-          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
-        ) : null}
-        {massageSlotsToday.length === 0 && !loadingMassageSlots ? (
-          <Text style={styles.eventsEmpty}>Bugun icin musait masaj saati bulunmuyor.</Text>
+        {/* 📅 Yaklaşan Randevularım */}
+        <Text style={styles.eventsSectionTitle}>📅 Yaklaşan Randevularım</Text>
+        {reservations.length === 0 ? (
+          <Text style={styles.eventsEmpty}>Yaklaşan randevunuz bulunmuyor.</Text>
         ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.eventsRail}
-            contentContainerStyle={styles.eventsRailInner}
-          >
-            {massageSlotsToday.map((slot) => (
-              <View key={slot.id} style={styles.eventCard}>
-                <View style={styles.eventCardBody}>
-                  <Text style={styles.eventTitle}>{fmtTime(slot.startTime)}</Text>
-                  <Text style={styles.eventMetaLine}>{fmtDate(slot.startTime)}</Text>
-                  <Text style={styles.eventCapacity}>Kalan: {slot.remainingCapacity}</Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+          <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 16 }}>
+            {reservations
+              .filter((r) => r.status === 'confirmed' || r.status === 'pending')
+              .slice(0, 3)
+              .map((r) => {
+                const trainerName = r.trainer
+                  ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}`
+                  : (r.spaTherapist?.name ?? '');
+                const serviceName = r.spaService?.name ?? (r.trainer ? 'PT Seansı' : 'Randevu');
+                const time = r.timeSlot
+                  ? `${fmtTime(r.timeSlot.startTime)} - ${fmtTime(r.timeSlot.endTime)}`
+                  : `${fmtTime(r.startTime)} - ${fmtTime(r.endTime)}`;
+                return (
+                  <View
+                    key={r.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 12,
+                      borderRadius: 12,
+                      backgroundColor: 'rgba(16,185,129,0.08)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(16,185,129,0.2)',
+                      gap: 12,
+                    }}
+                  >
+                    <Text style={{ fontSize: 24 }}>{r.spaService ? '💆' : '🏋️'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: premium.text, fontSize: 14, fontWeight: '700' }}>
+                        {serviceName}
+                      </Text>
+                      <Text style={{ color: premium.textMuted, fontSize: 12, marginTop: 2 }}>
+                        {trainerName} · {time}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(16,185,129,0.2)',
+                        borderRadius: 8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Text style={{ color: '#10b981', fontSize: 10, fontWeight: '700' }}>
+                        {r.status === 'confirmed' ? '✓ Onaylı' : '⏳ Bekliyor'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+          </View>
         )}
 
         <Text style={styles.eventsSectionTitle}>{t('home.upcomingEventsTitle')}</Text>
