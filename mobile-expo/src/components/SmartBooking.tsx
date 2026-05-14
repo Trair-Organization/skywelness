@@ -79,18 +79,18 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
 const guestStyles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 4 },
   subtitle: { fontSize: 12, color: premium.textMuted, marginBottom: 14, lineHeight: 18 },
-  input: { borderWidth: 1, borderColor: premium.glassBorder, borderRadius: 10, padding: 12, color: premium.text, fontSize: 14, marginBottom: 10, backgroundColor: 'rgba(0,0,0,0.2)' },
+  input: { borderWidth: 1, borderColor: premium.glassBorder, borderRadius: 10, padding: 10, color: premium.text, fontSize: 13, marginBottom: 8, backgroundColor: 'rgba(0,0,0,0.2)' },
   termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginVertical: 12 },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: premium.glassBorder, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkboxChecked: { backgroundColor: premium.accentGreen, borderColor: premium.accentGreen },
   checkmark: { color: '#fff', fontSize: 13, fontWeight: '800' },
   termsText: { flex: 1, fontSize: 12, color: premium.textMuted, lineHeight: 18 },
   termsLink: { color: premium.accentBlue, fontWeight: '600' },
-  payBtn: { backgroundColor: '#6366f1', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 6 },
-  payBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  policyBox: { marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(251,191,36,0.06)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' },
-  policyTitle: { fontSize: 12, fontWeight: '700', color: '#fbbf24', marginBottom: 6 },
-  policyText: { fontSize: 11, color: premium.textMuted, lineHeight: 18 },
+  payBtn: { backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
+  payBtnTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  policyBox: { marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: 'rgba(251,191,36,0.06)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' },
+  policyTitle: { fontSize: 11, fontWeight: '700', color: '#fbbf24', marginBottom: 4 },
+  policyText: { fontSize: 10, color: premium.textMuted, lineHeight: 16 },
   hint: { color: premium.textMuted, fontSize: 11, textAlign: 'center', marginTop: 12 },
 });
 
@@ -404,6 +404,7 @@ export function SmartBooking({ subdomain, category }: Props) {
         <Pressable style={styles.modalBackdrop} onPress={() => setSelectedSlotId(null)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
             <Text style={styles.modalTitle}>Rezervasyon Onayı</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
             {(() => {
               const slot = allSlots.find(s => s.id === selectedSlotId);
               const svc = slot ? services.find(s => s.id === slot.serviceId) : null;
@@ -462,6 +463,7 @@ export function SmartBooking({ subdomain, category }: Props) {
                 </>
               );
             })()}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -510,7 +512,7 @@ const styles = StyleSheet.create({
   noSlots: { color: premium.textMuted, textAlign: 'center', padding: 16, fontSize: 13 },
   // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#0b1220', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '70%' },
+  modalCard: { backgroundColor: '#0b1220', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
   modalTitle: { fontSize: 18, fontWeight: '800', color: premium.text, marginBottom: 16 },
   modalSlotInfo: { padding: 14, borderRadius: 12, backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)', marginBottom: 16 },
   modalSlotTime: { fontSize: 18, fontWeight: '800', color: premium.text },
