@@ -41,6 +41,10 @@ export class Conversation {
   @Column({ type: 'timestamptz', nullable: true, name: 'last_message_at' })
   lastMessageAt!: Date | null;
 
+  /** Son mesajı gönderen kullanıcı ID'si — gelen/gönderilen filtresi için. */
+  @Column({ type: 'uuid', nullable: true, name: 'last_message_sender_id' })
+  lastMessageSenderId!: string | null;
+
   /** A'nın okumadığı mesaj sayısı. */
   @Column({ type: 'int', default: 0, name: 'unread_count_a' })
   unreadCountA!: number;

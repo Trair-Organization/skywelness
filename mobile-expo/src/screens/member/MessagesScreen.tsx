@@ -32,6 +32,8 @@ type ConversationRow = {
   };
   lastMessagePreview: string | null;
   lastMessageAt: string | null;
+  lastMessageSenderId: string | null;
+  isLastMessageMine: boolean;
   unreadCount: number;
 };
 
@@ -53,6 +55,7 @@ export function MessagesScreen() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'inbox' | 'sent' | 'all'>('all');
 
   // New conversation modal
   const [showNewChat, setShowNewChat] = useState(false);
@@ -220,12 +223,23 @@ export function MessagesScreen() {
             style={[styles.convPreview, item.unreadCount > 0 && styles.convPreviewUnread]}
             numberOfLines={1}
           >
+            {item.isLastMessageMine ? '📤 ' : ''}
             {item.lastMessagePreview}
           </Text>
         )}
       </View>
     </Pressable>
   );
+
+  const filteredConversations = conversations.filter((c) => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'inbox') return !c.isLastMessageMine; // Karşı taraftan gelen
+    if (activeTab === 'sent') return c.isLastMessageMine; // Senin gönderdiğin
+    return true;
+  });
+
+  const inboxCount = conversations.filter((c) => !c.isLastMessageMine && c.lastMessageAt).length;
+  const sentCount = conversations.filter((c) => c.isLastMessageMine).length;
 
   if (loading) {
     return (
@@ -252,15 +266,50 @@ export function MessagesScreen() {
             <Text style={styles.newChatBtnTxt}>+ Yeni</Text>
           </Pressable>
         </View>
-        {conversations.length === 0 ? (
+
+        {/* Tab Bar — Tümü / Gelen / Gönderilen */}
+        <View style={styles.tabBar}>
+          <Pressable
+            style={[styles.tabBtn, activeTab === 'all' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('all')}
+          >
+            <Text style={[styles.tabBtnTxt, activeTab === 'all' && styles.tabBtnTxtActive]}>
+              Tümü ({conversations.length})
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tabBtn, activeTab === 'inbox' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('inbox')}
+          >
+            <Text style={[styles.tabBtnTxt, activeTab === 'inbox' && styles.tabBtnTxtActive]}>
+              📥 Gelen ({inboxCount})
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tabBtn, activeTab === 'sent' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('sent')}
+          >
+            <Text style={[styles.tabBtnTxt, activeTab === 'sent' && styles.tabBtnTxtActive]}>
+              📤 Gönderilen ({sentCount})
+            </Text>
+          </Pressable>
+        </View>
+
+        {filteredConversations.length === 0 ? (
           <EmptyState
             icon="💬"
-            title="Henüz mesajınız yok"
+            title={
+              activeTab === 'inbox'
+                ? 'Gelen mesaj yok'
+                : activeTab === 'sent'
+                  ? 'Gönderilen mesaj yok'
+                  : 'Henüz mesajınız yok'
+            }
             description="Eğitmenlerle veya kulüplerle iletişime geçtiğinizde mesajlarınız burada görünecek."
           />
         ) : (
           <FlatList
-            data={conversations}
+            data={filteredConversations}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -366,6 +415,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   newChatBtnTxt: { fontSize: 13, fontWeight: '700', color: premium.accentBlue },
+  tabBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(15,23,42,0.4)',
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+  },
+  tabBtnActive: {
+    backgroundColor: 'rgba(56,189,248,0.12)',
+    borderColor: premium.accentBlue,
+  },
+  tabBtnTxt: { fontSize: 12, fontWeight: '700', color: premium.textMuted },
+  tabBtnTxtActive: { color: premium.accentBlue },
   list: { paddingBottom: 80 },
   convRow: {
     flexDirection: 'row',

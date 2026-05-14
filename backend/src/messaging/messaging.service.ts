@@ -46,6 +46,8 @@ export class MessagingService {
         },
         lastMessagePreview: c.lastMessagePreview,
         lastMessageAt: c.lastMessageAt,
+        lastMessageSenderId: c.lastMessageSenderId,
+        isLastMessageMine: c.lastMessageSenderId === userId,
         unreadCount,
       };
     });
@@ -145,6 +147,7 @@ export class MessagingService {
       .set({
         lastMessagePreview: preview,
         lastMessageAt: new Date(),
+        lastMessageSenderId: userId,
       })
       .where('id = :id', { id: conversationId });
 
@@ -152,12 +155,14 @@ export class MessagingService {
       updateQb.set({
         lastMessagePreview: preview,
         lastMessageAt: new Date(),
+        lastMessageSenderId: userId,
         unreadCountB: () => '"unread_count_b" + 1',
       });
     } else {
       updateQb.set({
         lastMessagePreview: preview,
         lastMessageAt: new Date(),
+        lastMessageSenderId: userId,
         unreadCountA: () => '"unread_count_a" + 1',
       });
     }
