@@ -195,14 +195,14 @@ export function SmartBooking({ subdomain, category }: Props) {
                     <Text style={styles.gridHeaderTxt}>Saat</Text>
                   </View>
                   {services.map((svc) => {
-                    // Kort isimlerini kısa ama anlaşılır yap
-                    let shortName = svc.providerName || svc.name;
-                    shortName = shortName.replace('(4 Kişilik)', '(4K)').replace('(2 Kişilik)', '(2K)').replace(' - PT Seansı', '').replace(' - Masaj Seansı', '');
+                    const name = svc.name.replace(' (4 Kişilik)', '').replace(' (2 Kişilik)', '').replace(' - PT Seansı', '').replace(' - Masaj Seansı', '');
+                    const capacity = svc.capacity > 1 ? `${svc.capacity} kişi` : '';
                     return (
                       <View key={svc.id} style={styles.gridProviderCell}>
-                        <Text style={styles.gridProviderTxt} numberOfLines={2}>
-                          {shortName}
+                        <Text style={styles.gridProviderTxt} numberOfLines={1}>
+                          {svc.providerName || name}
                         </Text>
+                        {capacity ? <Text style={styles.gridProviderCapacity}>{capacity}</Text> : null}
                       </View>
                     );
                   })}
@@ -278,10 +278,11 @@ const styles = StyleSheet.create({
   gridSection: { marginBottom: 16 },
   gridTitle: { fontSize: 14, fontWeight: '800', color: premium.text, marginBottom: 10, paddingHorizontal: 20 },
   gridRow: { flexDirection: 'row', alignItems: 'center' },
-  gridTimeCell: { width: 80, paddingVertical: 8, paddingHorizontal: 4 },
+  gridTimeCell: { width: 90, paddingVertical: 8, paddingHorizontal: 4 },
   gridTimeTxt: { fontSize: 11, color: premium.text, fontWeight: '700' },
   gridProviderCell: { width: 60, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
   gridProviderTxt: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', textAlign: 'center' },
+  gridProviderCapacity: { fontSize: 9, color: premium.textMuted, fontWeight: '600', textAlign: 'center', marginTop: 1 },
   gridHeaderTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
   gridCell: { width: 60, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 8, margin: 2, backgroundColor: 'rgba(0,0,0,0.2)' },
   gridCellAvailable: { backgroundColor: 'rgba(16,185,129,0.2)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' },
