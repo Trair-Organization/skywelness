@@ -244,7 +244,7 @@ function getWeekDays() {
 }
 
 export function SmartBooking({ subdomain, category }: Props) {
-  const { token, tenant } = useMemberAuth();
+  const { token, tenant, user } = useMemberAuth();
   const navigation = useNavigation();
   const [services, setServices] = useState<V2Service[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -367,31 +367,36 @@ export function SmartBooking({ subdomain, category }: Props) {
       const addonsList = Object.entries(selectedAddons)
         .filter(([, qty]) => qty > 0)
         .map(([addonId, quantity]) => ({ addonId, quantity }));
-      await apiJson('/v2/appointments', {
+
+      // Kayıtlı üye de kapora öder — Stripe checkout
+      const res = await apiJson<{ checkoutUrl: string }>('/v2/checkout', {
         method: 'POST',
         token,
         tenantSubdomain: tenant?.subdomain,
         body: JSON.stringify({
           slotId: selectedSlotId,
           addons: addonsList.length > 0 ? addonsList : undefined,
+          // Üye bilgileri backend'den alınacak (token ile)
+          guestEmail: user?.email,
+          guestName: user ? `${user.firstName} ${user.lastName}`.trim() : undefined,
+          guestPhone: user?.phone || undefined,
         }),
       });
-      // Başarı animasyonu
-      setBookingSuccess(true);
-      Animated.spring(successAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 40,
-        useNativeDriver: true,
-      }).start();
-      setTimeout(() => {
-        setBookingSuccess(false);
-        successAnim.setValue(0);
+      if (res.checkoutUrl) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          res.checkoutUrl,
+          'wellnessclubai://booking-success',
+        );
         setSelectedSlotId(null);
-      }, 2500);
-      void loadSlots();
+        if (result.type === 'success') {
+          showToast('Ödeme başarılı! Biletiniz e-postanıza gönderildi 🎉', 'success');
+          void loadSlots();
+        } else if (result.type === 'cancel') {
+          showToast('Ödeme iptal edildi', 'warning');
+        }
+      }
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Rezervasyon başarısız', 'error');
+      showToast(e instanceof Error ? e.message : 'Ödeme başlatılamadı', 'error');
     } finally {
       setBooking(false);
     }
@@ -648,7 +653,7 @@ export function SmartBooking({ subdomain, category }: Props) {
                           disabled={booking}
                         >
                           <Text style={styles.modalConfirmTxt}>
-                            {booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}
+                            {booking ? 'Yönlendiriliyor...' : '💳 Kapora Öde'}
                           </Text>
                         </Pressable>
                       )
