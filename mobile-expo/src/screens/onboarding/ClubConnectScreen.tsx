@@ -1819,6 +1819,7 @@ export function ClubConnectScreen() {
             : null
         }
         onClose={() => setPreviewCampaign(null)}
+        isAuthenticated={isAuthenticated}
         onBuy={async (campaignId) => {
           try {
             const res = await apiJson<{ checkoutUrl: string }>(
@@ -1852,14 +1853,22 @@ export function ClubConnectScreen() {
         }}
         onRequestInfo={(camp) => {
           setPreviewCampaign(null);
-          setLeadModal({
-            visible: true,
-            source: 'campaign',
-            sourceRef: camp.id,
-            sourceLabel: camp.title,
-            clubSubdomain: camp.clubSubdomain ?? undefined,
-            prefillMessage: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
-          });
+          if (camp.clubSubdomain) {
+            // contactClub: giriş yapmışsa mesaj başlatır, değilse lead form açar
+            void contactClub({
+              clubSubdomain: camp.clubSubdomain,
+              clubName: camp.clubName ?? camp.title,
+              prefillMessage: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
+            });
+          } else {
+            setLeadModal({
+              visible: true,
+              source: 'campaign',
+              sourceRef: camp.id,
+              sourceLabel: camp.title,
+              prefillMessage: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
+            });
+          }
         }}
       />
 

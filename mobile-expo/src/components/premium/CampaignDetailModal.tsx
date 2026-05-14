@@ -24,6 +24,7 @@ type Props = {
   onClose: () => void;
   onBuy?: (campaignId: string) => void;
   onRequestInfo?: (campaign: CampaignData) => void;
+  isAuthenticated?: boolean;
 };
 
 const TYPE_LABELS: Record<string, { icon: string; label: string }> = {
@@ -33,7 +34,13 @@ const TYPE_LABELS: Record<string, { icon: string; label: string }> = {
   general: { icon: '🔥', label: 'Kampanya' },
 };
 
-export function CampaignDetailModal({ campaign, onClose, onBuy, onRequestInfo }: Props) {
+export function CampaignDetailModal({
+  campaign,
+  onClose,
+  onBuy: _onBuy,
+  onRequestInfo,
+  isAuthenticated = false,
+}: Props) {
   if (!campaign) return null;
 
   const startDate = new Date(campaign.startsAt);
@@ -144,24 +151,26 @@ export function CampaignDetailModal({ campaign, onClose, onBuy, onRequestInfo }:
 
           {/* CTA */}
           <View style={styles.ctaBar}>
+            {/* Hemen Satın Al butonu şimdilik gizli — daha sonra açılacak
             {showBuy && buyAmount > 0 && (
               <Pressable
                 style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.85 }]}
-                onPress={() => onBuy?.(campaign.id)}
+                onPress={() => _onBuy?.(campaign.id)}
               >
                 <Text style={styles.buyBtnTxt}>
                   💳 Hemen Satın Al · {kaporaAmount.toLocaleString('tr-TR')}₺ kapora
                 </Text>
               </Pressable>
             )}
-            {showInfo && (
-              <Pressable
-                style={({ pressed }) => [styles.infoBtn, pressed && { opacity: 0.85 }]}
-                onPress={() => onRequestInfo?.(campaign)}
-              >
-                <Text style={styles.infoBtnTxt}>📋 Bilgi Almak İçin Başvur</Text>
-              </Pressable>
-            )}
+            */}
+            <Pressable
+              style={({ pressed }) => [styles.infoBtn, pressed && { opacity: 0.85 }]}
+              onPress={() => onRequestInfo?.(campaign)}
+            >
+              <Text style={styles.infoBtnTxt}>
+                {isAuthenticated ? '💬 Kulübe Mesaj Gönder' : '📋 Bilgi Almak İçin Başvur'}
+              </Text>
+            </Pressable>
             <Pressable style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnTxt}>Kapat</Text>
             </Pressable>

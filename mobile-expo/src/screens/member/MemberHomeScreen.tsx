@@ -1323,31 +1323,37 @@ export function MemberHomeScreen() {
             }
           }}
           onRequestInfo={async (camp) => {
-            // Lead oluştur — kulüp dashboard'una düşer
-            try {
-              await apiJson('/leads', {
-                method: 'POST',
-                token,
-                tenantSubdomain: tenant?.subdomain,
-                body: JSON.stringify({
-                  source: 'campaign',
-                  sourceRef: camp.id,
-                  sourceLabel: camp.title,
-                  fullName: user ? `${user.firstName} ${user.lastName}`.trim() : '',
-                  phone: user?.phone || '',
-                  email: user?.email || '',
-                  message: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
-                }),
-              });
-              setSelectedCampaign(null);
-              showToast(
-                'Talebiniz iletildi! Kulüp en kısa sürede sizinle iletişime geçecek ✓',
-                'success',
-              );
-            } catch (e) {
-              showToast(e instanceof ApiError ? e.message : 'Talep gönderilemedi', 'error');
+            // Giriş yapmış üye → kulübe direkt mesaj başlat
+            if (token && tenant) {
+              try {
+                const res = await apiJson<{ conversationId: string }>(
+                  '/messages/conversations/club',
+                  {
+                    method: 'POST',
+                    token,
+                    tenantSubdomain: tenant.subdomain,
+                  },
+                );
+                setSelectedCampaign(null);
+                showToast(`${tenant.name} ile sohbet başladı`, 'success');
+                (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                  'Chat',
+                  {
+                    conversationId: res.conversationId,
+                    otherUser: {
+                      id: '',
+                      firstName: tenant.name,
+                      lastName: '',
+                      photoUrl: null,
+                    },
+                  },
+                );
+              } catch (e) {
+                showToast(e instanceof ApiError ? e.message : 'Mesaj başlatılamadı', 'error');
+              }
             }
           }}
+          isAuthenticated={!!token}
         />
 
         <Modal
