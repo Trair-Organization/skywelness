@@ -13,6 +13,7 @@ type Club = {
   description: string | null;
   logoUrl: string | null;
   coverImageUrl: string | null;
+  galleryImages?: string[];
   location: string | null;
   avgRating: string;
   reviewCount: number;
@@ -52,8 +53,11 @@ export function AllClubsScreen() {
               )
             }
           >
-            {club.coverImageUrl ? (
-              <Image source={{ uri: club.coverImageUrl }} style={styles.cardImage} />
+            {club.coverImageUrl || (club.galleryImages && club.galleryImages.length > 0) ? (
+              <Image
+                source={{ uri: club.coverImageUrl || club.galleryImages![0] }}
+                style={styles.cardImage}
+              />
             ) : (
               <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
                 <Text style={{ fontSize: 32 }}>🏢</Text>
