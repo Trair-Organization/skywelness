@@ -1135,7 +1135,29 @@ export function MemberHomeScreen() {
           <Text style={styles.eventsEmpty}>{t('home.trainersEmpty')}</Text>
         ) : null}
 
-        <Text style={styles.eventsSectionTitle}>SkyCafe - Gunun Urunleri</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            marginTop: 12,
+            marginBottom: 10,
+          }}
+        >
+          <Text style={styles.eventsSectionTitle}>☕ SkyCafe - Ürünlerimiz</Text>
+          <Pressable
+            onPress={() =>
+              (navigation as unknown as { navigate: (n: string) => void }).navigate(
+                'SkyCafe' as never,
+              )
+            }
+          >
+            <Text style={{ color: premium.accentBlue, fontSize: 13, fontWeight: '700' }}>
+              Tümünü Gör →
+            </Text>
+          </Pressable>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
