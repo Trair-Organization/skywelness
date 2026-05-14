@@ -538,32 +538,47 @@ export function PartnerProfileScreen() {
 
       {/* ═══ Sticky CTA ═══ */}
       <View style={[styles.stickyCta, { paddingBottom: insets.bottom + 12 }]}>
-        <Pressable
-          style={styles.stickyCtaBtn}
-          onPress={() => {
-            if (!token) {
-              // Kayıt olmamış kullanıcıyı kayıt ekranına yönlendir
-              (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                'Register',
-                { preselectedSubdomain: profile.subdomain },
-              );
-              return;
-            }
-            if (profile.visibilityMode === 'public' && profile.resources.length > 0) {
-              showToast('Yukarıdan saat seçip rezervasyon yapabilirsiniz ↑', 'info');
-            } else {
-              showToast('💬 Mesaj göndermek için kulüp kartındaki butonu kullanın', 'info');
-            }
-          }}
-        >
-          <Text style={styles.stickyCtaBtnTxt}>
-            {!token
-              ? '👤 Kayıt Ol & Başla'
-              : profile.visibilityMode === 'public'
-                ? '🎾 Rezervasyon Yap'
-                : '💬 Mesaj Gönder'}
-          </Text>
-        </Pressable>
+        {!token ? (
+          <View style={styles.stickyCtaRow}>
+            <Pressable
+              style={[styles.stickyCtaBtn, { flex: 1 }]}
+              onPress={() => {
+                (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                  'Register',
+                  { preselectedSubdomain: profile.subdomain },
+                );
+              }}
+            >
+              <Text style={styles.stickyCtaBtnTxt}>Hesap Oluştur</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.stickyCtaBtnOutline, { flex: 1 }]}
+              onPress={() => {
+                (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Login');
+              }}
+            >
+              <Text style={styles.stickyCtaBtnOutlineTxt}>Giriş Yap</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            style={styles.stickyCtaBtn}
+            onPress={() => {
+              if (profile.visibilityMode === 'public' && profile.resources.length > 0) {
+                showToast('Yukarıdan saat seçip rezervasyon yapabilirsiniz ↑', 'info');
+              } else {
+                showToast('💬 Mesaj göndermek için kulüp kartındaki butonu kullanın', 'info');
+              }
+            }}
+          >
+            <Text style={styles.stickyCtaBtnTxt}>
+              {profile.visibilityMode === 'public' ? '🎾 Rezervasyon Yap' : '💬 Mesaj Gönder'}
+            </Text>
+          </Pressable>
+        )}
+        {!token && (
+          <Text style={styles.stickyCtaClubName}>🏢 {profile.name}</Text>
+        )}
       </View>
     </GradientBackground>
   );
@@ -672,6 +687,10 @@ const styles = StyleSheet.create({
   stickyCta: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(5,8,16,0.95)', borderTopWidth: 1, borderTopColor: premium.glassBorder },
   stickyCtaBtn: { backgroundColor: premium.accentBlue, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   stickyCtaBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  stickyCtaRow: { flexDirection: 'row', gap: 10 },
+  stickyCtaBtnOutline: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.05)' },
+  stickyCtaBtnOutlineTxt: { color: premium.text, fontSize: 16, fontWeight: '800' },
+  stickyCtaClubName: { color: premium.textMuted, fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 8 },
   // Exclusive CTA
   exclusiveCta: { padding: 24, borderRadius: 16, backgroundColor: 'rgba(56,189,248,0.06)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)', alignItems: 'center' },
   exclusiveIcon: { fontSize: 36, marginBottom: 12 },
