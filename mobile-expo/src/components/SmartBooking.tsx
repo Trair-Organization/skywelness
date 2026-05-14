@@ -89,15 +89,56 @@ export function SmartBooking({ subdomain, category }: Props) {
 
   useEffect(() => { void loadSlots(); }, [loadSlots]);
 
-  // Önerilen slotlar (en yakın 3 müsait)
+  // Önerilen slotlar (akıllı sıralama)
   const now = new Date();
   const currentHour = now.getHours();
   const isToday = selectedDate === new Date().toISOString().slice(0, 10);
   const availableSlots = allSlots
     .filter(s => s.remainingCapacity > 0)
-    .filter(s => !isToday || parseInt(s.startTime) > currentHour)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const recommended = availableSlots.slice(0, 3);
+    .filter(s => !isToday || parseInt(s.startTime) > currentHour);
+
+  // Profesyonel öneri algoritması
+  const scored = availableSlots.map(slot => {
+    let score = 0;
+    const hour = parseInt(slot.startTime);
+
+    // 1. Prime time bonus (18-21 arası en popüler)
+    if (hour >= 18 && hour <= 21) score += 30;
+    // 2. Akşam üstü bonus (16-18)
+    else if (hour >= 16 && hour < 18) score += 20;
+    // 3. Sabah erken bonus (07-09 — sporcular)
+    else if (hour >= 7 && hour <= 9) score += 15;
+    // 4. Öğle arası bonus (12-14)
+    else if (hour >= 12 && hour <= 14) score += 10;
+
+    // 5. Yakınlık bonusu (şu ana yakın saatler)
+    if (isToday) {
+      const diff = hour - currentHour;
+      if (diff <= 2) score += 25; // 2 saat içinde
+      else if (diff <= 4) score += 15;
+    }
+
+    // 6. Kapasite bonusu (büyük kort = daha çok gelir)
+    const svc = services.find(s => s.id === slot.serviceId);
+    if (svc && svc.capacity >= 4) score += 10;
+
+    // 7. Uygun fiyat bonusu
+    if (svc && parseFloat(svc.price) <= 3000) score += 5;
+
+    return { ...slot, score, serviceName: svc?.providerName || svc?.name || '' };
+  });
+
+  // Sırala ve farklı saatlerden seç (dağılım)
+  scored.sort((a, b) => b.score - a.score);
+  const recommended: typeof scored = [];
+  const usedHours = new Set<string>();
+  for (const slot of scored) {
+    if (recommended.length >= 3) break;
+    if (!usedHours.has(slot.startTime)) {
+      recommended.push(slot);
+      usedHours.add(slot.startTime);
+    }
+  }
 
   // Grid: service × saat
   const hours = Array.from({ length: 17 }, (_, i) => ({
@@ -163,23 +204,28 @@ export function SmartBooking({ subdomain, category }: Props) {
           {recommended.length > 0 && (
             <View style={styles.recommendedSection}>
               <Text style={styles.recommendedTitle}>⚡ Önerilen Saatler</Text>
-              {recommended.map((slot) => (
-                <Pressable
-                  key={slot.id}
-                  style={styles.recommendedCard}
-                  onPress={() => handleBook(slot.id)}
-                  disabled={booking}
-                >
-                  <View style={styles.recommendedLeft}>
-                    <Text style={styles.recommendedTime}>{slot.startTime} - {slot.endTime}</Text>
-                    <Text style={styles.recommendedName}>{getServiceName(slot.serviceId)}</Text>
-                  </View>
-                  <View style={styles.recommendedRight}>
-                    <Text style={styles.recommendedPrice}>{slot.price}₺</Text>
-                    {token && <Text style={styles.recommendedCta}>Hemen Al →</Text>}
-                  </View>
-                </Pressable>
-              ))}
+              {recommended.map((slot) => {
+                const hour = parseInt(slot.startTime);
+                const badge = hour >= 18 && hour <= 21 ? '🔥 Popüler' : hour >= 7 && hour <= 9 ? '🌅 Erken' : isToday && (hour - currentHour) <= 2 ? '⏰ Yakında' : '';
+                return (
+                  <Pressable
+                    key={slot.id}
+                    style={styles.recommendedCard}
+                    onPress={() => handleBook(slot.id)}
+                    disabled={booking}
+                  >
+                    <View style={styles.recommendedLeft}>
+                      <Text style={styles.recommendedTime}>{slot.startTime} - {slot.endTime}</Text>
+                      <Text style={styles.recommendedName}>{slot.serviceName}</Text>
+                      {badge ? <Text style={styles.recommendedBadge}>{badge}</Text> : null}
+                    </View>
+                    <View style={styles.recommendedRight}>
+                      <Text style={styles.recommendedPrice}>{slot.price}₺</Text>
+                      {token && <Text style={styles.recommendedCta}>Hemen Al →</Text>}
+                    </View>
+                  </Pressable>
+                );
+              })}
               {!token && <Text style={styles.loginHint}>Rezervasyon için giriş yapın</Text>}
             </View>
           )}
@@ -270,6 +316,7 @@ const styles = StyleSheet.create({
   recommendedLeft: {},
   recommendedTime: { fontSize: 16, fontWeight: '800', color: premium.text },
   recommendedName: { fontSize: 12, color: premium.textMuted, marginTop: 2 },
+  recommendedBadge: { fontSize: 10, color: '#fbbf24', fontWeight: '700', marginTop: 3 },
   recommendedRight: { alignItems: 'flex-end' },
   recommendedPrice: { fontSize: 16, fontWeight: '900', color: premium.accentGreen },
   recommendedCta: { fontSize: 11, color: premium.accentGreen, fontWeight: '700', marginTop: 2 },
