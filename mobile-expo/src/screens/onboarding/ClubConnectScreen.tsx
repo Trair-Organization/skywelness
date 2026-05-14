@@ -507,7 +507,11 @@ export function ClubConnectScreen() {
     }
     if (cta === 'join') {
       if (!isAuthenticated) {
-        navigation.navigate('Login');
+        // Giriş yapmamış → Register ekranına yönlendir, kulüp otomatik seçili
+        (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+          'Register',
+          { preselectedSubdomain: club.subdomain },
+        );
         return;
       }
       setJoinRequestTarget({ name: club.name, subdomain: club.subdomain });

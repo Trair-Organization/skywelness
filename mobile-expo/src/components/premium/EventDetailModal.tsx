@@ -168,29 +168,33 @@ export function EventDetailModal({
                 <Text style={styles.joinBtnTxt}>✓ Etkinliğe Katıl</Text>
               </Pressable>
             ) : (
-              <View style={styles.guestCtaContainer}>
-                <Text style={styles.guestCtaText}>Katılmak için hesap oluşturun</Text>
-                <View style={styles.guestCtaRow}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.registerBtn,
-                      pressed && styles.registerBtnPressed,
-                    ]}
-                    onPress={onRegister}
-                  >
-                    <Text style={styles.registerBtnTxt}>Kayıt Ol</Text>
-                  </Pressable>
+              <>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.registerBtn,
+                    pressed && styles.registerBtnPressed,
+                  ]}
+                  onPress={onRegister}
+                >
+                  <Text style={styles.registerBtnTxt}>Katılmak için Kayıt Ol</Text>
+                </Pressable>
+                <View style={styles.guestSecondaryRow}>
                   <Pressable style={styles.loginLink} onPress={onLogin}>
                     <Text style={styles.loginLinkTxt}>
                       Zaten hesabın var mı? <Text style={styles.loginLinkBold}>Giriş Yap</Text>
                     </Text>
                   </Pressable>
+                  <Pressable style={styles.closeBtn} onPress={onClose}>
+                    <Text style={styles.closeBtnTxt}>Kapat</Text>
+                  </Pressable>
                 </View>
-              </View>
+              </>
             )}
-            <Pressable style={styles.closeBtn} onPress={onClose}>
-              <Text style={styles.closeBtnTxt}>Kapat</Text>
-            </Pressable>
+            {isAuthenticated && (
+              <Pressable style={styles.closeBtn} onPress={onClose}>
+                <Text style={styles.closeBtnTxt}>Kapat</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -260,47 +264,43 @@ const styles = StyleSheet.create({
   scheduleTitle: { color: premium.text, fontSize: 14, fontWeight: '600', flex: 1 },
   // CTA
   ctaBar: {
-    flexDirection: 'row',
-    gap: 10,
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: premium.glassBorder,
+    gap: 10,
   },
   joinBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: premium.accentBlue,
     borderRadius: 14,
-    minHeight: 48,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(56,189,248,0.1)',
-  },
-  joinBtnPressed: { backgroundColor: 'rgba(56,189,248,0.25)' },
-  joinBtnTxt: { color: premium.accentBlue, fontSize: 16, fontWeight: '800' },
-  closeBtn: {
-    paddingHorizontal: 20,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnTxt: { color: premium.textMuted, fontSize: 14, fontWeight: '600' },
-  // Guest CTA
-  guestCtaContainer: { flex: 1, gap: 8 },
-  guestCtaText: { color: premium.textMuted, fontSize: 12, textAlign: 'center' },
-  guestCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  registerBtn: {
-    flex: 1,
     backgroundColor: premium.accentBlue,
-    borderRadius: 14,
-    minHeight: 48,
+  },
+  joinBtnPressed: { opacity: 0.85 },
+  joinBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  closeBtn: {
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  registerBtnPressed: { opacity: 0.8 },
+  closeBtnTxt: { color: premium.textMuted, fontSize: 13, fontWeight: '600' },
+  // Guest CTA
+  registerBtn: {
+    borderRadius: 14,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: premium.accentBlue,
+  },
+  registerBtnPressed: { opacity: 0.85 },
   registerBtnTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  loginLink: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
-  loginLinkTxt: { color: premium.textMuted, fontSize: 11, textAlign: 'center' },
+  guestSecondaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  loginLink: { flex: 1 },
+  loginLinkTxt: { color: premium.textMuted, fontSize: 12 },
   loginLinkBold: { color: premium.accentBlue, fontWeight: '700' },
 });
