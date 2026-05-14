@@ -584,21 +584,21 @@ export function PartnerProfileScreen() {
                   ) : (
                     <View style={styles.eventModalLoginBox}>
                       <Text style={styles.eventModalLoginTxt}>Etkinliğe katılmak için üye olmanız gerekiyor.</Text>
-                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                      <View style={styles.stickyCtaRow}>
                         <Pressable
-                          style={[styles.eventModalJoinBtn, { flex: 1 }]}
+                          style={[styles.stickyCtaBtn, { flex: 1, marginTop: 0 }]}
                           onPress={() => {
                             setSelectedEvent(null);
                             (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Register', { preselectedSubdomain: profile.subdomain });
                           }}
                         >
-                          <Text style={styles.eventModalJoinTxt}>Hesap Oluştur</Text>
+                          <Text style={styles.stickyCtaBtnTxt}>Hesap Oluştur</Text>
                         </Pressable>
                         <Pressable
-                          style={[styles.eventModalLoginBtn, { flex: 1 }]}
+                          style={[styles.stickyCtaBtnOutline, { flex: 1 }]}
                           onPress={() => { setSelectedEvent(null); (navigation as unknown as { navigate: (n: string) => void }).navigate('Login'); }}
                         >
-                          <Text style={styles.eventModalLoginBtnTxt}>Giriş Yap</Text>
+                          <Text style={styles.stickyCtaBtnOutlineTxt}>Giriş Yap</Text>
                         </Pressable>
                       </View>
                     </View>
@@ -780,8 +780,8 @@ const styles = StyleSheet.create({
   eventModalDesc: { fontSize: 14, lineHeight: 22, color: premium.textMuted, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: premium.glassBorder },
   eventModalJoinBtn: { backgroundColor: premium.accentBlue, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
   eventModalJoinTxt: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  eventModalLoginBox: { marginTop: 20, padding: 16, borderRadius: 14, backgroundColor: 'rgba(56,189,248,0.06)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)', alignItems: 'center' },
-  eventModalLoginTxt: { color: premium.textMuted, fontSize: 13, textAlign: 'center' },
+  eventModalLoginBox: { marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: premium.glassBorder },
+  eventModalLoginTxt: { color: premium.textMuted, fontSize: 13, textAlign: 'center', marginBottom: 12 },
   eventModalLoginBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.05)' },
   eventModalLoginBtnTxt: { color: premium.text, fontSize: 15, fontWeight: '700' },
 });
