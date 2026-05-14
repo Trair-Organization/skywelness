@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { apiJson } from '../api/client';
 import { useMemberAuth } from '../auth/MemberAuthContext';
@@ -9,11 +9,25 @@ import { premium } from '../theme/premiumTheme';
 type AddonItem = { id: string; name: string; price: string; description: string | null };
 
 function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string; subdomain: string; addons: Array<{ addonId: string; quantity: number }>; onClose: () => void }) {
+  const navigation = useNavigation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  // Üye teşvik kartı shimmer animasyonu
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, [shimmerAnim]);
+
+  const shimmerOpacity = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
 
   async function handlePay() {
     if (!name.trim() || !phone.trim() || !email.trim()) {
@@ -48,7 +62,26 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
 
   return (
     <View>
-      <Text style={guestStyles.title}>Misafir Rezervasyon</Text>
+      {/* Üye Teşvik Kartı */}
+      <Animated.View style={[guestStyles.promoCard, { opacity: shimmerOpacity }]}>
+        <Text style={guestStyles.promoIcon}>💎</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={guestStyles.promoTitle}>Üye olun, %10 indirim kazanın!</Text>
+          <Text style={guestStyles.promoList}>✓ Hızlı rezervasyon  ✓ Geçmiş takibi  ✓ Özel fırsatlar</Text>
+        </View>
+        <Pressable
+          style={guestStyles.promoBtn}
+          onPress={() => {
+            onClose();
+            (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Register', { preselectedSubdomain: subdomain });
+          }}
+        >
+          <Text style={guestStyles.promoBtnTxt}>Üye Ol</Text>
+        </Pressable>
+      </Animated.View>
+
+      <Text style={guestStyles.divider}>— veya misafir olarak devam edin —</Text>
+
       <Text style={guestStyles.subtitle}>Bilgilerinizi girin, ödeme sonrası e-posta adresinize bilet gönderilecektir.</Text>
       <TextInput style={guestStyles.input} placeholder="Ad Soyad *" placeholderTextColor="#64748b" value={name} onChangeText={setName} />
       <TextInput style={guestStyles.input} placeholder="Telefon *" placeholderTextColor="#64748b" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
@@ -67,31 +100,34 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
       </Pressable>
       <View style={guestStyles.policyBox}>
         <Text style={guestStyles.policyTitle}>📋 İptal Politikası</Text>
-        <Text style={guestStyles.policyText}>• 3 saat öncesine kadar: %100 iade</Text>
-        <Text style={guestStyles.policyText}>• 3 saatten az kala: İade yapılmaz</Text>
-        <Text style={guestStyles.policyText}>• Gelmeme (no-show): İade yapılmaz</Text>
+        <Text style={guestStyles.policyText}>• 3 saat öncesine kadar: %100 iade  • 3 saatten az: İade yok  • No-show: İade yok</Text>
       </View>
-      <Text style={guestStyles.hint}>Hesabınız var mı? Giriş yaparak daha hızlı rezervasyon yapabilirsiniz.</Text>
     </View>
   );
 }
 
 const guestStyles = StyleSheet.create({
+  promoCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: 'rgba(99,102,241,0.1)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)', marginBottom: 12, gap: 10 },
+  promoIcon: { fontSize: 24 },
+  promoTitle: { fontSize: 12, fontWeight: '800', color: '#a5b4fc', marginBottom: 2 },
+  promoList: { fontSize: 10, color: premium.textMuted },
+  promoBtn: { backgroundColor: '#6366f1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  promoBtnTxt: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  divider: { textAlign: 'center', color: premium.textMuted, fontSize: 11, marginBottom: 12 },
   title: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 4 },
-  subtitle: { fontSize: 12, color: premium.textMuted, marginBottom: 14, lineHeight: 18 },
+  subtitle: { fontSize: 11, color: premium.textMuted, marginBottom: 12, lineHeight: 16 },
   input: { borderWidth: 1, borderColor: premium.glassBorder, borderRadius: 10, padding: 10, color: premium.text, fontSize: 13, marginBottom: 8, backgroundColor: 'rgba(0,0,0,0.2)' },
-  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginVertical: 12 },
-  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: premium.glassBorder, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginVertical: 10 },
+  checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: premium.glassBorder, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkboxChecked: { backgroundColor: premium.accentGreen, borderColor: premium.accentGreen },
-  checkmark: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  termsText: { flex: 1, fontSize: 12, color: premium.textMuted, lineHeight: 18 },
+  checkmark: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  termsText: { flex: 1, fontSize: 11, color: premium.textMuted, lineHeight: 16 },
   termsLink: { color: premium.accentBlue, fontWeight: '600' },
-  payBtn: { backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
+  payBtn: { backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
   payBtnTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
   policyBox: { marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: 'rgba(251,191,36,0.06)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' },
-  policyTitle: { fontSize: 11, fontWeight: '700', color: '#fbbf24', marginBottom: 4 },
+  policyTitle: { fontSize: 11, fontWeight: '700', color: '#fbbf24', marginBottom: 3 },
   policyText: { fontSize: 10, color: premium.textMuted, lineHeight: 16 },
-  hint: { color: premium.textMuted, fontSize: 11, textAlign: 'center', marginTop: 12 },
 });
 
 type V2Service = {
@@ -249,6 +285,9 @@ export function SmartBooking({ subdomain, category }: Props) {
     setSelectedAddons({});
   }
 
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const successAnim = useRef(new Animated.Value(0)).current;
+
   async function confirmBooking() {
     if (!selectedSlotId) return;
     setBooking(true);
@@ -262,8 +301,14 @@ export function SmartBooking({ subdomain, category }: Props) {
         tenantSubdomain: tenant?.subdomain,
         body: JSON.stringify({ slotId: selectedSlotId, addons: addonsList.length > 0 ? addonsList : undefined }),
       });
-      showToast('Rezervasyon oluşturuldu! ✅', 'success');
-      setSelectedSlotId(null);
+      // Başarı animasyonu
+      setBookingSuccess(true);
+      Animated.spring(successAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start();
+      setTimeout(() => {
+        setBookingSuccess(false);
+        successAnim.setValue(0);
+        setSelectedSlotId(null);
+      }, 2500);
       void loadSlots();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Rezervasyon başarısız', 'error');
@@ -449,9 +494,17 @@ export function SmartBooking({ subdomain, category }: Props) {
                     <Text style={styles.modalTotalPrice}>{(slotPrice + addonTotal).toLocaleString('tr-TR')}₺</Text>
                   </View>
                   {token ? (
-                    <Pressable style={styles.modalConfirmBtn} onPress={confirmBooking} disabled={booking}>
-                      <Text style={styles.modalConfirmTxt}>{booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}</Text>
-                    </Pressable>
+                    bookingSuccess ? (
+                      <Animated.View style={[styles.successBox, { transform: [{ scale: successAnim }] }]}>
+                        <Text style={styles.successIcon}>🎉</Text>
+                        <Text style={styles.successTitle}>Rezervasyon Oluşturuldu!</Text>
+                        <Text style={styles.successSubtitle}>Detaylar bildirimlerinizde görünecek.</Text>
+                      </Animated.View>
+                    ) : (
+                      <Pressable style={styles.modalConfirmBtn} onPress={confirmBooking} disabled={booking}>
+                        <Text style={styles.modalConfirmTxt}>{booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}</Text>
+                      </Pressable>
+                    )
                   ) : (
                     <GuestCheckout
                       slotId={selectedSlotId!}
@@ -484,7 +537,7 @@ const styles = StyleSheet.create({
   // Recommended
   recommendedSection: { paddingHorizontal: 20, marginBottom: 20 },
   recommendedTitle: { fontSize: 14, fontWeight: '800', color: premium.accentBlue, marginBottom: 10 },
-  recommendedCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.06)', marginBottom: 8 },
+  recommendedCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.06)', marginBottom: 8, transform: [{ scale: 1 }] },
   recommendedLeft: {},
   recommendedTime: { fontSize: 16, fontWeight: '800', color: premium.text },
   recommendedName: { fontSize: 12, color: premium.textMuted, marginTop: 2 },
@@ -503,7 +556,7 @@ const styles = StyleSheet.create({
   gridProviderTxt: { fontSize: 10, color: premium.accentBlue, fontWeight: '700', textAlign: 'center' },
   gridProviderCapacity: { fontSize: 9, color: premium.textMuted, fontWeight: '600', textAlign: 'center', marginTop: 1 },
   gridHeaderTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
-  gridCell: { width: 60, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 8, margin: 2, backgroundColor: 'rgba(0,0,0,0.2)' },
+  gridCell: { width: 60, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 8, margin: 2, backgroundColor: 'rgba(0,0,0,0.2)', transform: [{ scale: 1 }] },
   gridCellAvailable: { backgroundColor: 'rgba(16,185,129,0.2)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' },
   gridCellBooked: { backgroundColor: 'rgba(100,116,139,0.1)' },
   gridCellPast: { backgroundColor: 'rgba(0,0,0,0.1)' },
@@ -532,6 +585,10 @@ const styles = StyleSheet.create({
   modalTotalPrice: { fontSize: 22, fontWeight: '900', color: premium.accentGreen },
   modalConfirmBtn: { backgroundColor: premium.accentGreen, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   modalConfirmTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  successBox: { alignItems: 'center', paddingVertical: 24 },
+  successIcon: { fontSize: 48, marginBottom: 12 },
+  successTitle: { fontSize: 18, fontWeight: '800', color: premium.accentGreen, marginBottom: 4 },
+  successSubtitle: { fontSize: 13, color: premium.textMuted },
   modalLoginMsg: { color: premium.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 14 },
   modalLoginRow: { flexDirection: 'row', gap: 10 },
   modalLoginBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.05)' },
