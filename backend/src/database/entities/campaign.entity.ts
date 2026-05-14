@@ -14,6 +14,7 @@ export type CampaignType = 'massage_package' | 'membership' | 'personal_training
 export type CampaignStatus = 'active' | 'draft' | 'expired' | 'paused';
 export type DiscountKind = 'percentage' | 'fixed';
 export type CampaignAudience = 'everyone' | 'new_members' | 'existing_members';
+export type CampaignActionType = 'instant_buy' | 'lead_only' | 'both';
 
 @Entity({ name: 'campaign' })
 @Index(['tenantId', 'status'])
@@ -88,6 +89,15 @@ export class Campaign {
   /** Platform admin tarafından keşif ekranında öne çıkarılmış kampanya. */
   @Column({ type: 'boolean', default: false })
   featured!: boolean;
+
+  /**
+   * Kullanıcı aksiyon tipi:
+   * - instant_buy: Sadece direkt satın alma (Stripe)
+   * - lead_only: Sadece bilgi formu
+   * - both: İkisi birden (varsayılan)
+   */
+  @Column({ type: 'varchar', length: 20, default: 'both', name: 'action_type' })
+  actionType!: CampaignActionType;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

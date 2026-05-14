@@ -15,11 +15,15 @@ type CampaignData = {
   startsAt: string;
   endsAt: string;
   clubName?: string | null;
+  clubSubdomain?: string | null;
+  actionType?: 'instant_buy' | 'lead_only' | 'both';
 };
 
 type Props = {
   campaign: CampaignData | null;
   onClose: () => void;
+  onBuy?: (campaignId: string) => void;
+  onRequestInfo?: (campaign: CampaignData) => void;
 };
 
 const TYPE_LABELS: Record<string, { icon: string; label: string }> = {
@@ -29,7 +33,7 @@ const TYPE_LABELS: Record<string, { icon: string; label: string }> = {
   general: { icon: '🔥', label: 'Kampanya' },
 };
 
-export function CampaignDetailModal({ campaign, onClose }: Props) {
+export function CampaignDetailModal({ campaign, onClose, onBuy, onRequestInfo }: Props) {
   if (!campaign) return null;
 
   const startDate = new Date(campaign.startsAt);
@@ -44,6 +48,12 @@ export function CampaignDetailModal({ campaign, onClose }: Props) {
     month: 'long',
     year: 'numeric',
   });
+
+  const actionType = campaign.actionType ?? 'both';
+  const showBuy = actionType === 'instant_buy' || actionType === 'both';
+  const showInfo = actionType === 'lead_only' || actionType === 'both';
+  const buyAmount = parseFloat(campaign.discountedPrice || campaign.originalPrice || '0');
+  const kaporaAmount = Math.ceil(buyAmount * 0.15);
   const cat = TYPE_LABELS[campaign.campaignType] ?? TYPE_LABELS.general;
   const discountLabel =
     campaign.discountKind === 'percentage'
@@ -134,6 +144,24 @@ export function CampaignDetailModal({ campaign, onClose }: Props) {
 
           {/* CTA */}
           <View style={styles.ctaBar}>
+            {showBuy && buyAmount > 0 && (
+              <Pressable
+                style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.85 }]}
+                onPress={() => onBuy?.(campaign.id)}
+              >
+                <Text style={styles.buyBtnTxt}>
+                  💳 Hemen Satın Al · {kaporaAmount.toLocaleString('tr-TR')}₺ kapora
+                </Text>
+              </Pressable>
+            )}
+            {showInfo && (
+              <Pressable
+                style={({ pressed }) => [styles.infoBtn, pressed && { opacity: 0.85 }]}
+                onPress={() => onRequestInfo?.(campaign)}
+              >
+                <Text style={styles.infoBtnTxt}>📋 Bilgi Almak İçin Başvur</Text>
+              </Pressable>
+            )}
             <Pressable style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnTxt}>Kapat</Text>
             </Pressable>
@@ -219,7 +247,26 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: premium.glassBorder,
+    gap: 10,
   },
-  closeBtn: { height: 48, alignItems: 'center', justifyContent: 'center' },
-  closeBtnTxt: { color: premium.textMuted, fontSize: 14, fontWeight: '600' },
+  buyBtn: {
+    borderRadius: 14,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+  },
+  buyBtnTxt: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  infoBtn: {
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: premium.accentBlue,
+    backgroundColor: 'rgba(56,189,248,0.08)',
+  },
+  infoBtnTxt: { color: premium.accentBlue, fontSize: 14, fontWeight: '700' },
+  closeBtn: { height: 40, alignItems: 'center', justifyContent: 'center' },
+  closeBtnTxt: { color: premium.textMuted, fontSize: 13, fontWeight: '600' },
 });

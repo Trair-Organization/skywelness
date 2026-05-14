@@ -19,6 +19,7 @@ import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
+import { Campaign } from '../database/entities/campaign.entity';
 import { UserRole, PackageStatus, SessionType } from '../database/enums';
 import { MailService } from '../mail/mail.service';
 
@@ -43,6 +44,7 @@ export class UnifiedBookingService {
     private readonly eventRegsRepo: Repository<ClubEventRegistration>,
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
+    @InjectRepository(Campaign) private readonly campaignsRepo: Repository<Campaign>,
     private readonly mailService: MailService,
   ) {}
 
@@ -292,6 +294,17 @@ export class UnifiedBookingService {
       );
     }
 
+    // Campaign checkout mu?
+    if (md.type === 'campaign') {
+      return this.handleCampaignPaymentCompleted(
+        session as unknown as {
+          id: string;
+          metadata: Record<string, string>;
+          customer_details?: { email?: string };
+        },
+      );
+    }
+
     if (!slotId || !tenantId || !serviceId) {
       this.logger.error(`Stripe webhook missing required metadata: ${JSON.stringify(md)}`);
       return { ok: false, error: 'missing metadata' };
@@ -525,6 +538,148 @@ export class UnifiedBookingService {
       kaporaAmount: kaporaTRY,
       currency: event.currency,
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // CAMPAIGN CHECKOUT (Kampanya Satın Alma)
+  // ═══════════════════════════════════════════════════════════
+
+  /** Kampanya için Stripe Checkout session oluştur (kapora modeli) */
+  async createCampaignCheckout(data: {
+    campaignId: string;
+    guestName?: string;
+    guestPhone?: string;
+    guestEmail?: string;
+    userId?: string;
+  }) {
+    const campaign = await this.campaignsRepo.findOne({
+      where: { id: data.campaignId },
+      relations: ['tenant'],
+    });
+    if (!campaign) throw new NotFoundException('Campaign not found');
+    if (campaign.status !== 'active') throw new BadRequestException('Campaign is not active');
+    if (campaign.actionType === 'lead_only') {
+      throw new BadRequestException('Bu kampanya sadece bilgi formu üzerinden alınabilir');
+    }
+
+    // Fiyat: discountedPrice öncelikli, yoksa originalPrice
+    const totalPrice = parseFloat(campaign.discountedPrice || campaign.originalPrice || '0');
+    if (totalPrice <= 0) {
+      throw new BadRequestException('Kampanya fiyatı tanımlı değil');
+    }
+
+    // Komisyon oranı (tenant bazlı)
+    const COMMISSION_RATE = campaign.tenant ? parseFloat(campaign.tenant.commissionRate) : 0.15;
+
+    const totalCents = Math.round(totalPrice * 100);
+    const kaporaCents = Math.ceil(totalCents * COMMISSION_RATE);
+    const kaporaTRY = (kaporaCents / 100).toFixed(2);
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'try',
+            product_data: {
+              name: `Kapora — ${campaign.title}`,
+              description: `Kampanya: ${campaign.title} | Toplam: ${totalPrice}₺ · Kapora: ${kaporaTRY}₺`,
+            },
+            unit_amount: kaporaCents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `https://www.wellnessclub.tech/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.wellnessclub.tech/booking-cancel`,
+      metadata: {
+        type: 'campaign',
+        campaignId: campaign.id,
+        tenantId: campaign.tenantId,
+        guestName: data.guestName || '',
+        guestPhone: data.guestPhone || '',
+        guestEmail: data.guestEmail || '',
+        userId: data.userId || '',
+        totalAmount: String(totalPrice),
+        kaporaAmount: kaporaTRY,
+        commissionRate: String(COMMISSION_RATE),
+      },
+      ...(data.guestEmail ? { customer_email: data.guestEmail } : {}),
+    });
+
+    return {
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      campaignTitle: campaign.title,
+      totalAmount: String(totalPrice),
+      kaporaAmount: kaporaTRY,
+      currency: 'TRY',
+    };
+  }
+
+  /** Stripe webhook'tan gelen kampanya ödeme onayını işle */
+  async handleCampaignPaymentCompleted(session: {
+    id: string;
+    metadata: Record<string, string>;
+    customer_details?: { email?: string };
+  }) {
+    const md = session.metadata;
+    const campaignId = md.campaignId;
+    const tenantId = md.tenantId;
+
+    if (!campaignId || !tenantId) return { ok: false, error: 'missing campaign metadata' };
+
+    const campaign = await this.campaignsRepo.findOne({
+      where: { id: campaignId },
+      relations: ['tenant'],
+    });
+    if (!campaign) return { ok: false, error: 'campaign not found' };
+
+    const guestName = md.guestName || 'Misafir';
+    const guestPhone = md.guestPhone || '';
+    const guestEmail = (session.customer_details?.email || md.guestEmail || '').toLowerCase();
+
+    // Kampanya kullanım sayısını artır
+    campaign.redemptionCount = (campaign.redemptionCount || 0) + 1;
+    await this.campaignsRepo.save(campaign);
+
+    // Kullanıcı resolve
+    const userId =
+      md.userId || (await this.resolveGuestUserId(tenantId, guestEmail, guestName, guestPhone));
+
+    // Bilet maili
+    if (guestEmail) {
+      try {
+        await this.mailService.sendBookingConfirmation({
+          to: guestEmail,
+          guestName,
+          clubName: campaign.tenant?.name || 'Wellness Club',
+          serviceName: campaign.title,
+          providerName: null,
+          date: new Date().toISOString().slice(0, 10),
+          startTime: '',
+          endTime: '',
+          totalAmount: md.totalAmount || '0',
+          kaporaAmount: md.kaporaAmount || null,
+          remainingAmount:
+            md.totalAmount && md.kaporaAmount
+              ? String((parseFloat(md.totalAmount) - parseFloat(md.kaporaAmount)).toFixed(0))
+              : null,
+          currency: 'TRY',
+          appointmentId: `CMP-${campaignId.slice(0, 8)}`,
+          cancellationDeadline: null,
+        });
+        this.logger.log(
+          `Campaign confirmation email sent to ${guestEmail} for campaign ${campaignId}`,
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Failed to send campaign confirmation email: ${msg}`);
+      }
+    }
+
+    return { ok: true, campaignId, userId };
   }
 
   /** Stripe webhook'tan gelen event ödeme onayını işle */

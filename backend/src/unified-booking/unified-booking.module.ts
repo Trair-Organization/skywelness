@@ -13,6 +13,7 @@ import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
+import { Campaign } from '../database/entities/campaign.entity';
 import { UnifiedBookingController } from './unified-booking.controller';
 import { UnifiedBookingService } from './unified-booking.service';
 
@@ -30,6 +31,7 @@ import { UnifiedBookingService } from './unified-booking.service';
       ClubEventRegistration,
       Package,
       PackageType,
+      Campaign,
     ]),
     AuthModule,
     MailModule,

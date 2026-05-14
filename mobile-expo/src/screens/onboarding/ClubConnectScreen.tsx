@@ -62,6 +62,7 @@ type PublicCampaign = {
   endsAt: string;
   maxRedemptions: number | null;
   redemptionCount: number;
+  actionType?: 'instant_buy' | 'lead_only' | 'both';
   tenant?: { id: string; name: string; subdomain: string };
 };
 
@@ -1812,10 +1813,54 @@ export function ClubConnectScreen() {
                 startsAt: previewCampaign.startsAt,
                 endsAt: previewCampaign.endsAt,
                 clubName: previewCampaign.tenant?.name ?? null,
+                clubSubdomain: previewCampaign.tenant?.subdomain ?? null,
+                actionType: previewCampaign.actionType,
               }
             : null
         }
         onClose={() => setPreviewCampaign(null)}
+        onBuy={async (campaignId) => {
+          try {
+            const res = await apiJson<{ checkoutUrl: string }>(
+              `/v2/campaigns/${campaignId}/checkout`,
+              {
+                method: 'POST',
+                auth: false,
+                body: JSON.stringify({
+                  guestName: user ? `${user.firstName} ${user.lastName}`.trim() : undefined,
+                  guestPhone: user?.phone || undefined,
+                  guestEmail: user?.email || undefined,
+                  userId: user?.id || undefined,
+                }),
+              },
+            );
+            if (res.checkoutUrl) {
+              setPreviewCampaign(null);
+              const result = await WebBrowser.openAuthSessionAsync(
+                res.checkoutUrl,
+                'wellnessclubai://booking-success',
+              );
+              if (result.type === 'success') {
+                showToast('Ödeme başarılı! Biletiniz e-postanıza gönderildi 🎉', 'success');
+              } else if (result.type === 'cancel') {
+                showToast('Ödeme iptal edildi', 'warning');
+              }
+            }
+          } catch (e) {
+            showToast(e instanceof ApiError ? e.message : 'Ödeme başlatılamadı', 'error');
+          }
+        }}
+        onRequestInfo={(camp) => {
+          setPreviewCampaign(null);
+          setLeadModal({
+            visible: true,
+            source: 'campaign',
+            sourceRef: camp.id,
+            sourceLabel: camp.title,
+            clubSubdomain: camp.clubSubdomain ?? undefined,
+            prefillMessage: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
+          });
+        }}
       />
 
       <JoinRequestModal

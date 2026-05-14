@@ -149,6 +149,21 @@ export class UnifiedBookingController {
     return this.service.createEventCheckout({ eventId, ...body });
   }
 
+  /** Kampanya satın alma için Stripe Checkout session oluştur */
+  @Post('campaigns/:id/checkout')
+  createCampaignCheckout(
+    @Param('id') campaignId: string,
+    @Body()
+    body: {
+      guestName?: string;
+      guestPhone?: string;
+      guestEmail?: string;
+      userId?: string;
+    },
+  ) {
+    return this.service.createCampaignCheckout({ campaignId, ...body });
+  }
+
   /** Stripe webhook callback — raw body + stripe-signature header */
   @Post('checkout/webhook')
   handleWebhook(

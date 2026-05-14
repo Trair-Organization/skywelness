@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -113,6 +114,7 @@ type CampaignRow = {
   endsAt: string;
   maxRedemptions: number | null;
   redemptionCount: number;
+  actionType?: 'instant_buy' | 'lead_only' | 'both';
   tenant?: { name: string; subdomain: string };
 };
 
@@ -1282,10 +1284,70 @@ export function MemberHomeScreen() {
                   startsAt: selectedCampaign.startsAt,
                   endsAt: selectedCampaign.endsAt,
                   clubName: tenant?.name ?? null,
+                  clubSubdomain: tenant?.subdomain ?? null,
+                  actionType: selectedCampaign.actionType,
                 }
               : null
           }
           onClose={() => setSelectedCampaign(null)}
+          onBuy={async (campaignId) => {
+            try {
+              const res = await apiJson<{ checkoutUrl: string }>(
+                `/v2/campaigns/${campaignId}/checkout`,
+                {
+                  method: 'POST',
+                  token,
+                  tenantSubdomain: tenant?.subdomain,
+                  body: JSON.stringify({
+                    guestName: user ? `${user.firstName} ${user.lastName}`.trim() : undefined,
+                    guestPhone: user?.phone || undefined,
+                    guestEmail: user?.email || undefined,
+                    userId: user?.id || undefined,
+                  }),
+                },
+              );
+              if (res.checkoutUrl) {
+                setSelectedCampaign(null);
+                const result = await WebBrowser.openAuthSessionAsync(
+                  res.checkoutUrl,
+                  'wellnessclubai://booking-success',
+                );
+                if (result.type === 'success') {
+                  showToast('Ödeme başarılı! Biletiniz e-postanıza gönderildi 🎉', 'success');
+                } else if (result.type === 'cancel') {
+                  showToast('Ödeme iptal edildi', 'warning');
+                }
+              }
+            } catch (e) {
+              showToast(e instanceof ApiError ? e.message : 'Ödeme başlatılamadı', 'error');
+            }
+          }}
+          onRequestInfo={async (camp) => {
+            // Lead oluştur — kulüp dashboard'una düşer
+            try {
+              await apiJson('/leads', {
+                method: 'POST',
+                token,
+                tenantSubdomain: tenant?.subdomain,
+                body: JSON.stringify({
+                  source: 'campaign',
+                  sourceRef: camp.id,
+                  sourceLabel: camp.title,
+                  fullName: user ? `${user.firstName} ${user.lastName}`.trim() : '',
+                  phone: user?.phone || '',
+                  email: user?.email || '',
+                  message: `${camp.title} kampanyası hakkında bilgi almak istiyorum.`,
+                }),
+              });
+              setSelectedCampaign(null);
+              showToast(
+                'Talebiniz iletildi! Kulüp en kısa sürede sizinle iletişime geçecek ✓',
+                'success',
+              );
+            } catch (e) {
+              showToast(e instanceof ApiError ? e.message : 'Talep gönderilemedi', 'error');
+            }
+          }}
         />
 
         <Modal
