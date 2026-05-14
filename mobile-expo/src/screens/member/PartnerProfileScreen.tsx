@@ -21,6 +21,7 @@ import { apiJson } from '../../api/client';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { showToast } from '../../components/premium/Toast';
+import { SmartBooking } from '../../components/SmartBooking';
 import { premium } from '../../theme/premiumTheme';
 import type { MemberTabParamList } from '../../navigation/memberTabTypes';
 
@@ -425,68 +426,12 @@ export function PartnerProfileScreen() {
           </View>
         )}
 
-        {/* ═══ Kaynaklar & Ajanda ═══ */}
-        {profile.resources.length > 0 && (profile.visibilityMode === 'public' || token) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🛍️ Rezervasyon</Text>
-            {/* Resource seçimi */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              {profile.resources.map((r) => (
-                <Pressable
-                  key={r.id}
-                  style={[styles.resourceChip, selectedResource === r.id && styles.resourceChipActive]}
-                  onPress={() => setSelectedResource(r.id)}
-                >
-                  <Text style={[styles.resourceChipTxt, selectedResource === r.id && { color: premium.accentBlue }]}>
-                    {r.name}
-                  </Text>
-                  <Text style={styles.resourceChipPrice}>{r.price}₺</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            {/* Tarih seçimi — public kulüpte herkes görebilir */}
-            {(token || profile.visibilityMode === 'public') && (
-              <>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                  {dates.map((d) => (
-                    <Pressable
-                      key={d.value}
-                      onPress={() => setSelectedDate(d.value)}
-                      style={[styles.dateChip, selectedDate === d.value && styles.dateChipActive]}
-                    >
-                      <Text style={[styles.dateChipDay, selectedDate === d.value && styles.dateChipTxtActive]}>{d.dayName}</Text>
-                      <Text style={[styles.dateChipDate, selectedDate === d.value && styles.dateChipTxtActive]}>{d.label}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-                {/* Slotlar */}
-                {slots.length === 0 ? (
-                  <Text style={styles.noSlots}>Bu tarihte müsait slot yok</Text>
-                ) : (
-                  <View style={styles.slotsGrid}>
-                    {slots.map((s) => (
-                      <Pressable key={s.id} style={styles.slotChip} onPress={() => {
-                        if (!token) {
-                          showToast('Rezervasyon için giriş yapmalısınız', 'warning');
-                          return;
-                        }
-                        handleBookSlot(s.id);
-                      }}>
-                        <Text style={styles.slotTime}>{s.startTime}</Text>
-                        <Text style={styles.slotPrice}>{s.price}₺</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-                {!token && (
-                  <Text style={[styles.noSlots, { marginTop: 8 }]}>Rezervasyon yapmak için giriş yapın</Text>
-                )}
-              </>
-            )}
-            {!token && profile.visibilityMode !== 'public' && (
-              <Text style={styles.noSlots}>Müsait saatleri görmek için giriş yapın</Text>
-            )}
-          </View>
+        {/* ═══ Smart Booking (v2) ═══ */}
+        {(profile.visibilityMode === 'public' || token) && (
+          <SmartBooking
+            subdomain={profile.subdomain}
+            category={profile.vertical === 'padel' ? 'court_rental' : undefined}
+          />
         )}
 
         {/* ═══ Özel Üyelik CTA (Private + Giriş yapmamış) ═══ */}
