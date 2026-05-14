@@ -30,35 +30,11 @@ function GuestCheckout({
   addons: Array<{ addonId: string; quantity: number }>;
   onClose: () => void;
 }) {
-  const navigation = useNavigation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
-
-  // Üye teşvik kartı shimmer animasyonu
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, [shimmerAnim]);
-
-  const shimmerOpacity = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
 
   async function handlePay() {
     if (!name.trim() || !phone.trim() || !email.trim()) {
@@ -104,30 +80,7 @@ function GuestCheckout({
 
   return (
     <View>
-      {/* Üye Teşvik Kartı */}
-      <Animated.View style={[guestStyles.promoCard, { opacity: shimmerOpacity }]}>
-        <Text style={guestStyles.promoIcon}>💎</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={guestStyles.promoTitle}>Üye olun, %10 indirim kazanın!</Text>
-          <Text style={guestStyles.promoList}>
-            ✓ Hızlı rezervasyon ✓ Geçmiş takibi ✓ Özel fırsatlar
-          </Text>
-        </View>
-        <Pressable
-          style={guestStyles.promoBtn}
-          onPress={() => {
-            onClose();
-            (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-              'Register',
-              { preselectedSubdomain: subdomain },
-            );
-          }}
-        >
-          <Text style={guestStyles.promoBtnTxt}>Üye Ol</Text>
-        </Pressable>
-      </Animated.View>
-
-      <Text style={guestStyles.divider}>— veya misafir olarak devam edin —</Text>
+      <Text style={guestStyles.divider}>— misafir olarak devam edin —</Text>
 
       <Text style={guestStyles.subtitle}>
         Bilgilerinizi girin, ödeme sonrası e-posta adresinize bilet gönderilecektir.
@@ -192,29 +145,7 @@ function GuestCheckout({
 }
 
 const guestStyles = StyleSheet.create({
-  promoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(99,102,241,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.3)',
-    marginBottom: 8,
-    gap: 8,
-  },
-  promoIcon: { fontSize: 20 },
-  promoTitle: { fontSize: 11, fontWeight: '800', color: '#a5b4fc', marginBottom: 1 },
-  promoList: { fontSize: 9, color: premium.textMuted },
-  promoBtn: {
-    backgroundColor: '#6366f1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  promoBtnTxt: { color: '#fff', fontSize: 10, fontWeight: '800' },
   divider: { textAlign: 'center', color: premium.textMuted, fontSize: 10, marginBottom: 8 },
-  title: { fontSize: 14, fontWeight: '800', color: premium.text, marginBottom: 4 },
   subtitle: { fontSize: 10, color: premium.textMuted, marginBottom: 8, lineHeight: 14 },
   input: {
     borderWidth: 1,
