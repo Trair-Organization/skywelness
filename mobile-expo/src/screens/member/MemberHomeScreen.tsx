@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson, ApiError } from '../../api/client';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
+import { EventDetailModal } from '../../components/premium/EventDetailModal';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { EmptyState } from '../../components/premium/EmptyState';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -1208,104 +1209,46 @@ export function MemberHomeScreen() {
             </View>
           ))}
         </GlassCard>
-        <Modal
-          visible={!!selectedEvent}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setSelectedEvent(null)}
-        >
-          {selectedEvent ? (
-            <Pressable style={styles.modalBackdrop} onPress={() => setSelectedEvent(null)}>
-              <Pressable style={styles.modalCard} onPress={() => {}}>
-                <View style={styles.modalHeaderRow}>
-                  <Text style={styles.modalTitle}>{selectedEvent.title}</Text>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.modalCloseBtn,
-                      pressed && styles.modalCloseBtnPressed,
-                    ]}
-                    onPress={() => setSelectedEvent(null)}
-                  >
-                    <Text style={styles.modalCloseTxt}>×</Text>
-                  </Pressable>
-                </View>
-                {selectedEvent.imageUrl ? (
-                  <Image
-                    source={{ uri: selectedEvent.imageUrl }}
-                    style={styles.modalImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.modalImage, styles.eventImagePh]}>
-                    <Text style={styles.eventImagePhTxt}>{t('events.noImage')}</Text>
-                  </View>
-                )}
-                <Text style={styles.modalMeta}>
-                  {t('events.locationLabel')}: {selectedEvent.location || '-'}
-                </Text>
-                <Text style={styles.modalMeta}>
-                  {t('events.dateLabel')}: {fmtDate(selectedEvent.startsAt)}
-                </Text>
-                <Text style={styles.modalMeta}>
-                  {t('events.startLabel')}: {fmtTime(selectedEvent.startsAt)}
-                </Text>
-                <Text style={styles.modalMeta}>
-                  {t('events.endLabel')}:{' '}
-                  {selectedEvent.endsAt ? fmtTime(selectedEvent.endsAt) : '-'}
-                </Text>
-                <Text style={styles.modalMeta}>
-                  {t('events.coachLabel')}: {selectedEvent.coachName || '-'}
-                </Text>
-                <Text style={styles.modalMeta}>
-                  {t('events.capacity', {
-                    booked: selectedEvent.bookedCount,
-                    capacity: selectedEvent.capacity,
-                  })}
-                </Text>
-                {selectedEvent.description ? (
-                  <Text style={styles.modalDescription}>{selectedEvent.description}</Text>
-                ) : null}
-                <Pressable
-                  {...ripple}
-                  style={({ pressed }) => [
-                    selectedEvent.isJoined ? styles.btnGhost : styles.btnPrimary,
-                    pressed &&
-                      (selectedEvent.isJoined ? styles.btnGhostPressed : styles.btnPrimaryPressed),
-                    (joiningEventId === selectedEvent.id ||
-                      (!selectedEvent.isJoined &&
-                        selectedEvent.bookedCount >= selectedEvent.capacity)) &&
-                      styles.disabled,
-                  ]}
-                  disabled={
-                    joiningEventId === selectedEvent.id ||
-                    (!selectedEvent.isJoined && selectedEvent.bookedCount >= selectedEvent.capacity)
-                  }
-                  onPress={() => {
-                    toggleEventJoin(selectedEvent)
-                      .then(() => setSelectedEvent(null))
-                      .catch(() => {});
-                  }}
-                >
-                  {joiningEventId === selectedEvent.id ? (
-                    <ActivityIndicator
-                      color={selectedEvent.isJoined ? premium.textMuted : '#fff'}
-                    />
-                  ) : (
-                    <Text
-                      style={selectedEvent.isJoined ? styles.btnGhostTxt : styles.btnPrimaryTxt}
-                    >
-                      {selectedEvent.isJoined
-                        ? t('events.leave')
-                        : selectedEvent.bookedCount >= selectedEvent.capacity
-                          ? t('events.full')
-                          : t('events.join')}
-                    </Text>
-                  )}
-                </Pressable>
-              </Pressable>
-            </Pressable>
-          ) : null}
-        </Modal>
+        <EventDetailModal
+          event={
+            selectedEvent
+              ? {
+                  id: selectedEvent.id,
+                  title: selectedEvent.title,
+                  description: selectedEvent.description,
+                  coachName: selectedEvent.coachName,
+                  location: selectedEvent.location,
+                  imageUrl: selectedEvent.imageUrl,
+                  startsAt: selectedEvent.startsAt,
+                  endsAt: selectedEvent.endsAt,
+                  capacity: selectedEvent.capacity,
+                  category: 'general',
+                  requirements: null,
+                  schedule: null,
+                  clubName: tenant?.name ?? null,
+                }
+              : null
+          }
+          onClose={() => setSelectedEvent(null)}
+          isAuthenticated={!!token}
+          onJoin={async (eventId) => {
+            const ev = clubEvents.find((e) => e.id === eventId);
+            if (ev) {
+              await toggleEventJoin(ev);
+              setSelectedEvent(null);
+            }
+          }}
+          onRegister={() => {
+            setSelectedEvent(null);
+            (navigation as unknown as { navigate: (n: string) => void }).navigate(
+              'Register' as never,
+            );
+          }}
+          onLogin={() => {
+            setSelectedEvent(null);
+            (navigation as unknown as { navigate: (n: string) => void }).navigate('Login' as never);
+          }}
+        />
 
         <Modal
           visible={!!selectedCafeProduct}
