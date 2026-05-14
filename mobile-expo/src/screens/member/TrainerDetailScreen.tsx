@@ -154,21 +154,6 @@ export function TrainerDetailScreen() {
         {/* Header */}
         <View style={styles.headerSection}>
           <Text style={styles.name}>{profile.name}</Text>
-          {profile.club && (
-            <Pressable
-              onPress={() => {
-                (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
-                  'PartnerProfile',
-                  { subdomain: profile.club!.subdomain },
-                );
-              }}
-            >
-              <Text style={styles.clubLink}>🏢 {profile.club.name}</Text>
-            </Pressable>
-          )}
-          {profile.club?.location && (
-            <Text style={styles.location}>📍 {profile.club.location}</Text>
-          )}
 
           {/* Metrics */}
           <View style={styles.metricsRow}>
@@ -185,6 +170,19 @@ export function TrainerDetailScreen() {
               </View>
             )}
           </View>
+
+          {/* Hizmet türü badge */}
+          {profile.offersSessionTypes.length > 0 && (
+            <View style={[styles.chipsRow, { marginTop: 12 }]}>
+              {profile.offersSessionTypes.map((s, i) => (
+                <View key={i} style={[styles.chip, styles.chipService]}>
+                  <Text style={[styles.chipTxt, { color: premium.accentBlue }]}>
+                    {s === 'personal_training' ? '🏋️ Personal Training' : s === 'massage' ? '💆 Masaj' : s}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Bio */}
@@ -223,31 +221,27 @@ export function TrainerDetailScreen() {
           </View>
         )}
 
-        {/* Hizmet Tipleri */}
-        {profile.offersSessionTypes.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏋️ Verdiği Hizmetler</Text>
-            <View style={styles.chipsRow}>
-              {profile.offersSessionTypes.map((s, i) => (
-                <View key={i} style={[styles.chip, styles.chipService]}>
-                  <Text style={[styles.chipTxt, { color: premium.accentBlue }]}>
-                    {s === 'personal_training' ? 'Personal Training' : s === 'massage' ? 'Masaj' : s}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Hizmetler (fiyatlı) */}
-        {profile.services && profile.services.length > 0 && (
+        {/* Hizmetler (fiyatlı) — sadece giriş yapmış üyeler + session type filtreli */}
+        {token && profile.services && profile.services.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🛍️ Hizmetler & Fiyatlar</Text>
-            {profile.services.map((s) => (
+            {profile.services
+              .filter((s) => {
+                // Sadece bu eğitmenin session type'ına uygun hizmetleri göster
+                const name = s.name.toLowerCase();
+                if (profile.offersSessionTypes.includes('personal_training') && !profile.offersSessionTypes.includes('massage')) {
+                  return !name.includes('masaj') && !name.includes('massage');
+                }
+                if (profile.offersSessionTypes.includes('massage') && !profile.offersSessionTypes.includes('personal_training')) {
+                  return !name.includes('personal') && !name.includes('pt');
+                }
+                return true;
+              })
+              .map((s) => (
               <View key={s.id} style={styles.serviceCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.serviceName}>{s.name}</Text>
-                  <Text style={styles.serviceMeta}>⏱ {s.durationMinutes} dk · 👥 {s.capacity} kişi</Text>
+                  <Text style={styles.serviceMeta}>⏱ {s.durationMinutes} dk</Text>
                   {s.description && <Text style={styles.serviceDesc}>{s.description}</Text>}
                 </View>
                 <Text style={styles.servicePrice}>{s.price}₺</Text>
@@ -256,11 +250,13 @@ export function TrainerDetailScreen() {
           </View>
         )}
 
-        {/* Paketler */}
-        {profile.packages && profile.packages.length > 0 && (
+        {/* Paketler — sadece giriş yapmış üyeler + session type filtreli */}
+        {token && profile.packages && profile.packages.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>💎 Paketler</Text>
-            {profile.packages.map((p) => (
+            {profile.packages
+              .filter((p) => profile.offersSessionTypes.includes(p.sessionType))
+              .map((p) => (
               <View key={p.id} style={styles.packageCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.packageName}>{p.name}</Text>
@@ -272,24 +268,50 @@ export function TrainerDetailScreen() {
             ))}
           </View>
         )}
+
+        {/* Üyelik CTA — kayıtsız kullanıcılar için */}
+        {!token && profile.club && (
+          <View style={styles.section}>
+            <View style={styles.exclusiveCta}>
+              <Text style={styles.exclusiveIcon}>🔒</Text>
+              <Text style={styles.exclusiveTitle}>Üyelik Gerekli</Text>
+              <Text style={styles.exclusiveDesc}>
+                Bu eğitmenle çalışmak için {profile.club.name}'a üye olmanız gerekiyor.
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Sticky CTA */}
       <View style={[styles.stickyCta, { paddingBottom: insets.bottom + 12 }]}>
-        <Pressable
-          style={styles.stickyCtaBtn}
-          onPress={() => {
-            if (!token) {
-              (navigation as unknown as { navigate: (n: string) => void }).navigate('Register');
-              return;
-            }
-            handleContact();
-          }}
-        >
-          <Text style={styles.stickyCtaBtnTxt}>
-            {!token ? '👤 Kayıt Ol & İletişime Geç' : '💬 İletişime Geç'}
-          </Text>
-        </Pressable>
+        {!token ? (
+          <View style={styles.stickyCtaRow}>
+            <Pressable
+              style={[styles.stickyCtaBtn, { flex: 1 }]}
+              onPress={() => {
+                (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate(
+                  'Register',
+                  { preselectedSubdomain: profile.club?.subdomain },
+                );
+              }}
+            >
+              <Text style={styles.stickyCtaBtnTxt}>Hesap Oluştur</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.stickyCtaBtnOutline, { flex: 1 }]}
+              onPress={() => {
+                (navigation as unknown as { navigate: (n: string) => void }).navigate('Login');
+              }}
+            >
+              <Text style={styles.stickyCtaBtnOutlineTxt}>Giriş Yap</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable style={styles.stickyCtaBtn} onPress={handleContact}>
+            <Text style={styles.stickyCtaBtnTxt}>💬 Mesaj Gönder</Text>
+          </Pressable>
+        )}
       </View>
     </GradientBackground>
   );
@@ -334,4 +356,11 @@ const styles = StyleSheet.create({
   stickyCta: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(5,8,16,0.95)', borderTopWidth: 1, borderTopColor: premium.glassBorder },
   stickyCtaBtn: { backgroundColor: premium.accentGreen, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   stickyCtaBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  stickyCtaRow: { flexDirection: 'row', gap: 10 },
+  stickyCtaBtnOutline: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.05)' },
+  stickyCtaBtnOutlineTxt: { color: premium.text, fontSize: 16, fontWeight: '800' },
+  exclusiveCta: { padding: 24, borderRadius: 16, backgroundColor: 'rgba(56,189,248,0.06)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)', alignItems: 'center' },
+  exclusiveIcon: { fontSize: 36, marginBottom: 12 },
+  exclusiveTitle: { fontSize: 20, fontWeight: '800', color: premium.text, marginBottom: 12 },
+  exclusiveDesc: { fontSize: 14, lineHeight: 22, color: premium.textMuted, textAlign: 'center' },
 });
