@@ -10,6 +10,7 @@ import { ClubProfilePage } from './pages/ClubProfilePage';
 import { TrainerProfilePage } from './pages/TrainerProfilePage';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { MemberDashboardPage } from './pages/MemberDashboardPage';
+import { ServiceTermsPage } from './pages/ServiceTermsPage';
 import { EventsPage } from './pages/EventsPage';
 import { CampaignsPage } from './pages/CampaignsPage';
 import { DiscoveryManagementPage } from './pages/DiscoveryManagementPage';
@@ -68,6 +69,7 @@ function AppRoutes() {
       <Route path="/contact" element={<MarketingContactPage />} />
       <Route path="/privacy" element={<MarketingPrivacyPage />} />
       <Route path="/terms" element={<MarketingTermsPage />} />
+      <Route path="/service-terms" element={<ServiceTermsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />

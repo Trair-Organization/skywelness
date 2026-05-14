@@ -12,11 +12,16 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handlePay() {
-    if (!name.trim() || !phone.trim()) {
-      showToast('İsim ve telefon zorunludur', 'warning');
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      showToast('Tüm alanları doldurun', 'warning');
+      return;
+    }
+    if (!acceptedTerms) {
+      showToast('Sözleşmeyi kabul etmelisiniz', 'warning');
       return;
     }
     setLoading(true);
@@ -29,7 +34,7 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
           addons: addons.length > 0 ? addons : undefined,
           guestName: name.trim(),
           guestPhone: phone.trim(),
-          guestEmail: email.trim() || undefined,
+          guestEmail: email.trim(),
         }),
       });
       if (res.checkoutUrl) {
@@ -44,13 +49,28 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
   return (
     <View>
       <Text style={guestStyles.title}>Misafir Rezervasyon</Text>
-      <Text style={guestStyles.subtitle}>Bilgilerinizi girin, ödeme sayfasına yönlendirileceksiniz.</Text>
+      <Text style={guestStyles.subtitle}>Bilgilerinizi girin, ödeme sonrası e-posta adresinize bilet gönderilecektir.</Text>
       <TextInput style={guestStyles.input} placeholder="Ad Soyad *" placeholderTextColor="#64748b" value={name} onChangeText={setName} />
       <TextInput style={guestStyles.input} placeholder="Telefon *" placeholderTextColor="#64748b" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <TextInput style={guestStyles.input} placeholder="E-posta (opsiyonel)" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} keyboardType="email-address" />
-      <Pressable style={guestStyles.payBtn} onPress={handlePay} disabled={loading}>
+      <TextInput style={guestStyles.input} placeholder="E-posta *" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <Pressable style={guestStyles.termsRow} onPress={() => setAcceptedTerms(!acceptedTerms)}>
+        <View style={[guestStyles.checkbox, acceptedTerms && guestStyles.checkboxChecked]}>
+          {acceptedTerms && <Text style={guestStyles.checkmark}>✓</Text>}
+        </View>
+        <Text style={guestStyles.termsText}>
+          <Text style={guestStyles.termsLink}>Hizmet Kullanım Sözleşmesi</Text> ve{' '}
+          <Text style={guestStyles.termsLink}>Rezervasyon Kuralları</Text>'nı okudum, kabul ediyorum.
+        </Text>
+      </Pressable>
+      <Pressable style={[guestStyles.payBtn, (!acceptedTerms || !name || !phone || !email) && { opacity: 0.5 }]} onPress={handlePay} disabled={loading || !acceptedTerms || !name.trim() || !phone.trim() || !email.trim()}>
         <Text style={guestStyles.payBtnTxt}>{loading ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}</Text>
       </Pressable>
+      <View style={guestStyles.policyBox}>
+        <Text style={guestStyles.policyTitle}>📋 İptal Politikası</Text>
+        <Text style={guestStyles.policyText}>• 3 saat öncesine kadar: %100 iade</Text>
+        <Text style={guestStyles.policyText}>• 3 saatten az kala: İade yapılmaz</Text>
+        <Text style={guestStyles.policyText}>• Gelmeme (no-show): İade yapılmaz</Text>
+      </View>
       <Text style={guestStyles.hint}>Hesabınız var mı? Giriş yaparak daha hızlı rezervasyon yapabilirsiniz.</Text>
     </View>
   );
@@ -58,10 +78,19 @@ function GuestCheckout({ slotId, subdomain, addons, onClose }: { slotId: string;
 
 const guestStyles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 4 },
-  subtitle: { fontSize: 12, color: premium.textMuted, marginBottom: 14 },
+  subtitle: { fontSize: 12, color: premium.textMuted, marginBottom: 14, lineHeight: 18 },
   input: { borderWidth: 1, borderColor: premium.glassBorder, borderRadius: 10, padding: 12, color: premium.text, fontSize: 14, marginBottom: 10, backgroundColor: 'rgba(0,0,0,0.2)' },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginVertical: 12 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: premium.glassBorder, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkboxChecked: { backgroundColor: premium.accentGreen, borderColor: premium.accentGreen },
+  checkmark: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  termsText: { flex: 1, fontSize: 12, color: premium.textMuted, lineHeight: 18 },
+  termsLink: { color: premium.accentBlue, fontWeight: '600' },
   payBtn: { backgroundColor: '#6366f1', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 6 },
   payBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  policyBox: { marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(251,191,36,0.06)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' },
+  policyTitle: { fontSize: 12, fontWeight: '700', color: '#fbbf24', marginBottom: 6 },
+  policyText: { fontSize: 11, color: premium.textMuted, lineHeight: 18 },
   hint: { color: premium.textMuted, fontSize: 11, textAlign: 'center', marginTop: 12 },
 });
 
