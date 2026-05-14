@@ -220,7 +220,7 @@ export function PartnerProfileScreen() {
         </Pressable>
 
         {/* ═══ Slider ═══ */}
-        <View style={styles.sliderContainer}>
+        <View style={[styles.sliderContainer, { marginTop: insets.top }]}>
           {sliderImages.length > 0 ? (
             <>
               <ScrollView
