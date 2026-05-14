@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { apiJson } from '../api/client';
 import { useMemberAuth } from '../auth/MemberAuthContext';
 import { showToast } from '../components/premium/Toast';
@@ -59,6 +60,7 @@ function getWeekDays() {
 
 export function SmartBooking({ subdomain, category }: Props) {
   const { token, tenant } = useMemberAuth();
+  const navigation = useNavigation();
   const [services, setServices] = useState<V2Service[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [allSlots, setAllSlots] = useState<V2Slot[]>([]);
@@ -156,10 +158,7 @@ export function SmartBooking({ subdomain, category }: Props) {
   }));
 
   function handleSlotSelect(slotId: string) {
-    if (!token) {
-      showToast('Rezervasyon için giriş yapmalısınız', 'warning');
-      return;
-    }
+    // Giriş yapmamış kullanıcı da modal'ı görsün — içinde giriş/kayıt CTA olacak
     setSelectedSlotId(slotId);
     setSelectedAddons({});
   }
@@ -362,9 +361,35 @@ export function SmartBooking({ subdomain, category }: Props) {
                     <Text style={styles.modalTotalLabel}>Toplam</Text>
                     <Text style={styles.modalTotalPrice}>{(slotPrice + addonTotal).toLocaleString('tr-TR')}₺</Text>
                   </View>
-                  <Pressable style={styles.modalConfirmBtn} onPress={confirmBooking} disabled={booking}>
-                    <Text style={styles.modalConfirmTxt}>{booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}</Text>
-                  </Pressable>
+                  {token ? (
+                    <Pressable style={styles.modalConfirmBtn} onPress={confirmBooking} disabled={booking}>
+                      <Text style={styles.modalConfirmTxt}>{booking ? 'Oluşturuluyor...' : '✓ Rezervasyonu Onayla'}</Text>
+                    </Pressable>
+                  ) : (
+                    <View>
+                      <Text style={styles.modalLoginMsg}>Bu slotu rezerve etmek için giriş yapmanız gerekiyor.</Text>
+                      <View style={styles.modalLoginRow}>
+                        <Pressable
+                          style={[styles.modalConfirmBtn, { flex: 1 }]}
+                          onPress={() => {
+                            setSelectedSlotId(null);
+                            (navigation as unknown as { navigate: (n: string, p?: unknown) => void }).navigate('Register', { preselectedSubdomain: subdomain });
+                          }}
+                        >
+                          <Text style={styles.modalConfirmTxt}>Hesap Oluştur</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.modalLoginBtn, { flex: 1 }]}
+                          onPress={() => {
+                            setSelectedSlotId(null);
+                            (navigation as unknown as { navigate: (n: string) => void }).navigate('Login');
+                          }}
+                        >
+                          <Text style={styles.modalLoginBtnTxt}>Giriş Yap</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
                 </>
               );
             })()}
@@ -436,4 +461,8 @@ const styles = StyleSheet.create({
   modalTotalPrice: { fontSize: 22, fontWeight: '900', color: premium.accentGreen },
   modalConfirmBtn: { backgroundColor: premium.accentGreen, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   modalConfirmTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  modalLoginMsg: { color: premium.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 14 },
+  modalLoginRow: { flexDirection: 'row', gap: 10 },
+  modalLoginBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: premium.glassBorder, backgroundColor: 'rgba(255,255,255,0.05)' },
+  modalLoginBtnTxt: { color: premium.text, fontSize: 16, fontWeight: '800' },
 });
