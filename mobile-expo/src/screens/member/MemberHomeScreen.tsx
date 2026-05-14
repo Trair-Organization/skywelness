@@ -21,6 +21,7 @@ import { apiJson, ApiError } from '../../api/client';
 import { useMemberAuth } from '../../auth/MemberAuthContext';
 import { GradientBackground } from '../../components/premium/GradientBackground';
 import { EventDetailModal } from '../../components/premium/EventDetailModal';
+import { CampaignDetailModal } from '../../components/premium/CampaignDetailModal';
 import { GlassCard } from '../../components/premium/GlassCard';
 import { EmptyState } from '../../components/premium/EmptyState';
 import { PremiumInput } from '../../components/premium/PremiumInput';
@@ -276,6 +277,7 @@ export function MemberHomeScreen() {
   // --- Campaigns ---
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
 
   const loadCampaigns = useCallback(async () => {
     if (!token || !tenant) return;
@@ -1061,11 +1063,11 @@ export function MemberHomeScreen() {
             marginBottom: 10,
           }}
         >
-          <Text style={styles.trainersSectionTitle}>Eğitmenlerimiz</Text>
+          <Text style={styles.trainersSectionTitle}>🔥 Kampanyalar</Text>
           <Pressable
             onPress={() =>
               (navigation as unknown as { navigate: (n: string) => void }).navigate(
-                'AllTrainers' as never,
+                'AllCampaigns' as never,
               )
             }
           >
@@ -1074,67 +1076,80 @@ export function MemberHomeScreen() {
             </Text>
           </Pressable>
         </View>
-        {loadingTrainers && trainers.length === 0 ? (
-          <ActivityIndicator color={premium.accentBlue} style={styles.eventsLoader} />
-        ) : null}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.trainersRail}
-          contentContainerStyle={styles.trainersRailInner}
-        >
-          {trainers.map((tr) => {
-            const fullName = `${tr.user.firstName} ${tr.user.lastName}`.trim();
-            const initials = `${tr.user.firstName?.[0] ?? ''}${tr.user.lastName?.[0] ?? ''}`
-              .trim()
-              .toUpperCase();
-            return (
-              <View key={`showcase-${tr.id}`} style={homeTrainerStyles.cardWrapper}>
+        {campaigns.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 16, paddingLeft: 20 }}
+            contentContainerStyle={{ gap: 12, paddingRight: 20 }}
+          >
+            {campaigns.map((c) => {
+              const discountLabel =
+                c.discountKind === 'percentage'
+                  ? `%${parseFloat(c.discountValue).toFixed(0)}`
+                  : `${parseFloat(c.discountValue).toFixed(0)}₺`;
+              return (
                 <Pressable
-                  onPress={() =>
-                    (
-                      navigation as unknown as { navigate: (n: string, p?: unknown) => void }
-                    ).navigate('TrainerDetail' as never, { trainerId: tr.id } as never)
-                  }
-                  style={({ pressed }) => [homeTrainerStyles.card, pressed && { opacity: 0.85 }]}
+                  key={c.id}
+                  style={homeCampaignStyles.card}
+                  onPress={() => setSelectedCampaign(c)}
                 >
-                  <View style={homeTrainerStyles.photoArea}>
-                    {tr.user.photoUrl ? (
-                      <Image
-                        source={{ uri: tr.user.photoUrl }}
-                        style={homeTrainerStyles.photo}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <Text style={homeTrainerStyles.avatarTxt}>{initials || 'TR'}</Text>
-                    )}
-                  </View>
-                  <View style={homeTrainerStyles.infoArea}>
-                    <Text style={homeTrainerStyles.name} numberOfLines={1}>
-                      {fullName}
-                    </Text>
-                    <Text style={homeTrainerStyles.club} numberOfLines={1}>
-                      {tenant?.name ?? ''}
+                  {c.imageUrl ? (
+                    <Image
+                      source={{ uri: c.imageUrl }}
+                      style={homeCampaignStyles.image}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        homeCampaignStyles.image,
+                        {
+                          backgroundColor: 'rgba(251,191,36,0.1)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        },
+                      ]}
+                    >
+                      <Text style={{ fontSize: 24 }}>🔥</Text>
+                    </View>
+                  )}
+                  <View style={homeCampaignStyles.body}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <View style={homeCampaignStyles.badge}>
+                        <Text style={homeCampaignStyles.badgeTxt}>{discountLabel}</Text>
+                      </View>
+                      {c.discountedPrice && (
+                        <Text style={homeCampaignStyles.price}>
+                          {parseFloat(c.discountedPrice).toLocaleString('tr-TR')}₺
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={homeCampaignStyles.title} numberOfLines={2}>
+                      {c.title}
                     </Text>
                   </View>
                 </Pressable>
-                <Pressable
-                  style={homeTrainerStyles.ctaBtn}
-                  onPress={() =>
-                    (
-                      navigation as unknown as { navigate: (n: string, p?: unknown) => void }
-                    ).navigate('TrainerDetail' as never, { trainerId: tr.id } as never)
-                  }
-                >
-                  <Text style={homeTrainerStyles.ctaBtnTxt}>📅 Randevu Al</Text>
-                </Pressable>
-              </View>
-            );
-          })}
-        </ScrollView>
-        {!loadingTrainers && trainers.length === 0 ? (
-          <Text style={styles.eventsEmpty}>{t('home.trainersEmpty')}</Text>
-        ) : null}
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+            <Pressable style={{ borderRadius: 16, overflow: 'hidden' }}>
+              <Image
+                source={require('../../../assets/branding/skylandkampanya.jpg')}
+                style={{ width: '100%', height: 180, borderRadius: 16 }}
+                resizeMode="cover"
+              />
+            </Pressable>
+          </View>
+        )}
 
         <View
           style={{
@@ -1248,6 +1263,29 @@ export function MemberHomeScreen() {
             setSelectedEvent(null);
             (navigation as unknown as { navigate: (n: string) => void }).navigate('Login' as never);
           }}
+        />
+
+        <CampaignDetailModal
+          campaign={
+            selectedCampaign
+              ? {
+                  id: selectedCampaign.id,
+                  title: selectedCampaign.title,
+                  description: selectedCampaign.description,
+                  imageUrl: selectedCampaign.imageUrl,
+                  campaignType: selectedCampaign.campaignType,
+                  discountKind: selectedCampaign.discountKind,
+                  discountValue: selectedCampaign.discountValue,
+                  originalPrice: selectedCampaign.originalPrice,
+                  discountedPrice: selectedCampaign.discountedPrice,
+                  terms: selectedCampaign.terms,
+                  startsAt: selectedCampaign.startsAt,
+                  endsAt: selectedCampaign.endsAt,
+                  clubName: tenant?.name ?? null,
+                }
+              : null
+          }
+          onClose={() => setSelectedCampaign(null)}
         />
 
         <Modal
@@ -2109,4 +2147,26 @@ const homeTrainerStyles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaBtnTxt: { color: premium.accentBlue, fontSize: 12, fontWeight: '800' },
+});
+
+const homeCampaignStyles = StyleSheet.create({
+  card: {
+    width: 180,
+    borderRadius: 14,
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.3)',
+    overflow: 'hidden',
+  },
+  image: { width: '100%', height: 80 },
+  body: { padding: 10, gap: 4 },
+  badge: {
+    backgroundColor: 'rgba(251,191,36,0.2)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeTxt: { color: '#fbbf24', fontSize: 11, fontWeight: '800' },
+  price: { fontSize: 15, fontWeight: '900', color: '#10b981' },
+  title: { fontSize: 13, fontWeight: '800', color: premium.text, lineHeight: 17 },
 });

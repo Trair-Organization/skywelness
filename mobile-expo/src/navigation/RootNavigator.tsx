@@ -19,6 +19,7 @@ import { TrainerDetailScreen } from '../screens/member/TrainerDetailScreen';
 import { AllClubsScreen } from '../screens/discover/AllClubsScreen';
 import { AllEventsScreen } from '../screens/discover/AllEventsScreen';
 import { AllTrainersScreen } from '../screens/discover/AllTrainersScreen';
+import { AllCampaignsScreen } from '../screens/discover/AllCampaignsScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -124,6 +125,7 @@ export function RootNavigator() {
         <Stack.Screen name="AllClubs" component={AllClubsScreen} />
         <Stack.Screen name="AllEvents" component={AllEventsScreen} />
         <Stack.Screen name="AllTrainers" component={AllTrainersScreen} />
+        <Stack.Screen name="AllCampaigns" component={AllCampaignsScreen} />
         <Stack.Screen name="Main" component={MemberTabNavigator} />
         <Stack.Screen name="TrainerMain" component={TrainerTabNavigator} />
       </Stack.Navigator>

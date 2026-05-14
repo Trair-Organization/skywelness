@@ -13,6 +13,7 @@ export type RootStackParamList = {
   AllClubs: undefined;
   AllEvents: undefined;
   AllTrainers: undefined;
+  AllCampaigns: undefined;
   Main: undefined;
   TrainerMain: undefined;
 };

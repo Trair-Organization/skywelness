@@ -24,6 +24,7 @@ import { GradientBackground } from '../../components/premium/GradientBackground'
 import { GlassCard } from '../../components/premium/GlassCard';
 import { LeadCaptureModal } from '../../components/premium/LeadCaptureModal';
 import { EventDetailModal } from '../../components/premium/EventDetailModal';
+import { CampaignDetailModal } from '../../components/premium/CampaignDetailModal';
 import { JoinRequestModal } from '../../components/premium/JoinRequestModal';
 import { showToast } from '../../components/premium/Toast';
 import type { RootStackParamList } from '../../navigation/types';
@@ -1266,6 +1267,88 @@ export function ClubConnectScreen() {
 
         <View style={styles.popularHeader}>
           <View style={styles.sectionHeaderRow}>
+            <Text style={styles.popularTitle}>🔥 Kampanyalar</Text>
+            <Pressable
+              onPress={() =>
+                (navigation as unknown as { navigate: (n: string) => void }).navigate(
+                  'AllCampaigns',
+                )
+              }
+            >
+              <Text style={styles.seeAllTxt}>Tümünü Gör →</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.popularSubtitle}>Özel fırsatları kaçırma!</Text>
+        </View>
+
+        {campaigns.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 20, paddingLeft: 20 }}
+            contentContainerStyle={{ gap: 12, paddingRight: 20 }}
+          >
+            {campaigns.map((c) => {
+              const discountLabel =
+                c.discountKind === 'percentage'
+                  ? `%${parseFloat(c.discountValue).toFixed(0)}`
+                  : `${parseFloat(c.discountValue).toFixed(0)}₺`;
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => setPreviewCampaign(c)}
+                  style={({ pressed }) => [styles.campaignCard, pressed && { opacity: 0.85 }]}
+                >
+                  {c.imageUrl ? (
+                    <Image
+                      source={{ uri: c.imageUrl }}
+                      style={styles.campaignCardImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.campaignCardImage,
+                        {
+                          backgroundColor: 'rgba(251,191,36,0.1)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        },
+                      ]}
+                    >
+                      <Text style={{ fontSize: 24 }}>🔥</Text>
+                    </View>
+                  )}
+                  <View style={styles.campaignCardBody}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <View style={styles.campaignDiscountBadge}>
+                        <Text style={styles.campaignDiscountTxt}>{discountLabel}</Text>
+                      </View>
+                      {c.discountedPrice && (
+                        <Text style={styles.campaignPrice}>
+                          {parseFloat(c.discountedPrice).toLocaleString('tr-TR')}₺
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.campaignTitle} numberOfLines={2}>
+                      {c.title}
+                    </Text>
+                    {c.tenant && <Text style={styles.campaignClub}>{c.tenant.name}</Text>}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View style={styles.popularHeader}>
+          <View style={styles.sectionHeaderRow}>
             <Text style={styles.popularTitle}>Popüler Kulüpler</Text>
             <Pressable
               onPress={() =>
@@ -1896,6 +1979,29 @@ export function ClubConnectScreen() {
             setSelectedEvent(null);
           }
         }}
+      />
+
+      <CampaignDetailModal
+        campaign={
+          previewCampaign
+            ? {
+                id: previewCampaign.id,
+                title: previewCampaign.title,
+                description: previewCampaign.description,
+                imageUrl: previewCampaign.imageUrl,
+                campaignType: previewCampaign.campaignType,
+                discountKind: previewCampaign.discountKind,
+                discountValue: previewCampaign.discountValue,
+                originalPrice: previewCampaign.originalPrice,
+                discountedPrice: previewCampaign.discountedPrice,
+                terms: previewCampaign.terms,
+                startsAt: previewCampaign.startsAt,
+                endsAt: previewCampaign.endsAt,
+                clubName: previewCampaign.tenant?.name ?? null,
+              }
+            : null
+        }
+        onClose={() => setPreviewCampaign(null)}
       />
 
       <JoinRequestModal
@@ -3474,6 +3580,39 @@ const styles = StyleSheet.create({
   campaignCardBody: {
     padding: 12,
     gap: 4,
+  },
+  campaignCardImage: {
+    width: '100%',
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  campaignDiscountBadge: {
+    backgroundColor: 'rgba(251,191,36,0.2)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  campaignDiscountTxt: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  campaignPrice: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#10b981',
+  },
+  campaignTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: premium.text,
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  campaignClub: {
+    fontSize: 10,
+    color: premium.textMuted,
+    marginTop: 2,
   },
   campaignCardTitle: {
     fontSize: 14,
