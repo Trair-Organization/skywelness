@@ -6,6 +6,7 @@ import { HomeBanner } from './entities/home-banner.entity';
 import { ServiceCatalog } from './entities/service-catalog.entity';
 import { ScheduleSlot } from './entities/schedule-slot.entity';
 import { Appointment } from './entities/appointment.entity';
+import { Membership } from './entities/membership.entity';
 import { Lead } from './entities/lead.entity';
 import { Message } from './entities/message.entity';
 import { SpaBooking } from './entities/spa-booking.entity';
@@ -99,4 +100,5 @@ export const typeOrmEntities = [
   ServiceCatalog,
   ScheduleSlot,
   Appointment,
+  Membership,
 ];
