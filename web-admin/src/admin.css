@@ -1,12 +1,12 @@
 :root {
-  --bg: #000000;
-  --surface: #111111;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
-  --accent-hover: #7dd3fc;
-  --danger: #ef4444;
-  --border: rgba(148, 163, 184, 0.15);
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger: #dc2626;
+  --border: #e2e8f0;
   --radius: 10px;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
@@ -145,11 +145,11 @@ button:hover:not(:disabled) {
 }
 
 .card {
-  background: var(--surface);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 1.4rem 1.6rem;
-  box-shadow: 0 10px 40px rgba(3, 8, 20, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   margin-bottom: 1rem;
 }
 
@@ -442,7 +442,7 @@ code {
   font-size: 0.85em;
   padding: 0.1em 0.35em;
   border-radius: 4px;
-  background: #0b0d11;
+  background: #f1f5f9;
   border: 1px solid var(--border);
 }
 
@@ -725,7 +725,7 @@ a.secondary:hover {
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  background: var(--surface);
+  background: #f8fafc;
 }
 .admin-sidebar {
   width: 260px;
@@ -746,6 +746,7 @@ a.secondary:hover {
   padding: 28px 32px;
   min-height: 100vh;
   overflow-y: auto;
+  background: #f8fafc;
 }
 .sidebar-brand {
   display: flex;
@@ -783,11 +784,11 @@ a.secondary:hover {
   transition: all 0.15s;
 }
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: #f1f5f9;
   color: var(--text);
 }
 .sidebar-link-active {
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--accent);
   font-weight: 700;
 }
@@ -903,7 +904,7 @@ a.secondary:hover {
 }
 
 .stat-card {
-  background: var(--surface);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px;
@@ -914,7 +915,7 @@ a.secondary:hover {
 
 .stat-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
   transform: translateY(-1px);
 }
 
@@ -1203,7 +1204,7 @@ a.secondary:hover {
 .filter-tab-active {
   background: #fff;
   color: var(--accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .search-box input {
