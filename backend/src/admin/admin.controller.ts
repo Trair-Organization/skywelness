@@ -677,6 +677,18 @@ export class AdminController {
     return this.adminMembers.resetMemberPassword(admin.tenantId, userId);
   }
 
+  /** Admin: Üye profilini güncelle */
+  @Patch('members/:userId/update-profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updateMemberProfile(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { firstName?: string; lastName?: string; phone?: string | null; email?: string },
+  ) {
+    return this.adminMembers.updateMemberProfile(admin.tenantId, userId, body);
+  }
+
   /** Admin: Üye hesabını dondur */
   @Post('members/:userId/suspend')
   @UseGuards(JwtAuthGuard, RolesGuard)

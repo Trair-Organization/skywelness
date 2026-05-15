@@ -586,53 +586,10 @@ export function MembersPage() {
                     Üyelik tanımlı değil
                   </p>
                 )}
-                <button
-                  onClick={() => {
-                    const type = prompt('Üyelik tipi (monthly / yearly):', 'monthly');
-                    if (!type) return;
-                    const startDate = prompt(
-                      'Başlangıç (YYYY-MM-DD):',
-                      new Date().toISOString().slice(0, 10),
-                    );
-                    if (!startDate) return;
-                    const endDate = prompt(
-                      'Bitiş (YYYY-MM-DD):',
-                      (() => {
-                        const d = new Date();
-                        d.setMonth(d.getMonth() + 1);
-                        return d.toISOString().slice(0, 10);
-                      })(),
-                    );
-                    if (!endDate) return;
-                    const price = prompt('Aylık ücret (₺):', '5000');
-                    void apiJson(`/admin/members/${detail.id}/membership`, {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        membershipType: type,
-                        startDate,
-                        endDate,
-                        price: price ? parseFloat(price) : 0,
-                      }),
-                    })
-                      .then(() => {
-                        void openDetail(detail as unknown as Member);
-                      })
-                      .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
-                  }}
-                  style={{
-                    marginTop: 8,
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #e2e8f0',
-                    background: '#fff',
-                    color: '#374151',
-                    fontWeight: 600,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {detail.membership ? '✏️ Üyelik Güncelle' : '+ Üyelik Ekle'}
-                </button>
+                <MembershipForm
+                  userId={detail.id}
+                  onSaved={() => void openDetail(detail as unknown as Member)}
+                />
               </div>
             </div>
 
@@ -855,7 +812,7 @@ export function MembersPage() {
               gap: 16,
             }}
           >
-            {/* Sol: Aksiyonlar */}
+            {/* Sol: Aksiyonlar + Profil Düzenle */}
             <div>
               <h3
                 style={{
@@ -868,6 +825,30 @@ export function MembersPage() {
                 ⚡ İşlemler
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    const firstName = prompt('Ad:', detail.firstName);
+                    if (!firstName) return;
+                    const lastName = prompt('Soyad:', detail.lastName);
+                    if (!lastName) return;
+                    const phone = prompt('Telefon:', detail.phone || '');
+                    void apiJson(`/admin/members/${detail.id}/update-profile`, {
+                      method: 'PATCH',
+                      body: JSON.stringify({
+                        firstName: firstName.trim(),
+                        lastName: lastName.trim(),
+                        phone: phone?.trim() || null,
+                      }),
+                    })
+                      .then(() => {
+                        void openDetail(detail as unknown as Member);
+                      })
+                      .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+                  }}
+                  style={actionBtnStyle}
+                >
+                  ✏️ Profil Düzenle
+                </button>
                 <button
                   onClick={async () => {
                     if (!confirm('Şifre sıfırlanacak. Devam?')) return;
@@ -888,8 +869,7 @@ export function MembersPage() {
                 {detail.accountStatus === 'active' && (
                   <button
                     onClick={async () => {
-                      if (!confirm('Üye hesabı dondurulacak. Paketleri askıya alınacak. Devam?'))
-                        return;
+                      if (!confirm('Hesap dondurulacak. Devam?')) return;
                       try {
                         await apiJson(`/admin/members/${detail.id}/suspend`, {
                           method: 'POST',
@@ -924,36 +904,6 @@ export function MembersPage() {
                     ✅ Hesabı Aktifleştir
                   </button>
                 )}
-                {detail.packages
-                  .filter((p) => p.status === 'active')
-                  .map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      onClick={async () => {
-                        const days = prompt('Kaç gün uzatılsın?', '30');
-                        if (!days) return;
-                        try {
-                          const res = await apiJson<{ newExpiry: string }>(
-                            `/admin/members/${detail.id}/packages/${pkg.id}/extend`,
-                            {
-                              method: 'POST',
-                              body: JSON.stringify({ extraDays: parseInt(days) }),
-                            },
-                          );
-                          alert(`Paket süresi uzatıldı: ${res.newExpiry}`);
-                          const d = await apiJson<MemberDetail>(
-                            `/admin/members/${detail.id}/detail`,
-                          );
-                          setDetail(d);
-                        } catch (e) {
-                          setError(e instanceof ApiError ? e.message : 'Hata');
-                        }
-                      }}
-                      style={actionBtnStyle}
-                    >
-                      📅 {pkg.packageType.name} süre uzat
-                    </button>
-                  ))}
               </div>
             </div>
 
@@ -1322,4 +1272,156 @@ const actionBtnStyle: React.CSSProperties = {
   fontSize: '0.82rem',
   cursor: 'pointer',
   textAlign: 'left',
+};
+
+// ─── MembershipForm Component ───────────────────────────────────────────────────
+
+function MembershipForm({ userId, onSaved }: { userId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState('monthly');
+  const [duration, setDuration] = useState(1);
+  const [price, setPrice] = useState('5000');
+  const [saving, setSaving] = useState(false);
+
+  const startDate = new Date().toISOString().slice(0, 10);
+  const endDate = (() => {
+    const d = new Date();
+    if (type === 'monthly') d.setMonth(d.getMonth() + duration);
+    else d.setFullYear(d.getFullYear() + duration);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  async function save() {
+    setSaving(true);
+    try {
+      await apiJson(`/admin/members/${userId}/membership`, {
+        method: 'POST',
+        body: JSON.stringify({
+          membershipType: type,
+          startDate,
+          endDate,
+          price: parseFloat(price) || 0,
+        }),
+      });
+      setOpen(false);
+      onSaved();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hata');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          marginTop: 8,
+          padding: '6px 12px',
+          borderRadius: 6,
+          border: '1px solid #e2e8f0',
+          background: '#fff',
+          color: '#374151',
+          fontWeight: 600,
+          fontSize: '0.78rem',
+          cursor: 'pointer',
+        }}
+      >
+        + Üyelik Ekle / Güncelle
+      </button>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: 12,
+        borderRadius: 8,
+        background: '#f1f5f9',
+        border: '1px solid #e2e8f0',
+      }}
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>Tip</span>
+          <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle}>
+            <option value="monthly">Aylık</option>
+            <option value="yearly">Yıllık</option>
+          </select>
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>
+            {type === 'monthly' ? 'Kaç Ay' : 'Kaç Yıl'}
+          </span>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            style={inputStyle}
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n} {type === 'monthly' ? 'ay' : 'yıl'}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>Ücret (₺)</span>
+        <input
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          style={inputStyle}
+        />
+      </label>
+      <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: 8 }}>
+        📅 {startDate} → <strong>{endDate}</strong> (otomatik hesaplandı)
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          onClick={() => void save()}
+          disabled={saving}
+          style={{
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: 'none',
+            background: '#2563eb',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '0.78rem',
+            cursor: 'pointer',
+          }}
+        >
+          {saving ? '...' : '✓ Kaydet'}
+        </button>
+        <button
+          onClick={() => setOpen(false)}
+          style={{
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: '#fff',
+            color: '#64748b',
+            fontWeight: 600,
+            fontSize: '0.78rem',
+            cursor: 'pointer',
+          }}
+        >
+          İptal
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: '6px 10px',
+  borderRadius: 6,
+  border: '1px solid #e2e8f0',
+  fontSize: '0.82rem',
+  background: '#fff',
+  color: '#0f172a',
 };

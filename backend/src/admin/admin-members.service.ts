@@ -2056,6 +2056,34 @@ export class AdminMembersService {
     return { ok: true, temporaryPassword: newPassword, email: user.email };
   }
 
+  /** Admin: Üye profilini güncelle */
+  async updateMemberProfile(
+    tenantId: string,
+    userId: string,
+    data: { firstName?: string; lastName?: string; phone?: string | null; email?: string },
+  ) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    if (data.firstName !== undefined) user.firstName = data.firstName.trim();
+    if (data.lastName !== undefined) user.lastName = data.lastName.trim();
+    if (data.phone !== undefined) user.phone = data.phone?.trim() || null;
+    if (data.email !== undefined && data.email.trim()) {
+      user.email = data.email.trim().toLowerCase();
+    }
+
+    await this.usersRepo.save(user);
+    return {
+      ok: true,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+    };
+  }
+
   /** Admin: Üye hesabını dondur/askıya al */
   async suspendMember(tenantId: string, userId: string, reason?: string) {
     const user = await this.usersRepo.findOne({
