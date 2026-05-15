@@ -3736,20 +3736,62 @@ button.primary:disabled {
 
 /* ─── Spa Form Fields ──────────────────────────────────────────────────────── */
 .form-label {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.82rem;
   font-weight: 600;
 }
 .form-input {
-  padding: 0.6rem;
+  padding: 0.6rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-  color: #e2e8f0;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
   font-size: 0.85rem;
   font-family: inherit;
+  transition: border-color 0.15s;
 }
 .form-input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+.form-input::placeholder {
+  color: #94a3b8;
+}
+
+/* ─── Spa Form Panel ──────────────────────────────────────────────────────── */
+.spa-form-panel {
+  padding: 1.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.spa-form-panel h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: var(--text);
+}
+
+/* ─── Spa Package Card ────────────────────────────────────────────────────── */
+.spa-pkg-card {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.spa-pkg-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+}
+.spa-pkg-price {
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 1.1rem;
 }

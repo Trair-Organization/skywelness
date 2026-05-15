@@ -306,8 +306,8 @@ function ServicesTab({ services, onRefresh, getCategoryLabel }: { services: SpaS
       </div>
 
       {showForm && (
-        <form onSubmit={(e) => void handleSave(e)} style={{ padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(56,189,248,0.2)', background: 'rgba(56,189,248,0.04)', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>{editId ? 'Hizmet Düzenle' : 'Yeni Hizmet'}</h4>
+        <form onSubmit={(e) => void handleSave(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
+          <h4>{editId ? '✏️ Hizmet Düzenle' : '+ Yeni Hizmet'}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               <span className="form-label">Hizmet Adı *</span>
@@ -341,7 +341,7 @@ function ServicesTab({ services, onRefresh, getCategoryLabel }: { services: SpaS
               </select>
             </label>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
             <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
             <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
           </div>
@@ -452,8 +452,8 @@ function PackagesTab() {
       </div>
 
       {showForm && (
-        <form onSubmit={(e) => void handleSave(e)} style={{ padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(56,189,248,0.2)', background: 'rgba(56,189,248,0.04)', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>{editId ? 'Paket Düzenle' : 'Yeni Paket'}</h4>
+        <form onSubmit={(e) => void handleSave(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
+          <h4>{editId ? '✏️ Paket Düzenle' : '+ Yeni Paket'}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               <span className="form-label">Paket Adı *</span>
@@ -485,7 +485,7 @@ function PackagesTab() {
               <input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} min={1} className="form-input" />
             </label>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
             <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
             <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
           </div>
@@ -497,18 +497,18 @@ function PackagesTab() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           {packages.map((p) => (
-            <div key={p.id} style={{ padding: '1rem 1.25rem', borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)', background: 'rgba(0,0,0,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={p.id} className="spa-pkg-card">
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <strong style={{ color: '#e2e8f0' }}>{p.name}</strong>
-                  <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 6, background: p.active ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: p.active ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{p.active ? 'Aktif' : 'Pasif'}</span>
+                  <strong style={{ color: 'var(--text)' }}>{p.name}</strong>
+                  <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 6, background: p.active ? '#dcfce7' : '#fee2e2', color: p.active ? '#166534' : '#991b1b', fontWeight: 600 }}>{p.active ? 'Aktif' : 'Pasif'}</span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 4 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>
                   {p.sessionCount} seans · {p.validityDays} gün geçerli {p.description && `· ${p.description.slice(0, 60)}`}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '1.1rem' }}>₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
+                <span className="spa-pkg-price">₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
                 <button className="btn-sm btn-outline" onClick={() => startEdit(p)}>✏️</button>
               </div>
             </div>
@@ -671,73 +671,42 @@ function RoomSlotsTab() {
           {showForm && (
             <form
               onSubmit={(e) => void handleCreateRoom(e)}
-              style={{
-                padding: '1.25rem',
-                borderRadius: 12,
-                border: '1px solid rgba(56,189,248,0.2)',
-                background: 'rgba(56,189,248,0.04)',
-                marginBottom: '1.5rem',
-                display: 'grid',
-                gap: '0.75rem',
-              }}
+              className="spa-form-panel"
+              style={{ display: 'grid', gap: '0.75rem' }}
             >
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Yeni Masaj Odası</h4>
+              <h4>Yeni Masaj Odası</h4>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                  Oda Adı *
-                </span>
+                <span className="form-label">Oda Adı *</span>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Örn: Masaj Odası 4 (Çift)"
                   required
-                  style={{
-                    padding: '0.6rem',
-                    borderRadius: 8,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(0,0,0,0.3)',
-                    color: '#e2e8f0',
-                  }}
+                  className="form-input"
                 />
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Kapasite *
-                  </span>
+                  <span className="form-label">Kapasite *</span>
                   <select
                     value={formCapacity}
                     onChange={(e) => setFormCapacity(Number(e.target.value))}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#e2e8f0',
-                    }}
+                    className="form-input"
                   >
                     <option value={1}>1 kişi (Tek)</option>
                     <option value={2}>2 kişi (Çift)</option>
                   </select>
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Seans Fiyatı (₺) *
-                  </span>
+                  <span className="form-label">Seans Fiyatı (₺) *</span>
                   <input
                     type="number"
                     value={formPrice}
                     onChange={(e) => setFormPrice(e.target.value)}
                     placeholder="2000"
                     required
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#e2e8f0',
-                    }}
+                    className="form-input"
                   />
                 </label>
               </div>
@@ -765,26 +734,15 @@ function RoomSlotsTab() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {rooms.map((r) => (
-                <div
-                  key={r.id}
-                  style={{
-                    padding: '1rem 1.25rem',
-                    borderRadius: 12,
-                    border: '1px solid rgba(148,163,184,0.1)',
-                    background: 'rgba(0,0,0,0.15)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
+                <div key={r.id} className="spa-pkg-card">
                   <div>
-                    <strong style={{ color: '#e2e8f0' }}>{r.name}</strong>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 2 }}>
+                    <strong style={{ color: 'var(--text)' }}>{r.name}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 2 }}>
                       {r.capacity >= 2 ? '👫 Çift kişilik' : '🧖 Tek kişilik'} · {r.durationMinutes}{' '}
                       dk
                     </div>
                   </div>
-                  <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '1.1rem' }}>
+                  <span className="spa-pkg-price">
                     {r.price}₺
                   </span>
                 </div>
@@ -807,154 +765,63 @@ function RoomSlotsTab() {
           {rooms.length === 0 ? (
             <p className="muted">Önce bir oda ekleyin.</p>
           ) : (
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="spa-form-panel" style={{ display: 'grid', gap: '1rem' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Oda</span>
-                <select
-                  value={selectedRoom}
-                  onChange={(e) => setSelectedRoom(e.target.value)}
-                  style={{
-                    padding: '0.6rem',
-                    borderRadius: 8,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(0,0,0,0.3)',
-                    color: '#e2e8f0',
-                  }}
-                >
+                <span className="form-label">Oda</span>
+                <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="form-input">
                   {rooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.capacity} kişi)
-                    </option>
+                    <option key={r.id} value={r.id}>{r.name} ({r.capacity} kişi)</option>
                   ))}
                 </select>
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Başlangıç Tarihi
-                  </span>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#e2e8f0',
-                    }}
-                  />
+                  <span className="form-label">Başlangıç Tarihi</span>
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Bitiş Tarihi
-                  </span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#e2e8f0',
-                    }}
-                  />
+                  <span className="form-label">Bitiş Tarihi</span>
+                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="form-input" />
                 </label>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Başlangıç Saati
-                  </span>
-                  <select
-                    value={startHour}
-                    onChange={(e) => setStartHour(Number(e.target.value))}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#e2e8f0',
-                    }}
-                  >
+                  <span className="form-label">Başlangıç Saati</span>
+                  <select value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} className="form-input">
                     {Array.from({ length: 16 }, (_, i) => i + 7).map((h) => (
-                      <option key={h} value={h}>
-                        {String(h).padStart(2, '0')}:00
-                      </option>
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
                     ))}
                   </select>
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Bitiş Saati
-                  </span>
-                  <select
-                    value={endHour}
-                    onChange={(e) => setEndHour(Number(e.target.value))}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: 8,
-                      border: '1px solid rgba(148,163,184,0.2)',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: '#e2e8f0',
-                    }}
-                  >
+                  <span className="form-label">Bitiş Saati</span>
+                  <select value={endHour} onChange={(e) => setEndHour(Number(e.target.value))} className="form-input">
                     {Array.from({ length: 16 }, (_, i) => i + 8).map((h) => (
-                      <option key={h} value={h}>
-                        {String(h).padStart(2, '0')}:00
-                      </option>
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
                     ))}
                   </select>
                 </label>
               </div>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-                  Özel Fiyat (boş = oda fiyatı)
-                </span>
-                <input
-                  type="number"
-                  value={slotPrice}
-                  onChange={(e) => setSlotPrice(e.target.value)}
-                  placeholder="Opsiyonel"
-                  style={{
-                    padding: '0.6rem',
-                    borderRadius: 8,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(0,0,0,0.3)',
-                    color: '#e2e8f0',
-                  }}
-                />
+                <span className="form-label">Özel Fiyat (boş = oda fiyatı)</span>
+                <input type="number" value={slotPrice} onChange={(e) => setSlotPrice(e.target.value)} placeholder="Opsiyonel" className="form-input" />
               </label>
-              <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
                 {(() => {
-                  const days =
-                    Math.ceil(
-                      (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000,
-                    ) + 1;
+                  const days = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1;
                   return `${days} gün × ${endHour - startHour} slot = ${days * (endHour - startHour)} slot`;
                 })()}
               </p>
               <button
                 onClick={() => void handleGenerateSlots()}
                 disabled={generating || !selectedRoom}
-                style={{
-                  padding: '0.85rem',
-                  borderRadius: 10,
-                  background: '#38bdf8',
-                  color: '#0a0f1a',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  opacity: generating ? 0.5 : 1,
-                }}
+                className="btn-sm btn-primary"
+                style={{ padding: '0.75rem', fontSize: '0.9rem' }}
               >
                 {generating ? '⏳ Oluşturuluyor...' : '🏠 Slotları Oluştur'}
               </button>
               {genResult && (
-                <p style={{ color: '#10b981', fontWeight: 700 }}>
+                <p style={{ color: '#059669', fontWeight: 700 }}>
                   ✅ {genResult.created} slot oluşturuldu ({genResult.roomName})
                 </p>
               )}
