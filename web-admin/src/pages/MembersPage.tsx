@@ -492,52 +492,7 @@ export function MembersPage() {
           >
             {/* Sol: Profil Bilgileri */}
             <div>
-              <h3
-                style={{
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  margin: '0 0 12px',
-                }}
-              >
-                Profil Bilgileri
-              </h3>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <InfoRow label="Ad Soyad" value={`${detail.firstName} ${detail.lastName}`} />
-                <InfoRow label="E-posta" value={detail.email} />
-                <InfoRow label="Telefon" value={detail.phone || '—'} />
-                <InfoRow
-                  label="Kayıt Tarihi"
-                  value={new Date(detail.createdAt).toLocaleDateString('tr-TR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                />
-                <InfoRow
-                  label="Son Giriş"
-                  value={
-                    detail.lastLogin
-                      ? new Date(detail.lastLogin).toLocaleDateString('tr-TR', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : 'Hiç giriş yapmadı'
-                  }
-                />
-                <InfoRow
-                  label="Durum"
-                  value={
-                    detail.accountStatus === 'active'
-                      ? 'Aktif Üye'
-                      : detail.accountStatus === 'pending_approval'
-                        ? 'Onay Bekliyor'
-                        : 'Reddedildi'
-                  }
-                />
-              </div>
+              <ProfileEditor detail={detail} onSaved={() => void openDetail(detail as unknown as Member)} />
 
               {/* Üyelik Bilgisi */}
               <div style={{ marginTop: 16 }}>
@@ -881,30 +836,6 @@ export function MembersPage() {
                 ⚡ İşlemler
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button
-                  onClick={() => {
-                    const firstName = prompt('Ad:', detail.firstName);
-                    if (!firstName) return;
-                    const lastName = prompt('Soyad:', detail.lastName);
-                    if (!lastName) return;
-                    const phone = prompt('Telefon:', detail.phone || '');
-                    void apiJson(`/admin/members/${detail.id}/update-profile`, {
-                      method: 'PATCH',
-                      body: JSON.stringify({
-                        firstName: firstName.trim(),
-                        lastName: lastName.trim(),
-                        phone: phone?.trim() || null,
-                      }),
-                    })
-                      .then(() => {
-                        void openDetail(detail as unknown as Member);
-                      })
-                      .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
-                  }}
-                  style={actionBtnStyle}
-                >
-                  ✏️ Profil Düzenle
-                </button>
                 <button
                   onClick={async () => {
                     if (!confirm('Şifre sıfırlanacak. Devam?')) return;
@@ -1603,5 +1534,88 @@ function TrainerSelectForPackage({ userId, value, onChange }: { userId: string; 
         <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
       ))}
     </select>
+  );
+}
+
+// ─── ProfileEditor Component ────────────────────────────────────────────────────
+
+function ProfileEditor({ detail, onSaved }: { detail: MemberDetail; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [firstName, setFirstName] = useState(detail.firstName);
+  const [lastName, setLastName] = useState(detail.lastName);
+  const [email, setEmail] = useState(detail.email);
+  const [phone, setPhone] = useState(detail.phone || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFirstName(detail.firstName);
+    setLastName(detail.lastName);
+    setEmail(detail.email);
+    setPhone(detail.phone || '');
+  }, [detail]);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await apiJson(`/admin/members/${detail.id}/update-profile`, {
+        method: 'PATCH',
+        body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() || null }),
+      });
+      setEditing(false);
+      onSaved();
+    } catch (e) { alert(e instanceof Error ? e.message : 'Hata'); }
+    finally { setSaving(false); }
+  }
+
+  const fieldStyle: React.CSSProperties = editing
+    ? { padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a', background: '#fff', width: '100%' }
+    : { fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Profil Bilgileri</h3>
+        {!editing ? (
+          <button onClick={() => setEditing(true)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#2563eb', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
+            ✏️ Düzenle
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => void save()} disabled={saving} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
+              {saving ? '...' : '💾 Kaydet'}
+            </button>
+            <button onClick={() => setEditing(false)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
+              İptal
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Üye ID</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', fontFamily: 'monospace' }}>{detail.id.slice(0, 8)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Ad</span>
+          {editing ? <input value={firstName} onChange={(e) => setFirstName(e.target.value)} style={fieldStyle} /> : <span style={fieldStyle}>{detail.firstName}</span>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Soyad</span>
+          {editing ? <input value={lastName} onChange={(e) => setLastName(e.target.value)} style={fieldStyle} /> : <span style={fieldStyle}>{detail.lastName}</span>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>E-posta</span>
+          {editing ? <input value={email} onChange={(e) => setEmail(e.target.value)} style={fieldStyle} /> : <span style={fieldStyle}>{detail.email}</span>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Telefon</span>
+          {editing ? <input value={phone} onChange={(e) => setPhone(e.target.value)} style={fieldStyle} placeholder="05xx..." /> : <span style={fieldStyle}>{detail.phone || '—'}</span>}
+        </div>
+        <InfoRow label="Kayıt Tarihi" value={new Date(detail.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} />
+        <InfoRow label="Son Giriş" value={detail.lastLogin ? new Date(detail.lastLogin).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Hiç giriş yapmadı'} />
+        <InfoRow label="Durum" value={detail.accountStatus === 'active' ? 'Aktif Üye' : detail.accountStatus === 'pending_approval' ? 'Onay Bekliyor' : detail.accountStatus === 'suspended' ? 'Dondurulmuş' : 'Reddedildi'} />
+      </div>
+    </div>
   );
 }
