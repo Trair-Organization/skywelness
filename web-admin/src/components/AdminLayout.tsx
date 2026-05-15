@@ -16,6 +16,7 @@ const WELLNESS_NAV: NavItem[] = [
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/push-notifications', icon: '🔔', label: 'Bildirimler' },
+  { path: '/club/logs', icon: '📜', label: 'İşlem Kayıtları' },
   { path: '/club/profile', icon: '🏢', label: 'Kulüp Profili' },
   { path: '/club/insights', icon: '📈', label: 'İstatistikler' },
 ];

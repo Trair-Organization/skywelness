@@ -22,6 +22,9 @@ import { AssignPackageTrainerDto } from './dto/assign-package-trainer.dto';
 import { CafeOrdersService } from '../booking/cafe-orders.service';
 import { BookingService } from '../booking/booking.service';
 import { MailService } from '../mail/mail.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ClubAuditLog } from '../database/entities/club-audit-log.entity';
 
 @Controller('admin')
 export class AdminController {
@@ -30,6 +33,7 @@ export class AdminController {
     private readonly cafeOrders: CafeOrdersService,
     private readonly bookingService: BookingService,
     private readonly mailService: MailService,
+    @InjectRepository(ClubAuditLog) private readonly auditRepo: Repository<ClubAuditLog>,
   ) {}
 
   /** Dashboard istatistikleri */
@@ -132,6 +136,40 @@ export class AdminController {
     return { ok: true, scope: 'admin' };
   }
 
+  /** Admin: İşlem kayıtlarını listele (son 200) */
+  @Get('logs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async listLogs(@CurrentUser() admin: User, @Query('limit') limit?: string) {
+    const take = Math.min(parseInt(limit || '200') || 200, 500);
+    const logs = await this.auditRepo.find({
+      where: { tenantId: admin.tenantId },
+      order: { createdAt: 'DESC' },
+      take,
+    });
+    return logs;
+  }
+
+  /** Admin: İşlem kaydı oluştur (internal helper — diğer endpoint'lerden çağrılır) */
+  private async logAction(
+    admin: User,
+    action: string,
+    targetType?: string,
+    targetId?: string,
+    details?: Record<string, unknown>,
+  ) {
+    await this.auditRepo.save(
+      this.auditRepo.create({
+        tenantId: admin.tenantId,
+        actorUserId: admin.id,
+        action,
+        targetType: targetType ?? null,
+        targetId: targetId ?? null,
+        details: details ?? {},
+      }),
+    );
+  }
+
   @Get('pending-members')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
@@ -142,21 +180,25 @@ export class AdminController {
   @Post('members/:userId/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
-  approveMember(
+  async approveMember(
     @CurrentUser() admin: User,
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
-    return this.adminMembers.approveMember(admin.tenantId, userId);
+    const result = await this.adminMembers.approveMember(admin.tenantId, userId);
+    void this.logAction(admin, 'member_approved', 'user', userId);
+    return result;
   }
 
   @Post('members/:userId/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
-  rejectMember(
+  async rejectMember(
     @CurrentUser() admin: User,
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
-    return this.adminMembers.rejectMember(admin.tenantId, userId);
+    const result = await this.adminMembers.rejectMember(admin.tenantId, userId);
+    void this.logAction(admin, 'member_rejected', 'user', userId);
+    return result;
   }
 
   @Get('members/:userId/packages')
@@ -670,11 +712,13 @@ export class AdminController {
   @Post('members/:userId/reset-password')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
-  resetMemberPassword(
+  async resetMemberPassword(
     @CurrentUser() admin: User,
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
-    return this.adminMembers.resetMemberPassword(admin.tenantId, userId);
+    const result = await this.adminMembers.resetMemberPassword(admin.tenantId, userId);
+    void this.logAction(admin, 'password_reset', 'user', userId);
+    return result;
   }
 
   /** Admin: Üye profilini güncelle */
@@ -693,11 +737,13 @@ export class AdminController {
   @Delete('members/:userId/delete')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
-  deleteMember(
+  async deleteMember(
     @CurrentUser() admin: User,
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
   ) {
-    return this.adminMembers.deleteMember(admin.tenantId, userId);
+    const result = await this.adminMembers.deleteMember(admin.tenantId, userId);
+    void this.logAction(admin, 'member_deleted', 'user', userId);
+    return result;
   }
 
   /** Admin: Üye hesabını dondur */

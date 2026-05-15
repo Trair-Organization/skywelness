@@ -9,6 +9,7 @@ import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Membership } from '../database/entities/membership.entity';
+import { ClubAuditLog } from '../database/entities/club-audit-log.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
@@ -45,6 +46,7 @@ import { AdminMembersService } from './admin-members.service';
       ClubEvent,
       ClubEventRegistration,
       Membership,
+      ClubAuditLog,
     ]),
   ],
   controllers: [AdminController, AdminEventsController],

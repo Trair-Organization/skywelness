@@ -37,6 +37,7 @@ import { MarketingContactPage } from './pages/MarketingContactPage';
 import { MarketingPrivacyPage } from './pages/MarketingPrivacyPage';
 import { MarketingTermsPage } from './pages/MarketingTermsPage';
 import { ClubInsightsPage } from './pages/ClubInsightsPage';
+import { ClubLogsPage } from './pages/ClubLogsPage';
 import { ClubCafeOrdersPage } from './pages/ClubCafeOrdersPage';
 import { ClubReservationRequestsPage } from './pages/ClubReservationRequestsPage';
 import { ConnectionsPage } from './pages/ConnectionsPage';
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/cafe-products" element={<CafeProductsPage />} />
         <Route path="/club/insights" element={<ClubInsightsPage />} />
+        <Route path="/club/logs" element={<ClubLogsPage />} />
         <Route path="/club/cafe-orders" element={<ClubCafeOrdersPage />} />
         <Route path="/club/reservation-requests" element={<ClubReservationRequestsPage />} />
         <Route path="/members" element={<MembersPage />} />
