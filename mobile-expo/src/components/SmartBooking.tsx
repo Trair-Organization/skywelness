@@ -398,6 +398,14 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
   }
 
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [bookingSuccessData, setBookingSuccessData] = useState<{
+    service: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    remainingSessions: number;
+    packageName: string;
+  } | null>(null);
   const successAnim = useRef(new Animated.Value(0)).current;
 
   // Seçili slot için uygun paket var mı?
@@ -434,20 +442,47 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
 
       if (matchedPkg) {
         // Paketten seans düş — ödeme yok
-        const res = await apiJson<{ id: string; remainingSessions: number }>(
-          '/v2/appointments/use-package',
-          {
-            method: 'POST',
-            token,
-            tenantSubdomain: tenant?.subdomain,
-            body: JSON.stringify({
-              slotId: selectedSlotId,
-              packageId: matchedPkg.id,
-            }),
-          },
-        );
-        setSelectedSlotId(null);
-        showToast(`Randevu oluşturuldu! Kalan seans: ${res.remainingSessions} ✓`, 'success');
+        const res = await apiJson<{
+          id: string;
+          remainingSessions: number;
+          service?: string;
+          date?: string;
+          startTime?: string;
+          endTime?: string;
+          packageName?: string;
+        }>('/v2/appointments/use-package', {
+          method: 'POST',
+          token,
+          tenantSubdomain: tenant?.subdomain,
+          body: JSON.stringify({
+            slotId: selectedSlotId,
+            packageId: matchedPkg.id,
+          }),
+        });
+
+        // Başarı animasyonu göster (modal içinde)
+        setBookingSuccess(true);
+        setBookingSuccessData({
+          service: res.service || matchedPkg.packageTypeName,
+          date: res.date || selectedDate,
+          startTime: res.startTime || '',
+          endTime: res.endTime || '',
+          remainingSessions: res.remainingSessions,
+          packageName: res.packageName || matchedPkg.packageTypeName,
+        });
+        Animated.spring(successAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 40,
+          useNativeDriver: true,
+        }).start();
+        setTimeout(() => {
+          setBookingSuccess(false);
+          setBookingSuccessData(null);
+          successAnim.setValue(0);
+          setSelectedSlotId(null);
+        }, 4000);
+
         // Paket listesini güncelle
         setMyPackages((prev) =>
           prev.map((p) =>
@@ -733,9 +768,26 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
                           style={[styles.successBox, { transform: [{ scale: successAnim }] }]}
                         >
                           <Text style={styles.successIcon}>🎉</Text>
-                          <Text style={styles.successTitle}>Rezervasyon Oluşturuldu!</Text>
+                          <Text style={styles.successTitle}>Rezervasyon Onaylandı!</Text>
+                          {bookingSuccessData && (
+                            <View style={styles.successDetails}>
+                              <Text style={styles.successDetailRow}>
+                                📋 {bookingSuccessData.service}
+                              </Text>
+                              <Text style={styles.successDetailRow}>
+                                📅 {bookingSuccessData.date} · 🕐 {bookingSuccessData.startTime}
+                                {bookingSuccessData.endTime
+                                  ? ` - ${bookingSuccessData.endTime}`
+                                  : ''}
+                              </Text>
+                              <Text style={styles.successDetailRow}>
+                                📦 {bookingSuccessData.packageName} · Kalan:{' '}
+                                {bookingSuccessData.remainingSessions} seans
+                              </Text>
+                            </View>
+                          )}
                           <Text style={styles.successSubtitle}>
-                            Detaylar bildirimlerinizde görünecek.
+                            ✉️ Biletiniz mail ve SMS olarak gönderilmiştir.
                           </Text>
                         </Animated.View>
                       ) : (
@@ -961,9 +1013,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalConfirmTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  successBox: { alignItems: 'center', paddingVertical: 24 },
-  successIcon: { fontSize: 48, marginBottom: 12 },
-  successTitle: { fontSize: 18, fontWeight: '800', color: premium.accentGreen, marginBottom: 4 },
+  successBox: { alignItems: 'center', paddingVertical: 20 },
+  successIcon: { fontSize: 48, marginBottom: 10 },
+  successTitle: { fontSize: 18, fontWeight: '800', color: premium.accentGreen, marginBottom: 8 },
+  successDetails: {
+    width: '100%',
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16,185,129,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.2)',
+    marginBottom: 12,
+    gap: 4,
+  },
+  successDetailRow: { fontSize: 13, color: premium.text, fontWeight: '600' },
   successSubtitle: { fontSize: 13, color: premium.textMuted },
   modalLoginMsg: { color: premium.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 14 },
   modalLoginRow: { flexDirection: 'row', gap: 10 },
