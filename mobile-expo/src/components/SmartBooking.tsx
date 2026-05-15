@@ -611,7 +611,20 @@ export function SmartBooking({ subdomain, category, providerId, participantCount
                       <Text style={styles.recommendedTime}>
                         {slot.startTime} - {slot.endTime}
                       </Text>
-                      <Text style={styles.recommendedName}>{slot.serviceName}</Text>
+                      <Text style={styles.recommendedName}>
+                        {participantCount >= 2
+                          ? (() => {
+                              // Aynı saatte müsait olan 2 masöz ismini göster
+                              const sameTime = availableSlots.filter(
+                                (s) => s.startTime === slot.startTime && s.providerId !== slot.providerId,
+                              );
+                              const secondName = sameTime.length > 0
+                                ? (services.find((sv) => sv.id === sameTime[0].serviceId)?.providerName || '')
+                                : '';
+                              return `${slot.serviceName} + ${secondName}`;
+                            })()
+                          : slot.serviceName}
+                      </Text>
                       {badge ? <Text style={styles.recommendedBadge}>{badge}</Text> : null}
                     </View>
                     <View style={styles.recommendedRight}>
