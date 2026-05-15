@@ -254,7 +254,7 @@ type MyPackage = {
   assignedTrainerName: string | null;
 };
 
-export function SmartBooking({ subdomain, category, providerId }: Props) {
+export function SmartBooking({ subdomain, category, providerId, participantCount = 1 }: Props) {
   const { token, tenant, user } = useMemberAuth();
   const navigation = useNavigation();
   const [services, setServices] = useState<V2Service[]>([]);
@@ -607,6 +607,7 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
           )}
 
           {/* 📊 Grid: Saatler dikey, Hizmetler yatay (üstte) */}
+          {participantCount < 2 ? (
           <View style={styles.gridSection}>
             <Text style={styles.gridTitle}>📊 Tüm Saatler</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -672,6 +673,78 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
               </View>
             </ScrollView>
           </View>
+          ) : (
+          /* Çift kişilik grid: sadece 2+ masöz müsait olan saatler */
+          <View style={styles.gridSection}>
+            <Text style={styles.gridTitle}>🧖‍♀️🧖‍♂️ Çift Masaj — Müsait Saatler</Text>
+            <View style={{ paddingHorizontal: 20, gap: 8 }}>
+              {hours
+                .filter((h) => !isToday || parseInt(h.start) > currentHour)
+                .map((h) => {
+                  // Bu saatte kaç masöz müsait?
+                  const availableInHour = services
+                    .map((svc) => ({ svc, slot: getSlotForServiceHour(svc.id, h.start) }))
+                    .filter(({ slot }) => slot && slot.remainingCapacity > 0);
+                  const isAvailable = availableInHour.length >= 2;
+                  if (!isAvailable) return null;
+                  const therapistNames = availableInHour
+                    .slice(0, 2)
+                    .map(({ svc }) => svc.providerName || svc.name.replace(' - Masaj Seansı', ''))
+                    .join(' + ');
+                  const firstSlot = availableInHour[0].slot!;
+                  return (
+                    <Pressable
+                      key={h.start}
+                      style={({ pressed }) => [
+                        {
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: 14,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: 'rgba(16,185,129,0.3)',
+                          backgroundColor: pressed ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.06)',
+                        },
+                      ]}
+                      onPress={() => handleSlotSelect(firstSlot.id)}
+                      disabled={booking}
+                    >
+                      <View>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: premium.text }}>
+                          {h.label}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: premium.textMuted, marginTop: 2 }}>
+                          {therapistNames}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: premium.accentGreen }}>
+                          {(parseFloat(firstSlot.price) * 2).toLocaleString('tr-TR')}₺
+                        </Text>
+                        <Text style={{ fontSize: 11, color: premium.accentGreen, fontWeight: '700' }}>
+                          Rezerve Et →
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })
+                .filter(Boolean)}
+              {hours
+                .filter((h) => !isToday || parseInt(h.start) > currentHour)
+                .every((h) => {
+                  const availableInHour = services
+                    .map((svc) => ({ slot: getSlotForServiceHour(svc.id, h.start) }))
+                    .filter(({ slot }) => slot && slot.remainingCapacity > 0);
+                  return availableInHour.length < 2;
+                }) && (
+                <Text style={{ color: premium.textMuted, textAlign: 'center', padding: 20 }}>
+                  Bu tarihte çift kişilik müsait seans bulunamadı.
+                </Text>
+              )}
+            </View>
+          </View>
+          )}
 
           {availableSlots.length === 0 && (
             <Text style={styles.noSlots}>Bu tarihte müsait saat yok</Text>
