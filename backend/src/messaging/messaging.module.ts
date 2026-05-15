@@ -5,12 +5,14 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { Conversation } from '../database/entities/conversation.entity';
 import { Message } from '../database/entities/message.entity';
 import { User } from '../database/entities/user.entity';
+import { UserBlock } from '../database/entities/user-block.entity';
+import { MessageReport } from '../database/entities/message-report.entity';
 import { MessagingController } from './messaging.controller';
 import { MessagingService } from './messaging.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Conversation, Message, User]),
+    TypeOrmModule.forFeature([Conversation, Message, User, UserBlock, MessageReport]),
     AuthModule,
     NotificationsModule,
   ],

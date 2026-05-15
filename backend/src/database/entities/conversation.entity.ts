@@ -53,6 +53,14 @@ export class Conversation {
   @Column({ type: 'int', default: 0, name: 'unread_count_b' })
   unreadCountB!: number;
 
+  /** A bu sohbeti silmiş mi (kendi tarafından gizli). */
+  @Column({ type: 'boolean', default: false, name: 'deleted_by_a' })
+  deletedByA!: boolean;
+
+  /** B bu sohbeti silmiş mi. */
+  @Column({ type: 'boolean', default: false, name: 'deleted_by_b' })
+  deletedByB!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

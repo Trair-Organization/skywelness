@@ -1,5 +1,7 @@
 import { Campaign } from './entities/campaign.entity';
 import { Conversation } from './entities/conversation.entity';
+import { UserBlock } from './entities/user-block.entity';
+import { MessageReport } from './entities/message-report.entity';
 import { HomeBanner } from './entities/home-banner.entity';
 import { ServiceCatalog } from './entities/service-catalog.entity';
 import { ScheduleSlot } from './entities/schedule-slot.entity';
@@ -52,6 +54,8 @@ export const typeOrmEntities = [
   TenantVisibilityAudit,
   Campaign,
   Conversation,
+  UserBlock,
+  MessageReport,
   Lead,
   Message,
   SpaBooking,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../database/entities/user.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,16 +27,13 @@ export class MessagingController {
     return this.messagingService.getOrCreateConversation(user.id, body.otherUserId);
   }
 
-  /** Kulübe mesaj gönder (tenant admin ile sohbet başlat). */
+  /** Kulübe mesaj gönder (kendi kulübünün admin'i ile). */
   @Post('conversations/club')
   startClubConversation(@CurrentUser() user: User) {
     return this.messagingService.getOrCreateConversationWithClubByTenantId(user.id, user.tenantId);
   }
 
-  /**
-   * Cross-tenant mesajlaşma: Başka kulübe mesaj başlat.
-   * Üye kendi kulübüne bağlı olsa bile, ekosistemdeki başka kulüple iletişim kurabilir.
-   */
+  /** Cross-tenant: Başka kulübe mesaj başlat. */
   @Post('conversations/club-by-subdomain')
   startCrossTenantClubConversation(@CurrentUser() user: User, @Body() body: { subdomain: string }) {
     return this.messagingService.getOrCreateConversationWithClubBySubdomain(
@@ -44,6 +41,60 @@ export class MessagingController {
       body.subdomain,
     );
   }
+
+  // ═══ MODERATION (App Store 1.2 — User-Generated Content) ═══
+
+  /** Sohbeti kullanıcının kendi tarafından sil (soft delete). */
+  @Delete('conversations/:conversationId')
+  deleteConversation(@CurrentUser() user: User, @Param('conversationId') conversationId: string) {
+    return this.messagingService.deleteConversation(user.id, conversationId);
+  }
+
+  /** Tek mesaj sil (sadece kendi gönderdiği mesajı). */
+  @Delete('messages/:messageId')
+  deleteMessage(@CurrentUser() user: User, @Param('messageId') messageId: string) {
+    return this.messagingService.deleteMessage(user.id, messageId);
+  }
+
+  /** Kullanıcıyı engelle. */
+  @Post('users/:userId/block')
+  blockUser(
+    @CurrentUser() user: User,
+    @Param('userId') userId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.messagingService.blockUser(user.id, userId, body.reason);
+  }
+
+  /** Engeli kaldır. */
+  @Delete('users/:userId/block')
+  unblockUser(@CurrentUser() user: User, @Param('userId') userId: string) {
+    return this.messagingService.unblockUser(user.id, userId);
+  }
+
+  /** Engellenen kullanıcılar listesi. */
+  @Get('users/blocked')
+  listBlocked(@CurrentUser() user: User) {
+    return this.messagingService.listBlockedUsers(user.id);
+  }
+
+  /** Kullanıcı veya mesaj şikayet et. */
+  @Post('reports')
+  reportUser(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      reportedUserId: string;
+      conversationId?: string;
+      messageId?: string;
+      category: 'spam' | 'harassment' | 'inappropriate' | 'fake_profile' | 'violence' | 'other';
+      description?: string;
+    },
+  ) {
+    return this.messagingService.reportUser(user.id, body);
+  }
+
+  // ═══ MESSAGES ═══════════════════════════════════════════
 
   /** Mesaj gönder. */
   @Post('conversations/:conversationId')
