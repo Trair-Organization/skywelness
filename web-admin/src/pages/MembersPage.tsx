@@ -32,6 +32,11 @@ type MemberDetail = {
     status: string;
     price: string;
   } | null;
+  assignedTrainers: Array<{
+    linkId: string;
+    trainerId: string;
+    trainerName: string;
+  }>;
   packages: Array<{
     id: string;
     status: string;
@@ -590,6 +595,25 @@ export function MembersPage() {
                   userId={detail.id}
                   onSaved={() => void openDetail(detail as unknown as Member)}
                 />
+              </div>
+
+              {/* PT Ataması */}
+              <div style={{ marginTop: 16 }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 10px' }}>
+                  🏋️ Atanmış Eğitmen
+                </h3>
+                {detail.assignedTrainers.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {detail.assignedTrainers.map((t) => (
+                      <div key={t.linkId} style={{ padding: '8px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e40af' }}>🏋️ {t.trainerName}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>Eğitmen atanmamış</p>
+                )}
+                <TrainerAssignForm userId={detail.id} tenantTrainers={packageTypes.length > 0 ? [] : []} onSaved={() => void openDetail(detail as unknown as Member)} />
               </div>
             </div>
 
@@ -1481,3 +1505,49 @@ const inputStyle: React.CSSProperties = {
   background: '#fff',
   color: '#0f172a',
 };
+
+// ─── TrainerAssignForm Component ────────────────────────────────────────────────
+
+function TrainerAssignForm({ userId, onSaved }: { userId: string; tenantTrainers: unknown[]; onSaved: () => void }) {
+  const [trainers, setTrainers] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+  const [selectedTrainer, setSelectedTrainer] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiJson<Array<{ id: string; firstName: string; lastName: string }>>('/admin/trainers')
+      .then(setTrainers)
+      .catch(() => setTrainers([]));
+  }, []);
+
+  async function assign() {
+    if (!selectedTrainer) return;
+    setSaving(true);
+    try {
+      await apiJson(`/admin/members/${userId}/assign-trainer`, {
+        method: 'POST',
+        body: JSON.stringify({ trainerId: selectedTrainer }),
+      });
+      setSelectedTrainer('');
+      onSaved();
+    } catch (e) { alert(e instanceof Error ? e.message : 'Hata'); }
+    finally { setSaving(false); }
+  }
+
+  if (trainers.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+      <select value={selectedTrainer} onChange={(e) => setSelectedTrainer(e.target.value)}
+        style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.82rem', background: '#fff', color: '#0f172a' }}>
+        <option value="">Eğitmen seçin...</option>
+        {trainers.map((t) => (
+          <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+        ))}
+      </select>
+      <button onClick={() => void assign()} disabled={!selectedTrainer || saving}
+        style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', opacity: !selectedTrainer ? 0.5 : 1 }}>
+        {saving ? '...' : 'Ata'}
+      </button>
+    </div>
+  );
+}

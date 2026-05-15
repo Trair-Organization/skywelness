@@ -12,6 +12,7 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
+import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import {
@@ -47,6 +48,8 @@ export class AdminMembersService {
     private readonly availabilityRepo: Repository<Availability>,
     @InjectRepository(Membership)
     private readonly membershipsRepo: Repository<Membership>,
+    @InjectRepository(TrainerMemberLink)
+    private readonly trainerMemberLinksRepo: Repository<TrainerMemberLink>,
     @InjectRepository(SpaTherapist)
     private readonly spaTherapistsRepo: Repository<SpaTherapist>,
     @InjectRepository(SpaService)
@@ -320,6 +323,12 @@ export class AdminMembersService {
       .take(20)
       .getMany();
 
+    // Atanmış eğitmenler
+    const trainerLinks = await this.trainerMemberLinksRepo.find({
+      where: { memberUserId: userId, tenantId, status: 'active' },
+      relations: ['trainer', 'trainer.user'],
+    });
+
     return {
       id: member.id,
       firstName: member.firstName,
@@ -330,6 +339,13 @@ export class AdminMembersService {
       accountStatus: member.accountStatus,
       lastLogin: member.lastLogin,
       createdAt: member.createdAt,
+      assignedTrainers: trainerLinks.map((l) => ({
+        linkId: l.id,
+        trainerId: l.trainerId,
+        trainerName: l.trainer?.user
+          ? `${l.trainer.user.firstName} ${l.trainer.user.lastName}`.trim()
+          : 'Eğitmen',
+      })),
       membership: membership
         ? {
             id: membership.id,
@@ -2093,6 +2109,53 @@ export class AdminMembersService {
 
     await this.usersRepo.remove(user);
     return { ok: true, deletedUserId: userId };
+  }
+
+  /** Admin: Üyeye eğitmen ata (trainer_member_link oluştur) */
+  async assignTrainerToMember(tenantId: string, userId: string, trainerId: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    const trainer = await this.trainersRepo.findOne({
+      where: { id: trainerId, tenantId },
+      relations: ['user'],
+    });
+    if (!trainer) throw new NotFoundException('Eğitmen bulunamadı');
+
+    // Mevcut bağlantı var mı?
+    const existing = await this.trainerMemberLinksRepo.findOne({
+      where: { trainerId, memberUserId: userId },
+    });
+
+    if (existing) {
+      if (existing.status !== 'active') {
+        existing.status = 'active';
+        await this.trainerMemberLinksRepo.save(existing);
+      }
+      return {
+        ok: true,
+        linkId: existing.id,
+        trainerName: `${trainer.user.firstName} ${trainer.user.lastName}`.trim(),
+        status: 'active',
+      };
+    }
+
+    const link = this.trainerMemberLinksRepo.create({
+      tenantId,
+      trainerId,
+      memberUserId: userId,
+      status: 'active',
+    });
+    await this.trainerMemberLinksRepo.save(link);
+
+    return {
+      ok: true,
+      linkId: link.id,
+      trainerName: `${trainer.user.firstName} ${trainer.user.lastName}`.trim(),
+      status: 'active',
+    };
   }
 
   /** Admin: Üye hesabını dondur/askıya al */

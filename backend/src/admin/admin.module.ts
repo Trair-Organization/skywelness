@@ -19,6 +19,7 @@ import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerApplication } from '../database/entities/trainer-application.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
+import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
 import { User } from '../database/entities/user.entity';
 import { AdminController } from './admin.controller';
 import { AdminEventsController } from './admin-events.controller';
@@ -47,6 +48,7 @@ import { AdminMembersService } from './admin-members.service';
       ClubEventRegistration,
       Membership,
       ClubAuditLog,
+      TrainerMemberLink,
     ]),
   ],
   controllers: [AdminController, AdminEventsController],
