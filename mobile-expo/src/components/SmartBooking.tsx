@@ -693,6 +693,7 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
                 const slot = allSlots.find((s) => s.id === selectedSlotId);
                 const svc = slot ? services.find((s) => s.id === slot.serviceId) : null;
                 const slotPrice = slot ? parseFloat(slot.price) : 0;
+                const slotCapacity = svc?.capacity ?? slot?.capacity ?? 1;
                 const addonTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
                   const addon = addons.find((a) => a.id === id);
                   return sum + (addon ? parseFloat(addon.price) * qty : 0);
@@ -791,22 +792,76 @@ export function SmartBooking({ subdomain, category, providerId }: Props) {
                           </Text>
                         </Animated.View>
                       ) : (
-                        <Pressable
-                          style={[
-                            styles.modalConfirmBtn,
-                            findMatchingPackage(selectedSlotId!) && { backgroundColor: '#10b981' },
-                          ]}
-                          onPress={confirmBooking}
-                          disabled={booking}
-                        >
-                          <Text style={styles.modalConfirmTxt}>
-                            {booking
-                              ? 'İşleniyor...'
-                              : findMatchingPackage(selectedSlotId!)
-                                ? `✓ Paketten Kullan (Kalan: ${findMatchingPackage(selectedSlotId!)!.remainingSessions})`
-                                : '💳 Kapora Öde'}
-                          </Text>
-                        </Pressable>
+                        <>
+                          {/* Paket bilgisi */}
+                          {findMatchingPackage(selectedSlotId!) && (
+                            <View style={{ padding: 12, borderRadius: 10, backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)', marginBottom: 10 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: premium.accentGreen }}>📦 {findMatchingPackage(selectedSlotId!)!.packageTypeName}</Text>
+                              <Text style={{ fontSize: 12, color: premium.textMuted, marginTop: 2 }}>
+                                Kalan: {findMatchingPackage(selectedSlotId!)!.remainingSessions} seans → kullanım: {slotCapacity}
+                              </Text>
+                            </View>
+                          )}
+                          {/* Paketten Kullan butonu */}
+                          {findMatchingPackage(selectedSlotId!) && (
+                            <Pressable
+                              style={[styles.modalConfirmBtn, { backgroundColor: '#10b981', marginBottom: 8 }]}
+                              onPress={confirmBooking}
+                              disabled={booking}
+                            >
+                              <Text style={styles.modalConfirmTxt}>
+                                {booking ? 'İşleniyor...' : `✓ Paketten Kullan (${slotCapacity} seans)`}
+                              </Text>
+                            </Pressable>
+                          )}
+                          {/* Kapora Öde butonu — her zaman göster */}
+                          <Pressable
+                            style={[styles.modalConfirmBtn, { backgroundColor: '#6366f1' }]}
+                            onPress={async () => {
+                              if (!selectedSlotId || booking) return;
+                              setBooking(true);
+                              try {
+                                const addonsList = Object.entries(selectedAddons)
+                                  .filter(([, qty]) => qty > 0)
+                                  .map(([addonId, quantity]) => ({ addonId, quantity }));
+                                const res = await apiJson<{ checkoutUrl: string }>('/v2/checkout', {
+                                  method: 'POST',
+                                  token,
+                                  tenantSubdomain: tenant?.subdomain,
+                                  body: JSON.stringify({
+                                    slotId: selectedSlotId,
+                                    addons: addonsList.length > 0 ? addonsList : undefined,
+                                    guestEmail: user?.email,
+                                    guestName: user ? `${user.firstName} ${user.lastName}`.trim() : undefined,
+                                    guestPhone: user?.phone || undefined,
+                                  }),
+                                });
+                                if (res.checkoutUrl) {
+                                  const result = await WebBrowser.openAuthSessionAsync(
+                                    res.checkoutUrl,
+                                    'wellnessclubai://booking-success',
+                                  );
+                                  setSelectedSlotId(null);
+                                  if (result.type === 'success') {
+                                    showToast('Ödeme başarılı! Biletiniz gönderildi 🎉', 'success');
+                                    void loadSlots();
+                                  } else if (result.type === 'cancel') {
+                                    showToast('Ödeme iptal edildi', 'warning');
+                                  }
+                                }
+                              } catch (e) {
+                                showToast(e instanceof Error ? e.message : 'Ödeme başlatılamadı', 'error');
+                              } finally {
+                                setBooking(false);
+                              }
+                            }}
+                            disabled={booking}
+                          >
+                            <Text style={styles.modalConfirmTxt}>
+                              {booking ? 'Yönlendiriliyor...' : '💳 Kapora Öde'}
+                            </Text>
+                          </Pressable>
+                        </>
                       )
                     ) : (
                       <GuestCheckout
