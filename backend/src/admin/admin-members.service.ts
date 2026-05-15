@@ -205,22 +205,20 @@ export class AdminMembersService {
     // Aktif paketlerin kalan seansları
     const packages = await this.packagesRepo
       .createQueryBuilder('p')
-      .innerJoin('p.packageType', 'pt')
+      .innerJoinAndSelect('p.packageType', 'pt')
       .where('pt.tenantId = :tenantId', { tenantId })
       .andWhere('p.userId IN (:...ids)', { ids: memberIds })
       .andWhere('p.status = :active', { active: 'active' })
-      .select(['p.userId', 'p.remainingSessions', 'pt.sessionType'])
-      .addSelect('pt.sessionType', 'sessionType')
-      .getRawMany<{ p_userId: string; p_remaining_sessions: number; sessionType: string }>();
+      .getMany();
 
     const ptMap = new Map<string, number>();
     const massageMap = new Map<string, number>();
     for (const pkg of packages) {
-      const uid = pkg.p_userId;
-      const sessions = Number(pkg.p_remaining_sessions) || 0;
-      if (pkg.sessionType === 'personal_training') {
+      const uid = pkg.userId;
+      const sessions = pkg.remainingSessions || 0;
+      if (pkg.packageType.sessionType === 'personal_training') {
         ptMap.set(uid, (ptMap.get(uid) || 0) + sessions);
-      } else if (pkg.sessionType === 'massage') {
+      } else if (pkg.packageType.sessionType === 'massage') {
         massageMap.set(uid, (massageMap.get(uid) || 0) + sessions);
       }
     }
