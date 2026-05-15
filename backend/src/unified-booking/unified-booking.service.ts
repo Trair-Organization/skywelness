@@ -1226,11 +1226,21 @@ export class UnifiedBookingService {
         const requiredTherapists = participantCount ?? room.capacity;
         const isBookable = availableTherapists.length >= requiredTherapists;
 
+        // Fiyat: kişi başı masöz seans fiyatı (ilk müsait masözün slot fiyatından)
+        const unitPrice = (() => {
+          if (availableTherapists.length === 0) return '0';
+          const ts = therapistSlots.find(
+            (s) => s.providerId === availableTherapists[0].id && s.startTime === rs.startTime,
+          );
+          return ts?.price ?? '2000';
+        })();
+
         return {
           roomSlotId: rs.id,
           startTime: rs.startTime,
           endTime: rs.endTime,
-          price: rs.price,
+          unitPrice,
+          totalPrice: String(parseFloat(unitPrice) * requiredTherapists),
           currency: rs.currency,
           isBookable,
           requiredTherapists,

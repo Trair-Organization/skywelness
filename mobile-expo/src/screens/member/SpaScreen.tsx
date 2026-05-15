@@ -15,7 +15,8 @@ type RoomTimeSlot = {
   roomSlotId: string;
   startTime: string;
   endTime: string;
-  price: string;
+  unitPrice: string;
+  totalPrice: string;
   currency: string;
   isBookable: boolean;
   requiredTherapists: number;
@@ -862,17 +863,20 @@ export function SpaScreen() {
                   <View style={styles.priceRow}>
                     <Text style={styles.priceLabel}>Toplam ({selectedCapacity!} kişi)</Text>
                     <Text style={styles.priceValue}>
-                      {(parseFloat(selectedSlot.timeSlot.price) * selectedCapacity!).toLocaleString(
-                        'tr-TR',
-                      )}
-                      ₺
+                      {parseFloat(selectedSlot.timeSlot.totalPrice).toLocaleString('tr-TR')}₺
+                    </Text>
+                  </View>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabelSub}>Kişi başı</Text>
+                    <Text style={styles.priceValueSub}>
+                      {parseFloat(selectedSlot.timeSlot.unitPrice).toLocaleString('tr-TR')}₺
                     </Text>
                   </View>
                   <View style={styles.priceRow}>
                     <Text style={styles.priceLabelSub}>💳 Kapora (%15)</Text>
                     <Text style={styles.priceValueSub}>
                       {Math.ceil(
-                        parseFloat(selectedSlot.timeSlot.price) * selectedCapacity! * 0.15,
+                        parseFloat(selectedSlot.timeSlot.totalPrice) * 0.15,
                       ).toLocaleString('tr-TR')}
                       ₺
                     </Text>
