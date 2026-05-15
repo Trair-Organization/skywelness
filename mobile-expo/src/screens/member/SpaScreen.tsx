@@ -39,6 +39,30 @@ type MyPackage = {
   packageTypeName: string;
   sessionType: string;
   remainingSessions: number;
+  expiresAt?: string;
+  totalSessions?: number;
+};
+
+type UpcomingAppointment = {
+  id: string;
+  sessionType: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  therapistName: string | null;
+  trainerName: string | null;
+  serviceName: string | null;
+  canCancelWithRefund: boolean;
+  hoursUntilStart: number;
+};
+
+type PastAppointment = {
+  id: string;
+  status: string;
+  createdAt: string;
+  slot?: { date: string; startTime: string; endTime: string } | null;
+  service?: { name: string } | null;
+  notes: string | null;
 };
 
 type CapacityOption = { label: string; value: number; icon: string; desc: string };
@@ -78,6 +102,9 @@ export function SpaScreen() {
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [myPackages, setMyPackages] = useState<MyPackage[]>([]);
+  const [upcomingAppt, setUpcomingAppt] = useState<UpcomingAppointment | null>(null);
+  const [pastAppointments, setPastAppointments] = useState<PastAppointment[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Modal state
   const [selectedSlot, setSelectedSlot] = useState<{
@@ -105,6 +132,36 @@ export function SpaScreen() {
     apiJson<MyPackage[]>('/v2/my-packages', { token, tenantSubdomain: tenant?.subdomain })
       .then(setMyPackages)
       .catch(() => setMyPackages([]));
+  }, [token, tenant?.subdomain]);
+
+  // Yaklaşan randevuyu yükle
+  useEffect(() => {
+    if (!token) return;
+    apiJson<UpcomingAppointment[]>('/member-schedule/my-upcoming', {
+      token,
+      tenantSubdomain: tenant?.subdomain,
+    })
+      .then((data) => {
+        const spaAppt = data.find((a) => a.sessionType === 'massage');
+        setUpcomingAppt(spaAppt ?? null);
+      })
+      .catch(() => setUpcomingAppt(null));
+  }, [token, tenant?.subdomain]);
+
+  // Geçmiş masajları yükle
+  useEffect(() => {
+    if (!token) return;
+    apiJson<PastAppointment[]>('/v2/appointments/my', {
+      token,
+      tenantSubdomain: tenant?.subdomain,
+    })
+      .then((data) => {
+        const past = data
+          .filter((a) => a.status === 'completed' || a.status === 'confirmed')
+          .slice(0, 5);
+        setPastAppointments(past);
+      })
+      .catch(() => setPastAppointments([]));
   }, [token, tenant?.subdomain]);
 
   // Oda müsaitliğini yükle
@@ -272,6 +329,110 @@ export function SpaScreen() {
           <Text style={styles.title}>💆 Spa & Masaj</Text>
           <Text style={styles.subtitle}>Oda seç, masöz seç, rahatla.</Text>
         </View>
+
+        {/* 1. Yaklaşan Randevu */}
+        {token && upcomingAppt && (
+          <View style={styles.upcomingCard}>
+            <View style={styles.upcomingHeader}>
+              <Text style={styles.upcomingBadge}>📅 Yaklaşan Randevu</Text>
+              {upcomingAppt.canCancelWithRefund && (
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      await apiJson(`/member-schedule/reservations/${upcomingAppt.id}`, {
+                        method: 'DELETE',
+                        token,
+                        tenantSubdomain: tenant?.subdomain,
+                      });
+                      showToast('Randevu iptal edildi', 'success');
+                      setUpcomingAppt(null);
+                    } catch (e) {
+                      showToast(e instanceof Error ? e.message : 'İptal başarısız', 'error');
+                    }
+                  }}
+                >
+                  <Text style={styles.cancelTxt}>İptal Et</Text>
+                </Pressable>
+              )}
+            </View>
+            <Text style={styles.upcomingTime}>
+              {new Date(upcomingAppt.startTime).toLocaleDateString('tr-TR', {
+                day: 'numeric',
+                month: 'short',
+              })}{' '}
+              ·{' '}
+              {new Date(upcomingAppt.startTime).toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              -
+              {new Date(upcomingAppt.endTime).toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+            <Text style={styles.upcomingDetail}>
+              💆 {upcomingAppt.therapistName || upcomingAppt.serviceName || 'Masaj'}
+            </Text>
+            <Text style={styles.upcomingCountdown}>
+              ⏰ {upcomingAppt.hoursUntilStart} saat sonra
+            </Text>
+          </View>
+        )}
+
+        {/* 2. Paket Kartı */}
+        {token && (
+          <View style={styles.packageCard}>
+            {(() => {
+              const pkg = myPackages.find(
+                (p) => p.sessionType === 'massage' && p.remainingSessions > 0,
+              );
+              if (pkg) {
+                const isLow = pkg.remainingSessions <= 2;
+                return (
+                  <>
+                    <View style={styles.packageRow}>
+                      <View>
+                        <Text style={styles.packageName}>📦 {pkg.packageTypeName}</Text>
+                        <Text style={styles.packageSessions}>
+                          Kalan:{' '}
+                          <Text style={[styles.packageCount, isLow && { color: '#f59e0b' }]}>
+                            {pkg.remainingSessions} seans
+                          </Text>
+                        </Text>
+                        {pkg.expiresAt && (
+                          <Text style={styles.packageExpiry}>Bitiş: {pkg.expiresAt}</Text>
+                        )}
+                      </View>
+                      {isLow && (
+                        <View style={styles.lowBadge}>
+                          <Text style={styles.lowBadgeTxt}>⚠️ Az kaldı</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Pressable
+                      style={styles.requestBtn}
+                      onPress={() => showToast('Paket talep özelliği yakında', 'info')}
+                    >
+                      <Text style={styles.requestBtnTxt}>+ Yeni Paket Talep Et</Text>
+                    </Pressable>
+                  </>
+                );
+              }
+              return (
+                <View>
+                  <Text style={styles.noPackageTxt}>Aktif masaj paketiniz bulunmuyor.</Text>
+                  <Pressable
+                    style={styles.requestBtn}
+                    onPress={() => showToast('Paket talep özelliği yakında', 'info')}
+                  >
+                    <Text style={styles.requestBtnTxt}>📦 Masaj Paketi Talep Et</Text>
+                  </Pressable>
+                </View>
+              );
+            })()}
+          </View>
+        )}
 
         {/* Kapasite Seçimi (Tek / Çift) */}
         <View style={styles.capacitySection}>
@@ -565,6 +726,40 @@ export function SpaScreen() {
             )}
           </>
         )}
+        {/* 4. Geçmiş Masajlarım */}
+        {token && pastAppointments.length > 0 && (
+          <View style={styles.historySection}>
+            <Pressable style={styles.historyHeader} onPress={() => setShowHistory(!showHistory)}>
+              <Text style={styles.historyTitle}>📋 Geçmiş Masajlarım</Text>
+              <Text style={styles.historyToggle}>{showHistory ? '▲' : '▼'}</Text>
+            </Pressable>
+            {showHistory &&
+              pastAppointments.map((appt) => (
+                <View key={appt.id} style={styles.historyRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.historyService}>
+                      {appt.service?.name || appt.notes?.split('·')[0]?.trim() || 'Masaj'}
+                    </Text>
+                    <Text style={styles.historyDate}>
+                      {appt.slot
+                        ? `${appt.slot.date} · ${appt.slot.startTime}-${appt.slot.endTime}`
+                        : new Date(appt.createdAt).toLocaleDateString('tr-TR')}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.historyStatus,
+                      appt.status === 'completed' && { color: '#10b981' },
+                      appt.status === 'confirmed' && { color: '#38bdf8' },
+                      appt.status === 'cancelled' && { color: '#ef4444' },
+                    ]}
+                  >
+                    {appt.status === 'completed' ? '✓' : appt.status === 'confirmed' ? '◉' : '✗'}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Onay Modal */}
@@ -755,9 +950,81 @@ export function SpaScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyTxt: { color: premium.textMuted, fontSize: 14 },
-  header: { paddingHorizontal: 20, marginBottom: 20 },
+  header: { paddingHorizontal: 20, marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '900', color: premium.text },
   subtitle: { fontSize: 14, color: premium.textMuted, marginTop: 4 },
+  // Upcoming Appointment
+  upcomingCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: 'rgba(56,189,248,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.3)',
+  },
+  upcomingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  upcomingBadge: { fontSize: 12, fontWeight: '700', color: premium.accentBlue },
+  cancelTxt: { fontSize: 12, fontWeight: '700', color: '#ef4444' },
+  upcomingTime: { fontSize: 16, fontWeight: '800', color: premium.text },
+  upcomingDetail: { fontSize: 13, color: premium.textMuted, marginTop: 4 },
+  upcomingCountdown: { fontSize: 12, color: '#fbbf24', fontWeight: '700', marginTop: 6 },
+  // Package Card
+  packageCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: 'rgba(16,185,129,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.2)',
+  },
+  packageRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  packageName: { fontSize: 14, fontWeight: '800', color: premium.text },
+  packageSessions: { fontSize: 13, color: premium.textMuted, marginTop: 4 },
+  packageCount: { fontWeight: '800', color: premium.accentGreen },
+  packageExpiry: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  lowBadge: {
+    backgroundColor: 'rgba(245,158,11,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  lowBadgeTxt: { fontSize: 11, fontWeight: '700', color: '#f59e0b' },
+  requestBtn: {
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(16,185,129,0.15)',
+    alignItems: 'center',
+  },
+  requestBtnTxt: { fontSize: 13, fontWeight: '700', color: premium.accentGreen },
+  noPackageTxt: { fontSize: 13, color: premium.textMuted, marginBottom: 4 },
+  // History
+  historySection: { marginHorizontal: 20, marginTop: 20, marginBottom: 8 },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  historyTitle: { fontSize: 15, fontWeight: '800', color: premium.text },
+  historyToggle: { fontSize: 12, color: premium.textMuted },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148,163,184,0.08)',
+  },
+  historyService: { fontSize: 13, fontWeight: '700', color: premium.text },
+  historyDate: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
+  historyStatus: { fontSize: 16, fontWeight: '800', color: premium.textMuted },
   // Capacity Selection
   capacitySection: { paddingHorizontal: 20, marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 12 },
