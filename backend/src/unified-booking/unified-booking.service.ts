@@ -22,6 +22,7 @@ import { PackageType } from '../database/entities/package-type.entity';
 import { Campaign } from '../database/entities/campaign.entity';
 import { UserRole, PackageStatus, SessionType } from '../database/enums';
 import { MailService } from '../mail/mail.service';
+import { SmsService } from '../notifications/sms.service';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
@@ -46,6 +47,7 @@ export class UnifiedBookingService {
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     @InjectRepository(Campaign) private readonly campaignsRepo: Repository<Campaign>,
     private readonly mailService: MailService,
+    private readonly smsService: SmsService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════
@@ -455,6 +457,16 @@ export class UnifiedBookingService {
         const msg = err instanceof Error ? err.message : String(err);
         this.logger.error(`Failed to send booking confirmation email: ${msg}`);
       }
+    }
+
+    // SMS gönder
+    const guestPhoneForSms = md.guestPhone || '';
+    if (guestPhoneForSms) {
+      const tenantForSms = await this.tenantsRepo.findOne({ where: { id: tenantId } });
+      void this.smsService.send(
+        guestPhoneForSms,
+        `Rezervasyonunuz onaylandi: ${slot.service?.name ?? 'Rezervasyon'} - ${slot.date} ${slot.startTime}. ${tenantForSms?.name ?? 'Wellness Club'}`,
+      );
     }
 
     return { ok: true, appointmentId: saved.id };
@@ -905,6 +917,15 @@ export class UnifiedBookingService {
       } catch {
         // Mail hatası rezervasyonu engellemesin
       }
+    }
+
+    // SMS gönder
+    if (user.phone) {
+      const tenant = await this.tenantsRepo.findOne({ where: { id: slot.tenantId } });
+      void this.smsService.send(
+        user.phone,
+        `Rezervasyonunuz onaylandi: ${slot.service?.name ?? 'Seans'} - ${slot.date} ${slot.startTime}. Kalan seans: ${pkg.remainingSessions}. ${tenant?.name ?? 'Wellness Club'}`,
+      );
     }
 
     return {
