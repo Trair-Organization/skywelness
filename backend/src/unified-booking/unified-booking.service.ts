@@ -1148,7 +1148,7 @@ export class UnifiedBookingService {
    * Her oda için saatleri döner, her saatte hangi masözlerin müsait olduğunu gösterir.
    * Çift oda: 2 masöz gerekli, Tek oda: 1 masöz gerekli.
    */
-  async listSpaRoomAvailability(tenantSubdomain: string, date: string) {
+  async listSpaRoomAvailability(tenantSubdomain: string, date: string, participantCount?: number) {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
@@ -1222,7 +1222,8 @@ export class UnifiedBookingService {
       const roomSlotsForRoom = roomSlots.filter((s) => s.resourceId === room.id);
       const timeSlots = roomSlotsForRoom.map((rs) => {
         const availableTherapists = therapistsByTime.get(rs.startTime) || [];
-        const requiredTherapists = room.capacity; // Çift oda: 2, Tek oda: 1
+        // participantCount belirtilmişse onu kullan, yoksa oda kapasitesi
+        const requiredTherapists = participantCount ?? room.capacity;
         const isBookable = availableTherapists.length >= requiredTherapists;
 
         return {
@@ -1287,10 +1288,13 @@ export class UnifiedBookingService {
     const room = roomSlot.resourceId
       ? await this.resourcesRepo.findOne({ where: { id: roomSlot.resourceId } })
       : null;
-    const requiredTherapists = room?.capacity ?? 1;
+    // Gerekli masöz sayısı: client'ın gönderdiği kadar (tek kişi = 1, çift = 2)
+    // Ama oda kapasitesinden fazla olamaz
+    const maxTherapists = room?.capacity ?? 1;
+    const requiredTherapists = Math.min(data.therapistSlotIds.length, maxTherapists);
 
-    if (data.therapistSlotIds.length < requiredTherapists) {
-      throw new BadRequestException(`Bu oda için ${requiredTherapists} masöz seçilmelidir`);
+    if (data.therapistSlotIds.length < 1) {
+      throw new BadRequestException('En az 1 masöz seçilmelidir');
     }
 
     // Masöz slotlarını doğrula

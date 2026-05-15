@@ -95,8 +95,16 @@ export class UnifiedBookingController {
 
   /** Public: Oda bazlı spa müsaitliği (oda + masöz eşleşmesi) */
   @Get('schedule/spa-rooms')
-  listSpaRoomAvailability(@Query('tenant') tenant: string, @Query('date') date: string) {
-    return this.service.listSpaRoomAvailability(tenant, date);
+  listSpaRoomAvailability(
+    @Query('tenant') tenant: string,
+    @Query('date') date: string,
+    @Query('participants') participants?: string,
+  ) {
+    return this.service.listSpaRoomAvailability(
+      tenant,
+      date,
+      participants ? parseInt(participants) : undefined,
+    );
   }
 
   /** Admin: Toplu slot oluştur */

@@ -113,7 +113,7 @@ export function SpaScreen() {
     setLoading(true);
     try {
       const res = await apiJson<SpaRoomResponse>(
-        `/v2/schedule/spa-rooms?tenant=${encodeURIComponent(tenant.subdomain)}&date=${selectedDate}`,
+        `/v2/schedule/spa-rooms?tenant=${encodeURIComponent(tenant.subdomain)}&date=${selectedDate}&participants=${selectedCapacity}`,
         { auth: false },
       );
       setRoomData(res.rooms || []);
@@ -136,7 +136,9 @@ export function SpaScreen() {
   // Slot seçimi
   function handleSlotPress(room: RoomData, timeSlot: RoomTimeSlot) {
     if (!timeSlot.isBookable) return;
-    const selectedTherapists = timeSlot.availableTherapists.slice(0, timeSlot.requiredTherapists);
+    // Tek kişilik: 1 masöz seç, Çift kişilik: 2 masöz seç
+    const count = selectedCapacity === 2 ? Math.min(2, timeSlot.availableTherapists.length) : 1;
+    const selectedTherapists = timeSlot.availableTherapists.slice(0, count);
     setSelectedSlot({ room, timeSlot, selectedTherapists });
   }
 
@@ -146,7 +148,7 @@ export function SpaScreen() {
     setBooking(true);
     try {
       const pkg = findMassagePackage();
-      const sessionsNeeded = selectedSlot.room.capacity;
+      const sessionsNeeded = selectedCapacity!;
       const usePackage = pkg && pkg.remainingSessions >= sessionsNeeded;
 
       const res = await apiJson<{
@@ -216,8 +218,10 @@ export function SpaScreen() {
   }
 
   // Seçilen kapasiteye göre odaları filtrele
+  // Tek kişilik: TÜM odalar kullanılabilir (çift odada da tek kişi masaj olabilir)
+  // Çift kişilik: Sadece çift odalar (capacity >= 2)
   const filteredRooms = selectedCapacity
-    ? roomData.filter((r) => (selectedCapacity === 2 ? r.capacity >= 2 : r.capacity === 1))
+    ? roomData.filter((r) => (selectedCapacity === 2 ? r.capacity >= 2 : true))
     : [];
 
   // Geçmiş saatleri filtrele
@@ -347,7 +351,7 @@ export function SpaScreen() {
                 {/* Grid: Odalar sütun, Saatler dikey */}
                 <View style={styles.gridSection}>
                   <Text style={styles.gridTitle}>
-                    {selectedCapacity === 2 ? '👫 Çift Kişilik Odalar' : '🧖 Tek Kişilik Oda'}
+                    {selectedCapacity === 2 ? '👫 Çift Kişilik Odalar' : '🧖 Müsait Odalar'}
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View>
@@ -375,12 +379,15 @@ export function SpaScreen() {
                           {filteredRooms.map((room) => {
                             const ts = room.timeSlots.find((s) => s.startTime === time);
                             const isBookable = ts?.isBookable ?? false;
-                            const therapistNames =
+                            const therapistCount = ts?.availableTherapists.length ?? 0;
+                            const displayText =
                               ts && isBookable
-                                ? ts.availableTherapists
-                                    .slice(0, ts.requiredTherapists)
-                                    .map((t) => t.name.split(' ')[0])
-                                    .join('+')
+                                ? selectedCapacity === 1
+                                  ? `${therapistCount} masöz`
+                                  : ts.availableTherapists
+                                      .slice(0, ts.requiredTherapists)
+                                      .map((t) => t.name.split(' ')[0])
+                                      .join('+')
                                 : '';
                             return (
                               <Pressable
@@ -397,7 +404,7 @@ export function SpaScreen() {
                               >
                                 {isBookable ? (
                                   <Text style={[styles.gridCellTxt, styles.gridCellTxtAvailable]}>
-                                    {therapistNames || '✓'}
+                                    {displayText || '✓'}
                                   </Text>
                                 ) : (
                                   <Text style={styles.gridCellTxt}>—</Text>
@@ -454,10 +461,10 @@ export function SpaScreen() {
                 </View>
 
                 {/* Masöz Seçimi (değiştirilebilir — sadece fazla masöz varsa) */}
-                {selectedSlot.timeSlot.availableTherapists.length > selectedSlot.room.capacity && (
+                {selectedSlot.timeSlot.availableTherapists.length > selectedCapacity! && (
                   <View style={styles.therapistSelectSection}>
                     <Text style={styles.therapistSelectTitle}>
-                      Masöz Değiştir ({selectedSlot.room.capacity} seçin)
+                      Masöz Değiştir ({selectedCapacity!} seçin)
                     </Text>
                     {selectedSlot.timeSlot.availableTherapists.map((t) => {
                       const isSelected = selectedSlot.selectedTherapists.some(
@@ -481,9 +488,7 @@ export function SpaScreen() {
                                 });
                               }
                             } else {
-                              if (
-                                selectedSlot.selectedTherapists.length < selectedSlot.room.capacity
-                              ) {
+                              if (selectedSlot.selectedTherapists.length < selectedCapacity!) {
                                 setSelectedSlot({
                                   ...selectedSlot,
                                   selectedTherapists: [...selectedSlot.selectedTherapists, t],
@@ -516,13 +521,11 @@ export function SpaScreen() {
                 {/* Fiyat Bilgisi */}
                 <View style={styles.priceSection}>
                   <View style={styles.priceRow}>
-                    <Text style={styles.priceLabel}>
-                      Toplam ({selectedSlot.room.capacity} kişi)
-                    </Text>
+                    <Text style={styles.priceLabel}>Toplam ({selectedCapacity!} kişi)</Text>
                     <Text style={styles.priceValue}>
-                      {(
-                        parseFloat(selectedSlot.timeSlot.price) * selectedSlot.room.capacity
-                      ).toLocaleString('tr-TR')}
+                      {(parseFloat(selectedSlot.timeSlot.price) * selectedCapacity!).toLocaleString(
+                        'tr-TR',
+                      )}
                       ₺
                     </Text>
                   </View>
@@ -530,7 +533,7 @@ export function SpaScreen() {
                     <Text style={styles.priceLabelSub}>💳 Kapora (%15)</Text>
                     <Text style={styles.priceValueSub}>
                       {Math.ceil(
-                        parseFloat(selectedSlot.timeSlot.price) * selectedSlot.room.capacity * 0.15,
+                        parseFloat(selectedSlot.timeSlot.price) * selectedCapacity! * 0.15,
                       ).toLocaleString('tr-TR')}
                       ₺
                     </Text>
@@ -540,7 +543,7 @@ export function SpaScreen() {
                 {/* Paket Bilgisi */}
                 {(() => {
                   const pkg = findMassagePackage();
-                  const sessionsNeeded = selectedSlot.room.capacity;
+                  const sessionsNeeded = selectedCapacity!;
                   if (pkg && pkg.remainingSessions >= sessionsNeeded) {
                     return (
                       <View style={styles.packageInfo}>
@@ -559,7 +562,7 @@ export function SpaScreen() {
                   <View style={{ gap: 8, marginTop: 12 }}>
                     {(() => {
                       const pkg = findMassagePackage();
-                      const sessionsNeeded = selectedSlot.room.capacity;
+                      const sessionsNeeded = selectedCapacity!;
                       if (pkg && pkg.remainingSessions >= sessionsNeeded) {
                         return (
                           <Pressable
