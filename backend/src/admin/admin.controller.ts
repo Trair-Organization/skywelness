@@ -760,6 +760,20 @@ export class AdminController {
     return result;
   }
 
+  /** Admin: Üyeden eğitmen atamasını kaldır */
+  @Post('members/:userId/remove-trainer')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async removeTrainerFromMember(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { trainerId: string },
+  ) {
+    const result = await this.adminMembers.removeTrainerFromMember(admin.tenantId, userId, body.trainerId);
+    void this.logAction(admin, 'trainer_removed', 'user', userId, { trainerId: body.trainerId });
+    return result;
+  }
+
   /** Admin: Üye hesabını dondur */
   @Post('members/:userId/suspend')
   @UseGuards(JwtAuthGuard, RolesGuard)

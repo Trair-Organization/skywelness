@@ -2158,6 +2158,17 @@ export class AdminMembersService {
     };
   }
 
+  /** Admin: Üyeden eğitmen atamasını kaldır */
+  async removeTrainerFromMember(tenantId: string, userId: string, trainerId: string) {
+    const link = await this.trainerMemberLinksRepo.findOne({
+      where: { trainerId, memberUserId: userId, tenantId },
+    });
+    if (!link) throw new NotFoundException('Atama bulunamadı');
+
+    await this.trainerMemberLinksRepo.remove(link);
+    return { ok: true, removedTrainerId: trainerId };
+  }
+
   /** Admin: Üye hesabını dondur/askıya al */
   async suspendMember(tenantId: string, userId: string, reason?: string) {
     const user = await this.usersRepo.findOne({

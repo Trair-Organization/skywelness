@@ -607,6 +607,16 @@ export function MembersPage() {
                     {detail.assignedTrainers.map((t) => (
                       <div key={t.linkId} style={{ padding: '8px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e40af' }}>🏋️ {t.trainerName}</span>
+                        <button onClick={() => {
+                          if (!confirm(`${t.trainerName} ataması kaldırılsın mı?`)) return;
+                          void apiJson(`/admin/members/${detail.id}/remove-trainer`, {
+                            method: 'POST',
+                            body: JSON.stringify({ trainerId: t.trainerId }),
+                          }).then(() => void openDetail(detail as unknown as Member))
+                            .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+                        }} style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid #fee2e2', background: '#fff', color: '#dc2626', fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer' }}>
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
