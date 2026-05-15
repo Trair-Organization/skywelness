@@ -1514,8 +1514,8 @@ function TrainerAssignForm({ userId, onSaved }: { userId: string; tenantTrainers
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    apiJson<Array<{ id: string; firstName: string; lastName: string }>>('/admin/trainers')
-      .then(setTrainers)
+    apiJson<Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>>('/admin/trainers')
+      .then((data) => setTrainers(data.filter((t) => t.offersSessionTypes?.includes('personal_training'))))
       .catch(() => setTrainers([]));
   }, []);
 
