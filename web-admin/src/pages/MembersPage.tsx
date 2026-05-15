@@ -86,6 +86,7 @@ export function MembersPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
   const [selectedPkgType, setSelectedPkgType] = useState('');
+  const [selectedPkgTrainer, setSelectedPkgTrainer] = useState('');
   const [assigningPkg, setAssigningPkg] = useState(false);
 
   const load = useCallback(async (status: string, searchTerm: string) => {
@@ -152,16 +153,24 @@ export function MembersPage() {
 
   async function assignPackage() {
     if (!detail || !selectedPkgType) return;
+    const pkg = packageTypes.find((p) => p.id === selectedPkgType);
+    if (pkg?.sessionType === 'personal_training' && !selectedPkgTrainer) {
+      alert('PT paketi için eğitmen seçimi zorunludur.');
+      return;
+    }
     setAssigningPkg(true);
     try {
       await apiJson(`/admin/members/${detail.id}/assign-package`, {
         method: 'POST',
-        body: JSON.stringify({ packageTypeId: selectedPkgType }),
+        body: JSON.stringify({
+          packageTypeId: selectedPkgType,
+          assignedTrainerId: pkg?.sessionType === 'personal_training' ? selectedPkgTrainer : undefined,
+        }),
       });
-      // Reload detail
       const d = await apiJson<MemberDetail>(`/admin/members/${detail.id}/detail`);
       setDetail(d);
       setSelectedPkgType('');
+      setSelectedPkgTrainer('');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Paket atanamadı');
     } finally {
@@ -793,12 +802,11 @@ export function MembersPage() {
                   >
                     Yeni Paket Ata
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <select
                       value={selectedPkgType}
-                      onChange={(e) => setSelectedPkgType(e.target.value)}
+                      onChange={(e) => { setSelectedPkgType(e.target.value); setSelectedPkgTrainer(''); }}
                       style={{
-                        flex: 1,
                         padding: '6px 10px',
                         borderRadius: 6,
                         border: '1px solid #e2e8f0',
@@ -814,6 +822,22 @@ export function MembersPage() {
                         </option>
                       ))}
                     </select>
+                    {(() => {
+                      const pkg = packageTypes.find((p) => p.id === selectedPkgType);
+                      if (pkg?.sessionType !== 'personal_training') return null;
+                      return (
+                        <select
+                          value={selectedPkgTrainer}
+                          onChange={(e) => setSelectedPkgTrainer(e.target.value)}
+                          style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.8rem', background: '#fff', color: '#0f172a' }}
+                        >
+                          <option value="">Eğitmen seçin (zorunlu)...</option>
+                          {detail.assignedTrainers.map((t) => (
+                            <option key={t.trainerId} value={t.trainerId}>{t.trainerName}</option>
+                          ))}
+                        </select>
+                      );
+                    })()}
                     <button
                       onClick={() => void assignPackage()}
                       disabled={!selectedPkgType || assigningPkg}
