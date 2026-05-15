@@ -35,6 +35,10 @@ export class ScheduleSlot {
   @Column({ type: 'uuid', nullable: true, name: 'provider_id' })
   providerId!: string | null;
 
+  /** Fiziksel kaynak (oda, kort) — opsiyonel. */
+  @Column({ type: 'uuid', nullable: true, name: 'resource_id' })
+  resourceId!: string | null;
+
   @Column({ type: 'date' })
   date!: string;
 

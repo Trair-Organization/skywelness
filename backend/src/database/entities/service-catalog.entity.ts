@@ -36,6 +36,10 @@ export class ServiceCatalog {
   @Column({ type: 'uuid', nullable: true, name: 'provider_id' })
   providerId!: string | null;
 
+  /** Fiziksel kaynak (oda, kort vb.) — opsiyonel. */
+  @Column({ type: 'uuid', nullable: true, name: 'resource_id' })
+  resourceId!: string | null;
+
   @Column({ type: 'int', name: 'duration_minutes', default: 60 })
   durationMinutes!: number;
 

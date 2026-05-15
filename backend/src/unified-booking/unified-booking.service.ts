@@ -93,6 +93,7 @@ export class UnifiedBookingService {
           currency: s.currency,
           capacity: s.capacity,
           imageUrl: s.imageUrl,
+          resourceId: s.resourceId,
           metadata: s.metadata,
         };
       }),
@@ -994,6 +995,7 @@ export class UnifiedBookingService {
       serviceId: string;
       providerType: string;
       providerId?: string;
+      resourceId?: string;
       startDate: string;
       endDate: string;
       startHour: number;
@@ -1030,6 +1032,7 @@ export class UnifiedBookingService {
             serviceId: data.serviceId,
             providerType: data.providerType,
             providerId: data.providerId ?? null,
+            resourceId: data.resourceId ?? service.resourceId ?? null,
             date: dateStr,
             startTime,
             endTime,

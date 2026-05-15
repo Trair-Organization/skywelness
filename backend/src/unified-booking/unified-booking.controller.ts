@@ -98,6 +98,7 @@ export class UnifiedBookingController {
       serviceId: string;
       providerType: string;
       providerId?: string;
+      resourceId?: string;
       startDate: string;
       endDate: string;
       startHour: number;
