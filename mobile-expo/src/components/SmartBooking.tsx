@@ -708,73 +708,64 @@ export function SmartBooking({ subdomain, category, providerId, participantCount
           ) : (
           /* Çift kişilik grid: sadece 2+ masöz müsait olan saatler */
           <View style={styles.gridSection}>
-            <Text style={styles.gridTitle}>🧖‍♀️🧖‍♂️ Çift Masaj — Müsait Saatler</Text>
-            <View style={{ paddingHorizontal: 20, gap: 8 }}>
-              {hours
-                .filter((h) => !isToday || parseInt(h.start) > currentHour)
-                .map((h) => {
-                  // Bu saatte kaç masöz müsait?
-                  const availableInHour = services
-                    .map((svc) => ({ svc, slot: getSlotForServiceHour(svc.id, h.start) }))
-                    .filter(({ slot }) => slot && slot.remainingCapacity > 0);
-                  const isAvailable = availableInHour.length >= 2;
-                  if (!isAvailable) return null;
-                  const therapistNames = availableInHour
-                    .slice(0, 2)
-                    .map(({ svc }) => svc.providerName || svc.name.replace(' - Masaj Seansı', ''))
-                    .join(' + ');
-                  const firstSlot = availableInHour[0].slot!;
-                  return (
-                    <Pressable
-                      key={h.start}
-                      style={({ pressed }) => [
-                        {
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: 14,
-                          borderRadius: 12,
-                          borderWidth: 1,
-                          borderColor: 'rgba(16,185,129,0.3)',
-                          backgroundColor: pressed ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.06)',
-                        },
-                      ]}
-                      onPress={() => handleSlotSelect(firstSlot.id)}
-                      disabled={booking}
-                    >
-                      <View>
-                        <Text style={{ fontSize: 16, fontWeight: '800', color: premium.text }}>
-                          {h.label}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: premium.textMuted, marginTop: 2 }}>
-                          {therapistNames}
-                        </Text>
+            <Text style={styles.gridTitle}>🧖‍♀️🧖‍♂️ Çift Masaj — Tüm Saatler</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View>
+                {/* Header */}
+                <View style={styles.gridRow}>
+                  <View style={styles.gridTimeCell}>
+                    <Text style={styles.gridHeaderTxt}>Saat</Text>
+                  </View>
+                  <View style={[styles.gridProviderCell, { width: 140 }]}>
+                    <Text style={styles.gridProviderTxt}>Çift Masaj Odası</Text>
+                    <Text style={styles.gridProviderCapacity}>2 kişi</Text>
+                  </View>
+                </View>
+                {/* Rows */}
+                {hours
+                  .filter((h) => !isToday || parseInt(h.start) > currentHour)
+                  .map((h) => {
+                    const availableInHour = services
+                      .map((svc) => ({ svc, slot: getSlotForServiceHour(svc.id, h.start) }))
+                      .filter(({ slot }) => slot && slot.remainingCapacity > 0);
+                    const isAvailable = availableInHour.length >= 2;
+                    const firstSlot = isAvailable ? availableInHour[0].slot! : null;
+                    const therapistNames = isAvailable
+                      ? availableInHour
+                          .slice(0, 2)
+                          .map(({ svc }) => (svc.providerName || svc.name.replace(' - Masaj Seansı', '')).split(' ')[0])
+                          .join('+')
+                      : '';
+                    return (
+                      <View key={h.start} style={styles.gridRow}>
+                        <View style={styles.gridTimeCell}>
+                          <Text style={styles.gridTimeTxt}>{h.label}</Text>
+                        </View>
+                        <Pressable
+                          style={[
+                            styles.gridCell,
+                            { width: 140 },
+                            isAvailable && styles.gridCellAvailable,
+                            !isAvailable && styles.gridCellBooked,
+                          ]}
+                          onPress={() => {
+                            if (isAvailable && firstSlot) handleSlotSelect(firstSlot.id);
+                          }}
+                          disabled={!isAvailable || booking}
+                        >
+                          {isAvailable ? (
+                            <Text style={[styles.gridCellTxt, styles.gridCellTxtAvailable, { fontSize: 10 }]}>
+                              ✓ {therapistNames}
+                            </Text>
+                          ) : (
+                            <Text style={styles.gridCellTxt}>—</Text>
+                          )}
+                        </Pressable>
                       </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ fontSize: 16, fontWeight: '900', color: premium.accentGreen }}>
-                          {(parseFloat(firstSlot.price) * 2).toLocaleString('tr-TR')}₺
-                        </Text>
-                        <Text style={{ fontSize: 11, color: premium.accentGreen, fontWeight: '700' }}>
-                          Rezerve Et →
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })
-                .filter(Boolean)}
-              {hours
-                .filter((h) => !isToday || parseInt(h.start) > currentHour)
-                .every((h) => {
-                  const availableInHour = services
-                    .map((svc) => ({ slot: getSlotForServiceHour(svc.id, h.start) }))
-                    .filter(({ slot }) => slot && slot.remainingCapacity > 0);
-                  return availableInHour.length < 2;
-                }) && (
-                <Text style={{ color: premium.textMuted, textAlign: 'center', padding: 20 }}>
-                  Bu tarihte çift kişilik müsait seans bulunamadı.
-                </Text>
-              )}
-            </View>
+                    );
+                  })}
+              </View>
+            </ScrollView>
           </View>
           )}
 
