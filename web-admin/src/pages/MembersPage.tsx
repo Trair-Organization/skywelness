@@ -24,6 +24,14 @@ type MemberDetail = {
   accountStatus: string;
   lastLogin: string | null;
   createdAt: string;
+  membership: {
+    id: string;
+    membershipType: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    price: string;
+  } | null;
   packages: Array<{
     id: string;
     status: string;
@@ -509,6 +517,123 @@ export function MembersPage() {
                   }
                 />
               </div>
+
+              {/* Üyelik Bilgisi */}
+              <div style={{ marginTop: 16 }}>
+                <h3
+                  style={{
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    margin: '0 0 10px',
+                  }}
+                >
+                  🎫 Üyelik
+                </h3>
+                {detail.membership ? (
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      border: '1px solid #e2e8f0',
+                      background: '#f8fafc',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
+                        {detail.membership.membershipType === 'monthly'
+                          ? 'Aylık'
+                          : detail.membership.membershipType === 'yearly'
+                            ? 'Yıllık'
+                            : detail.membership.membershipType}
+                      </span>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          background: detail.membership.status === 'active' ? '#dcfce7' : '#fee2e2',
+                          color: detail.membership.status === 'active' ? '#166534' : '#991b1b',
+                        }}
+                      >
+                        {detail.membership.status === 'active' ? 'Aktif' : 'Süresi Dolmuş'}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 16,
+                        marginTop: 6,
+                        fontSize: '0.8rem',
+                        color: '#64748b',
+                      }}
+                    >
+                      <span>
+                        📅 {detail.membership.startDate} → {detail.membership.endDate}
+                      </span>
+                      <span>💰 {parseFloat(detail.membership.price).toLocaleString('tr-TR')}₺</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>
+                    Üyelik tanımlı değil
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    const type = prompt('Üyelik tipi (monthly / yearly):', 'monthly');
+                    if (!type) return;
+                    const startDate = prompt(
+                      'Başlangıç (YYYY-MM-DD):',
+                      new Date().toISOString().slice(0, 10),
+                    );
+                    if (!startDate) return;
+                    const endDate = prompt(
+                      'Bitiş (YYYY-MM-DD):',
+                      (() => {
+                        const d = new Date();
+                        d.setMonth(d.getMonth() + 1);
+                        return d.toISOString().slice(0, 10);
+                      })(),
+                    );
+                    if (!endDate) return;
+                    const price = prompt('Aylık ücret (₺):', '5000');
+                    void apiJson(`/admin/members/${detail.id}/membership`, {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        membershipType: type,
+                        startDate,
+                        endDate,
+                        price: price ? parseFloat(price) : 0,
+                      }),
+                    })
+                      .then(() => {
+                        void openDetail(detail as unknown as Member);
+                      })
+                      .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+                  }}
+                  style={{
+                    marginTop: 8,
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    border: '1px solid #e2e8f0',
+                    background: '#fff',
+                    color: '#374151',
+                    fontWeight: 600,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {detail.membership ? '✏️ Üyelik Güncelle' : '+ Üyelik Ekle'}
+                </button>
+              </div>
             </div>
 
             {/* Sağ: Paketler */}
@@ -577,10 +702,55 @@ export function MembersPage() {
                         <span>📅 {pkg.expiresAt}</span>
                         {pkg.assignedTrainerName && <span>🏋️ {pkg.assignedTrainerName}</span>}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 4 }}>
-                        {pkg.packageType.sessionType === 'personal_training'
-                          ? '🏋️ PT Paketi'
-                          : '💆 Masaj Paketi'}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginTop: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          {pkg.packageType.sessionType === 'personal_training'
+                            ? '🏋️ PT Paketi'
+                            : '💆 Masaj Paketi'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const count = prompt(
+                              `Kaç seans eklensin? (Mevcut: ${pkg.remainingSessions})`,
+                              '10',
+                            );
+                            if (!count || parseInt(count) <= 0) return;
+                            void apiJson<{ newTotal: number }>(
+                              `/admin/members/${detail.id}/packages/${pkg.id}/add-sessions`,
+                              {
+                                method: 'POST',
+                                body: JSON.stringify({ sessions: parseInt(count) }),
+                              },
+                            )
+                              .then((res) => {
+                                alert(`✅ Seans eklendi. Yeni toplam: ${res.newTotal}`);
+                                void openDetail(detail as unknown as Member);
+                              })
+                              .catch((err: unknown) =>
+                                alert(err instanceof Error ? err.message : 'Hata'),
+                              );
+                          }}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 5,
+                            border: '1px solid #e2e8f0',
+                            background: '#fff',
+                            color: '#2563eb',
+                            fontWeight: 600,
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          + Seans Ekle
+                        </button>
                       </div>
                     </div>
                   ))}
