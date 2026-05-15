@@ -346,77 +346,204 @@ export function SpaScreen() {
                   Bu tarihte müsait oda slotu bulunmuyor.{'\n'}Başka bir gün deneyin.
                 </Text>
               </View>
-            ) : (
-              <>
-                {/* Grid: Odalar sütun, Saatler dikey */}
-                <View style={styles.gridSection}>
-                  <Text style={styles.gridTitle}>
-                    {selectedCapacity === 2 ? '👫 Çift Kişilik Odalar' : '🧖 Müsait Odalar'}
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View>
-                      {/* Header: Oda isimleri */}
-                      <View style={styles.gridRow}>
-                        <View style={styles.gridTimeCell}>
-                          <Text style={styles.gridHeaderTxt}>Saat</Text>
-                        </View>
-                        {filteredRooms.map((room) => (
-                          <View key={room.roomId} style={styles.gridProviderCell}>
-                            <Text style={styles.gridProviderTxt} numberOfLines={2}>
-                              {room.roomName.replace('Masaj Odası ', 'Oda ')}
-                            </Text>
-                            <Text style={styles.gridProviderCapacity}>{room.price}₺</Text>
-                          </View>
-                        ))}
+            ) : selectedCapacity === 2 ? (
+              /* ═══ Çift Kişilik: Sadece çift odalar ═══ */
+              <View style={styles.gridSection}>
+                <Text style={styles.gridTitle}>👫 Çift Kişilik Odalar</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View>
+                    <View style={styles.gridRow}>
+                      <View style={styles.gridTimeCell}>
+                        <Text style={styles.gridHeaderTxt}>Saat</Text>
                       </View>
-
-                      {/* Rows: Her saat */}
-                      {sortedTimes.map((time) => (
-                        <View key={time} style={styles.gridRow}>
-                          <View style={styles.gridTimeCell}>
-                            <Text style={styles.gridTimeTxt}>{time}</Text>
-                          </View>
-                          {filteredRooms.map((room) => {
-                            const ts = room.timeSlots.find((s) => s.startTime === time);
-                            const isBookable = ts?.isBookable ?? false;
-                            const therapistCount = ts?.availableTherapists.length ?? 0;
-                            const displayText =
-                              ts && isBookable
-                                ? selectedCapacity === 1
-                                  ? `${therapistCount} masöz`
-                                  : ts.availableTherapists
-                                      .slice(0, ts.requiredTherapists)
-                                      .map((t) => t.name.split(' ')[0])
-                                      .join('+')
-                                : '';
-                            return (
-                              <Pressable
-                                key={room.roomId}
-                                style={[
-                                  styles.gridCell,
-                                  isBookable && styles.gridCellAvailable,
-                                  !isBookable && styles.gridCellBooked,
-                                ]}
-                                onPress={() => {
-                                  if (isBookable && ts) handleSlotPress(room, ts);
-                                }}
-                                disabled={!isBookable || booking}
-                              >
-                                {isBookable ? (
-                                  <Text style={[styles.gridCellTxt, styles.gridCellTxtAvailable]}>
-                                    {displayText || '✓'}
-                                  </Text>
-                                ) : (
-                                  <Text style={styles.gridCellTxt}>—</Text>
-                                )}
-                              </Pressable>
-                            );
-                          })}
+                      {filteredRooms.map((room) => (
+                        <View key={room.roomId} style={styles.gridProviderCell}>
+                          <Text style={styles.gridProviderTxt} numberOfLines={2}>
+                            {room.roomName.replace('Masaj Odası ', 'Oda ')}
+                          </Text>
+                          <Text style={styles.gridProviderCapacity}>{room.price}₺</Text>
                         </View>
                       ))}
                     </View>
-                  </ScrollView>
-                </View>
+                    {sortedTimes.map((time) => (
+                      <View key={time} style={styles.gridRow}>
+                        <View style={styles.gridTimeCell}>
+                          <Text style={styles.gridTimeTxt}>{time}</Text>
+                        </View>
+                        {filteredRooms.map((room) => {
+                          const ts = room.timeSlots.find((s) => s.startTime === time);
+                          const isBookable = ts?.isBookable ?? false;
+                          const displayText =
+                            ts && isBookable
+                              ? ts.availableTherapists
+                                  .slice(0, ts.requiredTherapists)
+                                  .map((t) => t.name.split(' ')[0])
+                                  .join('+')
+                              : '';
+                          return (
+                            <Pressable
+                              key={room.roomId}
+                              style={[
+                                styles.gridCell,
+                                isBookable && styles.gridCellAvailable,
+                                !isBookable && styles.gridCellBooked,
+                              ]}
+                              onPress={() => {
+                                if (isBookable && ts) handleSlotPress(room, ts);
+                              }}
+                              disabled={!isBookable || booking}
+                            >
+                              {isBookable ? (
+                                <Text style={[styles.gridCellTxt, styles.gridCellTxtAvailable]}>
+                                  {displayText || '✓'}
+                                </Text>
+                              ) : (
+                                <Text style={styles.gridCellTxt}>—</Text>
+                              )}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            ) : (
+              /* ═══ Tek Kişilik: Önce tek oda, sonra çift odalar alternatif ═══ */
+              <>
+                {(() => {
+                  const singleRooms = filteredRooms.filter((r) => r.capacity === 1);
+                  const coupleRooms = filteredRooms.filter((r) => r.capacity >= 2);
+
+                  return (
+                    <>
+                      {/* Bölüm 1: Tek Kişilik Oda (Öncelikli) */}
+                      {singleRooms.length > 0 && (
+                        <View style={styles.gridSection}>
+                          <Text style={styles.gridTitle}>🧖 Tek Kişilik Oda</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View>
+                              <View style={styles.gridRow}>
+                                <View style={styles.gridTimeCell}>
+                                  <Text style={styles.gridHeaderTxt}>Saat</Text>
+                                </View>
+                                {singleRooms.map((room) => (
+                                  <View key={room.roomId} style={styles.gridProviderCell}>
+                                    <Text style={styles.gridProviderTxt} numberOfLines={2}>
+                                      {room.roomName.replace('Masaj Odası ', 'Oda ')}
+                                    </Text>
+                                    <Text style={styles.gridProviderCapacity}>{room.price}₺</Text>
+                                  </View>
+                                ))}
+                              </View>
+                              {sortedTimes.map((time) => (
+                                <View key={time} style={styles.gridRow}>
+                                  <View style={styles.gridTimeCell}>
+                                    <Text style={styles.gridTimeTxt}>{time}</Text>
+                                  </View>
+                                  {singleRooms.map((room) => {
+                                    const ts = room.timeSlots.find((s) => s.startTime === time);
+                                    const isBookable = ts?.isBookable ?? false;
+                                    const count = ts?.availableTherapists.length ?? 0;
+                                    return (
+                                      <Pressable
+                                        key={room.roomId}
+                                        style={[
+                                          styles.gridCell,
+                                          isBookable && styles.gridCellAvailable,
+                                          !isBookable && styles.gridCellBooked,
+                                        ]}
+                                        onPress={() => {
+                                          if (isBookable && ts) handleSlotPress(room, ts);
+                                        }}
+                                        disabled={!isBookable || booking}
+                                      >
+                                        {isBookable ? (
+                                          <Text
+                                            style={[
+                                              styles.gridCellTxt,
+                                              styles.gridCellTxtAvailable,
+                                            ]}
+                                          >
+                                            {count} masöz
+                                          </Text>
+                                        ) : (
+                                          <Text style={styles.gridCellTxt}>—</Text>
+                                        )}
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+                              ))}
+                            </View>
+                          </ScrollView>
+                        </View>
+                      )}
+
+                      {/* Bölüm 2: Çift Odalar (Alternatif) */}
+                      {coupleRooms.length > 0 && (
+                        <View style={styles.gridSection}>
+                          <View style={styles.altHeader}>
+                            <Text style={styles.altHeaderTxt}>
+                              💡 Tek oda doluysa → Çift odalarda da tek masaj yapılabilir
+                            </Text>
+                          </View>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View>
+                              <View style={styles.gridRow}>
+                                <View style={styles.gridTimeCell}>
+                                  <Text style={styles.gridHeaderTxt}>Saat</Text>
+                                </View>
+                                {coupleRooms.map((room) => (
+                                  <View key={room.roomId} style={styles.gridProviderCell}>
+                                    <Text style={styles.gridProviderTxt} numberOfLines={2}>
+                                      {room.roomName.replace('Masaj Odası ', 'Oda ')}
+                                    </Text>
+                                    <Text style={styles.gridProviderCapacity}>{room.price}₺</Text>
+                                  </View>
+                                ))}
+                              </View>
+                              {sortedTimes.map((time) => (
+                                <View key={time} style={styles.gridRow}>
+                                  <View style={styles.gridTimeCell}>
+                                    <Text style={styles.gridTimeTxt}>{time}</Text>
+                                  </View>
+                                  {coupleRooms.map((room) => {
+                                    const ts = room.timeSlots.find((s) => s.startTime === time);
+                                    const isBookable = ts?.isBookable ?? false;
+                                    const count = ts?.availableTherapists.length ?? 0;
+                                    return (
+                                      <Pressable
+                                        key={room.roomId}
+                                        style={[
+                                          styles.gridCell,
+                                          isBookable && styles.gridCellAlt,
+                                          !isBookable && styles.gridCellBooked,
+                                        ]}
+                                        onPress={() => {
+                                          if (isBookable && ts) handleSlotPress(room, ts);
+                                        }}
+                                        disabled={!isBookable || booking}
+                                      >
+                                        {isBookable ? (
+                                          <Text style={[styles.gridCellTxt, styles.gridCellTxtAlt]}>
+                                            {count} masöz
+                                          </Text>
+                                        ) : (
+                                          <Text style={styles.gridCellTxt}>—</Text>
+                                        )}
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+                              ))}
+                            </View>
+                          </ScrollView>
+                        </View>
+                      )}
+                    </>
+                  );
+                })()}
               </>
             )}
           </>
@@ -708,8 +835,25 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(16,185,129,0.4)',
   },
   gridCellBooked: { backgroundColor: 'rgba(100,116,139,0.08)' },
+  gridCellAlt: {
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.3)',
+  },
   gridCellTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
   gridCellTxtAvailable: { color: '#10b981' },
+  gridCellTxtAlt: { color: '#fbbf24' },
+  // Alt Header
+  altHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.2)',
+  },
+  altHeaderTxt: { fontSize: 12, color: '#fbbf24', fontWeight: '700' },
   // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalCard: {
