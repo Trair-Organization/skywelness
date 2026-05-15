@@ -87,6 +87,15 @@ export class UnifiedBookingController {
     return this.service.listProviderSlots(tenant, providerId, date);
   }
 
+  /** Public: Çift kişilik masaj müsaitliği (2+ masöz aynı saatte) */
+  @Get('schedule/couples')
+  listCouplesAvailability(
+    @Query('tenant') tenant: string,
+    @Query('date') date: string,
+  ) {
+    return this.service.listCouplesAvailability(tenant, date);
+  }
+
   /** Admin: Toplu slot oluştur */
   @Post('schedule/generate')
   @UseGuards(JwtAuthGuard, RolesGuard)

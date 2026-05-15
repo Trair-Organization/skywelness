@@ -225,6 +225,7 @@ type Props = {
   subdomain: string;
   category?: string; // 'court_rental' | 'personal_training' | 'massage' | undefined (all)
   providerId?: string; // Belirli bir eğitmen/masöz için filtrele
+  participantCount?: number; // Katılımcı sayısı (çift masaj = 2)
 };
 
 const DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];

@@ -1046,6 +1046,97 @@ export class UnifiedBookingService {
       }));
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // COUPLES AVAILABILITY (Çift Kişilik Masaj)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Çift kişilik masaj müsaitliği:
+   * Aynı saatte 2+ masöz müsait + çift kişilik oda boş olan saatleri döner.
+   */
+  async listCouplesAvailability(tenantSubdomain: string, date: string) {
+    const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    // Masaj slotlarını getir (o tarih, available, massage kategorisi)
+    const massageServices = await this.servicesRepo.find({
+      where: { tenantId: tenant.id, category: 'massage', active: true },
+    });
+    if (massageServices.length === 0) return [];
+
+    const serviceIds = massageServices.map((s) => s.id);
+
+    const slots = await this.slotsRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.service', 'svc')
+      .where('s.tenantId = :tid', { tid: tenant.id })
+      .andWhere('s.date = :date', { date })
+      .andWhere('s.status = :status', { status: 'available' })
+      .andWhere('s.serviceId IN (:...serviceIds)', { serviceIds })
+      .andWhere('s.bookedCount < s.capacity')
+      .orderBy('s.startTime', 'ASC')
+      .getMany();
+
+    // Saatlere göre grupla
+    const byTime = new Map<string, typeof slots>();
+    for (const slot of slots) {
+      const key = slot.startTime;
+      if (!byTime.has(key)) byTime.set(key, []);
+      byTime.get(key)!.push(slot);
+    }
+
+    // Her saat için: 2+ farklı masöz müsait mi?
+    const results: Array<{
+      startTime: string;
+      endTime: string;
+      therapists: Array<{ id: string; name: string; slotId: string }>;
+      totalPrice: number;
+      currency: string;
+    }> = [];
+
+    for (const [startTime, timeSlots] of byTime.entries()) {
+      // Farklı masözlerin slotları (providerId unique)
+      const uniqueTherapists = new Map<string, (typeof timeSlots)[0]>();
+      for (const s of timeSlots) {
+        if (s.providerId && !uniqueTherapists.has(s.providerId)) {
+          uniqueTherapists.set(s.providerId, s);
+        }
+      }
+
+      if (uniqueTherapists.size >= 2) {
+        // İlk 2 masözü al
+        const therapistSlots = Array.from(uniqueTherapists.values()).slice(0, 2);
+        const therapistNames: Array<{ id: string; name: string; slotId: string }> = [];
+
+        for (const ts of therapistSlots) {
+          let name = 'Masöz';
+          if (ts.providerId) {
+            const trainer = await this.trainersRepo.findOne({
+              where: { id: ts.providerId },
+              relations: ['user'],
+            });
+            if (trainer?.user) {
+              name = `${trainer.user.firstName} ${trainer.user.lastName}`.trim();
+            }
+          }
+          therapistNames.push({ id: ts.providerId!, name, slotId: ts.id });
+        }
+
+        const totalPrice = therapistSlots.reduce((sum, s) => sum + parseFloat(s.price), 0);
+
+        results.push({
+          startTime,
+          endTime: therapistSlots[0].endTime,
+          therapists: therapistNames,
+          totalPrice,
+          currency: therapistSlots[0].currency,
+        });
+      }
+    }
+
+    return results;
+  }
+
   /** Admin: Toplu slot oluştur (belirli tarih aralığı, saat aralığı) */
   async generateSlots(
     tenantId: string,
