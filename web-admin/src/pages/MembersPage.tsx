@@ -1156,7 +1156,7 @@ export function MembersPage() {
           <button onClick={() => setBulkAction('mail')} style={{ ...bulkBtnStyle, background: '#dbeafe', color: '#1e40af' }}>
             📧 Toplu Mail
           </button>
-          <button onClick={() => { setBulkAction('package'); if (packageTypes.length === 0) { void apiJson<PackageType[]>('/booking/package-types').then(setPackageTypes).catch(() => {}); } }} style={{ ...bulkBtnStyle, background: '#fef3c7', color: '#92400e' }}>
+          <button onClick={() => { setBulkAction('package'); if (packageTypes.length === 0) { void apiJson<PackageType[]>('/admin/package-types').then(setPackageTypes).catch(() => {}); } }} style={{ ...bulkBtnStyle, background: '#fef3c7', color: '#92400e' }}>
             📦 Toplu Paket
           </button>
         </div>
