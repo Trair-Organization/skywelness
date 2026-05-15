@@ -41,6 +41,13 @@ type MyPackage = {
   remainingSessions: number;
 };
 
+type CapacityOption = { label: string; value: number; icon: string; desc: string };
+
+const CAPACITY_OPTIONS: CapacityOption[] = [
+  { label: 'Tek Kişilik', value: 1, icon: '🧖', desc: 'Bireysel masaj seansı' },
+  { label: 'Çift Kişilik', value: 2, icon: '🧖‍♀️🧖‍♂️', desc: 'Çiftler için masaj seansı' },
+];
+
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
 const DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
@@ -64,10 +71,11 @@ function getWeekDays() {
 
 export function SpaScreen() {
   const insets = useSafeAreaInsets();
-  const { tenant, token, user } = useMemberAuth();
+  const { tenant, token } = useMemberAuth();
+  const [selectedCapacity, setSelectedCapacity] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [roomData, setRoomData] = useState<RoomData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [myPackages, setMyPackages] = useState<MyPackage[]>([]);
 
@@ -101,7 +109,7 @@ export function SpaScreen() {
 
   // Oda müsaitliğini yükle
   const loadRooms = useCallback(async () => {
-    if (!tenant?.subdomain) return;
+    if (!tenant?.subdomain || !selectedCapacity) return;
     setLoading(true);
     try {
       const res = await apiJson<SpaRoomResponse>(
@@ -114,7 +122,7 @@ export function SpaScreen() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.subdomain, selectedDate]);
+  }, [tenant?.subdomain, selectedDate, selectedCapacity]);
 
   useEffect(() => {
     void loadRooms();
@@ -128,7 +136,6 @@ export function SpaScreen() {
   // Slot seçimi
   function handleSlotPress(room: RoomData, timeSlot: RoomTimeSlot) {
     if (!timeSlot.isBookable) return;
-    // Otomatik masöz seçimi: ilk N masözü seç
     const selectedTherapists = timeSlot.availableTherapists.slice(0, timeSlot.requiredTherapists);
     setSelectedSlot({ room, timeSlot, selectedTherapists });
   }
@@ -161,7 +168,6 @@ export function SpaScreen() {
         }),
       });
 
-      // Başarı animasyonu
       setBookingSuccess(true);
       setSuccessData({
         room: res.room,
@@ -177,7 +183,6 @@ export function SpaScreen() {
         useNativeDriver: true,
       }).start();
 
-      // Paket güncelle
       if (usePackage && res.remainingSessions !== null) {
         setMyPackages((prev) =>
           prev.map((p) =>
@@ -210,21 +215,35 @@ export function SpaScreen() {
     );
   }
 
-  // Saatleri hesapla (grid için)
+  // Seçilen kapasiteye göre odaları filtrele
+  const filteredRooms = selectedCapacity
+    ? roomData.filter((r) => (selectedCapacity === 2 ? r.capacity >= 2 : r.capacity === 1))
+    : [];
+
+  // Geçmiş saatleri filtrele
   const now = new Date();
   const currentHour = now.getHours();
   const isToday = selectedDate === new Date().toISOString().slice(0, 10);
 
-  // Tüm odaların tüm saatlerini birleştir
+  // Tüm müsait saatleri topla
   const allTimes = new Set<string>();
-  for (const room of roomData) {
+  for (const room of filteredRooms) {
     for (const ts of room.timeSlots) {
+      if (isToday && parseInt(ts.startTime) <= currentHour) continue;
       allTimes.add(ts.startTime);
     }
   }
-  const sortedTimes = Array.from(allTimes)
-    .sort()
-    .filter((t) => !isToday || parseInt(t) > currentHour);
+  const sortedTimes = Array.from(allTimes).sort();
+
+  // Toplam müsait slot sayısı
+  const totalBookable = filteredRooms.reduce(
+    (sum, room) =>
+      sum +
+      room.timeSlots.filter(
+        (ts) => ts.isBookable && (!isToday || parseInt(ts.startTime) > currentHour),
+      ).length,
+    0,
+  );
 
   return (
     <GradientBackground>
@@ -239,122 +258,160 @@ export function SpaScreen() {
           <Text style={styles.subtitle}>Oda seç, masöz seç, rahatla.</Text>
         </View>
 
-        {/* Tarih Seçimi */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.dateRow}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-        >
-          {days.map((d) => (
-            <Pressable
-              key={d.value}
-              onPress={() => setSelectedDate(d.value)}
-              style={[styles.dateChip, selectedDate === d.value && styles.dateChipActive]}
-            >
-              <Text style={[styles.dateDay, selectedDate === d.value && styles.dateTxtActive]}>
-                {d.dayName}
-              </Text>
-              <Text style={[styles.dateNum, selectedDate === d.value && styles.dateTxtActive]}>
-                {d.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {loading ? (
-          <Text style={styles.loadingTxt}>Yükleniyor...</Text>
-        ) : roomData.length === 0 ? (
-          <View style={styles.hintBox}>
-            <Text style={styles.hintIcon}>📅</Text>
-            <Text style={styles.hintText}>Bu tarihte müsait oda slotu bulunmuyor.</Text>
+        {/* Kapasite Seçimi (Tek / Çift) */}
+        <View style={styles.capacitySection}>
+          <Text style={styles.sectionTitle}>Seans Tipi Seçin</Text>
+          <View style={styles.capacityRow}>
+            {CAPACITY_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt.value}
+                style={[
+                  styles.capacityCard,
+                  selectedCapacity === opt.value && styles.capacityCardActive,
+                ]}
+                onPress={() => setSelectedCapacity(opt.value)}
+              >
+                <Text style={styles.capacityIcon}>{opt.icon}</Text>
+                <Text
+                  style={[
+                    styles.capacityLabel,
+                    selectedCapacity === opt.value && styles.capacityLabelActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+                <Text style={styles.capacityDesc}>{opt.desc}</Text>
+              </Pressable>
+            ))}
           </View>
-        ) : (
+        </View>
+
+        {/* Seçim yapılmadıysa hint */}
+        {!selectedCapacity && (
+          <View style={styles.hintBox}>
+            <Text style={styles.hintIcon}>☝️</Text>
+            <Text style={styles.hintText}>
+              Yukarıdan seans tipini seçerek müsait odaları ve saatleri görüntüleyin.
+            </Text>
+          </View>
+        )}
+
+        {/* Seçim yapıldıysa: Tarih + Grid */}
+        {selectedCapacity && (
           <>
-            {/* Grid: Odalar sütun, Saatler dikey */}
-            <View style={styles.gridSection}>
-              <Text style={styles.gridTitle}>🏠 Oda Müsaitliği</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View>
-                  {/* Header: Oda isimleri */}
-                  <View style={styles.gridRow}>
-                    <View style={styles.gridTimeCell}>
-                      <Text style={styles.gridHeaderTxt}>Saat</Text>
-                    </View>
-                    {roomData.map((room) => (
-                      <View key={room.roomId} style={styles.gridProviderCell}>
-                        <Text style={styles.gridProviderTxt} numberOfLines={2}>
-                          {room.roomName.replace('Masaj Odası ', 'Oda ')}
-                        </Text>
-                        <Text style={styles.gridProviderCapacity}>
-                          {room.capacity >= 2 ? '👫 Çift' : '🧖 Tek'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
+            {/* Tarih Seçimi */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.dateRow}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {days.map((d) => (
+                <Pressable
+                  key={d.value}
+                  onPress={() => setSelectedDate(d.value)}
+                  style={[styles.dateChip, selectedDate === d.value && styles.dateChipActive]}
+                >
+                  <Text style={[styles.dateDay, selectedDate === d.value && styles.dateTxtActive]}>
+                    {d.dayName}
+                  </Text>
+                  <Text style={[styles.dateNum, selectedDate === d.value && styles.dateTxtActive]}>
+                    {d.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
 
-                  {/* Rows: Her saat */}
-                  {sortedTimes.map((time) => (
-                    <View key={time} style={styles.gridRow}>
-                      <View style={styles.gridTimeCell}>
-                        <Text style={styles.gridTimeTxt}>{time}</Text>
+            {/* Müsaitlik Özeti */}
+            {!loading && filteredRooms.length > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryTxt}>
+                  {totalBookable > 0
+                    ? `✅ ${totalBookable} müsait saat bulundu`
+                    : '❌ Bu tarihte müsait saat yok'}
+                </Text>
+              </View>
+            )}
+
+            {loading ? (
+              <Text style={styles.loadingTxt}>Yükleniyor...</Text>
+            ) : sortedTimes.length === 0 ? (
+              <View style={styles.hintBox}>
+                <Text style={styles.hintIcon}>📅</Text>
+                <Text style={styles.hintText}>
+                  Bu tarihte müsait oda slotu bulunmuyor.{'\n'}Başka bir gün deneyin.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Grid: Odalar sütun, Saatler dikey */}
+                <View style={styles.gridSection}>
+                  <Text style={styles.gridTitle}>
+                    {selectedCapacity === 2 ? '👫 Çift Kişilik Odalar' : '🧖 Tek Kişilik Oda'}
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View>
+                      {/* Header: Oda isimleri */}
+                      <View style={styles.gridRow}>
+                        <View style={styles.gridTimeCell}>
+                          <Text style={styles.gridHeaderTxt}>Saat</Text>
+                        </View>
+                        {filteredRooms.map((room) => (
+                          <View key={room.roomId} style={styles.gridProviderCell}>
+                            <Text style={styles.gridProviderTxt} numberOfLines={2}>
+                              {room.roomName.replace('Masaj Odası ', 'Oda ')}
+                            </Text>
+                            <Text style={styles.gridProviderCapacity}>{room.price}₺</Text>
+                          </View>
+                        ))}
                       </View>
-                      {roomData.map((room) => {
-                        const ts = room.timeSlots.find((s) => s.startTime === time);
-                        const isBookable = ts?.isBookable ?? false;
-                        const therapistNames = ts
-                          ? ts.availableTherapists
-                              .slice(0, ts.requiredTherapists)
-                              .map((t) => t.name.split(' ')[0])
-                              .join('+')
-                          : '';
-                        return (
-                          <Pressable
-                            key={room.roomId}
-                            style={[
-                              styles.gridCell,
-                              isBookable && styles.gridCellAvailable,
-                              !isBookable && styles.gridCellBooked,
-                            ]}
-                            onPress={() => {
-                              if (isBookable && ts) handleSlotPress(room, ts);
-                            }}
-                            disabled={!isBookable || booking}
-                          >
-                            {isBookable ? (
-                              <Text style={[styles.gridCellTxt, styles.gridCellTxtAvailable]}>
-                                {therapistNames || '✓'}
-                              </Text>
-                            ) : (
-                              <Text style={styles.gridCellTxt}>—</Text>
-                            )}
-                          </Pressable>
-                        );
-                      })}
+
+                      {/* Rows: Her saat */}
+                      {sortedTimes.map((time) => (
+                        <View key={time} style={styles.gridRow}>
+                          <View style={styles.gridTimeCell}>
+                            <Text style={styles.gridTimeTxt}>{time}</Text>
+                          </View>
+                          {filteredRooms.map((room) => {
+                            const ts = room.timeSlots.find((s) => s.startTime === time);
+                            const isBookable = ts?.isBookable ?? false;
+                            const therapistNames =
+                              ts && isBookable
+                                ? ts.availableTherapists
+                                    .slice(0, ts.requiredTherapists)
+                                    .map((t) => t.name.split(' ')[0])
+                                    .join('+')
+                                : '';
+                            return (
+                              <Pressable
+                                key={room.roomId}
+                                style={[
+                                  styles.gridCell,
+                                  isBookable && styles.gridCellAvailable,
+                                  !isBookable && styles.gridCellBooked,
+                                ]}
+                                onPress={() => {
+                                  if (isBookable && ts) handleSlotPress(room, ts);
+                                }}
+                                disabled={!isBookable || booking}
+                              >
+                                {isBookable ? (
+                                  <Text style={[styles.gridCellTxt, styles.gridCellTxtAvailable]}>
+                                    {therapistNames || '✓'}
+                                  </Text>
+                                ) : (
+                                  <Text style={styles.gridCellTxt}>—</Text>
+                                )}
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      ))}
                     </View>
-                  ))}
+                  </ScrollView>
                 </View>
-              </ScrollView>
-            </View>
-
-            {/* Oda Bilgi Kartları */}
-            <View style={styles.roomInfoSection}>
-              {roomData.map((room) => {
-                const bookableCount = room.timeSlots.filter((ts) => ts.isBookable).length;
-                return (
-                  <View key={room.roomId} style={styles.roomInfoCard}>
-                    <Text style={styles.roomInfoIcon}>{room.capacity >= 2 ? '👫' : '🧖'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.roomInfoName}>{room.roomName}</Text>
-                      <Text style={styles.roomInfoMeta}>
-                        {room.capacity} kişi · {room.price}₺
-                      </Text>
-                    </View>
-                    <Text style={styles.roomInfoAvail}>{bookableCount} müsait</Text>
-                  </View>
-                );
-              })}
-            </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -396,10 +453,12 @@ export function SpaScreen() {
                   </Text>
                 </View>
 
-                {/* Masöz Seçimi (değiştirilebilir) */}
+                {/* Masöz Seçimi (değiştirilebilir — sadece fazla masöz varsa) */}
                 {selectedSlot.timeSlot.availableTherapists.length > selectedSlot.room.capacity && (
                   <View style={styles.therapistSelectSection}>
-                    <Text style={styles.therapistSelectTitle}>Masöz Seçimi</Text>
+                    <Text style={styles.therapistSelectTitle}>
+                      Masöz Değiştir ({selectedSlot.room.capacity} seçin)
+                    </Text>
                     {selectedSlot.timeSlot.availableTherapists.map((t) => {
                       const isSelected = selectedSlot.selectedTherapists.some(
                         (st) => st.id === t.id,
@@ -413,10 +472,7 @@ export function SpaScreen() {
                           ]}
                           onPress={() => {
                             if (isSelected) {
-                              // Deselect (min kontrolü)
-                              if (
-                                selectedSlot.selectedTherapists.length > selectedSlot.room.capacity
-                              ) {
+                              if (selectedSlot.selectedTherapists.length > 1) {
                                 setSelectedSlot({
                                   ...selectedSlot,
                                   selectedTherapists: selectedSlot.selectedTherapists.filter(
@@ -425,7 +481,6 @@ export function SpaScreen() {
                                 });
                               }
                             } else {
-                              // Select (max kontrolü)
                               if (
                                 selectedSlot.selectedTherapists.length < selectedSlot.room.capacity
                               ) {
@@ -434,21 +489,22 @@ export function SpaScreen() {
                                   selectedTherapists: [...selectedSlot.selectedTherapists, t],
                                 });
                               } else {
-                                // Swap: son eklenen ile değiştir
                                 const newList = [
                                   ...selectedSlot.selectedTherapists.slice(0, -1),
                                   t,
                                 ];
-                                setSelectedSlot({
-                                  ...selectedSlot,
-                                  selectedTherapists: newList,
-                                });
+                                setSelectedSlot({ ...selectedSlot, selectedTherapists: newList });
                               }
                             }
                           }}
                         >
-                          <Text style={styles.therapistOptionTxt}>
-                            {isSelected ? '✓ ' : ''}
+                          <Text
+                            style={[
+                              styles.therapistOptionTxt,
+                              isSelected && { color: premium.accentGreen },
+                            ]}
+                          >
+                            {isSelected ? '✓ ' : '○ '}
                             {t.name}
                           </Text>
                         </Pressable>
@@ -460,7 +516,9 @@ export function SpaScreen() {
                 {/* Fiyat Bilgisi */}
                 <View style={styles.priceSection}>
                   <View style={styles.priceRow}>
-                    <Text style={styles.priceLabel}>Toplam Fiyat</Text>
+                    <Text style={styles.priceLabel}>
+                      Toplam ({selectedSlot.room.capacity} kişi)
+                    </Text>
                     <Text style={styles.priceValue}>
                       {(
                         parseFloat(selectedSlot.timeSlot.price) * selectedSlot.room.capacity
@@ -499,7 +557,6 @@ export function SpaScreen() {
                 {/* Butonlar */}
                 {token ? (
                   <View style={{ gap: 8, marginTop: 12 }}>
-                    {/* Paketten Kullan */}
                     {(() => {
                       const pkg = findMassagePackage();
                       const sessionsNeeded = selectedSlot.room.capacity;
@@ -520,7 +577,6 @@ export function SpaScreen() {
                       }
                       return null;
                     })()}
-                    {/* Kapora Öde */}
                     <Pressable
                       style={[styles.confirmBtn, { backgroundColor: '#6366f1' }]}
                       onPress={confirmBooking}
@@ -555,8 +611,40 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, marginBottom: 20 },
   title: { fontSize: 24, fontWeight: '900', color: premium.text },
   subtitle: { fontSize: 14, color: premium.textMuted, marginTop: 4 },
+  // Capacity Selection
+  capacitySection: { paddingHorizontal: 20, marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: premium.text, marginBottom: 12 },
+  capacityRow: { flexDirection: 'row', gap: 12 },
+  capacityCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: premium.glassBorder,
+    backgroundColor: 'rgba(15,23,42,0.4)',
+    alignItems: 'center',
+    gap: 6,
+  },
+  capacityCardActive: { borderColor: premium.accentBlue, backgroundColor: 'rgba(56,189,248,0.1)' },
+  capacityIcon: { fontSize: 28 },
+  capacityLabel: { fontSize: 14, fontWeight: '800', color: premium.text },
+  capacityLabelActive: { color: premium.accentBlue },
+  capacityDesc: { fontSize: 11, color: premium.textMuted, textAlign: 'center' },
+  // Hint
+  hintBox: {
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 14,
+    backgroundColor: 'rgba(56,189,248,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+    alignItems: 'center',
+    gap: 8,
+  },
+  hintIcon: { fontSize: 28 },
+  hintText: { fontSize: 13, color: premium.textMuted, textAlign: 'center', lineHeight: 20 },
   // Date
-  dateRow: { marginBottom: 16 },
+  dateRow: { marginBottom: 12 },
   dateChip: {
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -571,19 +659,10 @@ const styles = StyleSheet.create({
   dateDay: { fontSize: 11, color: premium.textMuted, fontWeight: '600' },
   dateNum: { fontSize: 14, color: premium.text, fontWeight: '800', marginTop: 2 },
   dateTxtActive: { color: premium.accentBlue },
+  // Summary
+  summaryRow: { paddingHorizontal: 20, marginBottom: 12 },
+  summaryTxt: { fontSize: 13, fontWeight: '700', color: premium.accentGreen },
   loadingTxt: { color: premium.textMuted, textAlign: 'center', padding: 20 },
-  hintBox: {
-    marginHorizontal: 20,
-    padding: 20,
-    borderRadius: 14,
-    backgroundColor: 'rgba(56,189,248,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(56,189,248,0.2)',
-    alignItems: 'center',
-    gap: 8,
-  },
-  hintIcon: { fontSize: 28 },
-  hintText: { fontSize: 13, color: premium.textMuted, textAlign: 'center', lineHeight: 20 },
   // Grid
   gridSection: { marginBottom: 16, paddingHorizontal: 8 },
   gridTitle: {
@@ -594,10 +673,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   gridRow: { flexDirection: 'row', alignItems: 'center' },
-  gridTimeCell: { width: 60, paddingVertical: 8, paddingHorizontal: 4 },
-  gridTimeTxt: { fontSize: 11, color: premium.text, fontWeight: '700' },
+  gridTimeCell: { width: 56, paddingVertical: 8, paddingHorizontal: 4 },
+  gridTimeTxt: { fontSize: 12, color: premium.text, fontWeight: '700' },
   gridHeaderTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
-  gridProviderCell: { width: 90, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
+  gridProviderCell: { width: 100, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
   gridProviderTxt: {
     fontSize: 11,
     color: premium.accentBlue,
@@ -605,45 +684,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gridProviderCapacity: {
-    fontSize: 9,
+    fontSize: 10,
     color: premium.textMuted,
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 2,
   },
   gridCell: {
-    width: 90,
-    height: 40,
+    width: 100,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
     margin: 2,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
   gridCellAvailable: {
-    backgroundColor: 'rgba(16,185,129,0.2)',
+    backgroundColor: 'rgba(16,185,129,0.15)',
     borderWidth: 1,
     borderColor: 'rgba(16,185,129,0.4)',
   },
-  gridCellBooked: { backgroundColor: 'rgba(100,116,139,0.1)' },
+  gridCellBooked: { backgroundColor: 'rgba(100,116,139,0.08)' },
   gridCellTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
   gridCellTxtAvailable: { color: '#10b981' },
-  // Room Info
-  roomInfoSection: { paddingHorizontal: 20, gap: 8, marginTop: 8 },
-  roomInfoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: premium.glassBorder,
-    backgroundColor: 'rgba(15,23,42,0.4)',
-    gap: 12,
-  },
-  roomInfoIcon: { fontSize: 24 },
-  roomInfoName: { fontSize: 14, fontWeight: '800', color: premium.text },
-  roomInfoMeta: { fontSize: 11, color: premium.textMuted, marginTop: 2 },
-  roomInfoAvail: { fontSize: 12, fontWeight: '700', color: premium.accentGreen },
   // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalCard: {
@@ -676,8 +739,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   therapistOption: {
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: premium.glassBorder,
     backgroundColor: 'rgba(0,0,0,0.2)',
@@ -687,18 +750,18 @@ const styles = StyleSheet.create({
     borderColor: premium.accentGreen,
     backgroundColor: 'rgba(16,185,129,0.1)',
   },
-  therapistOptionTxt: { fontSize: 13, fontWeight: '700', color: premium.text },
+  therapistOptionTxt: { fontSize: 14, fontWeight: '700', color: premium.text },
   // Price
   priceSection: {
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     backgroundColor: 'rgba(0,0,0,0.2)',
     marginBottom: 12,
-    gap: 6,
+    gap: 8,
   },
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  priceLabel: { fontSize: 14, fontWeight: '800', color: premium.text },
-  priceValue: { fontSize: 16, fontWeight: '900', color: premium.accentGreen },
+  priceLabel: { fontSize: 15, fontWeight: '800', color: premium.text },
+  priceValue: { fontSize: 18, fontWeight: '900', color: premium.accentGreen },
   priceLabelSub: { fontSize: 12, color: premium.textMuted },
   priceValueSub: { fontSize: 13, fontWeight: '700', color: premium.textMuted },
   // Package
