@@ -163,7 +163,7 @@ export class AdminMembersService {
     }
     if (search) {
       qb.andWhere(
-        '(LOWER(u.firstName) LIKE :s OR LOWER(u.lastName) LIKE :s OR LOWER(u.email) LIKE :s)',
+        '(LOWER(u.firstName) LIKE :s OR LOWER(u.lastName) LIKE :s OR LOWER(u.email) LIKE :s OR u.phone LIKE :s)',
         { s: `%${search.toLowerCase()}%` },
       );
     }

@@ -86,6 +86,8 @@ export function MembersPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'massage' | 'pt' | 'membership'>('createdAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Detail panel
   const [detail, setDetail] = useState<MemberDetail | null>(null);
@@ -225,6 +227,26 @@ export function MembersPage() {
     a.download = `uyeler_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Sıralama + uyarı hesaplama
+  const today = new Date().toISOString().slice(0, 10);
+  const sevenDaysLater = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })();
+
+  const sortedMembers = [...members].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    switch (sortBy) {
+      case 'name': return dir * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'tr');
+      case 'massage': return dir * (a.massageSessions - b.massageSessions);
+      case 'pt': return dir * (a.ptSessions - b.ptSessions);
+      case 'membership': return dir * ((a.membershipEndDate || '9999') > (b.membershipEndDate || '9999') ? 1 : -1);
+      default: return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+  });
+
+  function toggleSort(col: typeof sortBy) {
+    if (sortBy === col) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('desc'); }
   }
 
   const statusBadge = (s: string) => {
@@ -1038,21 +1060,25 @@ export function MembersPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                <th style={thStyle}>Üye</th>
+                <th style={thStyle} onClick={() => toggleSort('name')} className="sortable">Üye {sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th style={thStyle}>E-posta</th>
-                <th style={thStyle}>Üyelik Bitiş</th>
-                <th style={thStyle}>Masaj</th>
-                <th style={thStyle}>PT</th>
+                <th style={thStyle} onClick={() => toggleSort('membership')} className="sortable">Üyelik Bitiş {sortBy === 'membership' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th style={thStyle} onClick={() => toggleSort('massage')} className="sortable">Masaj {sortBy === 'massage' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th style={thStyle} onClick={() => toggleSort('pt')} className="sortable">PT {sortBy === 'pt' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th style={thStyle}>Durum</th>
                 <th style={thStyle}>İşlemler</th>
               </tr>
             </thead>
             <tbody>
-              {members.map((m) => (
+              {sortedMembers.map((m) => {
+                const membershipExpiring = m.membershipEndDate && m.membershipEndDate <= sevenDaysLater && m.membershipEndDate >= today;
+                const lowSessions = (m.massageSessions > 0 && m.massageSessions <= 2) || (m.ptSessions > 0 && m.ptSessions <= 2);
+                const rowBg = membershipExpiring ? '#fffbeb' : lowSessions ? '#fef2f2' : undefined;
+                return (
                 <tr
                   key={m.id}
                   onClick={() => void openDetail(m)}
-                  style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                  style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: rowBg }}
                 >
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1169,7 +1195,7 @@ export function MembersPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ); })}
             </tbody>
           </table>
         </div>
@@ -1205,6 +1231,8 @@ const thStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.3px',
   borderBottom: '1px solid #e2e8f0',
+  cursor: 'pointer',
+  userSelect: 'none',
 };
 
 const tdStyle: React.CSSProperties = {
