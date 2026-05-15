@@ -160,6 +160,13 @@ export function MembersPage() {
     }
     setAssigningPkg(true);
     try {
+      // PT paketiyse önce eğitmen atamasını yap (zaten varsa skip eder)
+      if (pkg?.sessionType === 'personal_training' && selectedPkgTrainer) {
+        await apiJson(`/admin/members/${detail.id}/assign-trainer`, {
+          method: 'POST',
+          body: JSON.stringify({ trainerId: selectedPkgTrainer }),
+        }).catch(() => {}); // Zaten atanmışsa hata vermez
+      }
       await apiJson(`/admin/members/${detail.id}/assign-package`, {
         method: 'POST',
         body: JSON.stringify({
@@ -826,16 +833,7 @@ export function MembersPage() {
                       const pkg = packageTypes.find((p) => p.id === selectedPkgType);
                       if (pkg?.sessionType !== 'personal_training') return null;
                       return (
-                        <select
-                          value={selectedPkgTrainer}
-                          onChange={(e) => setSelectedPkgTrainer(e.target.value)}
-                          style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.8rem', background: '#fff', color: '#0f172a' }}
-                        >
-                          <option value="">Eğitmen seçin (zorunlu)...</option>
-                          {detail.assignedTrainers.map((t) => (
-                            <option key={t.trainerId} value={t.trainerId}>{t.trainerName}</option>
-                          ))}
-                        </select>
+                        <TrainerSelectForPackage userId={detail.id} value={selectedPkgTrainer} onChange={setSelectedPkgTrainer} />
                       );
                     })()}
                     <button
@@ -1583,5 +1581,27 @@ function TrainerAssignForm({ userId, onSaved }: { userId: string; tenantTrainers
         {saving ? '...' : 'Ata'}
       </button>
     </div>
+  );
+}
+
+// ─── TrainerSelectForPackage ────────────────────────────────────────────────────
+
+function TrainerSelectForPackage({ userId, value, onChange }: { userId: string; value: string; onChange: (v: string) => void }) {
+  const [trainers, setTrainers] = useState<Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>>([]);
+
+  useEffect(() => {
+    apiJson<Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>>('/admin/trainers')
+      .then((data) => setTrainers(data.filter((t) => t.offersSessionTypes?.includes('personal_training'))))
+      .catch(() => setTrainers([]));
+  }, [userId]);
+
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}
+      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.8rem', background: '#fff', color: '#0f172a' }}>
+      <option value="">Eğitmen seçin (zorunlu)...</option>
+      {trainers.map((t) => (
+        <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+      ))}
+    </select>
   );
 }
