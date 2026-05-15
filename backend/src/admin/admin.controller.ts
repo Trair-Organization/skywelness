@@ -750,6 +750,31 @@ export class AdminController {
     return this.adminMembers.bulkCreateMembers(admin.tenantId, body.members);
   }
 
+  /** Admin: Üyelik oluştur/güncelle */
+  @Post('members/:userId/membership')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  setMembership(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { membershipType: string; startDate: string; endDate: string; price?: number },
+  ) {
+    return this.adminMembers.setMembership(admin.tenantId, userId, body);
+  }
+
+  /** Admin: Mevcut pakete seans ekle (+N) */
+  @Post('members/:userId/packages/:packageId/add-sessions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  addSessionsToPackage(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Param('packageId', new ParseUUIDPipe({ version: '4' })) packageId: string,
+    @Body() body: { sessions: number },
+  ) {
+    return this.adminMembers.addSessionsToPackage(admin.tenantId, userId, packageId, body.sessions);
+  }
+
   @Post('schedule/bulk-open')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { Availability } from '../database/entities/availability.entity';
+import { Membership } from '../database/entities/membership.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
@@ -13,7 +14,13 @@ import { TrainerApplication } from '../database/entities/trainer-application.ent
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
-import { MemberAccountStatus, ReservationStatus, SessionType, UserRole } from '../database/enums';
+import {
+  MemberAccountStatus,
+  ReservationStatus,
+  SessionType,
+  UserRole,
+  PackageStatus,
+} from '../database/enums';
 import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
 import { PushService } from '../notifications/push.service';
 import { SmsService } from '../notifications/sms.service';
@@ -38,6 +45,8 @@ export class AdminMembersService {
     private readonly trainerProfilesRepo: Repository<TrainerProfile>,
     @InjectRepository(Availability)
     private readonly availabilityRepo: Repository<Availability>,
+    @InjectRepository(Membership)
+    private readonly membershipsRepo: Repository<Membership>,
     @InjectRepository(SpaTherapist)
     private readonly spaTherapistsRepo: Repository<SpaTherapist>,
     @InjectRepository(SpaService)
@@ -276,12 +285,18 @@ export class AdminMembersService {
     }));
   }
 
-  /** Üye detay bilgisi (profil + paketler + son randevular) */
+  /** Üye detay bilgisi (profil + paketler + son randevular + üyelik) */
   async getMemberDetail(tenantId: string, userId: string) {
     const member = await this.usersRepo.findOne({
       where: { id: userId, tenantId, role: UserRole.MEMBER },
     });
     if (!member) throw new NotFoundException('Üye bulunamadı');
+
+    // Üyelik
+    const membership = await this.membershipsRepo.findOne({
+      where: { userId, tenantId },
+      order: { createdAt: 'DESC' },
+    });
 
     // Paketleri
     const packages = await this.packagesRepo
@@ -315,6 +330,16 @@ export class AdminMembersService {
       accountStatus: member.accountStatus,
       lastLogin: member.lastLogin,
       createdAt: member.createdAt,
+      membership: membership
+        ? {
+            id: membership.id,
+            membershipType: membership.membershipType,
+            startDate: membership.startDate,
+            endDate: membership.endDate,
+            status: membership.status,
+            price: membership.price,
+          }
+        : null,
       packages: packages.map((p) => ({
         id: p.id,
         status: p.status,
@@ -2189,6 +2214,89 @@ export class AdminMembersService {
       exists: results.filter((r) => r.status === 'exists').length,
       errors: results.filter((r) => r.status === 'error').length,
       details: results,
+    };
+  }
+
+  /** Admin: Üyelik oluştur veya güncelle */
+  async setMembership(
+    tenantId: string,
+    userId: string,
+    data: { membershipType: string; startDate: string; endDate: string; price?: number },
+  ) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    let membership = await this.membershipsRepo.findOne({
+      where: { userId, tenantId },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (membership) {
+      membership.membershipType = data.membershipType;
+      membership.startDate = data.startDate;
+      membership.endDate = data.endDate;
+      membership.status = 'active';
+      if (data.price !== undefined) membership.price = String(data.price);
+      await this.membershipsRepo.save(membership);
+    } else {
+      membership = this.membershipsRepo.create({
+        tenantId,
+        userId,
+        membershipType: data.membershipType,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: 'active',
+        price: String(data.price ?? 0),
+        currency: 'TRY',
+      });
+      await this.membershipsRepo.save(membership);
+    }
+
+    return {
+      ok: true,
+      membershipId: membership.id,
+      startDate: membership.startDate,
+      endDate: membership.endDate,
+      membershipType: membership.membershipType,
+    };
+  }
+
+  /** Admin: Mevcut pakete seans ekle (7 + 10 = 17) */
+  async addSessionsToPackage(
+    tenantId: string,
+    userId: string,
+    packageId: string,
+    sessions: number,
+  ) {
+    if (sessions <= 0) throw new BadRequestException("Seans sayısı 0'dan büyük olmalı");
+
+    const pkg = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.packageType', 'pt')
+      .addSelect(['pt.tenantId', 'pt.name'])
+      .where('p.id = :id', { id: packageId })
+      .andWhere('p.userId = :userId', { userId })
+      .andWhere('pt.tenantId = :tenantId', { tenantId })
+      .getOne();
+    if (!pkg) throw new NotFoundException('Paket bulunamadı');
+
+    const previousSessions = pkg.remainingSessions;
+    pkg.remainingSessions += sessions;
+
+    if (pkg.status === PackageStatus.DEPLETED || pkg.status === PackageStatus.EXPIRED) {
+      pkg.status = PackageStatus.ACTIVE;
+    }
+
+    await this.packagesRepo.save(pkg);
+
+    return {
+      ok: true,
+      packageId,
+      previousSessions,
+      addedSessions: sessions,
+      newTotal: pkg.remainingSessions,
     };
   }
 }

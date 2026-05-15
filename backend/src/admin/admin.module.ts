@@ -8,6 +8,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
+import { Membership } from '../database/entities/membership.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Reservation } from '../database/entities/reservation.entity';
@@ -43,6 +44,7 @@ import { AdminMembersService } from './admin-members.service';
       SpaService,
       ClubEvent,
       ClubEventRegistration,
+      Membership,
     ]),
   ],
   controllers: [AdminController, AdminEventsController],

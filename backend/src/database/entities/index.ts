@@ -16,3 +16,5 @@ export * from './time-slot.entity';
 export * from './trainer.entity';
 export * from './user.entity';
 export * from './waiting-list.entity';
+
+export * from './membership.entity';
