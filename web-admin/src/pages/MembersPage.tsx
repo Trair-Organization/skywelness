@@ -904,6 +904,26 @@ export function MembersPage() {
                     ✅ Hesabı Aktifleştir
                   </button>
                 )}
+                <button
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        `${detail.firstName} ${detail.lastName} kalıcı olarak silinecek. Bu işlem geri alınamaz. Emin misiniz?`,
+                      )
+                    )
+                      return;
+                    try {
+                      await apiJson(`/admin/members/${detail.id}/delete`, { method: 'DELETE' });
+                      setDetail(null);
+                      void load(statusFilter, search);
+                    } catch (e) {
+                      setError(e instanceof ApiError ? e.message : 'Hata');
+                    }
+                  }}
+                  style={{ ...actionBtnStyle, color: '#dc2626', borderColor: '#fee2e2' }}
+                >
+                  🗑 Üyeyi Sil
+                </button>
               </div>
             </div>
 

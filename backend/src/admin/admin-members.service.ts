@@ -2084,6 +2084,17 @@ export class AdminMembersService {
     };
   }
 
+  /** Admin: Üyeyi kalıcı olarak sil (KVKK uyumu) */
+  async deleteMember(tenantId: string, userId: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    await this.usersRepo.remove(user);
+    return { ok: true, deletedUserId: userId };
+  }
+
   /** Admin: Üye hesabını dondur/askıya al */
   async suspendMember(tenantId: string, userId: string, reason?: string) {
     const user = await this.usersRepo.findOne({

@@ -689,6 +689,17 @@ export class AdminController {
     return this.adminMembers.updateMemberProfile(admin.tenantId, userId, body);
   }
 
+  /** Admin: Üyeyi kalıcı olarak sil */
+  @Delete('members/:userId/delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deleteMember(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.adminMembers.deleteMember(admin.tenantId, userId);
+  }
+
   /** Admin: Üye hesabını dondur */
   @Post('members/:userId/suspend')
   @UseGuards(JwtAuthGuard, RolesGuard)
