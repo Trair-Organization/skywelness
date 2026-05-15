@@ -809,6 +809,30 @@ export class AdminController {
     return this.adminMembers.addMemberNote(admin.tenantId, userId, body.note, admin.id);
   }
 
+  /** Admin: Üye notunu güncelle */
+  @Patch('members/:userId/notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  updateMemberNote(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { index: number; text: string },
+  ) {
+    return this.adminMembers.updateMemberNote(admin.tenantId, userId, body.index, body.text);
+  }
+
+  /** Admin: Üye notunu sil */
+  @Delete('members/:userId/notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deleteMemberNote(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { index: number },
+  ) {
+    return this.adminMembers.deleteMemberNote(admin.tenantId, userId, body.index);
+  }
+
   /** Admin: Üye notlarını getir */
   @Get('members/:userId/notes')
   @UseGuards(JwtAuthGuard, RolesGuard)

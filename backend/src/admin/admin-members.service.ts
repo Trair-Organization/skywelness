@@ -2270,6 +2270,44 @@ export class AdminMembersService {
     return data.notes || [];
   }
 
+  /** Admin: Üye notunu güncelle */
+  async updateMemberNote(tenantId: string, userId: string, index: number, text: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    const data =
+      (user.emergencyContact as {
+        notes?: Array<{ text: string; date: string; adminId: string }>;
+      } | null) || {};
+    const notes = data.notes || [];
+    if (index < 0 || index >= notes.length) throw new BadRequestException('Geçersiz not index');
+
+    notes[index].text = text.trim();
+    await this.usersRepo.update({ id: userId }, { emergencyContact: { ...data, notes } as never });
+    return { ok: true };
+  }
+
+  /** Admin: Üye notunu sil */
+  async deleteMemberNote(tenantId: string, userId: string, index: number) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    const data =
+      (user.emergencyContact as {
+        notes?: Array<{ text: string; date: string; adminId: string }>;
+      } | null) || {};
+    const notes = data.notes || [];
+    if (index < 0 || index >= notes.length) throw new BadRequestException('Geçersiz not index');
+
+    notes.splice(index, 1);
+    await this.usersRepo.update({ id: userId }, { emergencyContact: { ...data, notes } as never });
+    return { ok: true };
+  }
+
   /** Admin: Paket süresini uzat */
   async extendPackageExpiry(
     tenantId: string,

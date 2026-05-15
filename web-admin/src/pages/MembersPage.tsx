@@ -568,34 +568,7 @@ export function MembersPage() {
                 />
               </div>
 
-              {/* PT Ataması */}
-              <div style={{ marginTop: 16 }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 10px' }}>
-                  🏋️ Atanmış Eğitmen
-                </h3>
-                {detail.assignedTrainers.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {detail.assignedTrainers.map((t) => (
-                      <div key={t.linkId} style={{ padding: '8px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e40af' }}>🏋️ {t.trainerName}</span>
-                        <button onClick={() => {
-                          if (!confirm(`${t.trainerName} ataması kaldırılsın mı?`)) return;
-                          void apiJson(`/admin/members/${detail.id}/remove-trainer`, {
-                            method: 'POST',
-                            body: JSON.stringify({ trainerId: t.trainerId }),
-                          }).then(() => void openDetail(detail as unknown as Member))
-                            .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
-                        }} style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid #fee2e2', background: '#fff', color: '#dc2626', fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer' }}>
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>Eğitmen atanmamış</p>
-                )}
-                <TrainerAssignForm userId={detail.id} tenantTrainers={packageTypes.length > 0 ? [] : []} onSaved={() => void openDetail(detail as unknown as Member)} />
-              </div>
+              {/* Üyelik section continues... */}
             </div>
 
             {/* Sağ: Paketler */}
@@ -811,6 +784,35 @@ export function MembersPage() {
                   </div>
                 </div>
               )}
+
+              {/* PT Ataması (Yeni Paket Ata altında) */}
+              <div style={{ marginTop: 16 }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 10px' }}>
+                  🏋️ Atanmış Eğitmen
+                </h3>
+                {detail.assignedTrainers.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {detail.assignedTrainers.map((t) => (
+                      <div key={t.linkId} style={{ padding: '8px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e40af' }}>🏋️ {t.trainerName}</span>
+                        <button onClick={() => {
+                          if (!confirm(`${t.trainerName} ataması kaldırılsın mı?`)) return;
+                          void apiJson(`/admin/members/${detail.id}/remove-trainer`, {
+                            method: 'POST',
+                            body: JSON.stringify({ trainerId: t.trainerId }),
+                          }).then(() => void openDetail(detail as unknown as Member))
+                            .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+                        }} style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid #fee2e2', background: '#fff', color: '#dc2626', fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer' }}>
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>Eğitmen atanmamış</p>
+                )}
+                <TrainerAssignForm userId={detail.id} tenantTrainers={[]} onSaved={() => void openDetail(detail as unknown as Member)} />
+              </div>
             </div>
           </div>
 
@@ -1199,12 +1201,16 @@ function MemberNotes({ userId }: { userId: string }) {
   const [notes, setNotes] = useState<Array<{ text: string; date: string }>>([]);
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
 
-  useEffect(() => {
+  const loadNotes = useCallback(() => {
     apiJson<Array<{ text: string; date: string }>>(`/admin/members/${userId}/notes`)
       .then(setNotes)
       .catch(() => setNotes([]));
   }, [userId]);
+
+  useEffect(() => { loadNotes(); }, [loadNotes]);
 
   async function addNote() {
     if (!newNote.trim()) return;
@@ -1214,89 +1220,70 @@ function MemberNotes({ userId }: { userId: string }) {
         method: 'POST',
         body: JSON.stringify({ note: newNote.trim() }),
       });
-      setNotes(await apiJson(`/admin/members/${userId}/notes`));
       setNewNote('');
-    } catch {
-      /* */
-    } finally {
-      setSaving(false);
-    }
+      loadNotes();
+    } catch { /* */ }
+    finally { setSaving(false); }
+  }
+
+  async function updateNote(idx: number, text: string) {
+    try {
+      await apiJson(`/admin/members/${userId}/notes`, {
+        method: 'PATCH',
+        body: JSON.stringify({ index: idx, text: text.trim() }),
+      });
+      setEditIdx(null);
+      loadNotes();
+    } catch { /* */ }
+  }
+
+  async function deleteNote(idx: number) {
+    if (!confirm('Not silinsin mi?')) return;
+    try {
+      await apiJson(`/admin/members/${userId}/notes`, {
+        method: 'DELETE',
+        body: JSON.stringify({ index: idx }),
+      });
+      loadNotes();
+    } catch { /* */ }
   }
 
   return (
     <div>
-      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>
-        📝 Notlar
-      </h3>
+      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>📝 Notlar</h3>
       <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-        <input
-          type="text"
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Not ekle..."
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void addNote();
-          }}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            borderRadius: 8,
-            border: '1px solid #e2e8f0',
-            fontSize: '0.82rem',
-            background: '#fff',
-            color: '#0f172a',
-          }}
-        />
-        <button
-          onClick={() => void addNote()}
-          disabled={saving || !newNote.trim()}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#2563eb',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            opacity: !newNote.trim() ? 0.5 : 1,
-          }}
-        >
-          +
-        </button>
+        <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Not ekle..."
+          onKeyDown={(e) => { if (e.key === 'Enter') void addNote(); }}
+          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.82rem', background: '#fff', color: '#0f172a' }} />
+        <button onClick={() => void addNote()} disabled={saving || !newNote.trim()}
+          style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', opacity: !newNote.trim() ? 0.5 : 1 }}>+</button>
       </div>
       {notes.length === 0 ? (
         <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Henüz not yok</p>
       ) : (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            maxHeight: 200,
-            overflowY: 'auto',
-          }}
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
           {notes.map((n, i) => (
-            <div
-              key={i}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: '#fffbeb',
-                border: '1px solid #fef3c7',
-                fontSize: '0.8rem',
-              }}
-            >
-              <div style={{ color: '#0f172a' }}>{n.text}</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: 2 }}>
-                {new Date(n.date).toLocaleDateString('tr-TR', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </div>
+            <div key={i} style={{ padding: '8px 12px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fef3c7', fontSize: '0.8rem' }}>
+              {editIdx === i ? (
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <input value={editText} onChange={(e) => setEditText(e.target.value)} style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: '0.8rem' }} />
+                  <button onClick={() => void updateNote(i, editText)} style={{ padding: '4px 8px', borderRadius: 4, border: 'none', background: '#2563eb', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>💾</button>
+                  <button onClick={() => setEditIdx(null)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '0.7rem', cursor: 'pointer' }}>✕</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ color: '#0f172a' }}>{n.text}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: 2 }}>
+                      {new Date(n.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                    <button onClick={() => { setEditIdx(i); setEditText(n.text); }} style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', fontSize: '0.65rem', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => void deleteNote(i)} style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #fee2e2', background: '#fff', fontSize: '0.65rem', cursor: 'pointer' }}>🗑</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
