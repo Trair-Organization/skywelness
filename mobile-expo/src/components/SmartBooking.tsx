@@ -377,11 +377,30 @@ export function SmartBooking({ subdomain, category, providerId, participantCount
   scored.sort((a, b) => b.score - a.score);
   const recommended: typeof scored = [];
   const usedServices = new Set<string>();
-  for (const slot of scored) {
-    if (recommended.length >= services.length) break;
-    if (!usedServices.has(slot.serviceId)) {
-      recommended.push(slot);
-      usedServices.add(slot.serviceId);
+
+  if (participantCount >= 2) {
+    // Çift kişilik: sadece aynı saatte 2+ masöz müsait olan saatlerden öner
+    const usedTimes = new Set<string>();
+    for (const slot of scored) {
+      if (recommended.length >= 3) break;
+      if (usedTimes.has(slot.startTime)) continue;
+      // Bu saatte kaç farklı masöz müsait?
+      const sameTimeSlots = availableSlots.filter(
+        (s) => s.startTime === slot.startTime && s.providerId !== slot.providerId,
+      );
+      if (sameTimeSlots.length >= 1) {
+        // 2+ masöz müsait — öner
+        recommended.push(slot);
+        usedTimes.add(slot.startTime);
+      }
+    }
+  } else {
+    for (const slot of scored) {
+      if (recommended.length >= services.length) break;
+      if (!usedServices.has(slot.serviceId)) {
+        recommended.push(slot);
+        usedServices.add(slot.serviceId);
+      }
     }
   }
 
@@ -596,7 +615,7 @@ export function SmartBooking({ subdomain, category, providerId, participantCount
                       {badge ? <Text style={styles.recommendedBadge}>{badge}</Text> : null}
                     </View>
                     <View style={styles.recommendedRight}>
-                      <Text style={styles.recommendedPrice}>{slot.price}₺</Text>
+                      <Text style={styles.recommendedPrice}>{(parseFloat(slot.price) * participantCount).toLocaleString('tr-TR')}₺</Text>
                       {token && <Text style={styles.recommendedCta}>Hemen Al →</Text>}
                     </View>
                   </Pressable>
