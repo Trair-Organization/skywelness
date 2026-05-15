@@ -89,11 +89,14 @@ export class UnifiedBookingController {
 
   /** Public: Çift kişilik masaj müsaitliği (2+ masöz aynı saatte) */
   @Get('schedule/couples')
-  listCouplesAvailability(
-    @Query('tenant') tenant: string,
-    @Query('date') date: string,
-  ) {
+  listCouplesAvailability(@Query('tenant') tenant: string, @Query('date') date: string) {
     return this.service.listCouplesAvailability(tenant, date);
+  }
+
+  /** Public: Oda bazlı spa müsaitliği (oda + masöz eşleşmesi) */
+  @Get('schedule/spa-rooms')
+  listSpaRoomAvailability(@Query('tenant') tenant: string, @Query('date') date: string) {
+    return this.service.listSpaRoomAvailability(tenant, date);
   }
 
   /** Admin: Toplu slot oluştur */
@@ -117,6 +120,26 @@ export class UnifiedBookingController {
     },
   ) {
     return this.service.generateSlots(user.tenantId, body);
+  }
+
+  /** Admin: Masaj odaları için toplu slot oluştur */
+  @Post('schedule/generate-room-slots')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  generateRoomSlots(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      roomId: string;
+      startDate: string;
+      endDate: string;
+      startHour: number;
+      endHour: number;
+      durationMinutes?: number;
+      price?: number;
+    },
+  ) {
+    return this.service.generateRoomSlots(user.tenantId, body);
   }
 
   // ═══ ADDONS ═══════════════════════════════════════════════
@@ -198,6 +221,22 @@ export class UnifiedBookingController {
     },
   ) {
     return this.service.createAppointment(user, body);
+  }
+
+  /** Üye: Oda bazlı spa randevusu (oda slotu + masöz slotları birlikte reserve) */
+  @Post('appointments/spa-room')
+  @UseGuards(JwtAuthGuard)
+  createSpaRoomAppointment(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      roomSlotId: string;
+      therapistSlotIds: string[];
+      packageId?: string;
+      notes?: string;
+    },
+  ) {
+    return this.service.createSpaRoomAppointment(user, body);
   }
 
   /** Üye: Aktif paketlerini listele */

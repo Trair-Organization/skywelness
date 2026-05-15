@@ -20,6 +20,7 @@ import { ClubEventRegistration } from '../database/entities/club-event-registrat
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Campaign } from '../database/entities/campaign.entity';
+import { Resource } from '../database/entities/resource.entity';
 import { UserRole, PackageStatus, SessionType } from '../database/enums';
 import { MailService } from '../mail/mail.service';
 import { SmsService } from '../notifications/sms.service';
@@ -46,6 +47,7 @@ export class UnifiedBookingService {
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     @InjectRepository(Campaign) private readonly campaignsRepo: Repository<Campaign>,
+    @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
   ) {}
@@ -1137,6 +1139,301 @@ export class UnifiedBookingService {
     return results;
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // SPA ROOM AVAILABILITY (Oda Bazlı Masaj Sistemi)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Oda bazlı spa müsaitliği:
+   * Her oda için saatleri döner, her saatte hangi masözlerin müsait olduğunu gösterir.
+   * Çift oda: 2 masöz gerekli, Tek oda: 1 masöz gerekli.
+   */
+  async listSpaRoomAvailability(tenantSubdomain: string, date: string) {
+    const tenant = await this.tenantsRepo.findOne({ where: { subdomain: tenantSubdomain } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    // Masaj odalarını getir
+    const rooms = await this.resourcesRepo.find({
+      where: { tenantId: tenant.id, resourceType: 'massage_room', active: true },
+      order: { sortOrder: 'ASC' },
+    });
+    if (rooms.length === 0) return { rooms: [], slots: [] };
+
+    // Oda slotlarını getir (providerType: 'resource', resourceId: oda_id)
+    const roomSlots = await this.slotsRepo
+      .createQueryBuilder('s')
+      .where('s.tenantId = :tid', { tid: tenant.id })
+      .andWhere('s.date = :date', { date })
+      .andWhere('s.providerType = :pt', { pt: 'resource' })
+      .andWhere('s.resourceId IN (:...roomIds)', { roomIds: rooms.map((r) => r.id) })
+      .andWhere('s.status = :status', { status: 'available' })
+      .andWhere('s.bookedCount < s.capacity')
+      .orderBy('s.startTime', 'ASC')
+      .getMany();
+
+    // Masöz slotlarını getir (providerType: 'trainer', category: massage)
+    const massageServices = await this.servicesRepo.find({
+      where: { tenantId: tenant.id, category: 'massage', active: true },
+    });
+    const massageServiceIds = massageServices.map((s) => s.id);
+
+    let therapistSlots: ScheduleSlot[] = [];
+    if (massageServiceIds.length > 0) {
+      therapistSlots = await this.slotsRepo
+        .createQueryBuilder('s')
+        .where('s.tenantId = :tid', { tid: tenant.id })
+        .andWhere('s.date = :date', { date })
+        .andWhere('s.providerType = :pt', { pt: 'trainer' })
+        .andWhere('s.serviceId IN (:...sids)', { sids: massageServiceIds })
+        .andWhere('s.status = :status', { status: 'available' })
+        .andWhere('s.bookedCount < s.capacity')
+        .orderBy('s.startTime', 'ASC')
+        .getMany();
+    }
+
+    // Masöz isimlerini çek
+    const therapistIds = [...new Set(therapistSlots.map((s) => s.providerId).filter(Boolean))];
+    const therapistMap = new Map<string, string>();
+    for (const tid of therapistIds) {
+      const trainer = await this.trainersRepo.findOne({
+        where: { id: tid! },
+        relations: ['user'],
+      });
+      if (trainer?.user) {
+        therapistMap.set(tid!, `${trainer.user.firstName} ${trainer.user.lastName}`.trim());
+      }
+    }
+
+    // Saatlere göre masöz slotlarını grupla
+    const therapistsByTime = new Map<string, Array<{ id: string; slotId: string; name: string }>>();
+    for (const ts of therapistSlots) {
+      if (!ts.providerId) continue;
+      const key = ts.startTime;
+      if (!therapistsByTime.has(key)) therapistsByTime.set(key, []);
+      therapistsByTime.get(key)!.push({
+        id: ts.providerId,
+        slotId: ts.id,
+        name: therapistMap.get(ts.providerId) || 'Masöz',
+      });
+    }
+
+    // Her oda slotu için müsait masözleri eşleştir
+    const result = rooms.map((room) => {
+      const roomSlotsForRoom = roomSlots.filter((s) => s.resourceId === room.id);
+      const timeSlots = roomSlotsForRoom.map((rs) => {
+        const availableTherapists = therapistsByTime.get(rs.startTime) || [];
+        const requiredTherapists = room.capacity; // Çift oda: 2, Tek oda: 1
+        const isBookable = availableTherapists.length >= requiredTherapists;
+
+        return {
+          roomSlotId: rs.id,
+          startTime: rs.startTime,
+          endTime: rs.endTime,
+          price: rs.price,
+          currency: rs.currency,
+          isBookable,
+          requiredTherapists,
+          availableTherapists: availableTherapists.map((t) => ({
+            id: t.id,
+            slotId: t.slotId,
+            name: t.name,
+          })),
+        };
+      });
+
+      return {
+        roomId: room.id,
+        roomName: room.name,
+        capacity: room.capacity,
+        roomType: room.capacity >= 2 ? 'couple' : 'single',
+        price: room.price,
+        currency: room.currency,
+        timeSlots,
+      };
+    });
+
+    return { rooms: result, date };
+  }
+
+  /**
+   * Oda bazlı spa randevusu:
+   * 1 oda slotu + N masöz slotu birlikte reserve edilir.
+   * Çift oda: 2 masöz slotu, Tek oda: 1 masöz slotu.
+   */
+  async createSpaRoomAppointment(
+    user: User,
+    data: {
+      roomSlotId: string;
+      therapistSlotIds: string[];
+      packageId?: string;
+      notes?: string;
+    },
+  ) {
+    if (user.role !== UserRole.MEMBER) {
+      throw new ForbiddenException('Only members can create appointments');
+    }
+
+    // Oda slotunu doğrula
+    const roomSlot = await this.slotsRepo.findOne({
+      where: { id: data.roomSlotId },
+      relations: ['service'],
+    });
+    if (!roomSlot) throw new NotFoundException('Room slot not found');
+    if (roomSlot.status !== 'available')
+      throw new BadRequestException('Room slot is not available');
+    if (roomSlot.bookedCount >= roomSlot.capacity) throw new BadRequestException('Room is full');
+
+    // Oda bilgisini al
+    const room = roomSlot.resourceId
+      ? await this.resourcesRepo.findOne({ where: { id: roomSlot.resourceId } })
+      : null;
+    const requiredTherapists = room?.capacity ?? 1;
+
+    if (data.therapistSlotIds.length < requiredTherapists) {
+      throw new BadRequestException(`Bu oda için ${requiredTherapists} masöz seçilmelidir`);
+    }
+
+    // Masöz slotlarını doğrula
+    const therapistSlots: ScheduleSlot[] = [];
+    const therapistNames: string[] = [];
+    for (const tsId of data.therapistSlotIds.slice(0, requiredTherapists)) {
+      const ts = await this.slotsRepo.findOne({ where: { id: tsId }, relations: ['service'] });
+      if (!ts) throw new NotFoundException(`Therapist slot not found: ${tsId}`);
+      if (ts.status !== 'available') throw new BadRequestException(`Masöz slotu müsait değil`);
+      if (ts.bookedCount >= ts.capacity) throw new BadRequestException(`Masöz slotu dolu`);
+      if (ts.startTime !== roomSlot.startTime) {
+        throw new BadRequestException('Masöz ve oda slotları aynı saatte olmalıdır');
+      }
+      therapistSlots.push(ts);
+
+      // Masöz ismini al
+      if (ts.providerId) {
+        const trainer = await this.trainersRepo.findOne({
+          where: { id: ts.providerId },
+          relations: ['user'],
+        });
+        if (trainer?.user) {
+          therapistNames.push(`${trainer.user.firstName} ${trainer.user.lastName}`.trim());
+        }
+      }
+    }
+
+    // Paket kontrolü
+    let pkg: Package | null = null;
+    let usedPackage = false;
+    if (data.packageId) {
+      pkg = await this.packagesRepo.findOne({
+        where: { id: data.packageId, userId: user.id, status: PackageStatus.ACTIVE },
+        relations: ['packageType'],
+      });
+      if (!pkg) throw new NotFoundException('Package not found or not active');
+      const sessionsNeeded = requiredTherapists; // Çift masaj = 2 seans düşer
+      if (pkg.remainingSessions < sessionsNeeded) {
+        throw new BadRequestException(
+          `Pakette yeterli seans yok (gerekli: ${sessionsNeeded}, kalan: ${pkg.remainingSessions})`,
+        );
+      }
+      const now = new Date().toISOString().slice(0, 10);
+      if (pkg.expiresAt < now) throw new BadRequestException('Package expired');
+      usedPackage = true;
+    }
+
+    // Toplam fiyat: oda fiyatı + masöz fiyatları (paket kullanılıyorsa 0)
+    const roomPrice = parseFloat(roomSlot.price);
+    const therapistPrice = therapistSlots.reduce((sum, ts) => sum + parseFloat(ts.price), 0);
+    const totalAmount = usedPackage ? 0 : roomPrice + therapistPrice;
+
+    // Appointment oluştur (ana slot: oda slotu)
+    const appointment = this.appointmentsRepo.create({
+      tenantId: roomSlot.tenantId,
+      userId: user.id,
+      slotId: roomSlot.id,
+      serviceId: roomSlot.serviceId,
+      providerType: 'resource',
+      providerId: roomSlot.resourceId,
+      status: 'confirmed',
+      totalAmount: String(totalAmount),
+      currency: roomSlot.currency,
+      paymentStatus: usedPackage ? 'package' : 'pending',
+      paymentMethod: usedPackage ? 'package' : null,
+      packageId: data.packageId ?? null,
+      notes: data.notes
+        ? data.notes
+        : `${room?.name ?? 'Oda'} · ${therapistNames.join(' + ')} · ${roomSlot.startTime}-${roomSlot.endTime}`,
+      participantCount: requiredTherapists,
+      participants: therapistSlots.map((ts) => ({
+        slotId: ts.id,
+        providerId: ts.providerId,
+        name: therapistNames[therapistSlots.indexOf(ts)] || 'Masöz',
+      })),
+    });
+    const saved = await this.appointmentsRepo.save(appointment);
+
+    // Oda slotunu reserve et
+    await this.slotsRepo.increment({ id: roomSlot.id }, 'bookedCount', 1);
+    if (roomSlot.bookedCount + 1 >= roomSlot.capacity) {
+      await this.slotsRepo.update({ id: roomSlot.id }, { status: 'booked' });
+    }
+
+    // Masöz slotlarını reserve et
+    for (const ts of therapistSlots) {
+      await this.slotsRepo.increment({ id: ts.id }, 'bookedCount', 1);
+      if (ts.bookedCount + 1 >= ts.capacity) {
+        await this.slotsRepo.update({ id: ts.id }, { status: 'booked' });
+      }
+    }
+
+    // Paketten seans düş
+    if (usedPackage && pkg) {
+      const sessionsUsed = requiredTherapists;
+      pkg.remainingSessions -= sessionsUsed;
+      if (pkg.remainingSessions <= 0) {
+        pkg.status = PackageStatus.DEPLETED;
+      }
+      await this.packagesRepo.save(pkg);
+    }
+
+    // Bilet maili
+    if (user.email) {
+      try {
+        const tenant = await this.tenantsRepo.findOne({ where: { id: roomSlot.tenantId } });
+        await this.mailService.sendBookingConfirmation({
+          to: user.email,
+          guestName: `${user.firstName} ${user.lastName}`.trim(),
+          clubName: tenant?.name || 'Wellness Club',
+          serviceName: `${room?.name ?? 'Masaj Odası'} — ${therapistNames.join(' + ')}`,
+          providerName: therapistNames.join(' + '),
+          date: roomSlot.date,
+          startTime: roomSlot.startTime,
+          endTime: roomSlot.endTime,
+          totalAmount: String(totalAmount),
+          kaporaAmount: null,
+          remainingAmount: null,
+          currency: roomSlot.currency,
+          appointmentId: saved.id,
+          cancellationDeadline: null,
+        });
+      } catch {
+        // Mail hatası rezervasyonu engellemesin
+      }
+    }
+
+    return {
+      id: saved.id,
+      status: 'confirmed',
+      room: room?.name ?? 'Masaj Odası',
+      therapists: therapistNames,
+      date: roomSlot.date,
+      startTime: roomSlot.startTime,
+      endTime: roomSlot.endTime,
+      totalAmount: String(totalAmount),
+      participantCount: requiredTherapists,
+      paymentMethod: usedPackage ? 'package' : 'pending',
+      remainingSessions: pkg?.remainingSessions ?? null,
+      packageName: pkg?.packageType?.name ?? null,
+    };
+  }
+
   /** Admin: Toplu slot oluştur (belirli tarih aralığı, saat aralığı) */
   async generateSlots(
     tenantId: string,
@@ -1205,6 +1502,106 @@ export class UnifiedBookingService {
     }
 
     return { created, serviceId: data.serviceId, dateRange: `${data.startDate} — ${data.endDate}` };
+  }
+
+  /**
+   * Admin: Masaj odası için toplu slot oluştur.
+   * Oda slotları providerType: 'resource' olarak oluşturulur.
+   * Bir "Spa Oda" service_catalog kaydı yoksa otomatik oluşturulur.
+   */
+  async generateRoomSlots(
+    tenantId: string,
+    data: {
+      roomId: string;
+      startDate: string;
+      endDate: string;
+      startHour: number;
+      endHour: number;
+      durationMinutes?: number;
+      price?: number;
+    },
+  ) {
+    const room = await this.resourcesRepo.findOne({ where: { id: data.roomId, tenantId } });
+    if (!room) throw new NotFoundException('Room not found');
+
+    // Oda için service_catalog kaydı bul veya oluştur
+    let service = await this.servicesRepo.findOne({
+      where: { tenantId, resourceId: room.id, category: 'massage', active: true },
+    });
+    if (!service) {
+      service = await this.servicesRepo.save(
+        this.servicesRepo.create({
+          tenantId,
+          name: room.name,
+          description: room.description,
+          category: 'massage',
+          providerType: 'resource',
+          providerId: null,
+          resourceId: room.id,
+          durationMinutes: room.durationMinutes,
+          price: String(room.price),
+          currency: room.currency,
+          capacity: 1, // Oda slotu: 1 seferde 1 grup
+          active: true,
+          metadata: { roomType: room.capacity >= 2 ? 'couple' : 'single' },
+        }),
+      );
+    }
+
+    const duration = data.durationMinutes ?? room.durationMinutes;
+    const price = data.price ?? parseFloat(room.price);
+    const slotsToCreate: Partial<ScheduleSlot>[] = [];
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10);
+
+      for (let hour = data.startHour; hour < data.endHour; hour++) {
+        const minuteSlots = Math.floor(60 / duration);
+        for (let m = 0; m < minuteSlots; m++) {
+          const startMin = m * duration;
+          const endMin = startMin + duration;
+          const startTime = `${String(hour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
+          const endHour2 = hour + Math.floor(endMin / 60);
+          const endMin2 = endMin % 60;
+          const endTime = `${String(endHour2).padStart(2, '0')}:${String(endMin2).padStart(2, '0')}`;
+
+          slotsToCreate.push({
+            tenantId,
+            serviceId: service.id,
+            providerType: 'resource',
+            providerId: null,
+            resourceId: room.id,
+            date: dateStr,
+            startTime,
+            endTime,
+            capacity: 1,
+            bookedCount: 0,
+            price: String(price),
+            currency: room.currency,
+            status: 'available',
+          });
+        }
+      }
+    }
+
+    // Batch insert
+    const batchSize = 500;
+    let created = 0;
+    for (let i = 0; i < slotsToCreate.length; i += batchSize) {
+      const batch = slotsToCreate.slice(i, i + batchSize);
+      await this.slotsRepo.save(batch as ScheduleSlot[]);
+      created += batch.length;
+    }
+
+    return {
+      created,
+      roomId: room.id,
+      roomName: room.name,
+      dateRange: `${data.startDate} — ${data.endDate}`,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════

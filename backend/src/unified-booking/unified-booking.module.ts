@@ -15,6 +15,7 @@ import { ClubEventRegistration } from '../database/entities/club-event-registrat
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { Campaign } from '../database/entities/campaign.entity';
+import { Resource } from '../database/entities/resource.entity';
 import { UnifiedBookingController } from './unified-booking.controller';
 import { UnifiedBookingService } from './unified-booking.service';
 
@@ -33,6 +34,7 @@ import { UnifiedBookingService } from './unified-booking.service';
       Package,
       PackageType,
       Campaign,
+      Resource,
     ]),
     AuthModule,
     MailModule,
