@@ -239,6 +239,17 @@ export function SpaScreen() {
   }
   const sortedTimes = Array.from(allTimes).sort();
 
+  // Saat → endTime eşleşmesi (grid'de "14:00-15:00" göstermek için)
+  function getEndTime(startTime: string): string {
+    for (const room of filteredRooms) {
+      const ts = room.timeSlots.find((s) => s.startTime === startTime);
+      if (ts) return ts.endTime;
+    }
+    // Fallback: +1 saat
+    const h = parseInt(startTime) + 1;
+    return `${String(h).padStart(2, '0')}:00`;
+  }
+
   // Toplam müsait slot sayısı
   const totalBookable = filteredRooms.reduce(
     (sum, room) =>
@@ -368,7 +379,9 @@ export function SpaScreen() {
                     {sortedTimes.map((time) => (
                       <View key={time} style={styles.gridRow}>
                         <View style={styles.gridTimeCell}>
-                          <Text style={styles.gridTimeTxt}>{time}</Text>
+                          <Text style={styles.gridTimeTxt}>
+                            {time}-{getEndTime(time)}
+                          </Text>
                         </View>
                         {filteredRooms.map((room) => {
                           const ts = room.timeSlots.find((s) => s.startTime === time);
@@ -439,7 +452,9 @@ export function SpaScreen() {
                               {sortedTimes.map((time) => (
                                 <View key={time} style={styles.gridRow}>
                                   <View style={styles.gridTimeCell}>
-                                    <Text style={styles.gridTimeTxt}>{time}</Text>
+                                    <Text style={styles.gridTimeTxt}>
+                                      {time}-{getEndTime(time)}
+                                    </Text>
                                   </View>
                                   {singleRooms.map((room) => {
                                     const ts = room.timeSlots.find((s) => s.startTime === time);
@@ -506,7 +521,9 @@ export function SpaScreen() {
                               {sortedTimes.map((time) => (
                                 <View key={time} style={styles.gridRow}>
                                   <View style={styles.gridTimeCell}>
-                                    <Text style={styles.gridTimeTxt}>{time}</Text>
+                                    <Text style={styles.gridTimeTxt}>
+                                      {time}-{getEndTime(time)}
+                                    </Text>
                                   </View>
                                   {coupleRooms.map((room) => {
                                     const ts = room.timeSlots.find((s) => s.startTime === time);
@@ -803,8 +820,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   gridRow: { flexDirection: 'row', alignItems: 'center' },
-  gridTimeCell: { width: 56, paddingVertical: 8, paddingHorizontal: 4 },
-  gridTimeTxt: { fontSize: 12, color: premium.text, fontWeight: '700' },
+  gridTimeCell: { width: 80, paddingVertical: 8, paddingHorizontal: 4 },
+  gridTimeTxt: { fontSize: 11, color: premium.text, fontWeight: '700' },
   gridHeaderTxt: { fontSize: 10, color: premium.textMuted, fontWeight: '700' },
   gridProviderCell: { width: 100, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
   gridProviderTxt: {
