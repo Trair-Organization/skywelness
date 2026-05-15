@@ -250,12 +250,31 @@ export function SpaManagementPage() {
   );
 }
 
-// ─── Room Slots Tab ─────────────────────────────────────────────────────────────
+// ─── Room Management Tab ────────────────────────────────────────────────────────
 
-type RoomRow = { id: string; name: string; resourceType: string; capacity: number; price: string };
+type RoomRow = {
+  id: string;
+  name: string;
+  resourceType: string;
+  capacity: number;
+  price: string;
+  active: boolean;
+  durationMinutes: number;
+};
 
 function RoomSlotsTab() {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [subTab, setSubTab] = useState<'rooms' | 'slots'>('rooms');
+
+  // Room form
+  const [showForm, setShowForm] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formCapacity, setFormCapacity] = useState(1);
+  const [formPrice, setFormPrice] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Slot form
   const [selectedRoom, setSelectedRoom] = useState('');
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(() =>
@@ -263,26 +282,62 @@ function RoomSlotsTab() {
   );
   const [startHour, setStartHour] = useState(9);
   const [endHour, setEndHour] = useState(21);
-  const [price, setPrice] = useState('');
+  const [slotPrice, setSlotPrice] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<{ created: number; roomName: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [genResult, setGenResult] = useState<{ created: number; roomName: string } | null>(null);
+
+  const loadRooms = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiJson<RoomRow[]>('/resource-booking/admin/resources');
+      const massageRooms = data.filter((r) => r.resourceType === 'massage_room');
+      setRooms(massageRooms);
+      if (massageRooms.length > 0 && !selectedRoom) setSelectedRoom(massageRooms[0].id);
+    } catch {
+      /* */
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedRoom]);
 
   useEffect(() => {
-    apiJson<RoomRow[]>('/resource-booking/admin/resources')
-      .then((data) => {
-        const massageRooms = data.filter((r) => r.resourceType === 'massage_room');
-        setRooms(massageRooms);
-        if (massageRooms.length > 0) setSelectedRoom(massageRooms[0].id);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    queueMicrotask(() => {
+      void loadRooms();
+    });
+  }, [loadRooms]);
 
-  async function handleGenerate() {
+  async function handleCreateRoom(e: React.FormEvent) {
+    e.preventDefault();
+    if (!formName.trim() || !formPrice) return;
+    setSaving(true);
+    try {
+      await apiJson('/resource-booking/admin/resources', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: formName.trim(),
+          resourceType: 'massage_room',
+          capacity: formCapacity,
+          durationMinutes: 60,
+          price: parseFloat(formPrice),
+          description: formCapacity >= 2 ? 'Çift kişilik masaj odası' : 'Tek kişilik masaj odası',
+        }),
+      });
+      setShowForm(false);
+      setFormName('');
+      setFormCapacity(1);
+      setFormPrice('');
+      await loadRooms();
+    } catch (e2) {
+      alert(e2 instanceof Error ? e2.message : 'Oda oluşturulamadı');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleGenerateSlots() {
     if (!selectedRoom) return;
     setGenerating(true);
-    setResult(null);
+    setGenResult(null);
     try {
       const res = await apiJson<{ created: number; roomName: string }>(
         '/v2/schedule/generate-room-slots',
@@ -294,13 +349,13 @@ function RoomSlotsTab() {
             endDate,
             startHour,
             endHour,
-            price: price ? parseFloat(price) : undefined,
+            price: slotPrice ? parseFloat(slotPrice) : undefined,
           }),
         },
       );
-      setResult(res);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Slot oluşturulamadı');
+      setGenResult(res);
+    } catch (e2) {
+      alert(e2 instanceof Error ? e2.message : 'Slot oluşturulamadı');
     } finally {
       setGenerating(false);
     }
@@ -308,188 +363,335 @@ function RoomSlotsTab() {
 
   if (loading) return <p className="muted">Yükleniyor...</p>;
 
-  if (rooms.length === 0) {
-    return (
-      <div className="empty-state">
-        <span className="empty-icon">🏠</span>
-        <p>Henüz masaj odası tanımlı değil. Kaynak yönetiminden oda ekleyin.</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ maxWidth: 600 }}>
-      <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>
-        🏠 Masaj Odası Slot Oluşturma
-      </h2>
-      <p className="muted" style={{ marginBottom: '1.5rem' }}>
-        Masaj odaları için müsaitlik slotları oluşturun. Oda slotları, masöz slotlarıyla birlikte
-        çalışarak oda bazlı rezervasyon sağlar.
-      </p>
+    <div>
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+        <button
+          className={`btn-sm ${subTab === 'rooms' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setSubTab('rooms')}
+        >
+          🏠 Odalar ({rooms.length})
+        </button>
+        <button
+          className={`btn-sm ${subTab === 'slots' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setSubTab('slots')}
+        >
+          🕐 Slot Oluştur
+        </button>
+      </div>
 
-      <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
-        {/* Oda Seçimi */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-          <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-            Masaj Odası
-          </span>
-          <select
-            value={selectedRoom}
-            onChange={(e) => setSelectedRoom(e.target.value)}
+      {/* ═══ Odalar ═══ */}
+      {subTab === 'rooms' && (
+        <div>
+          <div
             style={{
-              padding: '0.65rem',
-              borderRadius: 8,
-              border: '1px solid rgba(148,163,184,0.2)',
-              background: 'rgba(0,0,0,0.3)',
-              color: '#e2e8f0',
-              fontSize: '0.9rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
             }}
           >
-            {rooms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} ({r.capacity} kişi) — {r.price}₺
-              </option>
-            ))}
-          </select>
-        </label>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Masaj Odaları</h3>
+            <button className="btn-sm btn-primary" onClick={() => setShowForm(true)}>
+              + Yeni Oda Ekle
+            </button>
+          </div>
 
-        {/* Tarih Aralığı */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-              Başlangıç
-            </span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+          {/* Oda Ekleme Formu */}
+          {showForm && (
+            <form
+              onSubmit={(e) => void handleCreateRoom(e)}
               style={{
-                padding: '0.6rem',
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#e2e8f0',
-              }}
-            />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Bitiş</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                padding: '0.6rem',
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#e2e8f0',
-              }}
-            />
-          </label>
-        </div>
-
-        {/* Saat Aralığı */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-              Başlangıç Saati
-            </span>
-            <select
-              value={startHour}
-              onChange={(e) => setStartHour(Number(e.target.value))}
-              style={{
-                padding: '0.6rem',
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#e2e8f0',
+                padding: '1.25rem',
+                borderRadius: 12,
+                border: '1px solid rgba(56,189,248,0.2)',
+                background: 'rgba(56,189,248,0.04)',
+                marginBottom: '1.5rem',
+                display: 'grid',
+                gap: '0.75rem',
               }}
             >
-              {Array.from({ length: 16 }, (_, i) => i + 7).map((h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, '0')}:00
-                </option>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Yeni Masaj Odası</h4>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                  Oda Adı *
+                </span>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Örn: Masaj Odası 4 (Çift)"
+                  required
+                  style={{
+                    padding: '0.6rem',
+                    borderRadius: 8,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#e2e8f0',
+                  }}
+                />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                    Kapasite *
+                  </span>
+                  <select
+                    value={formCapacity}
+                    onChange={(e) => setFormCapacity(Number(e.target.value))}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#e2e8f0',
+                    }}
+                  >
+                    <option value={1}>1 kişi (Tek)</option>
+                    <option value={2}>2 kişi (Çift)</option>
+                  </select>
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                    Seans Fiyatı (₺) *
+                  </span>
+                  <input
+                    type="number"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    placeholder="2000"
+                    required
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#e2e8f0',
+                    }}
+                  />
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button type="submit" className="btn-sm btn-primary" disabled={saving}>
+                  {saving ? '⏳...' : '✓ Oda Oluştur'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-sm btn-outline"
+                  onClick={() => setShowForm(false)}
+                >
+                  İptal
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Oda Listesi */}
+          {rooms.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-icon">🏠</span>
+              <p>Henüz masaj odası tanımlı değil.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {rooms.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    padding: '1rem 1.25rem',
+                    borderRadius: 12,
+                    border: '1px solid rgba(148,163,184,0.1)',
+                    background: 'rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: '#e2e8f0' }}>{r.name}</strong>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 2 }}>
+                      {r.capacity >= 2 ? '👫 Çift kişilik' : '🧖 Tek kişilik'} · {r.durationMinutes}{' '}
+                      dk
+                    </div>
+                  </div>
+                  <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '1.1rem' }}>
+                    {r.price}₺
+                  </span>
+                </div>
               ))}
-            </select>
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-              Bitiş Saati
-            </span>
-            <select
-              value={endHour}
-              onChange={(e) => setEndHour(Number(e.target.value))}
-              style={{
-                padding: '0.6rem',
-                borderRadius: 8,
-                border: '1px solid rgba(148,163,184,0.2)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#e2e8f0',
-              }}
-            >
-              {Array.from({ length: 16 }, (_, i) => i + 8).map((h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, '0')}:00
-                </option>
-              ))}
-            </select>
-          </label>
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Fiyat Override */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-          <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
-            Özel Fiyat (boş = oda fiyatı)
-          </span>
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="Opsiyonel"
-            style={{
-              padding: '0.6rem',
-              borderRadius: 8,
-              border: '1px solid rgba(148,163,184,0.2)',
-              background: 'rgba(0,0,0,0.3)',
-              color: '#e2e8f0',
-            }}
-          />
-        </label>
-      </div>
+      {/* ═══ Slot Oluştur ═══ */}
+      {subTab === 'slots' && (
+        <div style={{ maxWidth: 550 }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>
+            Oda Çalışma Slotları Oluştur
+          </h3>
+          <p className="muted" style={{ marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+            Seçilen oda için belirtilen tarih ve saat aralığında müsaitlik slotları oluşturulur.
+          </p>
 
-      <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1rem' }}>
-        {(() => {
-          const days =
-            Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1;
-          const slotsPerDay = endHour - startHour;
-          return `${days} gün × ${slotsPerDay} slot/gün = ${days * slotsPerDay} slot oluşturulacak`;
-        })()}
-      </p>
-
-      <button
-        onClick={handleGenerate}
-        disabled={generating || !selectedRoom}
-        style={{
-          width: '100%',
-          padding: '0.85rem',
-          borderRadius: 10,
-          background: '#38bdf8',
-          color: '#0a0f1a',
-          fontWeight: 700,
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '0.95rem',
-          opacity: generating ? 0.5 : 1,
-        }}
-      >
-        {generating ? '⏳ Oluşturuluyor...' : '🏠 Oda Slotlarını Oluştur'}
-      </button>
-
-      {result && (
-        <p style={{ color: '#10b981', fontWeight: 700, marginTop: '1rem' }}>
-          ✅ {result.created} slot başarıyla oluşturuldu ({result.roomName})
-        </p>
+          {rooms.length === 0 ? (
+            <p className="muted">Önce bir oda ekleyin.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Oda</span>
+                <select
+                  value={selectedRoom}
+                  onChange={(e) => setSelectedRoom(e.target.value)}
+                  style={{
+                    padding: '0.6rem',
+                    borderRadius: 8,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#e2e8f0',
+                  }}
+                >
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.capacity} kişi)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                    Başlangıç Tarihi
+                  </span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#e2e8f0',
+                    }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                    Bitiş Tarihi
+                  </span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#e2e8f0',
+                    }}
+                  />
+                </label>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                    Başlangıç Saati
+                  </span>
+                  <select
+                    value={startHour}
+                    onChange={(e) => setStartHour(Number(e.target.value))}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#e2e8f0',
+                    }}
+                  >
+                    {Array.from({ length: 16 }, (_, i) => i + 7).map((h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                    Bitiş Saati
+                  </span>
+                  <select
+                    value={endHour}
+                    onChange={(e) => setEndHour(Number(e.target.value))}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#e2e8f0',
+                    }}
+                  >
+                    {Array.from({ length: 16 }, (_, i) => i + 8).map((h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>
+                  Özel Fiyat (boş = oda fiyatı)
+                </span>
+                <input
+                  type="number"
+                  value={slotPrice}
+                  onChange={(e) => setSlotPrice(e.target.value)}
+                  placeholder="Opsiyonel"
+                  style={{
+                    padding: '0.6rem',
+                    borderRadius: 8,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#e2e8f0',
+                  }}
+                />
+              </label>
+              <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                {(() => {
+                  const days =
+                    Math.ceil(
+                      (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000,
+                    ) + 1;
+                  return `${days} gün × ${endHour - startHour} slot = ${days * (endHour - startHour)} slot`;
+                })()}
+              </p>
+              <button
+                onClick={() => void handleGenerateSlots()}
+                disabled={generating || !selectedRoom}
+                style={{
+                  padding: '0.85rem',
+                  borderRadius: 10,
+                  background: '#38bdf8',
+                  color: '#0a0f1a',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  opacity: generating ? 0.5 : 1,
+                }}
+              >
+                {generating ? '⏳ Oluşturuluyor...' : '🏠 Slotları Oluştur'}
+              </button>
+              {genResult && (
+                <p style={{ color: '#10b981', fontWeight: 700 }}>
+                  ✅ {genResult.created} slot oluşturuldu ({genResult.roomName})
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
