@@ -775,6 +775,18 @@ export class AdminController {
     return this.adminMembers.addSessionsToPackage(admin.tenantId, userId, packageId, body.sessions);
   }
 
+  /** Admin: Üyenin paketini sil */
+  @Delete('members/:userId/packages/:packageId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  deleteMemberPackage(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Param('packageId', new ParseUUIDPipe({ version: '4' })) packageId: string,
+  ) {
+    return this.adminMembers.deleteMemberPackage(admin.tenantId, userId, packageId);
+  }
+
   @Post('schedule/bulk-open')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)

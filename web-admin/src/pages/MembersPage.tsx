@@ -751,6 +751,36 @@ export function MembersPage() {
                         >
                           + Seans Ekle
                         </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              !confirm(`"${pkg.packageType.name}" paketi silinecek. Emin misiniz?`)
+                            )
+                              return;
+                            void apiJson(`/admin/members/${detail.id}/packages/${pkg.id}`, {
+                              method: 'DELETE',
+                            })
+                              .then(() => {
+                                void openDetail(detail as unknown as Member);
+                              })
+                              .catch((err: unknown) =>
+                                alert(err instanceof Error ? err.message : 'Hata'),
+                              );
+                          }}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 5,
+                            border: '1px solid #fee2e2',
+                            background: '#fff',
+                            color: '#dc2626',
+                            fontWeight: 600,
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🗑
+                        </button>
                       </div>
                     </div>
                   ))}

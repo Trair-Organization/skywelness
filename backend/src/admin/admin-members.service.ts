@@ -2299,4 +2299,19 @@ export class AdminMembersService {
       newTotal: pkg.remainingSessions,
     };
   }
+
+  /** Admin: Üyenin paketini sil */
+  async deleteMemberPackage(tenantId: string, userId: string, packageId: string) {
+    const pkg = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.packageType', 'pt')
+      .where('p.id = :id', { id: packageId })
+      .andWhere('p.userId = :userId', { userId })
+      .andWhere('pt.tenantId = :tenantId', { tenantId })
+      .getOne();
+    if (!pkg) throw new NotFoundException('Paket bulunamadı');
+
+    await this.packagesRepo.remove(pkg);
+    return { ok: true, deletedPackageId: packageId };
+  }
 }
