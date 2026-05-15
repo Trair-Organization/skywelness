@@ -7,20 +7,17 @@ type NavItem = { path: string; icon: string; label: string };
 
 const WELLNESS_NAV: NavItem[] = [
   { path: '/club/dashboard', icon: '📊', label: 'Dashboard' },
-  { path: '/club/profile', icon: '🏢', label: 'Profil Düzenle' },
   { path: '/members', icon: '👥', label: 'Üyeler' },
-  { path: '/services', icon: '📋', label: 'Hizmet Kataloğu' },
-  { path: '/appointments', icon: '📅', label: 'Randevular (v2)' },
-  { path: '/schedule-slots', icon: '🗓️', label: 'Slot Yönetimi' },
-  { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
   { path: '/spa', icon: '💆', label: 'Spa Yönetimi' },
-  { path: '/schedule', icon: '📆', label: 'Ajanda (Eski)' },
+  { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
+  { path: '/appointments', icon: '📅', label: 'Randevular' },
   { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '🎉', label: 'Etkinlikler' },
-  { path: '/push-notifications', icon: '🔔', label: 'Bildirimler' },
-  { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
-  { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
+  { path: '/messages', icon: '💬', label: 'Mesajlar' },
+  { path: '/push-notifications', icon: '🔔', label: 'Bildirimler' },
+  { path: '/club/profile', icon: '🏢', label: 'Kulüp Profili' },
+  { path: '/club/insights', icon: '📈', label: 'İstatistikler' },
 ];
 
 const GENERIC_NAV: NavItem[] = [
