@@ -840,6 +840,7 @@ export class UnifiedBookingService {
     }
 
     // Paketten seans düş
+    const previousSessions = pkg.remainingSessions;
     pkg.remainingSessions -= 1;
     if (pkg.remainingSessions <= 0) {
       pkg.status = PackageStatus.DEPLETED;
@@ -860,7 +861,7 @@ export class UnifiedBookingService {
       paymentStatus: 'package',
       paymentMethod: 'package',
       packageId: pkg.id,
-      notes: `Paket kullanımı: ${pkg.packageType?.name ?? 'Paket'}`,
+      notes: `Paket kullanımı: ${pkg.packageType?.name ?? 'Paket'} (${previousSessions} → ${pkg.remainingSessions})`,
       participantCount: 1,
     });
     const saved = await this.appointmentsRepo.save(appointment);
@@ -871,6 +872,41 @@ export class UnifiedBookingService {
       await this.slotsRepo.update({ id: slot.id }, { status: 'booked' });
     }
 
+    // Bilet maili gönder
+    if (user.email) {
+      try {
+        const tenant = await this.tenantsRepo.findOne({ where: { id: slot.tenantId } });
+        let providerName: string | null = null;
+        if (slot.providerId) {
+          const trainer = await this.trainersRepo.findOne({
+            where: { id: slot.providerId },
+            relations: ['user'],
+          });
+          if (trainer?.user) {
+            providerName = `${trainer.user.firstName} ${trainer.user.lastName}`.trim();
+          }
+        }
+        await this.mailService.sendBookingConfirmation({
+          to: user.email,
+          guestName: `${user.firstName} ${user.lastName}`.trim(),
+          clubName: tenant?.name || 'Wellness Club',
+          serviceName: slot.service?.name || 'Seans',
+          providerName,
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          totalAmount: '0',
+          kaporaAmount: null,
+          remainingAmount: null,
+          currency: slot.currency,
+          appointmentId: saved.id,
+          cancellationDeadline: null,
+        });
+      } catch {
+        // Mail hatası rezervasyonu engellemesin
+      }
+    }
+
     return {
       id: saved.id,
       status: 'confirmed',
@@ -879,6 +915,7 @@ export class UnifiedBookingService {
       startTime: slot.startTime,
       endTime: slot.endTime,
       packageName: pkg.packageType?.name,
+      previousSessions,
       remainingSessions: pkg.remainingSessions,
       paymentMethod: 'package',
     };

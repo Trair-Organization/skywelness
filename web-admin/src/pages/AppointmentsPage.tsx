@@ -53,7 +53,14 @@ export function AppointmentsPage() {
     finally { setLoading(false); }
   }, [statusFilter]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    const query = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
+    apiJson<Appointment[]>(`/v2/appointments${query}`)
+      .then((data) => { if (!cancelled) { setAppointments(data); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [statusFilter]);
 
   async function updateStatus(id: string, status: string) {
     setUpdating(id);
@@ -147,8 +154,12 @@ export function AppointmentsPage() {
                       </div>
                       <div>
                         <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Ödeme</span>
-                        <span style={{ color: a.paymentStatus === 'paid' ? '#10b981' : '#fbbf24', fontSize: '0.85rem', fontWeight: 600 }}>
-                          {a.paymentStatus === 'paid' ? '✅ Ödendi' : a.paymentStatus === 'pending' ? '⏳ Bekliyor' : a.paymentStatus}
+                        <span style={{ color: a.paymentStatus === 'paid' ? '#10b981' : a.paymentStatus === 'package' ? '#a78bfa' : '#fbbf24', fontSize: '0.85rem', fontWeight: 600 }}>
+                          {a.paymentStatus === 'paid' ? '✅ Ödendi'
+                            : a.paymentStatus === 'deposit_paid' ? '💳 Kapora ödendi'
+                            : a.paymentStatus === 'package' ? '📦 Paketten'
+                            : a.paymentStatus === 'pending' ? '⏳ Bekliyor'
+                            : a.paymentStatus}
                         </span>
                       </div>
                     </div>
