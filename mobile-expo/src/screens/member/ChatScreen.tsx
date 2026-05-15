@@ -122,7 +122,16 @@ export function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => {
+              // Chat'ten çıkarken her zaman Messages tab'ına git (keşif/profil/kampanya'ya değil)
+              const nav = navigation as unknown as {
+                navigate: (n: string, p?: unknown) => void;
+              };
+              nav.navigate('Main', { screen: 'Messages' });
+            }}
+          >
             <Text style={styles.backTxt}>←</Text>
           </Pressable>
           <View style={styles.headerAvatar}>
