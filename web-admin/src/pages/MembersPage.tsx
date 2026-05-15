@@ -5,6 +5,7 @@ import { apiJson, ApiError } from '../lib/api';
 type Member = {
   id: string;
   email: string;
+  username?: string;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -12,10 +13,15 @@ type Member = {
   accountStatus: string;
   lastLogin: string | null;
   createdAt: string;
+  membershipEndDate: string | null;
+  membershipStatus: string | null;
+  massageSessions: number;
+  ptSessions: number;
 };
 
 type MemberDetail = {
   id: string;
+  username: string | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -268,22 +274,22 @@ export function MembersPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={() => {
-              const name = prompt('Ad Soyad (örn: Ali Veli):');
-              if (!name) return;
-              const parts = name.trim().split(' ');
-              const firstName = parts[0];
-              const lastName = parts.slice(1).join(' ') || 'Üye';
-              const email = prompt('E-posta (opsiyonel):') || undefined;
-              const phone = prompt('Telefon (opsiyonel):') || undefined;
-              void apiJson('/admin/members/quick-create', {
-                method: 'POST',
-                body: JSON.stringify({ firstName, lastName, email, phone }),
-              })
-                .then(() => {
-                  alert('✅ Üye eklendi');
-                  void load(statusFilter, search);
-                })
-                .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+              setDetail({
+                id: '',
+                username: null,
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: null,
+                photoUrl: null,
+                accountStatus: 'active',
+                lastLogin: null,
+                createdAt: new Date().toISOString(),
+                membership: null,
+                assignedTrainers: [],
+                packages: [],
+                reservations: [],
+              });
             }}
             style={{
               padding: '8px 16px',
@@ -492,7 +498,7 @@ export function MembersPage() {
           >
             {/* Sol: Profil Bilgileri */}
             <div>
-              <ProfileEditor detail={detail} onSaved={() => void openDetail(detail as unknown as Member)} />
+              <ProfileEditor detail={detail} onSaved={() => { if (!detail.id) { setDetail(null); void load(statusFilter, search); } else { void openDetail(detail as unknown as Member); } }} />
 
               {/* Üyelik Bilgisi */}
               <div style={{ marginTop: 16 }}>
@@ -1034,9 +1040,10 @@ export function MembersPage() {
               <tr style={{ background: '#f8fafc' }}>
                 <th style={thStyle}>Üye</th>
                 <th style={thStyle}>E-posta</th>
-                <th style={thStyle}>Telefon</th>
+                <th style={thStyle}>Üyelik Bitiş</th>
+                <th style={thStyle}>Masaj</th>
+                <th style={thStyle}>PT</th>
                 <th style={thStyle}>Durum</th>
-                <th style={thStyle}>Kayıt</th>
                 <th style={thStyle}>İşlemler</th>
               </tr>
             </thead>
@@ -1073,9 +1080,20 @@ export function MembersPage() {
                     </div>
                   </td>
                   <td style={tdStyle}>{m.email}</td>
-                  <td style={tdStyle}>{m.phone || '—'}</td>
+                  <td style={tdStyle}>
+                    {m.membershipEndDate ? (
+                      <span style={{ fontSize: '0.8rem', color: m.membershipStatus === 'active' ? '#059669' : '#dc2626' }}>
+                        {m.membershipEndDate}
+                      </span>
+                    ) : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>}
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontWeight: 700, color: m.massageSessions > 0 ? '#059669' : '#94a3b8' }}>{m.massageSessions}</span>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontWeight: 700, color: m.ptSessions > 0 ? '#2563eb' : '#94a3b8' }}>{m.ptSessions}</span>
+                  </td>
                   <td style={tdStyle}>{statusBadge(m.accountStatus)}</td>
-                  <td style={tdStyle}>{new Date(m.createdAt).toLocaleDateString('tr-TR')}</td>
                   <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                     {m.accountStatus === 'pending_approval' && (
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -1527,7 +1545,8 @@ function TrainerSelectForPackage({ userId, value, onChange }: { userId: string; 
 // ─── ProfileEditor Component ────────────────────────────────────────────────────
 
 function ProfileEditor({ detail, onSaved }: { detail: MemberDetail; onSaved: () => void }) {
-  const [editing, setEditing] = useState(false);
+  const isNew = !detail.id;
+  const [editing, setEditing] = useState(isNew);
   const [firstName, setFirstName] = useState(detail.firstName);
   const [lastName, setLastName] = useState(detail.lastName);
   const [email, setEmail] = useState(detail.email);
@@ -1539,15 +1558,25 @@ function ProfileEditor({ detail, onSaved }: { detail: MemberDetail; onSaved: () 
     setLastName(detail.lastName);
     setEmail(detail.email);
     setPhone(detail.phone || '');
+    setEditing(!detail.id);
   }, [detail]);
 
   async function save() {
+    if (!firstName.trim() || !lastName.trim()) { alert('Ad ve soyad zorunlu'); return; }
     setSaving(true);
     try {
-      await apiJson(`/admin/members/${detail.id}/update-profile`, {
-        method: 'PATCH',
-        body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() || null }),
-      });
+      if (isNew) {
+        await apiJson('/admin/members/quick-create', {
+          method: 'POST',
+          body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || undefined, phone: phone.trim() || undefined }),
+        });
+        alert('✅ Üye oluşturuldu');
+      } else {
+        await apiJson(`/admin/members/${detail.id}/update-profile`, {
+          method: 'PATCH',
+          body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() || null }),
+        });
+      }
       setEditing(false);
       onSaved();
     } catch (e) { alert(e instanceof Error ? e.message : 'Hata'); }
@@ -1561,47 +1590,55 @@ function ProfileEditor({ detail, onSaved }: { detail: MemberDetail; onSaved: () 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Profil Bilgileri</h3>
-        {!editing ? (
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+          {isNew ? '➕ Yeni Üye Oluştur' : 'Profil Bilgileri'}
+        </h3>
+        {!editing && !isNew ? (
           <button onClick={() => setEditing(true)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#2563eb', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
             ✏️ Düzenle
           </button>
         ) : (
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={() => void save()} disabled={saving} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
-              {saving ? '...' : '💾 Kaydet'}
+              {saving ? '...' : isNew ? '✓ Kaydet' : '💾 Kaydet'}
             </button>
-            <button onClick={() => setEditing(false)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
-              İptal
-            </button>
+            {!isNew && <button onClick={() => setEditing(false)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>İptal</button>}
           </div>
         )}
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
-          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Üye ID</span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', fontFamily: 'monospace' }}>{detail.id.slice(0, 8)}</span>
-        </div>
+        {!isNew && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Üye ID</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', fontFamily: 'monospace' }}>{detail.id.slice(0, 8)}</span>
+          </div>
+        )}
+        {!isNew && detail.username && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Kullanıcı Adı</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>@{detail.username}</span>
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Ad</span>
-          {editing ? <input value={firstName} onChange={(e) => setFirstName(e.target.value)} style={fieldStyle} /> : <span style={fieldStyle}>{detail.firstName}</span>}
+          {editing ? <input value={firstName} onChange={(e) => setFirstName(e.target.value)} style={fieldStyle} placeholder="Ad *" /> : <span style={fieldStyle}>{detail.firstName}</span>}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Soyad</span>
-          {editing ? <input value={lastName} onChange={(e) => setLastName(e.target.value)} style={fieldStyle} /> : <span style={fieldStyle}>{detail.lastName}</span>}
+          {editing ? <input value={lastName} onChange={(e) => setLastName(e.target.value)} style={fieldStyle} placeholder="Soyad *" /> : <span style={fieldStyle}>{detail.lastName}</span>}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>E-posta</span>
-          {editing ? <input value={email} onChange={(e) => setEmail(e.target.value)} style={fieldStyle} /> : <span style={fieldStyle}>{detail.email}</span>}
+          {editing ? <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" style={fieldStyle} placeholder="email@ornek.com" /> : <span style={fieldStyle}>{detail.email}</span>}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Telefon</span>
           {editing ? <input value={phone} onChange={(e) => setPhone(e.target.value)} style={fieldStyle} placeholder="05xx..." /> : <span style={fieldStyle}>{detail.phone || '—'}</span>}
         </div>
-        <InfoRow label="Kayıt Tarihi" value={new Date(detail.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} />
-        <InfoRow label="Son Giriş" value={detail.lastLogin ? new Date(detail.lastLogin).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Hiç giriş yapmadı'} />
-        <InfoRow label="Durum" value={detail.accountStatus === 'active' ? 'Aktif Üye' : detail.accountStatus === 'pending_approval' ? 'Onay Bekliyor' : detail.accountStatus === 'suspended' ? 'Dondurulmuş' : 'Reddedildi'} />
+        {!isNew && <InfoRow label="Kayıt Tarihi" value={new Date(detail.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} />}
+        {!isNew && <InfoRow label="Son Giriş" value={detail.lastLogin ? new Date(detail.lastLogin).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Hiç giriş yapmadı'} />}
+        {!isNew && <InfoRow label="Durum" value={detail.accountStatus === 'active' ? 'Aktif Üye' : detail.accountStatus === 'pending_approval' ? 'Onay Bekliyor' : detail.accountStatus === 'suspended' ? 'Dondurulmuş' : 'Reddedildi'} />}
       </div>
     </div>
   );

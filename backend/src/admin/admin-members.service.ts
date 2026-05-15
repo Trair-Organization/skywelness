@@ -171,6 +171,7 @@ export class AdminMembersService {
     qb.select([
       'u.id',
       'u.email',
+      'u.username',
       'u.firstName',
       'u.lastName',
       'u.phone',
@@ -182,7 +183,55 @@ export class AdminMembersService {
     qb.orderBy('u.createdAt', 'DESC');
     qb.take(200);
 
-    return qb.getMany();
+    const members = await qb.getMany();
+
+    // Membership ve paket bilgilerini toplu çek
+    const memberIds = members.map((m) => m.id);
+    if (memberIds.length === 0) return [];
+
+    // Üyelik bitiş tarihleri
+    const memberships = await this.membershipsRepo
+      .createQueryBuilder('m')
+      .where('m.tenantId = :tenantId', { tenantId })
+      .andWhere('m.userId IN (:...ids)', { ids: memberIds })
+      .select(['m.userId', 'm.endDate', 'm.status'])
+      .orderBy('m.createdAt', 'DESC')
+      .getMany();
+    const membershipMap = new Map<string, { endDate: string; status: string }>();
+    for (const ms of memberships) {
+      if (!membershipMap.has(ms.userId)) membershipMap.set(ms.userId, { endDate: ms.endDate, status: ms.status });
+    }
+
+    // Aktif paketlerin kalan seansları
+    const packages = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.packageType', 'pt')
+      .where('pt.tenantId = :tenantId', { tenantId })
+      .andWhere('p.userId IN (:...ids)', { ids: memberIds })
+      .andWhere('p.status = :active', { active: 'active' })
+      .select(['p.userId', 'p.remainingSessions', 'pt.sessionType'])
+      .addSelect('pt.sessionType', 'sessionType')
+      .getRawMany<{ p_userId: string; p_remaining_sessions: number; sessionType: string }>();
+
+    const ptMap = new Map<string, number>();
+    const massageMap = new Map<string, number>();
+    for (const pkg of packages) {
+      const uid = pkg.p_userId;
+      const sessions = Number(pkg.p_remaining_sessions) || 0;
+      if (pkg.sessionType === 'personal_training') {
+        ptMap.set(uid, (ptMap.get(uid) || 0) + sessions);
+      } else if (pkg.sessionType === 'massage') {
+        massageMap.set(uid, (massageMap.get(uid) || 0) + sessions);
+      }
+    }
+
+    return members.map((m) => ({
+      ...m,
+      membershipEndDate: membershipMap.get(m.id)?.endDate || null,
+      membershipStatus: membershipMap.get(m.id)?.status || null,
+      massageSessions: massageMap.get(m.id) || 0,
+      ptSessions: ptMap.get(m.id) || 0,
+    }));
   }
 
   /** Eğitmenleri listele */
@@ -331,6 +380,7 @@ export class AdminMembersService {
 
     return {
       id: member.id,
+      username: (member as unknown as { username?: string }).username || null,
       firstName: member.firstName,
       lastName: member.lastName,
       email: member.email,
