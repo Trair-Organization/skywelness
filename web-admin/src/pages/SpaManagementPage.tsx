@@ -24,7 +24,7 @@ type SpaBookingRow = {
   user: { id: string; firstName: string; lastName: string; email: string } | null;
 };
 
-type TabType = 'bookings' | 'services' | 'therapists' | 'room-slots';
+type TabType = 'bookings' | 'services' | 'therapists' | 'packages' | 'room-slots';
 
 export function SpaManagementPage() {
   const [activeTab, setActiveTab] = useState<TabType>('bookings');
@@ -117,6 +117,12 @@ export function SpaManagementPage() {
             onClick={() => setActiveTab('therapists')}
           >
             💆 Masözler
+          </button>
+          <button
+            className={`filter-tab ${activeTab === 'packages' ? 'filter-tab-active' : ''}`}
+            onClick={() => setActiveTab('packages')}
+          >
+            📦 Paketler
           </button>
           <button
             className={`filter-tab ${activeTab === 'room-slots' ? 'filter-tab-active' : ''}`}
@@ -216,35 +222,298 @@ export function SpaManagementPage() {
           )}
 
           {/* Hizmetler */}
-          {activeTab === 'services' && (
-            <div className="services-grid">
-              {services.map((s) => (
-                <div key={s.id} className="service-card">
-                  <div className="service-card-header">
-                    <span className="service-category">{getCategoryLabel(s.category)}</span>
-                    <span className={`service-status ${s.active ? 'active' : 'inactive'}`}>
-                      {s.active ? 'Aktif' : 'Pasif'}
-                    </span>
-                  </div>
-                  <h3 className="service-name">{s.name}</h3>
-                  {s.description && (
-                    <p className="service-desc">{s.description.slice(0, 120)}...</p>
-                  )}
-                  <div className="service-meta">
-                    <span>⏱ {s.durationMinutes} dk</span>
-                    <span className="service-price">₺{s.price.toLocaleString('tr-TR')}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {activeTab === 'services' && <ServicesTab services={services} onRefresh={loadAll} getCategoryLabel={getCategoryLabel} />}
 
           {/* Masözler */}
           {activeTab === 'therapists' && <TherapistsPage embedded />}
 
+          {/* Paketler */}
+          {activeTab === 'packages' && <PackagesTab />}
+
           {/* Oda Slotları */}
           {activeTab === 'room-slots' && <RoomSlotsTab />}
         </>
+      )}
+    </div>
+  );
+}
+
+// ─── Services CRUD Tab ───────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  { value: 'relax', label: '🧘 Relax' },
+  { value: 'therapy', label: '💆 Therapy' },
+  { value: 'recovery', label: '🔄 Recovery' },
+  { value: 'sport', label: '⚡ Sport' },
+  { value: 'premium', label: '👑 Premium' },
+  { value: 'cold', label: '❄️ Cold' },
+];
+
+function ServicesTab({ services, onRefresh, getCategoryLabel }: { services: SpaServiceRow[]; onRefresh: () => void; getCategoryLabel: (c: string) => string }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('relax');
+  const [duration, setDuration] = useState(60);
+  const [price, setPrice] = useState('');
+  const [active, setActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  function resetForm() {
+    setEditId(null); setName(''); setDescription(''); setCategory('relax'); setDuration(60); setPrice(''); setActive(true); setShowForm(false);
+  }
+
+  function startEdit(s: SpaServiceRow) {
+    setEditId(s.id); setName(s.name); setDescription(s.description || ''); setCategory(s.category); setDuration(s.durationMinutes); setPrice(String(s.price)); setActive(s.active); setShowForm(true);
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !price) return;
+    setSaving(true);
+    try {
+      const body = { name: name.trim(), description: description.trim() || null, category, durationMinutes: duration, price: parseFloat(price), active };
+      if (editId) {
+        await apiJson(`/spa/admin/services/${editId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        await apiJson('/spa/admin/services', { method: 'POST', body: JSON.stringify(body) });
+      }
+      resetForm();
+      onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hata');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, sName: string) {
+    if (!confirm(`"${sName}" hizmeti silinecek. Emin misiniz?`)) return;
+    try {
+      await apiJson(`/spa/admin/services/${id}`, { method: 'DELETE' });
+      onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Silinemedi');
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Spa Hizmetleri ({services.length})</h3>
+        <button className="btn-sm btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ Hizmet Ekle</button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={(e) => void handleSave(e)} style={{ padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(56,189,248,0.2)', background: 'rgba(56,189,248,0.04)', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>{editId ? 'Hizmet Düzenle' : 'Yeni Hizmet'}</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Hizmet Adı *</span>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn: Aromaterapi Masajı" required className="form-input" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Kategori *</span>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="form-input">
+                {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </label>
+          </div>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <span className="form-label">Açıklama</span>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Hizmet açıklaması..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Süre (dk) *</span>
+              <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} min={15} className="form-input" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Fiyat (₺) *</span>
+              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="2000" required className="form-input" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Durum</span>
+              <select value={active ? 'true' : 'false'} onChange={(e) => setActive(e.target.value === 'true')} className="form-input">
+                <option value="true">Aktif</option>
+                <option value="false">Pasif</option>
+              </select>
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
+            <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
+          </div>
+        </form>
+      )}
+
+      {services.length === 0 ? (
+        <div className="empty-state"><span className="empty-icon">🧴</span><p>Henüz hizmet tanımlı değil</p></div>
+      ) : (
+        <div className="services-grid">
+          {services.map((s) => (
+            <div key={s.id} className="service-card">
+              <div className="service-card-header">
+                <span className="service-category">{getCategoryLabel(s.category)}</span>
+                <span className={`service-status ${s.active ? 'active' : 'inactive'}`}>{s.active ? 'Aktif' : 'Pasif'}</span>
+              </div>
+              <h3 className="service-name">{s.name}</h3>
+              {s.description && <p className="service-desc">{s.description.slice(0, 120)}...</p>}
+              <div className="service-meta">
+                <span>⏱ {s.durationMinutes} dk</span>
+                <span className="service-price">₺{s.price.toLocaleString('tr-TR')}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.75rem' }}>
+                <button className="btn-sm btn-outline" onClick={() => startEdit(s)}>✏️ Düzenle</button>
+                <button className="btn-sm btn-danger" onClick={() => void handleDelete(s.id, s.name)}>🗑</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Packages CRUD Tab ──────────────────────────────────────────────────────────
+
+type SpaPackageRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  sessionCount: number;
+  price: string;
+  validityDays: number;
+  applicableCategories: string[];
+  active: boolean;
+  sortOrder: number;
+};
+
+function PackagesTab() {
+  const [packages, setPackages] = useState<SpaPackageRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [sessionCount, setSessionCount] = useState(10);
+  const [price, setPrice] = useState('');
+  const [validityDays, setValidityDays] = useState(30);
+  const [active, setActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const loadPackages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiJson<SpaPackageRow[]>('/spa/admin/packages');
+      setPackages(data);
+    } catch { /* */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { queueMicrotask(() => { void loadPackages(); }); }, [loadPackages]);
+
+  function resetForm() {
+    setEditId(null); setName(''); setDescription(''); setSessionCount(10); setPrice(''); setValidityDays(30); setActive(true); setShowForm(false);
+  }
+
+  function startEdit(p: SpaPackageRow) {
+    setEditId(p.id); setName(p.name); setDescription(p.description || ''); setSessionCount(p.sessionCount); setPrice(p.price); setValidityDays(p.validityDays); setActive(p.active); setShowForm(true);
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !price) return;
+    setSaving(true);
+    try {
+      const body = { name: name.trim(), description: description.trim() || null, sessionCount, price: parseFloat(price), validityDays, active };
+      if (editId) {
+        await apiJson(`/spa/admin/packages/${editId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        await apiJson('/spa/admin/packages', { method: 'POST', body: JSON.stringify(body) });
+      }
+      resetForm();
+      await loadPackages();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hata');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <p className="muted">Yükleniyor...</p>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Spa Paketleri ({packages.length})</h3>
+        <button className="btn-sm btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ Paket Ekle</button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={(e) => void handleSave(e)} style={{ padding: '1.25rem', borderRadius: 12, border: '1px solid rgba(56,189,248,0.2)', background: 'rgba(56,189,248,0.04)', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>{editId ? 'Paket Düzenle' : 'Yeni Paket'}</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Paket Adı *</span>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn: 10 Seans Masaj" required className="form-input" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Durum</span>
+              <select value={active ? 'true' : 'false'} onChange={(e) => setActive(e.target.value === 'true')} className="form-input">
+                <option value="true">Aktif</option>
+                <option value="false">Pasif</option>
+              </select>
+            </label>
+          </div>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <span className="form-label">Açıklama</span>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Paket açıklaması..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Seans Sayısı *</span>
+              <input type="number" value={sessionCount} onChange={(e) => setSessionCount(Number(e.target.value))} min={1} className="form-input" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Fiyat (₺) *</span>
+              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="15000" required className="form-input" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Geçerlilik (gün) *</span>
+              <input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} min={1} className="form-input" />
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
+            <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
+          </div>
+        </form>
+      )}
+
+      {packages.length === 0 ? (
+        <div className="empty-state"><span className="empty-icon">📦</span><p>Henüz paket tanımlı değil</p></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          {packages.map((p) => (
+            <div key={p.id} style={{ padding: '1rem 1.25rem', borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)', background: 'rgba(0,0,0,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong style={{ color: '#e2e8f0' }}>{p.name}</strong>
+                  <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 6, background: p.active ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: p.active ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{p.active ? 'Aktif' : 'Pasif'}</span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 4 }}>
+                  {p.sessionCount} seans · {p.validityDays} gün geçerli {p.description && `· ${p.description.slice(0, 60)}`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '1.1rem' }}>₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
+                <button className="btn-sm btn-outline" onClick={() => startEdit(p)}>✏️</button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

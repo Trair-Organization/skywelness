@@ -3733,3 +3733,23 @@ button.primary:disabled {
   margin-top: 10px;
   flex-wrap: wrap;
 }
+
+/* ─── Spa Form Fields ──────────────────────────────────────────────────────── */
+.form-label {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.form-input {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
