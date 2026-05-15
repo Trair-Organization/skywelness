@@ -97,6 +97,16 @@ export function MembersPage() {
   const [selectedPkgTrainer, setSelectedPkgTrainer] = useState('');
   const [assigningPkg, setAssigningPkg] = useState(false);
 
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<'sms' | 'mail' | 'package' | null>(null);
+  const [bulkSmsMessage, setBulkSmsMessage] = useState('');
+  const [bulkMailSubject, setBulkMailSubject] = useState('');
+  const [bulkMailMessage, setBulkMailMessage] = useState('');
+  const [bulkPkgTypeId, setBulkPkgTypeId] = useState('');
+  const [bulkPkgTrainerId, setBulkPkgTrainerId] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   const load = useCallback(async (status: string, searchTerm: string) => {
     setLoading(true);
     setError(null);
@@ -227,6 +237,85 @@ export function MembersPage() {
     a.download = `uyeler_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // ─── Bulk Selection Helpers ───────────────────────────────────────────────────
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === members.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(members.map((m) => m.id)));
+    }
+  }
+
+  async function executeBulkSms() {
+    if (!bulkSmsMessage.trim()) { alert('Mesaj boş olamaz'); return; }
+    setBulkLoading(true);
+    try {
+      const res = await apiJson<{ total: number; sent: number; failed: number }>('/admin/members/bulk-sms', {
+        method: 'POST',
+        body: JSON.stringify({ memberIds: [...selectedIds], message: bulkSmsMessage }),
+      });
+      alert(`✅ SMS: ${res.sent} gönderildi, ${res.failed} başarısız (toplam ${res.total})`);
+      setBulkAction(null);
+      setBulkSmsMessage('');
+      setSelectedIds(new Set());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hata');
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function executeBulkMail() {
+    if (!bulkMailSubject.trim() || !bulkMailMessage.trim()) { alert('Konu ve mesaj zorunludur'); return; }
+    setBulkLoading(true);
+    try {
+      const res = await apiJson<{ total: number; sent: number; failed: number }>('/admin/members/bulk-mail', {
+        method: 'POST',
+        body: JSON.stringify({ memberIds: [...selectedIds], subject: bulkMailSubject, message: bulkMailMessage }),
+      });
+      alert(`✅ Mail: ${res.sent} gönderildi, ${res.failed} başarısız (toplam ${res.total})`);
+      setBulkAction(null);
+      setBulkMailSubject('');
+      setBulkMailMessage('');
+      setSelectedIds(new Set());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hata');
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function executeBulkPackage() {
+    if (!bulkPkgTypeId) { alert('Paket tipi seçiniz'); return; }
+    setBulkLoading(true);
+    try {
+      const res = await apiJson<{ assigned: number; failed: number }>('/admin/members/bulk-package', {
+        method: 'POST',
+        body: JSON.stringify({ memberIds: [...selectedIds], packageTypeId: bulkPkgTypeId, trainerId: bulkPkgTrainerId || undefined }),
+      });
+      alert(`✅ Paket: ${res.assigned} atandı, ${res.failed} başarısız`);
+      setBulkAction(null);
+      setBulkPkgTypeId('');
+      setBulkPkgTrainerId('');
+      setSelectedIds(new Set());
+      void load(statusFilter, search);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hata');
+    } finally {
+      setBulkLoading(false);
+    }
   }
 
   // Sıralama + uyarı hesaplama
@@ -1040,6 +1129,104 @@ export function MembersPage() {
 
       {loadingDetail && <p style={{ color: '#64748b', marginBottom: 16 }}>Detay yükleniyor...</p>}
 
+      {/* Bulk Action Toolbar */}
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '14px 20px',
+            background: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e40af' }}>
+            {selectedIds.size} üye seçili
+          </span>
+          <button onClick={() => setSelectedIds(new Set())} style={bulkBtnStyle}>
+            ✕ Seçimi Kaldır
+          </button>
+          <button onClick={() => setBulkAction('sms')} style={{ ...bulkBtnStyle, background: '#dcfce7', color: '#166534' }}>
+            📱 Toplu SMS
+          </button>
+          <button onClick={() => setBulkAction('mail')} style={{ ...bulkBtnStyle, background: '#dbeafe', color: '#1e40af' }}>
+            📧 Toplu Mail
+          </button>
+          <button onClick={() => { setBulkAction('package'); if (packageTypes.length === 0) { void apiJson<PackageType[]>('/booking/package-types').then(setPackageTypes).catch(() => {}); } }} style={{ ...bulkBtnStyle, background: '#fef3c7', color: '#92400e' }}>
+            📦 Toplu Paket
+          </button>
+        </div>
+      )}
+
+      {/* Bulk SMS Modal */}
+      {bulkAction === 'sms' && (
+        <div style={bulkModalStyle}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>📱 Toplu SMS Gönder ({selectedIds.size} üye)</h3>
+          <textarea
+            value={bulkSmsMessage}
+            onChange={(e) => setBulkSmsMessage(e.target.value)}
+            placeholder="SMS mesajınızı yazın..."
+            rows={4}
+            style={bulkTextareaStyle}
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>İptal</button>
+            <button onClick={() => void executeBulkSms()} disabled={bulkLoading} style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}>
+              {bulkLoading ? 'Gönderiliyor...' : 'Gönder'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Mail Modal */}
+      {bulkAction === 'mail' && (
+        <div style={bulkModalStyle}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>📧 Toplu Mail Gönder ({selectedIds.size} üye)</h3>
+          <input
+            value={bulkMailSubject}
+            onChange={(e) => setBulkMailSubject(e.target.value)}
+            placeholder="Konu"
+            style={{ ...bulkTextareaStyle, marginBottom: 8 }}
+          />
+          <textarea
+            value={bulkMailMessage}
+            onChange={(e) => setBulkMailMessage(e.target.value)}
+            placeholder="Mail içeriğini yazın..."
+            rows={6}
+            style={bulkTextareaStyle}
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>İptal</button>
+            <button onClick={() => void executeBulkMail()} disabled={bulkLoading} style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}>
+              {bulkLoading ? 'Gönderiliyor...' : 'Gönder'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Package Modal */}
+      {bulkAction === 'package' && (
+        <div style={bulkModalStyle}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>📦 Toplu Paket Ata ({selectedIds.size} üye)</h3>
+          <select value={bulkPkgTypeId} onChange={(e) => setBulkPkgTypeId(e.target.value)} style={{ ...bulkTextareaStyle, marginBottom: 8 }}>
+            <option value="">Paket tipi seçin...</option>
+            {packageTypes.filter((p) => p.active).map((p) => (
+              <option key={p.id} value={p.id}>{p.name} ({p.sessionCount} seans / {p.validityDays} gün)</option>
+            ))}
+          </select>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>İptal</button>
+            <button onClick={() => void executeBulkPackage()} disabled={bulkLoading} style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}>
+              {bulkLoading ? 'Atanıyor...' : 'Paket Ata'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Members Table */}
       {loading ? (
         <p style={{ color: '#64748b' }}>Yükleniyor...</p>
@@ -1060,6 +1247,14 @@ export function MembersPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
+                <th style={{ ...thStyle, width: 40 }}>
+                  <input
+                    type="checkbox"
+                    checked={members.length > 0 && selectedIds.size === members.length}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: 'pointer', width: 16, height: 16 }}
+                  />
+                </th>
                 <th style={thStyle} onClick={() => toggleSort('name')} className="sortable">Üye {sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th style={thStyle}>E-posta</th>
                 <th style={thStyle} onClick={() => toggleSort('membership')} className="sortable">Üyelik Bitiş {sortBy === 'membership' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
@@ -1080,6 +1275,14 @@ export function MembersPage() {
                   onClick={() => void openDetail(m)}
                   style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: rowBg }}
                 >
+                  <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(m.id)}
+                      onChange={() => toggleSelect(m.id)}
+                      style={{ cursor: 'pointer', width: 16, height: 16 }}
+                    />
+                  </td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div
@@ -1239,6 +1442,37 @@ const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   color: '#374151',
   verticalAlign: 'middle',
+};
+
+const bulkBtnStyle: React.CSSProperties = {
+  padding: '6px 14px',
+  borderRadius: 8,
+  border: '1px solid #e2e8f0',
+  background: '#fff',
+  color: '#374151',
+  fontWeight: 600,
+  fontSize: '0.8rem',
+  cursor: 'pointer',
+};
+
+const bulkModalStyle: React.CSSProperties = {
+  marginBottom: 16,
+  padding: '20px 24px',
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+};
+
+const bulkTextareaStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  border: '1px solid #e2e8f0',
+  borderRadius: 8,
+  fontSize: '0.85rem',
+  fontFamily: 'inherit',
+  resize: 'vertical',
+  boxSizing: 'border-box',
 };
 
 // ─── MemberNotes Component ──────────────────────────────────────────────────────

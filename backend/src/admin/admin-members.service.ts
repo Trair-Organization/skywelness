@@ -2513,4 +2513,56 @@ export class AdminMembersService {
     await this.packagesRepo.remove(pkg);
     return { ok: true, deletedPackageId: packageId };
   }
+
+  // ─── TOPLU İŞLEMLER ──────────────────────────────────────────────────────────
+
+  /** Verilen ID'lere göre üyeleri getir (tenant güvenliği ile) */
+  async getMembersByIds(tenantId: string, memberIds: string[]): Promise<User[]> {
+    if (!memberIds.length) return [];
+    return this.usersRepo
+      .createQueryBuilder('u')
+      .where('u.tenantId = :tenantId', { tenantId })
+      .andWhere('u.id IN (:...ids)', { ids: memberIds })
+      .andWhere('u.role = :role', { role: UserRole.MEMBER })
+      .getMany();
+  }
+
+  /** Toplu paket atama */
+  async bulkAssignPackage(
+    tenantId: string,
+    memberIds: string[],
+    packageTypeId: string,
+    trainerId?: string,
+  ): Promise<{ assigned: number; failed: number }> {
+    const pkgType = await this.packageTypesRepo.findOne({
+      where: { id: packageTypeId, tenantId },
+    });
+    if (!pkgType) throw new NotFoundException('Paket tipi bulunamadı');
+
+    const members = await this.getMembersByIds(tenantId, memberIds);
+    let assigned = 0;
+    let failed = 0;
+
+    for (const member of members) {
+      try {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + pkgType.validityDays);
+
+        const pkg = this.packagesRepo.create({
+          userId: member.id,
+          packageTypeId: pkgType.id,
+          remainingSessions: pkgType.sessionCount,
+          status: PackageStatus.ACTIVE,
+          expiresAt: expiresAt.toISOString().slice(0, 10),
+          assignedTrainerId: trainerId || null,
+        });
+        await this.packagesRepo.save(pkg);
+        assigned++;
+      } catch {
+        failed++;
+      }
+    }
+
+    return { assigned, failed };
+  }
 }

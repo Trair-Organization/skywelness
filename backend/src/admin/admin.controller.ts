@@ -22,6 +22,7 @@ import { AssignPackageTrainerDto } from './dto/assign-package-trainer.dto';
 import { CafeOrdersService } from '../booking/cafe-orders.service';
 import { BookingService } from '../booking/booking.service';
 import { MailService } from '../mail/mail.service';
+import { SmsService } from '../notifications/sms.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClubAuditLog } from '../database/entities/club-audit-log.entity';
@@ -33,6 +34,7 @@ export class AdminController {
     private readonly cafeOrders: CafeOrdersService,
     private readonly bookingService: BookingService,
     private readonly mailService: MailService,
+    private readonly smsService: SmsService,
     @InjectRepository(ClubAuditLog) private readonly auditRepo: Repository<ClubAuditLog>,
   ) {}
 
@@ -1003,5 +1005,86 @@ export class AdminController {
     },
   ) {
     return this.adminMembers.sendPushNotification(admin.tenantId, body);
+  }
+
+  // ─── TOPLU İŞLEMLER ──────────────────────────────────────────────────────────
+
+  /** Toplu SMS gönder */
+  @Post('members/bulk-sms')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async bulkSms(
+    @CurrentUser() admin: User,
+    @Body() body: { memberIds: string[]; message: string },
+  ) {
+    if (!body.memberIds?.length || !body.message?.trim()) {
+      throw new BadRequestException('memberIds ve message zorunludur');
+    }
+    const members = await this.adminMembers.getMembersByIds(admin.tenantId, body.memberIds);
+    let sent = 0;
+    let failed = 0;
+    for (const member of members) {
+      if (!member.phone) { failed++; continue; }
+      const result = await this.smsService.send(member.phone, body.message.trim());
+      if (result.ok) sent++;
+      else failed++;
+    }
+    // Audit log
+    await this.logAction(admin, 'bulk_sms', 'member', undefined, { count: members.length, sent, failed, messagePreview: body.message.slice(0, 100) });
+    return { total: members.length, sent, failed };
+  }
+
+  /** Toplu Mail gönder */
+  @Post('members/bulk-mail')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async bulkMail(
+    @CurrentUser() admin: User,
+    @Body() body: { memberIds: string[]; subject: string; message: string },
+  ) {
+    if (!body.memberIds?.length || !body.subject?.trim() || !body.message?.trim()) {
+      throw new BadRequestException('memberIds, subject ve message zorunludur');
+    }
+    const members = await this.adminMembers.getMembersByIds(admin.tenantId, body.memberIds);
+    let sent = 0;
+    let failed = 0;
+    for (const member of members) {
+      try {
+        await this.mailService['send']({
+          to: [member.email],
+          subject: body.subject.trim(),
+          html: `<div style="font-family:sans-serif;padding:20px;"><p>${body.message.replace(/\n/g, '<br>')}</p></div>`,
+          text: body.message,
+        });
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+    // Audit log
+    await this.logAction(admin, 'bulk_mail', 'member', undefined, { count: members.length, sent, failed, subject: body.subject.slice(0, 100) });
+    return { total: members.length, sent, failed };
+  }
+
+  /** Toplu paket ata */
+  @Post('members/bulk-package')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async bulkPackage(
+    @CurrentUser() admin: User,
+    @Body() body: { memberIds: string[]; packageTypeId: string; trainerId?: string },
+  ) {
+    if (!body.memberIds?.length || !body.packageTypeId) {
+      throw new BadRequestException('memberIds ve packageTypeId zorunludur');
+    }
+    const results = await this.adminMembers.bulkAssignPackage(
+      admin.tenantId,
+      body.memberIds,
+      body.packageTypeId,
+      body.trainerId,
+    );
+    // Audit log
+    await this.logAction(admin, 'bulk_package_assign', 'member', undefined, { count: body.memberIds.length, packageTypeId: body.packageTypeId, ...results });
+    return results;
   }
 }
