@@ -236,21 +236,97 @@ export function MembersPage() {
             {members.length} üye · Tıklayarak detay görüntüle
           </p>
         </div>
-        <button
-          onClick={exportCSV}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 8,
-            border: '1px solid #e2e8f0',
-            background: '#fff',
-            color: '#374151',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-          }}
-        >
-          📥 Excel İndir
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => {
+              const name = prompt('Ad Soyad (örn: Ali Veli):');
+              if (!name) return;
+              const parts = name.trim().split(' ');
+              const firstName = parts[0];
+              const lastName = parts.slice(1).join(' ') || 'Üye';
+              const email = prompt('E-posta (opsiyonel):') || undefined;
+              const phone = prompt('Telefon (opsiyonel):') || undefined;
+              void apiJson('/admin/members/quick-create', {
+                method: 'POST',
+                body: JSON.stringify({ firstName, lastName, email, phone }),
+              })
+                .then(() => {
+                  alert('✅ Üye eklendi');
+                  void load(statusFilter, search);
+                })
+                .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: 'none',
+              background: '#2563eb',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            + Üye Ekle
+          </button>
+          <button
+            onClick={() => {
+              const csv = prompt('CSV yapıştırın (her satır: Ad,Soyad,Email,Telefon):');
+              if (!csv) return;
+              const rows = csv
+                .split('\n')
+                .filter(Boolean)
+                .map((line) => {
+                  const [firstName, lastName, email, phone] = line.split(',').map((s) => s.trim());
+                  return { firstName: firstName || '', lastName: lastName || '', email, phone };
+                })
+                .filter((r) => r.firstName);
+              if (rows.length === 0) {
+                alert('Geçerli veri bulunamadı');
+                return;
+              }
+              void apiJson<{ created: number; exists: number; errors: number }>(
+                '/admin/members/bulk-create',
+                {
+                  method: 'POST',
+                  body: JSON.stringify({ members: rows }),
+                },
+              )
+                .then((res) => {
+                  alert(`✅ ${res.created} eklendi, ${res.exists} zaten var, ${res.errors} hata`);
+                  void load(statusFilter, search);
+                })
+                .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              color: '#374151',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            📋 Toplu Ekle
+          </button>
+          <button
+            onClick={exportCSV}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              color: '#374151',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            📥 Excel
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -570,6 +646,121 @@ export function MembersPage() {
             </div>
           </div>
 
+          {/* Aksiyonlar + Notlar */}
+          <div
+            style={{
+              padding: '0 24px 20px',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 16,
+            }}
+          >
+            {/* Sol: Aksiyonlar */}
+            <div>
+              <h3
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  margin: '0 0 12px',
+                }}
+              >
+                ⚡ İşlemler
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Şifre sıfırlanacak. Devam?')) return;
+                    try {
+                      const res = await apiJson<{ temporaryPassword: string }>(
+                        `/admin/members/${detail.id}/reset-password`,
+                        { method: 'POST' },
+                      );
+                      alert(`Yeni geçici şifre: ${res.temporaryPassword}\nÜyeye iletiniz.`);
+                    } catch (e) {
+                      setError(e instanceof ApiError ? e.message : 'Hata');
+                    }
+                  }}
+                  style={actionBtnStyle}
+                >
+                  🔑 Şifre Sıfırla
+                </button>
+                {detail.accountStatus === 'active' && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Üye hesabı dondurulacak. Paketleri askıya alınacak. Devam?'))
+                        return;
+                      try {
+                        await apiJson(`/admin/members/${detail.id}/suspend`, {
+                          method: 'POST',
+                          body: JSON.stringify({}),
+                        });
+                        const d = await apiJson<MemberDetail>(`/admin/members/${detail.id}/detail`);
+                        setDetail(d);
+                        void load(statusFilter, search);
+                      } catch (e) {
+                        setError(e instanceof ApiError ? e.message : 'Hata');
+                      }
+                    }}
+                    style={{ ...actionBtnStyle, color: '#d97706', borderColor: '#fef3c7' }}
+                  >
+                    ❄️ Hesabı Dondur
+                  </button>
+                )}
+                {(detail.accountStatus === 'suspended' || detail.accountStatus === 'rejected') && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await apiJson(`/admin/members/${detail.id}/reactivate`, { method: 'POST' });
+                        const d = await apiJson<MemberDetail>(`/admin/members/${detail.id}/detail`);
+                        setDetail(d);
+                        void load(statusFilter, search);
+                      } catch (e) {
+                        setError(e instanceof ApiError ? e.message : 'Hata');
+                      }
+                    }}
+                    style={{ ...actionBtnStyle, color: '#059669', borderColor: '#dcfce7' }}
+                  >
+                    ✅ Hesabı Aktifleştir
+                  </button>
+                )}
+                {detail.packages
+                  .filter((p) => p.status === 'active')
+                  .map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      onClick={async () => {
+                        const days = prompt('Kaç gün uzatılsın?', '30');
+                        if (!days) return;
+                        try {
+                          const res = await apiJson<{ newExpiry: string }>(
+                            `/admin/members/${detail.id}/packages/${pkg.id}/extend`,
+                            {
+                              method: 'POST',
+                              body: JSON.stringify({ extraDays: parseInt(days) }),
+                            },
+                          );
+                          alert(`Paket süresi uzatıldı: ${res.newExpiry}`);
+                          const d = await apiJson<MemberDetail>(
+                            `/admin/members/${detail.id}/detail`,
+                          );
+                          setDetail(d);
+                        } catch (e) {
+                          setError(e instanceof ApiError ? e.message : 'Hata');
+                        }
+                      }}
+                      style={actionBtnStyle}
+                    >
+                      📅 {pkg.packageType.name} süre uzat
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Sağ: Notlar */}
+            <MemberNotes userId={detail.id} />
+          </div>
+
           {/* Randevu Geçmişi */}
           {detail.reservations.length > 0 && (
             <div style={{ padding: '0 24px 20px' }}>
@@ -807,4 +998,128 @@ const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   color: '#374151',
   verticalAlign: 'middle',
+};
+
+// ─── MemberNotes Component ──────────────────────────────────────────────────────
+
+function MemberNotes({ userId }: { userId: string }) {
+  const [notes, setNotes] = useState<Array<{ text: string; date: string }>>([]);
+  const [newNote, setNewNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiJson<Array<{ text: string; date: string }>>(`/admin/members/${userId}/notes`)
+      .then(setNotes)
+      .catch(() => setNotes([]));
+  }, [userId]);
+
+  async function addNote() {
+    if (!newNote.trim()) return;
+    setSaving(true);
+    try {
+      await apiJson(`/admin/members/${userId}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ note: newNote.trim() }),
+      });
+      setNotes(await apiJson(`/admin/members/${userId}/notes`));
+      setNewNote('');
+    } catch {
+      /* */
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>
+        📝 Notlar
+      </h3>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        <input
+          type="text"
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          placeholder="Not ekle..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void addNote();
+          }}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid #e2e8f0',
+            fontSize: '0.82rem',
+            background: '#fff',
+            color: '#0f172a',
+          }}
+        />
+        <button
+          onClick={() => void addNote()}
+          disabled={saving || !newNote.trim()}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: 'none',
+            background: '#2563eb',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            opacity: !newNote.trim() ? 0.5 : 1,
+          }}
+        >
+          +
+        </button>
+      </div>
+      {notes.length === 0 ? (
+        <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Henüz not yok</p>
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            maxHeight: 200,
+            overflowY: 'auto',
+          }}
+        >
+          {notes.map((n, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: '#fffbeb',
+                border: '1px solid #fef3c7',
+                fontSize: '0.8rem',
+              }}
+            >
+              <div style={{ color: '#0f172a' }}>{n.text}</div>
+              <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: 2 }}>
+                {new Date(n.date).toLocaleDateString('tr-TR', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const actionBtnStyle: React.CSSProperties = {
+  padding: '8px 14px',
+  borderRadius: 8,
+  border: '1px solid #e2e8f0',
+  background: '#fff',
+  color: '#374151',
+  fontWeight: 600,
+  fontSize: '0.82rem',
+  cursor: 'pointer',
+  textAlign: 'left',
 };

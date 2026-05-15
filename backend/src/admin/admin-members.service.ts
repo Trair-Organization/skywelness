@@ -1985,9 +1985,11 @@ export class AdminMembersService {
     }
 
     const targetRole =
-      data.target === 'members' ? 'member' as const :
-      data.target === 'trainers' ? 'trainer' as const :
-      'all' as const;
+      data.target === 'members'
+        ? ('member' as const)
+        : data.target === 'trainers'
+          ? ('trainer' as const)
+          : ('all' as const);
 
     const result = await this.pushService.sendToTenantMembers(
       tenantId,
@@ -2007,6 +2009,186 @@ export class AdminMembersService {
       sent: result.sent,
       total: result.total,
       target: data.target,
+    };
+  }
+
+  // ─── Yeni Üye Yönetimi Endpoint'leri ──────────────────────────────────────────
+
+  /** Admin: Üye şifresini sıfırla (yeni şifre oluştur) */
+  async resetMemberPassword(tenantId: string, userId: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    const newPassword = `Temp${Date.now().toString(36).slice(-4)}!`;
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersRepo.update(
+      { id: userId },
+      { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+    );
+
+    return { ok: true, temporaryPassword: newPassword, email: user.email };
+  }
+
+  /** Admin: Üye hesabını dondur/askıya al */
+  async suspendMember(tenantId: string, userId: string, reason?: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    await this.usersRepo.update(
+      { id: userId },
+      { accountStatus: 'suspended' as MemberAccountStatus },
+    );
+
+    // Aktif paketlerin süresini dondur (expiresAt'ı ileriye al)
+    const activePackages = await this.packagesRepo.find({
+      where: { userId, status: 'active' as never },
+    });
+    for (const pkg of activePackages) {
+      // Paket notuna dondurma tarihi ekle
+      await this.packagesRepo.update(
+        { id: pkg.id },
+        {
+          status: 'frozen' as never,
+        },
+      );
+    }
+
+    return {
+      ok: true,
+      reason: reason || 'Hesap askıya alındı',
+      frozenPackages: activePackages.length,
+    };
+  }
+
+  /** Admin: Üye hesabını aktifleştir (dondurma kaldır) */
+  async reactivateMember(tenantId: string, userId: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    await this.usersRepo.update({ id: userId }, { accountStatus: MemberAccountStatus.ACTIVE });
+
+    // Donmuş paketleri tekrar aktif yap
+    const frozenPackages = await this.packagesRepo.find({
+      where: { userId, status: 'frozen' as never },
+    });
+    for (const pkg of frozenPackages) {
+      // Süreyi uzat: dondurma süresini ekle (basit: 30 gün ekle)
+      const newExpiry = new Date(pkg.expiresAt);
+      newExpiry.setDate(newExpiry.getDate() + 30);
+      await this.packagesRepo.update(
+        { id: pkg.id },
+        {
+          status: 'active' as never,
+          expiresAt: newExpiry.toISOString().slice(0, 10),
+        },
+      );
+    }
+
+    return { ok: true, reactivatedPackages: frozenPackages.length };
+  }
+
+  /** Admin: Üye notu ekle */
+  async addMemberNote(tenantId: string, userId: string, note: string, adminId: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    // emergencyContact alanını notes olarak kullanıyoruz (JSON)
+    const existing =
+      (user.emergencyContact as {
+        notes?: Array<{ text: string; date: string; adminId: string }>;
+      } | null) || {};
+    const notes = existing.notes || [];
+    notes.unshift({ text: note.trim(), date: new Date().toISOString(), adminId });
+
+    await this.usersRepo.update(
+      { id: userId },
+      {
+        emergencyContact: { ...existing, notes },
+      },
+    );
+
+    return { ok: true, totalNotes: notes.length };
+  }
+
+  /** Admin: Üye notlarını getir */
+  async getMemberNotes(tenantId: string, userId: string) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId, tenantId, role: UserRole.MEMBER },
+    });
+    if (!user) throw new NotFoundException('Üye bulunamadı');
+
+    const data =
+      (user.emergencyContact as {
+        notes?: Array<{ text: string; date: string; adminId: string }>;
+      } | null) || {};
+    return data.notes || [];
+  }
+
+  /** Admin: Paket süresini uzat */
+  async extendPackageExpiry(
+    tenantId: string,
+    userId: string,
+    packageId: string,
+    extraDays: number,
+  ) {
+    const pkg = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.packageType', 'pt')
+      .where('p.id = :id', { id: packageId })
+      .andWhere('p.userId = :userId', { userId })
+      .andWhere('pt.tenantId = :tenantId', { tenantId })
+      .getOne();
+    if (!pkg) throw new NotFoundException('Paket bulunamadı');
+
+    const currentExpiry = new Date(pkg.expiresAt);
+    currentExpiry.setDate(currentExpiry.getDate() + extraDays);
+    const newExpiresAt = currentExpiry.toISOString().slice(0, 10);
+
+    await this.packagesRepo.update({ id: packageId }, { expiresAt: newExpiresAt });
+
+    return { ok: true, packageId, previousExpiry: pkg.expiresAt, newExpiry: newExpiresAt };
+  }
+
+  /** Admin: Toplu üye ekleme (CSV data) */
+  async bulkCreateMembers(
+    tenantId: string,
+    members: Array<{ firstName: string; lastName: string; email?: string; phone?: string }>,
+  ) {
+    const results: Array<{ email: string; status: 'created' | 'exists' | 'error'; id?: string }> =
+      [];
+
+    for (const m of members) {
+      try {
+        const result = await this.quickCreateMember(tenantId, {
+          firstName: m.firstName,
+          lastName: m.lastName,
+          email: m.email || null,
+          phone: m.phone || null,
+        });
+        results.push({ email: result.email, status: 'created', id: result.id });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        results.push({
+          email: m.email || `${m.firstName} ${m.lastName}`,
+          status: msg.includes('zaten') ? 'exists' : 'error',
+        });
+      }
+    }
+
+    return {
+      total: members.length,
+      created: results.filter((r) => r.status === 'created').length,
+      exists: results.filter((r) => r.status === 'exists').length,
+      errors: results.filter((r) => r.status === 'error').length,
+      details: results,
     };
   }
 }

@@ -666,6 +666,90 @@ export class AdminController {
     return this.adminMembers.quickCreateMember(admin.tenantId, body);
   }
 
+  /** Admin: Üye şifresini sıfırla */
+  @Post('members/:userId/reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  resetMemberPassword(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.adminMembers.resetMemberPassword(admin.tenantId, userId);
+  }
+
+  /** Admin: Üye hesabını dondur */
+  @Post('members/:userId/suspend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  suspendMember(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminMembers.suspendMember(admin.tenantId, userId, body.reason);
+  }
+
+  /** Admin: Üye hesabını aktifleştir */
+  @Post('members/:userId/reactivate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  reactivateMember(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.adminMembers.reactivateMember(admin.tenantId, userId);
+  }
+
+  /** Admin: Üye notu ekle */
+  @Post('members/:userId/notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  addMemberNote(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { note: string },
+  ) {
+    return this.adminMembers.addMemberNote(admin.tenantId, userId, body.note, admin.id);
+  }
+
+  /** Admin: Üye notlarını getir */
+  @Get('members/:userId/notes')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getMemberNotes(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.adminMembers.getMemberNotes(admin.tenantId, userId);
+  }
+
+  /** Admin: Paket süresini uzat */
+  @Post('members/:userId/packages/:packageId/extend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  extendPackageExpiry(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Param('packageId', new ParseUUIDPipe({ version: '4' })) packageId: string,
+    @Body() body: { extraDays: number },
+  ) {
+    return this.adminMembers.extendPackageExpiry(admin.tenantId, userId, packageId, body.extraDays);
+  }
+
+  /** Admin: Toplu üye ekleme */
+  @Post('members/bulk-create')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  bulkCreateMembers(
+    @CurrentUser() admin: User,
+    @Body()
+    body: {
+      members: Array<{ firstName: string; lastName: string; email?: string; phone?: string }>;
+    },
+  ) {
+    return this.adminMembers.bulkCreateMembers(admin.tenantId, body.members);
+  }
+
   @Post('schedule/bulk-open')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
