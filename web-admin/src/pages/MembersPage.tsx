@@ -1124,6 +1124,42 @@ export function MembersPage() {
                         </button>
                       </div>
                     )}
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button
+                        onClick={() => void openDetail(m)}
+                        title="Ayarlar"
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          border: '1px solid #e2e8f0',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        ⚙️
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!confirm(`${m.firstName} ${m.lastName} silinecek. Emin misiniz?`))
+                            return;
+                          void apiJson(`/admin/members/${m.id}/delete`, { method: 'DELETE' })
+                            .then(() => void load(statusFilter, search))
+                            .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
+                        }}
+                        title="Sil"
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          border: '1px solid #fee2e2',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
