@@ -1,4 +1,4 @@
-const { Client } = require('../node_modules/pg');
+const { Client } = require('pg');
 const c = new Client('postgresql://rezidans:rezidans_dev_pass@127.0.0.1:5432/rezidans_dev');
 const SKYLAND = '00000000-0000-4000-8000-000000000002';
 
