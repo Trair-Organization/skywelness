@@ -1130,8 +1130,10 @@ function PackagesTab() {
                   <tr>
                     <th>Üye</th>
                     <th>Paket</th>
+                    <th>Yüklenen</th>
                     <th>Kullanım</th>
                     <th>Fiyat</th>
+                    <th>Tarih</th>
                     <th>Bitiş</th>
                     <th>Durum</th>
                   </tr>
@@ -1144,16 +1146,18 @@ function PackagesTab() {
                         {s.memberPhone && <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{s.memberPhone}</div>}
                       </td>
                       <td>{s.packageName}</td>
+                      <td><span style={{ fontWeight: 700 }}>{s.sessionCount} seans</span></td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden', minWidth: 40 }}>
                             <div style={{ width: `${Math.round((s.usedSessions / s.sessionCount) * 100)}%`, height: '100%', background: s.remainingSessions > 0 ? '#22c55e' : '#ef4444', borderRadius: 3 }}></div>
                           </div>
                           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{s.usedSessions}/{s.sessionCount}</span>
                         </div>
                       </td>
                       <td><span style={{ fontWeight: 700 }}>₺{parseFloat(s.price).toLocaleString('tr-TR')}</span></td>
-                      <td><span style={{ fontSize: '0.8rem' }}>{new Date(s.expiresAt).toLocaleDateString('tr-TR')}</span></td>
+                      <td><span style={{ fontSize: '0.78rem' }}>{new Date(s.createdAt).toLocaleDateString('tr-TR')}</span></td>
+                      <td><span style={{ fontSize: '0.78rem' }}>{new Date(s.expiresAt).toLocaleDateString('tr-TR')}</span></td>
                       <td><span className={`status-badge ${s.status === 'active' ? 'status-active' : s.status === 'depleted' ? 'status-spa-completed' : 'status-spa-cancelled'}`}>{s.status === 'active' ? 'Aktif' : s.status === 'depleted' ? 'Tükendi' : s.status === 'expired' ? 'Süresi Doldu' : s.status}</span></td>
                     </tr>
                   ))}
