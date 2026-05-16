@@ -870,7 +870,7 @@ a.secondary:hover {
   font-size: 1.75rem;
   font-weight: 700;
   margin: 0 0 4px;
-  color: var(--text);
+  color: #0f172a;
 }
 
 .dashboard-subtitle {
@@ -3910,6 +3910,11 @@ button.primary:disabled {
   color: var(--text);
   margin-left: 0.75rem;
 }
+.agenda-nav .btn-sm {
+  color: var(--text);
+  border-color: var(--border);
+  background: #fff;
+}
 .agenda-view-toggle {
   display: flex;
   gap: 0.4rem;
@@ -3963,17 +3968,7 @@ button.primary:disabled {
 .agenda-header-row .agenda-label-cell {
   background: var(--surface);
 }
-.agenda-therapist-name {
-  font-weight: 700;
-  font-size: 0.82rem;
-  color: var(--text);
-  white-space: nowrap;
-}
-.agenda-therapist-stat {
-  font-size: 0.7rem;
-  color: var(--muted);
-  margin-top: 2px;
-}
+/* Agenda header cell content handled by .agenda-th-therapist above */
 .agenda-hour-cell {
   text-align: center;
 }
@@ -4160,23 +4155,13 @@ button.primary:disabled {
 
 
 /* ─── Force readable text colors on Spa page ───────────────────────────────── */
-.dashboard-page,
 .dashboard-page h1,
 .dashboard-page h2,
 .dashboard-page h3,
-.dashboard-page h4,
-.dashboard-page p,
-.dashboard-page span,
-.dashboard-page label,
-.dashboard-page td,
-.dashboard-page th {
+.dashboard-page h4 {
   color: var(--text);
 }
-.dashboard-page .muted,
-.dashboard-page .form-label,
-.dashboard-page .agenda-therapist-stat,
-.dashboard-page .agenda-slot-time,
-.dashboard-page .spa-list-meta {
+.dashboard-page .dashboard-subtitle {
   color: var(--muted);
 }
 
@@ -4252,7 +4237,7 @@ button.primary:disabled {
   color: #16a34a;
 }
 .agenda-td-booked {
-  background: #eff6ff;
+  background: #dbeafe;
   border-left: 3px solid #2563eb;
 }
 .agenda-td-content {
@@ -4324,18 +4309,43 @@ button.primary:disabled {
   border-radius: 3px;
 }
 
-/* ─── Agenda Avatar & Clear Day ────────────────────────────────────────────── */
+/* (moved to .agenda-th-therapist section) */
+.agenda-th-therapist {
+  position: relative;
+  min-width: 130px;
+  padding: 0.75rem 0.5rem;
+  vertical-align: top;
+  border-bottom: 2px solid var(--border);
+}
+.agenda-th-therapist > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 .agenda-avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 4px;
+  border: 2px solid #e2e8f0;
+}
+.agenda-therapist-name {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: nowrap;
+  text-align: center;
+}
+.agenda-therapist-stat {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 600;
 }
 .agenda-clear-btn {
-  margin-top: 4px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 5px;
   border: 1px solid #fecaca;
   background: #fff;
   color: #dc2626;
@@ -4346,9 +4356,6 @@ button.primary:disabled {
 }
 .agenda-clear-btn:hover {
   background: #fef2f2;
-}
-.agenda-th-therapist {
-  position: relative;
 }
 
 
