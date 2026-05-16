@@ -4506,14 +4506,18 @@ button.primary:disabled {
 }
 .trainer-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid var(--border);
 }
 .trainer-actions .btn-sm {
   flex: none;
+  padding: 4px 8px;
+  font-size: 0.7rem;
 }
 .trainer-actions .btn-primary {
   flex: 1;
+  padding: 4px 10px;
+  font-size: 0.72rem;
 }
