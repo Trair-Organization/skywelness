@@ -4,6 +4,7 @@ import { apiJson, ApiError } from '../lib/api';
 
 type Member = {
   id: string;
+  publicId: string | null;
   email: string;
   username?: string;
   firstName: string;
@@ -1410,6 +1411,7 @@ export function MembersPage() {
                 <th style={thStyle} onClick={() => toggleSort('name')} className="sortable">
                   Üye {sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
                 </th>
+                <th style={thStyle}>ID</th>
                 <th style={thStyle}>E-posta</th>
                 <th style={thStyle} onClick={() => toggleSort('membership')} className="sortable">
                   Üyelik Bitiş {sortBy === 'membership' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
@@ -1476,6 +1478,9 @@ export function MembersPage() {
                           {m.firstName} {m.lastName}
                         </span>
                       </div>
+                    </td>
+                    <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: '0.78rem', color: '#2563eb', fontWeight: 600 }}>
+                      {m.publicId || '—'}
                     </td>
                     <td style={tdStyle}>{m.email}</td>
                     <td style={tdStyle}>

@@ -170,6 +170,7 @@ export class AdminMembersService {
 
     qb.select([
       'u.id',
+      'u.publicId',
       'u.email',
       'u.username',
       'u.firstName',
