@@ -1092,8 +1092,9 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
               <textarea
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                rows={2}
+                rows={5}
                 placeholder="Eğitmen hakkında..."
+                style={{ resize: 'vertical', minHeight: 100 }}
               />
             </label>
             <label>
@@ -1115,35 +1116,6 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                     </span>
                   );
                 })}
-              </div>
-            </label>
-            <label>
-              Hizmet Türleri
-              <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                {SESSION_TYPE_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.value}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: '0.85rem',
-                      color: 'var(--text)',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.offersSessionTypes.includes(opt.value)}
-                      onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...form.offersSessionTypes, opt.value]
-                          : form.offersSessionTypes.filter((v) => v !== opt.value);
-                        setForm({ ...form, offersSessionTypes: next });
-                      }}
-                    />
-                    {opt.label}
-                  </label>
-                ))}
               </div>
             </label>
             {/* Öğrenci Yönetimi (düzenleme modunda) */}
