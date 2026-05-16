@@ -240,9 +240,12 @@ function AgendaTab() {
     finally { setActionLoading(false); }
   }
 
-  // Grid config
-  const hours = Array.from({ length: 11 }, (_, i) => `${String(i + 11).padStart(2, '0')}:00`);
+  // Grid config - fully dynamic: grid hours adapt to actual slot data
   const filteredAgenda = filterTherapist === 'all' ? agenda : agenda.filter(t => t.therapistId === filterTherapist);
+  const allSlotTimes = filteredAgenda.flatMap(t => t.slots.filter(s => s.date === date).map(s => parseInt(s.startTime)));
+  const minHour = allSlotTimes.length > 0 ? Math.min(...allSlotTimes) : 9;
+  const maxHour = allSlotTimes.length > 0 ? Math.max(...allSlotTimes) + 1 : 22;
+  const hours = Array.from({ length: maxHour - minHour }, (_, i) => `${String(i + minHour).padStart(2, '0')}:00`);
 
   // Filtered member list for booking modal
   const filteredMembers = memberSearch.length > 0
