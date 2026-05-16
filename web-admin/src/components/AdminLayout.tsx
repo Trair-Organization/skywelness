@@ -10,7 +10,6 @@ const WELLNESS_NAV: NavItem[] = [
   { path: '/members', icon: '👥', label: 'Üyeler' },
   { path: '/spa', icon: '💆', label: 'Spa Yönetimi' },
   { path: '/pt', icon: '🏋️', label: 'PT Yönetimi' },
-  { path: '/appointments', icon: '📅', label: 'Randevular' },
   { path: '/packages', icon: '📦', label: 'Paketler' },
   { path: '/events', icon: '🎉', label: 'Etkinlikler' },
   { path: '/campaigns', icon: '🔥', label: 'Kampanyalar' },
