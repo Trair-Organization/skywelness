@@ -27,6 +27,18 @@ export class Tenant {
   @Column({ type: 'varchar', length: 200, nullable: true })
   location!: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  city!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  district!: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude!: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude!: string | null;
+
   @Column({ type: 'varchar', length: 2048, nullable: true, name: 'logo_url' })
   logoUrl!: string | null;
 

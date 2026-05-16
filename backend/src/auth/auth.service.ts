@@ -263,6 +263,8 @@ export class AuthService {
       lastName: dto.lastName,
       phone: dto.phone?.trim() || null,
       photoUrl: dto.photoUrl?.trim() || null,
+      city: dto.city?.trim() || null,
+      district: dto.district?.trim() || null,
       role: UserRole.MEMBER,
       accountStatus: hasExplicitTenant
         ? MemberAccountStatus.PENDING_APPROVAL
@@ -335,6 +337,8 @@ export class AuthService {
     const tenant = this.tenantsRepo.create({
       name: `${dto.firstName.trim()} ${dto.lastName.trim()} Coaching`,
       subdomain,
+      city: dto.city?.trim() || null,
+      district: dto.district?.trim() || null,
       branding: {},
       settings: { workspaceType: 'independent_trainer' },
     });

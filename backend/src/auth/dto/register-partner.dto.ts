@@ -35,6 +35,11 @@ export class RegisterPartnerDto {
   city!: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  district?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   clubCount?: number;

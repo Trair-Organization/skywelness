@@ -58,6 +58,11 @@ export class RegisterIndependentTrainerDto {
   @MaxLength(120)
   city!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  district?: string;
+
   @IsString()
   @MinLength(20)
   @MaxLength(4000)

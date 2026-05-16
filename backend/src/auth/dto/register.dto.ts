@@ -58,4 +58,14 @@ export class RegisterDto {
   @IsUrl({ require_tld: false })
   @MaxLength(2048)
   photoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  district?: string;
 }

@@ -50,6 +50,18 @@ export class User {
   @Column({ type: 'varchar', length: 2048, nullable: true, name: 'photo_url' })
   photoUrl!: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  city!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  district!: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude!: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude!: string | null;
+
   @Column({ type: 'varchar', length: 32 })
   role!: UserRole;
 
