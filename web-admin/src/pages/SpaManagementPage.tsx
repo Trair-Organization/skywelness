@@ -40,7 +40,7 @@ type AppointmentRow = {
   slot: { id: string; date: string; startTime: string; endTime: string };
 };
 
-type TabType = 'agenda' | 'appointments' | 'services' | 'therapists' | 'packages' | 'rooms';
+type TabType = 'agenda' | 'appointments' | 'services' | 'therapists' | 'packages' | 'rooms' | 'reports';
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
@@ -54,6 +54,7 @@ export function SpaManagementPage() {
     { key: 'therapists', icon: '💆', label: 'Masözler' },
     { key: 'packages', icon: '📦', label: 'Paketler' },
     { key: 'rooms', icon: '🏠', label: 'Odalar' },
+    { key: 'reports', icon: '📊', label: 'Raporlar' },
   ];
 
   return (
@@ -85,6 +86,7 @@ export function SpaManagementPage() {
       {activeTab === 'therapists' && <TherapistsPage embedded />}
       {activeTab === 'packages' && <PackagesTab />}
       {activeTab === 'rooms' && <RoomsTab />}
+      {activeTab === 'reports' && <ReportsTab />}
     </div>
   );
 }
@@ -154,13 +156,28 @@ function AgendaTab() {
     setMemberSearch('');
   }
 
-  function closeModal() { setSelectedAction(null); setActionMode(null); setSelectedMember(null); setMemberSearch(''); }
+  function closeModal() { setSelectedAction(null); setActionMode(null); setSelectedMember(null); setMemberSearch(''); setSelectedServiceId(''); }
 
   function openBulkSlotMenu(therapist: TherapistAgenda) {
     setSelectedAction({ slot: null, therapist, hour: '11:00', type: 'empty' });
     setActionMode('bulkSlot');
     setBulkStartHour(11);
     setBulkEndHour(22);
+  }
+
+  async function handleClearDay(therapist: TherapistAgenda) {
+    const daySlots = therapist.slots.filter(s => s.date === date);
+    const bookedCount = daySlots.filter(s => s.booked).length;
+    const msg = bookedCount > 0
+      ? `${therapist.therapistName} — ${date} tüm slotlar silinecek (${bookedCount} randevu var!). Emin misiniz?`
+      : `${therapist.therapistName} — ${date} tüm slotlar silinecek. Emin misiniz?`;
+    if (!confirm(msg)) return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/admin/therapists/${therapist.therapistId}/calendar-day?date=${date}`, { method: 'DELETE' });
+      void load();
+    } catch (err) { alert(err instanceof Error ? err.message : 'Hata'); }
+    finally { setActionLoading(false); }
   }
 
   async function handleBulkAddSlots() {
@@ -242,7 +259,7 @@ function AgendaTab() {
       const endTime = selectedAction.slot?.endTime || `${endH}:00`;
       await apiJson('/admin/therapists/reservations/create', {
         method: 'POST',
-        body: JSON.stringify({ therapistId: selectedAction.therapist.therapistId, userId: selectedMember.id, date, startTime, endTime }),
+        body: JSON.stringify({ therapistId: selectedAction.therapist.therapistId, userId: selectedMember.id, date, startTime, endTime, serviceId: selectedServiceId || undefined }),
       });
       closeModal(); void load();
     } catch (err) { alert(err instanceof Error ? err.message : 'Randevu oluşturulamadı'); }
@@ -256,10 +273,25 @@ function AgendaTab() {
   const maxHour = allSlotTimes.length > 0 ? Math.max(...allSlotTimes) + 1 : 22;
   const hours = Array.from({ length: maxHour - minHour }, (_, i) => `${String(i + minHour).padStart(2, '0')}:00`);
 
+  // Stats for today
+  const totalSlots = filteredAgenda.reduce((sum, t) => sum + t.slots.filter(s => s.date === date).length, 0);
+  const bookedSlots = filteredAgenda.reduce((sum, t) => sum + t.slots.filter(s => s.date === date && s.booked).length, 0);
+  const freeSlots = totalSlots - bookedSlots;
+  const occupancyPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
+
   // Filtered member list for booking modal
   const filteredMembers = memberSearch.length > 0
     ? allMembers.filter(m => `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(memberSearch.toLowerCase())).slice(0, 10)
     : allMembers.slice(0, 10);
+
+  // Spa services for booking
+  const [spaServices, setSpaServices] = useState<Array<{ id: string; name: string; category: string; durationMinutes: number }>>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+
+  useEffect(() => {
+    apiJson<Array<{ id: string; name: string; category: string; durationMinutes: number }>>('/spa/admin/services')
+      .then(setSpaServices).catch(() => {});
+  }, []);
 
   return (
     <div>
@@ -281,6 +313,21 @@ function AgendaTab() {
         </div>
       </div>
 
+      {/* Stats Bar */}
+      {!loading && totalSlots > 0 && (
+        <div className="agenda-stats-bar">
+          <div className="agenda-stat"><span className="agenda-stat-value">{bookedSlots}</span><span className="agenda-stat-label">Randevu</span></div>
+          <div className="agenda-stat"><span className="agenda-stat-value">{freeSlots}</span><span className="agenda-stat-label">Müsait</span></div>
+          <div className="agenda-stat"><span className="agenda-stat-value">{totalSlots}</span><span className="agenda-stat-label">Toplam Slot</span></div>
+          <div className="agenda-stat"><span className="agenda-stat-value" style={{ color: occupancyPct >= 80 ? '#059669' : occupancyPct >= 50 ? '#d97706' : '#64748b' }}>%{occupancyPct}</span><span className="agenda-stat-label">Doluluk</span></div>
+          <div className="agenda-legend">
+            <span className="agenda-legend-item"><span className="agenda-legend-dot" style={{ background: '#22c55e' }}></span>Müsait</span>
+            <span className="agenda-legend-item"><span className="agenda-legend-dot" style={{ background: '#2563eb' }}></span>Dolu</span>
+            <span className="agenda-legend-item"><span className="agenda-legend-dot" style={{ background: '#e2e8f0' }}></span>Slot Yok</span>
+          </div>
+        </div>
+      )}
+
       {loading && <p className="muted">Yükleniyor...</p>}
 
       {!loading && agenda.length === 0 && (
@@ -298,9 +345,15 @@ function AgendaTab() {
                   const daySlots = t.slots.filter(s => s.date === date);
                   const booked = daySlots.filter(s => s.booked).length;
                   return (
-                    <th key={t.therapistId} className="agenda-th-therapist" style={{ cursor: 'pointer' }} onClick={() => openBulkSlotMenu(t)} title={`${t.therapistName} — Tıkla: Çalışma saati ekle`}>
-                      <div className="agenda-therapist-name">{t.therapistName}</div>
-                      <div className="agenda-therapist-stat">{booked}/{daySlots.length} dolu</div>
+                    <th key={t.therapistId} className="agenda-th-therapist">
+                      <div style={{ cursor: 'pointer' }} onClick={() => openBulkSlotMenu(t)} title="Tıkla: Çalışma saati ekle">
+                        {t.photoUrl && <img src={t.photoUrl} alt="" className="agenda-avatar" />}
+                        <div className="agenda-therapist-name">{t.therapistName}</div>
+                        <div className="agenda-therapist-stat">{booked}/{daySlots.length} dolu</div>
+                      </div>
+                      {daySlots.length > 0 && (
+                        <button className="agenda-clear-btn" onClick={(e) => { e.stopPropagation(); void handleClearDay(t); }} title="Tüm günü kapat">✕ Günü Kapat</button>
+                      )}
                     </th>
                   );
                 })}
@@ -416,7 +469,12 @@ function AgendaTab() {
                   <span>🕐 {selectedAction.slot?.startTime || selectedAction.hour}–{selectedAction.slot?.endTime || `${String(parseInt(selectedAction.hour) + 1).padStart(2, '0')}:00`}</span>
                 </div>
                 <div className="agenda-modal-form">
-                  <label className="form-label">Üye Seç veya Ara</label>
+                  <label className="form-label">Hizmet Seç</label>
+                  <select className="form-input" value={selectedServiceId} onChange={(e) => setSelectedServiceId(e.target.value)}>
+                    <option value="">— Hizmet seçin (opsiyonel) —</option>
+                    {spaServices.map(s => <option key={s.id} value={s.id}>{s.name} ({s.durationMinutes} dk)</option>)}
+                  </select>
+                  <label className="form-label" style={{ marginTop: '0.5rem' }}>Üye Seç veya Ara</label>
                   <input type="text" className="form-input" placeholder="İsim veya e-posta ile filtrele..." value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
                   {selectedMember && (
                     <div className="agenda-selected-member">
@@ -463,13 +521,13 @@ function AgendaTab() {
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                       <span className="form-label">Başlangıç</span>
                       <select value={bulkStartHour} onChange={(e) => setBulkStartHour(Number(e.target.value))} className="form-input">
-                        {Array.from({ length: 14 }, (_, i) => i + 8).map(h => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
+                        {Array.from({ length: 16 }, (_, i) => i + 6).map(h => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
                       </select>
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                       <span className="form-label">Bitiş</span>
                       <select value={bulkEndHour} onChange={(e) => setBulkEndHour(Number(e.target.value))} className="form-input">
-                        {Array.from({ length: 14 }, (_, i) => i + 9).map(h => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
+                        {Array.from({ length: 16 }, (_, i) => i + 7).map(h => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
                       </select>
                     </label>
                   </div>
@@ -1128,6 +1186,123 @@ function RoomsTab() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Reports Tab ────────────────────────────────────────────────────────────────
+
+function ReportsTab() {
+  const [therapistStats, setTherapistStats] = useState<Array<{
+    therapistId: string;
+    therapistName: string;
+    totalSlots: number;
+    bookedSlots: number;
+    completedSessions: number;
+    occupancyPct: number;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<'week' | 'month'>('week');
+
+  useEffect(() => {
+    setLoading(true);
+    const now = new Date();
+    const from = new Date(now);
+    if (period === 'week') from.setDate(now.getDate() - 7);
+    else from.setDate(now.getDate() - 30);
+    const fromStr = from.toISOString().slice(0, 10);
+    const toStr = now.toISOString().slice(0, 10);
+
+    apiJson<Array<{ therapistId: string; therapistName: string; photoUrl: string | null; slots: Array<{ booked: boolean }> }>>(`/admin/therapists/agenda?from=${fromStr}&to=${toStr}`)
+      .then((data) => {
+        const stats = data.map(t => {
+          const total = t.slots.length;
+          const booked = t.slots.filter(s => s.booked).length;
+          return {
+            therapistId: t.therapistId,
+            therapistName: t.therapistName,
+            totalSlots: total,
+            bookedSlots: booked,
+            completedSessions: booked,
+            occupancyPct: total > 0 ? Math.round((booked / total) * 100) : 0,
+          };
+        });
+        setTherapistStats(stats.sort((a, b) => b.occupancyPct - a.occupancyPct));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [period]);
+
+  if (loading) return <p className="muted">Rapor yükleniyor...</p>;
+
+  const totalSessions = therapistStats.reduce((s, t) => s + t.bookedSlots, 0);
+  const totalSlots = therapistStats.reduce((s, t) => s + t.totalSlots, 0);
+  const avgOccupancy = totalSlots > 0 ? Math.round((totalSessions / totalSlots) * 100) : 0;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h3 className="spa-section-title" style={{ margin: 0 }}>📊 Performans Raporu</h3>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <button className={`btn-sm ${period === 'week' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setPeriod('week')}>Son 7 Gün</button>
+          <button className={`btn-sm ${period === 'month' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setPeriod('month')}>Son 30 Gün</button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div className="stat-card">
+          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Toplam Seans</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#2563eb' }}>{totalSessions}</div>
+        </div>
+        <div className="stat-card">
+          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Toplam Slot</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)' }}>{totalSlots}</div>
+        </div>
+        <div className="stat-card">
+          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Ortalama Doluluk</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: avgOccupancy >= 70 ? '#059669' : '#d97706' }}>%{avgOccupancy}</div>
+        </div>
+        <div className="stat-card">
+          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Aktif Masöz</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#8b5cf6' }}>{therapistStats.length}</div>
+        </div>
+      </div>
+
+      {/* Therapist Performance Table */}
+      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem' }}>Masöz Performansı</h4>
+      <div className="members-table-wrapper">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Masöz</th>
+              <th>Toplam Slot</th>
+              <th>Dolu</th>
+              <th>Doluluk</th>
+              <th>Görsel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {therapistStats.map((t) => (
+              <tr key={t.therapistId}>
+                <td><strong>{t.therapistName}</strong></td>
+                <td>{t.totalSlots}</td>
+                <td>{t.bookedSlots}</td>
+                <td>
+                  <span style={{ fontWeight: 700, color: t.occupancyPct >= 70 ? '#059669' : t.occupancyPct >= 40 ? '#d97706' : '#dc2626' }}>
+                    %{t.occupancyPct}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ width: '100%', maxWidth: 120, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${t.occupancyPct}%`, height: '100%', background: t.occupancyPct >= 70 ? '#22c55e' : t.occupancyPct >= 40 ? '#f59e0b' : '#ef4444', borderRadius: 4 }}></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

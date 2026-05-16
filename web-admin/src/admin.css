@@ -4273,3 +4273,80 @@ button.primary:disabled {
 .agenda-td-status {
   font-size: 0.7rem;
 }
+
+
+/* ─── Agenda Stats Bar & Legend ─────────────────────────────────────────────── */
+.agenda-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.agenda-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.agenda-stat-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.agenda-stat-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.agenda-legend {
+  margin-left: auto;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.agenda-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.agenda-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* ─── Agenda Avatar & Clear Day ────────────────────────────────────────────── */
+.agenda-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 4px;
+}
+.agenda-clear-btn {
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #dc2626;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.agenda-clear-btn:hover {
+  background: #fef2f2;
+}
+.agenda-th-therapist {
+  position: relative;
+}
