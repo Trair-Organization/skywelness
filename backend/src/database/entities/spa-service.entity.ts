@@ -52,6 +52,10 @@ export class SpaService {
   @Column({ type: 'boolean', default: true })
   active!: boolean;
 
+  /** Paketten düşülecek seans/kredi miktarı. Kulüp belirler. Varsayılan 1. */
+  @Column({ type: 'int', default: 1, name: 'session_cost' })
+  sessionCost!: number;
+
   @Column({ type: 'int', default: 0, name: 'sort_order' })
   sortOrder!: number;
 
