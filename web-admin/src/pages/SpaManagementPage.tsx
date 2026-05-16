@@ -121,7 +121,7 @@ function AgendaTab() {
   const [selectedAction, setSelectedAction] = useState<{ slot: AgendaSlot | null; therapist: TherapistAgenda; hour: string; type: 'available' | 'booked' | 'empty' } | null>(null);
   const [actionMode, setActionMode] = useState<'menu' | 'book' | 'addSlot' | 'bulkSlot' | 'reschedule' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [allMembers, setAllMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null }>>([]);
+  const [allMembers, setAllMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null; massageSessions: number; ptSessions: number }>>([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedMember, setSelectedMember] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
   const [bulkStartHour, setBulkStartHour] = useState(11);
@@ -140,7 +140,7 @@ function AgendaTab() {
     try {
       const [data, members] = await Promise.all([
         apiJson<TherapistAgenda[]>(`/admin/therapists/agenda?from=${date}&to=${date}`),
-        apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null }>>('/admin/members?status=active'),
+        apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null; massageSessions: number; ptSessions: number }>>('/admin/members?status=active'),
       ]);
       setAgenda(data);
       setAllMembers(members);
@@ -335,10 +335,15 @@ function AgendaTab() {
   const freeSlots = totalSlots - bookedSlots;
   const occupancyPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
 
-  // Filtered member list for booking modal
-  const filteredMembers = memberSearch.length > 0
-    ? allMembers.filter(m => `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(memberSearch.toLowerCase())).slice(0, 10)
-    : allMembers.slice(0, 10);
+  // Filtered member list for booking modal (package holders first)
+  const filteredMembers = (() => {
+    let list = allMembers;
+    if (memberSearch.length > 0) {
+      list = list.filter(m => `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(memberSearch.toLowerCase()));
+    }
+    // Sort: massage sessions > 0 first
+    return [...list].sort((a, b) => b.massageSessions - a.massageSessions).slice(0, 12);
+  })();
 
   // Spa services for booking
   const [spaServices, setSpaServices] = useState<Array<{ id: string; name: string; category: string; durationMinutes: number }>>([]);
@@ -544,8 +549,17 @@ function AgendaTab() {
                     <div className="agenda-member-list">
                       {filteredMembers.map((m) => (
                         <div key={m.id} className="agenda-member-item" onClick={() => setSelectedMember(m)}>
-                          <strong>{m.firstName} {m.lastName}</strong>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{m.email}{m.phone ? ` · ${m.phone}` : ''}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <div>
+                              <strong>{m.firstName} {m.lastName}</strong>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'block' }}>{m.email}{m.phone ? ` · ${m.phone}` : ''}</span>
+                            </div>
+                            {m.massageSessions > 0 ? (
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534' }}>💆 {m.massageSessions} seans</span>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>⚠️ Paket yok</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {filteredMembers.length === 0 && <p className="muted" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>Üye bulunamadı</p>}
