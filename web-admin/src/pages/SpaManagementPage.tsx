@@ -675,7 +675,7 @@ function AgendaTab() {
 // ─── Appointments Tab (Unified: spa_booking + v2/appointments) ──────────────────
 
 function AppointmentsTab() {
-  const [reservations, setReservations] = useState<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; therapistName: string | null; serviceName: string | null; serviceDuration: number | null; sessionCost: number; remainingSessions: number | null; sessionType: string; createdAt: string }>>([]);
+  const [reservations, setReservations] = useState<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; therapistName: string | null; serviceName: string | null; serviceDuration: number | null; sessionCost: number; sessionsBefore: number | null; sessionsAfter: number | null; remainingSessions: number | null; sessionType: string; createdAt: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('confirmed');
@@ -747,8 +747,9 @@ function AppointmentsTab() {
                 <th>Masöz</th>
                 <th>Hizmet</th>
                 <th>Tarih & Saat</th>
+                <th>Öncesi</th>
                 <th>Kredi</th>
-                <th>Kalan</th>
+                <th>Sonrası</th>
                 <th>Durum</th>
               </tr>
             </thead>
@@ -769,14 +770,9 @@ function AppointmentsTab() {
                     <div>{new Date(r.startTime).toLocaleDateString('tr-TR')}</div>
                     <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>{new Date(r.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}–{new Date(r.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
                   </td>
-                  <td><span style={{ fontWeight: 700 }}>🎫 {r.sessionCost}</span></td>
-                  <td>
-                    {r.remainingSessions !== null ? (
-                      <span style={{ fontWeight: 700, color: r.remainingSessions > 2 ? '#059669' : r.remainingSessions > 0 ? '#d97706' : '#dc2626' }}>
-                        {r.remainingSessions} seans
-                      </span>
-                    ) : <span style={{ color: 'var(--muted)' }}>—</span>}
-                  </td>
+                  <td><span style={{ fontWeight: 700 }}>{r.sessionsBefore ?? '—'}</span></td>
+                  <td><span style={{ fontWeight: 700, color: '#dc2626' }}>-{r.sessionCost}</span></td>
+                  <td><span style={{ fontWeight: 700, color: r.sessionsAfter !== null ? (r.sessionsAfter > 2 ? '#059669' : r.sessionsAfter > 0 ? '#d97706' : '#dc2626') : 'var(--muted)' }}>{r.sessionsAfter ?? '—'}</span></td>
                   <td><span className={`status-badge status-spa-${r.status}`}>{STATUS_LABELS[r.status] || r.status}</span></td>
                 </tr>
               ))}

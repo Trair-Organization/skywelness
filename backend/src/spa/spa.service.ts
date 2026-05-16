@@ -427,6 +427,7 @@ export class SpaServiceService {
     }
 
     // 5. Deduct sessionCost from package
+    const sessionsBefore = massagePackage.remainingSessions;
     massagePackage.remainingSessions -= sessionCost;
     if (massagePackage.remainingSessions <= 0) {
       massagePackage.remainingSessions = 0;
@@ -434,7 +435,7 @@ export class SpaServiceService {
     }
     await this.memberPackagesRepo.save(massagePackage);
 
-    // 5. Create a Reservation record
+    // 6. Create a Reservation record
     const reservation = this.reservationsRepo.create({
       userId,
       tenantId,
@@ -447,6 +448,8 @@ export class SpaServiceService {
       status: ReservationStatus.CONFIRMED,
       notes: null,
       cancelledAt: null,
+      sessionsBefore,
+      sessionsAfter: massagePackage.remainingSessions,
     });
     const saved = await this.reservationsRepo.save(reservation);
 

@@ -852,6 +852,8 @@ export class AdminMembersService {
       serviceName: r.spaService?.name || null,
       serviceDuration: r.spaService?.durationMinutes || null,
       sessionCost: r.spaService?.sessionCost || 1,
+      sessionsBefore: r.sessionsBefore ?? null,
+      sessionsAfter: r.sessionsAfter ?? null,
       remainingSessions: packageMap.get(r.userId) ?? null,
       sessionType: r.sessionType,
       createdAt: r.createdAt,

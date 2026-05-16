@@ -90,6 +90,14 @@ export class Reservation {
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 
+  /** Randevu oluşturulmadan önceki paket seans bakiyesi */
+  @Column({ type: 'int', nullable: true, name: 'sessions_before' })
+  sessionsBefore!: number | null;
+
+  /** Randevu sonrası kalan paket seans bakiyesi */
+  @Column({ type: 'int', nullable: true, name: 'sessions_after' })
+  sessionsAfter!: number | null;
+
   @VersionColumn({ default: 1 })
   version!: number;
 
