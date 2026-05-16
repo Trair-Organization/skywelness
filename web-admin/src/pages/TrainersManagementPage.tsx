@@ -55,6 +55,24 @@ const SESSION_TYPE_OPTIONS = [
   { value: 'massage', label: 'Masaj' },
 ];
 
+const SPECIALIZATION_OPTIONS = [
+  'Fonksiyonel Antrenman',
+  'Kuvvet & Kondisyon',
+  'Hipertrofi (Kas Gelişimi)',
+  'Kilo Verme & Yağ Yakımı',
+  'Pilates',
+  'Yoga',
+  'Kickboks & Boks',
+  'CrossFit',
+  'Rehabilitasyon & Postür',
+  'Atletik Performans',
+  'Beslenme Danışmanlığı',
+  'Futbol Kondisyonu',
+  'Yüzme',
+  'Fitness & Personal Training',
+  'Postür Analizi & Düzeltici Egzersizler',
+];
+
 const DAYS_LABELS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const WEEKDAY_NUMS = [1, 2, 3, 4, 5, 6, 0];
 
@@ -139,7 +157,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
     phone: '',
     password: '',
     bio: '',
-    specializations: '',
+    specializations: [] as string[],
     certifications: '',
     offersSessionTypes: ['personal_training'] as string[],
     photoUrl: '',
@@ -173,7 +191,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
       phone: '',
       password: '',
       bio: '',
-      specializations: '',
+      specializations: [] as string[],
       certifications: '',
       offersSessionTypes: ['personal_training'],
       photoUrl: '',
@@ -189,7 +207,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
       phone: t.phone || '',
       password: '',
       bio: t.bio || '',
-      specializations: ((t.specializations as string[]) || []).join(', '),
+      specializations: ((t.specializations as string[]) || []) as string[],
       certifications: ((t.certifications as string[]) || []).join(', '),
       offersSessionTypes: t.offersSessionTypes || ['personal_training'],
       photoUrl: t.photoUrl || '',
@@ -244,12 +262,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
         phone: form.phone || undefined,
         password: form.password || undefined,
         bio: form.bio || undefined,
-        specializations: form.specializations
-          ? form.specializations
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [],
+        specializations: form.specializations,
         certifications: form.certifications
           ? form.certifications
               .split(',')
@@ -1072,12 +1085,18 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
               />
             </label>
             <label>
-              Uzmanlık Alanları{' '}
-              <input
-                value={form.specializations}
-                onChange={(e) => setForm({ ...form, specializations: e.target.value })}
-                placeholder="Fitness, Pilates, Yoga"
-              />
+              Uzmanlık Alanları
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
+                {SPECIALIZATION_OPTIONS.map(spec => (
+                  <label key={spec} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '4px 10px', borderRadius: 8, border: `1px solid ${(form.specializations as string[]).includes(spec) ? 'var(--accent)' : 'var(--border)'}`, background: (form.specializations as string[]).includes(spec) ? 'rgba(37,99,235,0.06)' : '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 500 }}>
+                    <input type="checkbox" checked={(form.specializations as string[]).includes(spec)} onChange={(e) => {
+                      const current = form.specializations as string[];
+                      setForm({ ...form, specializations: e.target.checked ? [...current, spec] : current.filter(s => s !== spec) });
+                    }} style={{ width: 14, height: 14 }} />
+                    {spec}
+                  </label>
+                ))}
+              </div>
             </label>
             <label>
               Sertifikalar{' '}
