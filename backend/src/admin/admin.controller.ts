@@ -349,6 +349,14 @@ export class AdminController {
     return this.adminMembers.listSpaPackageSales(admin.tenantId);
   }
 
+  /** Admin: Tüm PT randevularını listele */
+  @Get('pt-reservations')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listPtReservations(@CurrentUser() admin: User, @Query('status') status?: string) {
+    return this.adminMembers.listPtReservations(admin.tenantId, status);
+  }
+
   /** Admin herhangi bir rezervasyonu iptal edebilir (pending veya confirmed) */
   @Post('reservations/:reservationId/cancel')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -503,6 +511,18 @@ export class AdminController {
   }
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
+
+  /** Tüm eğitmenlerin ajandası (günlük grid için) */
+  @Get('trainers/agenda')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTrainersAgenda(
+    @CurrentUser() admin: User,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.adminMembers.listAllTrainersAgenda(admin.tenantId, from, to);
+  }
 
   @Get('trainers/:trainerId/schedule')
   @UseGuards(JwtAuthGuard, RolesGuard)

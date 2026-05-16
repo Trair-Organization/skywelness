@@ -807,6 +807,34 @@ export class AdminMembersService {
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
 
+  /** Admin: Tüm PT randevularını listele */
+  async listPtReservations(tenantId: string, status?: string) {
+    const qb = this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .leftJoinAndSelect('r.trainer', 't')
+      .leftJoinAndSelect('t.user', 'tu')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.trainerId IS NOT NULL')
+      .andWhere('r.spaTherapistId IS NULL');
+    if (status && status !== 'all') {
+      qb.andWhere('r.status = :status', { status });
+    }
+    qb.orderBy('r.startTime', 'DESC').take(100);
+    const rows = await qb.getMany();
+    return rows.map(r => ({
+      id: r.id,
+      status: r.status,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      memberName: r.user ? `${r.user.firstName} ${r.user.lastName}` : null,
+      memberPhone: r.user?.phone || null,
+      trainerName: r.trainer?.user ? `${r.trainer.user.firstName} ${r.trainer.user.lastName}` : null,
+      sessionType: r.sessionType,
+      createdAt: r.createdAt,
+    }));
+  }
+
   /** Admin: Masaj paketi satış geçmişi */
   async listSpaPackageSales(tenantId: string) {
     const rows = await this.packagesRepo
@@ -1103,6 +1131,67 @@ export class AdminMembersService {
     }
 
     return { ok: true as const };
+  }
+
+  /** Tüm aktif eğitmenlerin belirli tarih aralığı için ajanda verisi */
+  async listAllTrainersAgenda(tenantId: string, from: string, to: string) {
+    const trainers = await this.trainersRepo.find({
+      where: { tenantId },
+      relations: ['user'],
+      order: { createdAt: 'ASC' },
+    });
+
+    const trainerIds = trainers.map(t => t.id);
+    if (trainerIds.length === 0) return [];
+
+    const allSlots = await this.availabilityRepo
+      .createQueryBuilder('a')
+      .where('a.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('a.date >= :from', { from })
+      .andWhere('a.date <= :to', { to })
+      .orderBy('a.date', 'ASC')
+      .addOrderBy('a.startTime', 'ASC')
+      .getMany();
+
+    const allReservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .where('r.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :fromTs', { fromTs: new Date(`${from}T00:00:00`) })
+      .andWhere('r.startTime <= :toTs', { toTs: new Date(`${to}T23:59:59`) })
+      .getMany();
+
+    return trainers.map((trainer) => {
+      const slots = allSlots.filter(s => s.trainerId === trainer.id);
+      const reservations = allReservations.filter(r => r.trainerId === trainer.id);
+
+      return {
+        trainerId: trainer.id,
+        trainerName: `${trainer.user.firstName} ${trainer.user.lastName}`,
+        photoUrl: trainer.photoUrl,
+        slots: slots.map(slot => {
+          const dateStr = typeof slot.date === 'string' ? slot.date.slice(0, 10) : new Date(slot.date).toISOString().slice(0, 10);
+          const slotStart = new Date(`${dateStr}T${slot.startTime}`);
+          const slotEnd = new Date(`${dateStr}T${slot.endTime}`);
+          const reservation = reservations.find(r => r.startTime >= slotStart && r.startTime < slotEnd);
+          return {
+            id: slot.id,
+            date: dateStr,
+            startTime: slot.startTime.slice(0, 5),
+            endTime: slot.endTime.slice(0, 5),
+            available: slot.available,
+            booked: !!reservation,
+            reservation: reservation ? {
+              id: reservation.id,
+              memberName: reservation.user ? `${reservation.user.firstName} ${reservation.user.lastName}` : null,
+              status: reservation.status,
+            } : null,
+          };
+        }),
+      };
+    });
   }
 
   /** Eğitmenin belirli tarih aralığındaki müsaitlik kayıtlarını getir (rezervasyon durumu dahil) */
