@@ -16,31 +16,6 @@ type SpaServiceRow = {
   sortOrder: number;
 };
 
-type SpaBookingRow = {
-  id: string;
-  bookingDate: string;
-  timeSlot: string;
-  status: string;
-  notes: string | null;
-  adminNote: string | null;
-  service: { id: string; name: string } | null;
-  therapist: { id: string; name: string } | null;
-  user: { id: string; firstName: string; lastName: string; email: string } | null;
-};
-
-type AppointmentRow = {
-  id: string;
-  status: string;
-  totalAmount: string;
-  paymentStatus: string;
-  notes: string | null;
-  adminNote: string | null;
-  createdAt: string;
-  user: { id: string; firstName: string; lastName: string; email: string };
-  service: { id: string; name: string; category: string };
-  slot: { id: string; date: string; startTime: string; endTime: string };
-};
-
 type TabType = 'agenda' | 'appointments' | 'services' | 'therapists' | 'packages' | 'rooms' | 'reports';
 
 // ─── Main Component ─────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiJson, ApiError } from '../lib/api';
+import { apiJson } from '../lib/api';
 import { TrainersManagementPage } from './TrainersManagementPage';
 import { PtAgendaTab } from './PtAgendaTab';
 
@@ -306,19 +306,21 @@ function PtPackagesTab() {
 
 // ─── PT Reports Tab ─────────────────────────────────────────────────────────────
 
+type TrainerAgenda = { trainerId: string; trainerName: string; photoUrl: string | null; slots: Array<{ id: string; date: string; startTime: string; endTime: string; available: boolean; booked: boolean }> };
 function PtReportsTab() {
   const [stats, setStats] = useState<Array<{ trainerId: string; trainerName: string; totalSlots: number; bookedSlots: number; occupancyPct: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'week' | 'month'>('week');
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     const now = new Date();
     const from = new Date(now);
     if (period === 'week') from.setDate(now.getDate() - 7); else from.setDate(now.getDate() - 30);
 
     apiJson<TrainerAgenda[]>(`/admin/trainers/agenda?from=${from.toISOString().slice(0, 10)}&to=${now.toISOString().slice(0, 10)}`)
       .then(data => {
+        if (cancelled) return;
         const s = data.map(t => {
           const total = t.slots.length;
           const booked = t.slots.filter(sl => sl.booked).length;
@@ -326,7 +328,8 @@ function PtReportsTab() {
         });
         setStats(s.sort((a, b) => b.occupancyPct - a.occupancyPct));
         setLoading(false);
-      }).catch(() => setLoading(false));
+      }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [period]);
 
   if (loading) return <p className="muted">Rapor yükleniyor...</p>;
