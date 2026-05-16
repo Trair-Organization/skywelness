@@ -189,6 +189,8 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
     });
     setEditId(t.id);
     setShowForm(true);
+    // Load students for this trainer
+    void loadStudents(t.id);
   }
 
   async function handleImageUpload(file: File) {
@@ -1122,6 +1124,29 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                 />
               )}
             </label>
+            {/* Öğrenci Yönetimi (düzenleme modunda) */}
+            {editId && studentsModal && (
+              <div style={{ marginTop: '0.5rem', padding: '1rem', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }}>
+                <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 700 }}>👥 Öğrenciler ({studentsModal.students.length})</h4>
+                {studentsModal.students.length === 0 ? (
+                  <p className="muted" style={{ fontSize: '0.8rem', margin: 0 }}>Henüz öğrenci atanmamış</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 200, overflowY: 'auto' }}>
+                    {studentsModal.students.map(s => (
+                      <div key={s.linkId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', borderRadius: 6, background: '#fff', border: '1px solid var(--border)' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.82rem' }}>{s.memberName}</strong>
+                          {s.memberPhone && <span style={{ fontSize: '0.7rem', color: 'var(--muted)', marginLeft: 6 }}>{s.memberPhone}</span>}
+                        </div>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: s.ptSessions > 0 ? '#dcfce7' : '#fee2e2', color: s.ptSessions > 0 ? '#166534' : '#991b1b' }}>
+                          {s.ptSessions > 0 ? `${s.ptSessions} seans` : 'Paket yok'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="form-actions">
               <button type="submit" className="primary" disabled={saving}>
                 {saving ? 'Kaydediliyor...' : editId ? 'Güncelle' : 'Ekle'}
@@ -1152,7 +1177,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
       ) : (
         <div className="trainers-grid">
           {trainers.map((t) => (
-            <div key={t.id} className="trainer-card">
+            <div key={t.id} className="trainer-card" onClick={() => openEdit(t)} style={{ cursor: 'pointer' }}>
               {/* Header: Centered Avatar + Name */}
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
                 <div className="trainer-avatar-lg" style={{ margin: '0 auto 10px' }}>
@@ -1181,7 +1206,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
 
               {/* Stats Panel (expandable) */}
               {selectedStats?.id === t.id && (
-                <div className="trainer-detail-panel">
+                <div className="trainer-detail-panel" onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem', textAlign: 'center' }}>
                     <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#059669' }}>{selectedStats.stats.completedSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Biten</div></div>
                     <div><div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--accent)' }}>{selectedStats.stats.confirmedSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Onaylı</div></div>
@@ -1192,11 +1217,9 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
               )}
 
               {/* Actions */}
-              <div className="trainer-actions">
+              <div className="trainer-actions" onClick={(e) => e.stopPropagation()}>
                 <button className="btn-sm btn-primary" onClick={() => openSchedule(t)}>🗓️ Ajanda</button>
-                <button className="btn-sm btn-outline" onClick={() => void loadStudents(t.id)}>👥 {t.studentCount}</button>
                 <button className="btn-sm btn-outline" onClick={() => void loadStats(t.id)}>📊</button>
-                <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>✏️</button>
                 <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>🗑</button>
               </div>
             </div>
