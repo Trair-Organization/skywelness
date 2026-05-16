@@ -17,6 +17,10 @@ type TrainerRow = {
   avgRating: string;
   totalSessions: number;
   studentCount: number;
+  todayLessons: number;
+  todaySlots: number;
+  monthSessions: number;
+  lastActivity: string | null;
   createdAt: string;
 };
 
@@ -1231,43 +1235,37 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
         <div className="trainers-grid">
           {trainers.map((t) => (
             <div key={t.id} className="trainer-card" onClick={() => openEdit(t)} style={{ cursor: 'pointer' }}>
-              {/* Header: Centered Avatar + Name */}
-              <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <div className="trainer-avatar-lg" style={{ margin: '0 auto 10px' }}>
+              {/* Bugün bilgisi ribbon */}
+              {t.todayLessons > 0 && <div style={{ position: 'absolute', top: 10, right: 10, fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#dbeafe', color: '#1e40af' }}>📅 Bugün {t.todayLessons} ders</div>}
+
+              {/* Header: Avatar + Name */}
+              <div style={{ textAlign: 'center', marginBottom: 10 }}>
+                <div className="trainer-avatar-lg" style={{ margin: '0 auto 8px' }}>
                   {t.photoUrl ? <img src={t.photoUrl} alt={t.firstName} /> : <span>{t.firstName[0]}{t.lastName[0]}</span>}
                 </div>
-                <h3 style={{ margin: '0 0 2px', fontSize: '0.95rem' }}>{t.firstName} {t.lastName}</h3>
-                <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.phone || t.email}</div>
-                <div className="trainer-rating" style={{ justifyContent: 'center', marginTop: 6 }}>
-                  <span className="rating-star">⭐</span><span>{Number(t.avgRating).toFixed(1)}</span>
-                  <span style={{ color: 'var(--muted)', fontSize: '0.72rem', marginLeft: 6 }}>{t.totalSessions} seans · 👥 {t.studentCount} öğrenci</span>
-                </div>
+                <h3 style={{ margin: '0 0 2px', fontSize: '0.92rem' }}>{t.firstName} {t.lastName}</h3>
+                <div style={{ fontSize: '0.73rem', color: 'var(--muted)' }}>{t.phone || t.email}</div>
+              </div>
+
+              {/* Metrics Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.25rem', textAlign: 'center', margin: '8px 0', padding: '8px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                <div><div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--accent)' }}>{t.studentCount}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Öğrenci</div></div>
+                <div><div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#059669' }}>{t.monthSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Bu Ay</div></div>
+                <div><div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#d97706' }}>⭐{Number(t.avgRating).toFixed(1)}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Puan</div></div>
+              </div>
+
+              {/* Doluluk + Son aktivite */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--muted)', margin: '4px 0 8px' }}>
+                <span>{t.todaySlots > 0 ? `Bugün: ${t.todayLessons}/${t.todaySlots} dolu` : 'Bugün slot yok'}</span>
+                <span>{t.lastActivity ? `Son: ${new Date(t.lastActivity).toLocaleDateString('tr-TR')}` : 'Henüz ders yok'}</span>
               </div>
 
               {/* Tags */}
-              <div className="trainer-tags" style={{ justifyContent: 'center', marginBottom: 8 }}>
-                {t.offersSessionTypes?.map((st) => (
-                  <span key={st} className="tag">{st === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}</span>
-                ))}
-                {t.specializations && (t.specializations as string[]).slice(0, 2).map((s, i) => (
+              <div className="trainer-tags" style={{ justifyContent: 'center', marginBottom: 6 }}>
+                {t.specializations && (t.specializations as string[]).slice(0, 3).map((s, i) => (
                   <span key={i} className="spec-tag">{s}</span>
                 ))}
               </div>
-
-              {/* Bio (short) */}
-              {t.bio && <p className="trainer-bio" style={{ textAlign: 'center', fontSize: '0.72rem', margin: '0 0 8px' }}>{(t.bio as string).slice(0, 80)}{(t.bio as string).length > 80 ? '...' : ''}</p>}
-
-              {/* Stats Panel (expandable) */}
-              {selectedStats?.id === t.id && (
-                <div className="trainer-detail-panel" onClick={(e) => e.stopPropagation()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem', textAlign: 'center' }}>
-                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#059669' }}>{selectedStats.stats.completedSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Biten</div></div>
-                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--accent)' }}>{selectedStats.stats.confirmedSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Onaylı</div></div>
-                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#dc2626' }}>{selectedStats.stats.cancelledSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>İptal</div></div>
-                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#d97706' }}>{selectedStats.stats.thisMonthSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Bu Ay</div></div>
-                  </div>
-                </div>
-              )}
 
               {/* Actions */}
               <div className="trainer-actions" onClick={(e) => e.stopPropagation()}>
@@ -1275,6 +1273,18 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                 <button className="btn-sm btn-outline" onClick={() => void loadStats(t.id)}>📊</button>
                 <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>🗑</button>
               </div>
+
+              {/* Stats Panel */}
+              {selectedStats?.id === t.id && (
+                <div className="trainer-detail-panel" onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem', textAlign: 'center' }}>
+                    <div><div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#059669' }}>{selectedStats.stats.completedSessions}</div><div style={{ fontSize: '0.58rem', color: 'var(--muted)' }}>Biten</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent)' }}>{selectedStats.stats.confirmedSessions}</div><div style={{ fontSize: '0.58rem', color: 'var(--muted)' }}>Onaylı</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#dc2626' }}>{selectedStats.stats.cancelledSessions}</div><div style={{ fontSize: '0.58rem', color: 'var(--muted)' }}>İptal</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#d97706' }}>{selectedStats.stats.thisMonthSessions}</div><div style={{ fontSize: '0.58rem', color: 'var(--muted)' }}>Bu Ay</div></div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

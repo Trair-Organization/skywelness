@@ -240,38 +240,103 @@ export class AdminMembersService {
       order: { createdAt: 'ASC' },
     });
 
-    // Öğrenci sayılarını toplu çek
     const trainerIds = trainers.map(t => t.id);
-    let studentCountMap = new Map<string, number>();
-    if (trainerIds.length > 0) {
-      const counts = await this.trainerMemberLinksRepo
-        .createQueryBuilder('l')
-        .select('l.trainerId', 'trainerId')
-        .addSelect('COUNT(l.id)', 'count')
-        .where('l.trainerId IN (:...ids)', { ids: trainerIds })
-        .andWhere('l.status = :status', { status: 'active' })
-        .groupBy('l.trainerId')
-        .getRawMany<{ trainerId: string; count: string }>();
-      for (const c of counts) studentCountMap.set(c.trainerId, parseInt(c.count));
-    }
+    if (trainerIds.length === 0) return [];
 
-    return trainers.map((t) => ({
-      id: t.id,
-      userId: t.userId,
-      firstName: t.user.firstName,
-      lastName: t.user.lastName,
-      email: t.user.email,
-      phone: t.user.phone,
-      photoUrl: t.photoUrl,
-      bio: t.bio,
-      specializations: t.specializations,
-      certifications: t.certifications,
-      offersSessionTypes: t.offersSessionTypes,
-      avgRating: t.avgRating,
-      totalSessions: t.totalSessions,
-      studentCount: studentCountMap.get(t.id) || 0,
-      createdAt: t.createdAt,
-    }));
+    // Öğrenci sayıları
+    let studentCountMap = new Map<string, number>();
+    const counts = await this.trainerMemberLinksRepo
+      .createQueryBuilder('l')
+      .select('l.trainerId', 'trainerId')
+      .addSelect('COUNT(l.id)', 'count')
+      .where('l.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('l.status = :status', { status: 'active' })
+      .groupBy('l.trainerId')
+      .getRawMany<{ trainerId: string; count: string }>();
+    for (const c of counts) studentCountMap.set(c.trainerId, parseInt(c.count));
+
+    // Bugünkü dersler
+    const today = new Date().toISOString().slice(0, 10);
+    const todayStart = new Date(`${today}T00:00:00`);
+    const todayEnd = new Date(`${today}T23:59:59`);
+    const todayLessons = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .select('r.trainerId', 'trainerId')
+      .addSelect('COUNT(r.id)', 'count')
+      .where('r.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :start', { start: todayStart })
+      .andWhere('r.startTime <= :end', { end: todayEnd })
+      .groupBy('r.trainerId')
+      .getRawMany<{ trainerId: string; count: string }>();
+    const todayMap = new Map<string, number>();
+    for (const t of todayLessons) todayMap.set(t.trainerId, parseInt(t.count));
+
+    // Bu ay tamamlanan dersler
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthLessons = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .select('r.trainerId', 'trainerId')
+      .addSelect('COUNT(r.id)', 'count')
+      .where('r.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('r.status = :status', { status: 'completed' })
+      .andWhere('r.startTime >= :start', { start: monthStart })
+      .groupBy('r.trainerId')
+      .getRawMany<{ trainerId: string; count: string }>();
+    const monthMap = new Map<string, number>();
+    for (const t of monthLessons) monthMap.set(t.trainerId, parseInt(t.count));
+
+    // Son aktivite (en son tamamlanan ders)
+    const lastActivity = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .select('r.trainerId', 'trainerId')
+      .addSelect('MAX(r.startTime)', 'lastTime')
+      .where('r.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('r.status = :status', { status: 'completed' })
+      .groupBy('r.trainerId')
+      .getRawMany<{ trainerId: string; lastTime: string }>();
+    const lastActivityMap = new Map<string, string>();
+    for (const t of lastActivity) lastActivityMap.set(t.trainerId, t.lastTime);
+
+    // Bugünkü toplam slot (doluluk hesabı)
+    const todaySlots = await this.availabilityRepo
+      .createQueryBuilder('a')
+      .select('a.trainerId', 'trainerId')
+      .addSelect('COUNT(a.id)', 'count')
+      .where('a.trainerId IN (:...ids)', { ids: trainerIds })
+      .andWhere('a.date = :today', { today })
+      .groupBy('a.trainerId')
+      .getRawMany<{ trainerId: string; count: string }>();
+    const todaySlotsMap = new Map<string, number>();
+    for (const t of todaySlots) todaySlotsMap.set(t.trainerId, parseInt(t.count));
+
+    return trainers.map((t) => {
+      const todayTotal = todaySlotsMap.get(t.id) || 0;
+      const todayBooked = todayMap.get(t.id) || 0;
+      return {
+        id: t.id,
+        userId: t.userId,
+        firstName: t.user.firstName,
+        lastName: t.user.lastName,
+        email: t.user.email,
+        phone: t.user.phone,
+        photoUrl: t.photoUrl,
+        bio: t.bio,
+        specializations: t.specializations,
+        certifications: t.certifications,
+        offersSessionTypes: t.offersSessionTypes,
+        avgRating: t.avgRating,
+        totalSessions: t.totalSessions,
+        studentCount: studentCountMap.get(t.id) || 0,
+        todayLessons: todayBooked,
+        todaySlots: todayTotal,
+        monthSessions: monthMap.get(t.id) || 0,
+        lastActivity: lastActivityMap.get(t.id) || null,
+        createdAt: t.createdAt,
+      };
+    });
   }
 
   async listPendingMembers(tenantId: string) {

@@ -4411,8 +4411,10 @@ button.primary:disabled {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 4px;
   transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 .trainer-card:hover {
   border-color: var(--accent);
