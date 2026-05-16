@@ -856,6 +856,7 @@ function RoomsTab() {
   const [subTab, setSubTab] = useState<'rooms' | 'slots'>('rooms');
 
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
   const [formCapacity, setFormCapacity] = useState(1);
   const [formPrice, setFormPrice] = useState('');
@@ -864,8 +865,8 @@ function RoomsTab() {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(() => new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10));
-  const [startHour, setStartHour] = useState(9);
-  const [endHour, setEndHour] = useState(21);
+  const [startHour, setStartHour] = useState(11);
+  const [endHour, setEndHour] = useState(22);
   const [slotPrice, setSlotPrice] = useState('');
   const [generating, setGenerating] = useState(false);
   const [genResult, setGenResult] = useState<{ created: number; roomName: string } | null>(null);
@@ -883,19 +884,41 @@ function RoomsTab() {
 
   useEffect(() => { queueMicrotask(() => { void loadRooms(); }); }, [loadRooms]);
 
-  async function handleCreateRoom(e: React.FormEvent) {
+  function resetForm() { setEditId(null); setFormName(''); setFormCapacity(1); setFormPrice(''); setShowForm(false); }
+
+  function startEdit(r: RoomRow) { setEditId(r.id); setFormName(r.name); setFormCapacity(r.capacity); setFormPrice(r.price); setShowForm(true); }
+
+  async function handleSaveRoom(e: React.FormEvent) {
     e.preventDefault();
     if (!formName.trim() || !formPrice) return;
     setSaving(true);
     try {
-      await apiJson('/resource-booking/admin/resources', {
-        method: 'POST',
-        body: JSON.stringify({ name: formName.trim(), resourceType: 'massage_room', capacity: formCapacity, durationMinutes: 60, price: parseFloat(formPrice), description: formCapacity >= 2 ? 'Çift kişilik masaj odası' : 'Tek kişilik masaj odası' }),
-      });
-      setShowForm(false); setFormName(''); setFormCapacity(1); setFormPrice('');
+      if (editId) {
+        await apiJson(`/resource-booking/admin/resources/${editId}`, {
+          method: 'POST',
+          body: JSON.stringify({ name: formName.trim(), capacity: formCapacity, price: parseFloat(formPrice) }),
+        });
+      } else {
+        await apiJson('/resource-booking/admin/resources', {
+          method: 'POST',
+          body: JSON.stringify({ name: formName.trim(), resourceType: 'massage_room', capacity: formCapacity, durationMinutes: 60, price: parseFloat(formPrice), description: formCapacity >= 2 ? 'Çift kişilik masaj odası' : 'Tek kişilik masaj odası' }),
+        });
+      }
+      resetForm();
       await loadRooms();
-    } catch (err) { alert(err instanceof Error ? err.message : 'Oda oluşturulamadı'); }
+    } catch (err) { alert(err instanceof Error ? err.message : 'Hata'); }
     finally { setSaving(false); }
+  }
+
+  async function handleDeleteRoom(id: string, name: string) {
+    if (!confirm(`"${name}" odası silinecek (deaktif edilecek). Emin misiniz?`)) return;
+    try {
+      await apiJson(`/resource-booking/admin/resources/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({ active: false }),
+      });
+      await loadRooms();
+    } catch (err) { alert(err instanceof Error ? err.message : 'Silinemedi'); }
   }
 
   async function handleGenerateSlots() {
@@ -924,12 +947,12 @@ function RoomsTab() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 className="spa-section-title" style={{ margin: 0 }}>Masaj Odaları</h3>
-            <button className="btn-sm btn-primary" onClick={() => setShowForm(true)}>+ Yeni Oda</button>
+            <button className="btn-sm btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ Yeni Oda</button>
           </div>
 
           {showForm && (
-            <form onSubmit={(e) => void handleCreateRoom(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
-              <h4>Yeni Masaj Odası</h4>
+            <form onSubmit={(e) => void handleSaveRoom(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
+              <h4>{editId ? '✏️ Oda Düzenle' : '+ Yeni Masaj Odası'}</h4>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 <span className="form-label">Oda Adı *</span>
                 <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Örn: Masaj Odası 4 (Çift)" required className="form-input" />
@@ -948,8 +971,8 @@ function RoomsTab() {
                 </label>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : '✓ Oda Oluştur'}</button>
-                <button type="button" className="btn-sm btn-outline" onClick={() => setShowForm(false)}>İptal</button>
+                <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oda Oluştur'}</button>
+                <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
               </div>
             </form>
           )}
@@ -960,11 +983,15 @@ function RoomsTab() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {rooms.map((r) => (
                 <div key={r.id} className="spa-pkg-card">
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <strong>{r.name}</strong>
                     <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 2 }}>{r.capacity >= 2 ? '👫 Çift kişilik' : '🧖 Tek kişilik'} · {r.durationMinutes} dk</div>
                   </div>
-                  <span className="spa-pkg-price">{r.price}₺</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="spa-pkg-price">{r.price}₺</span>
+                    <button className="btn-sm btn-outline" onClick={() => startEdit(r)}>✏️</button>
+                    <button className="btn-sm btn-danger" onClick={() => void handleDeleteRoom(r.id, r.name)}>🗑</button>
+                  </div>
                 </div>
               ))}
             </div>
