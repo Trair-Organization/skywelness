@@ -50,7 +50,7 @@ export function SpaManagementPage() {
 
   const tabs: { key: TabType; icon: string; label: string }[] = [
     { key: 'agenda', icon: '📅', label: 'Ajanda' },
-    { key: 'appointments', icon: '📝', label: 'Randevular' },
+    { key: 'appointments', icon: '📋', label: 'Geçmiş' },
     { key: 'services', icon: '🧴', label: 'Hizmetler' },
     { key: 'therapists', icon: '💆', label: 'Masözler' },
     { key: 'packages', icon: '📦', label: 'Paketler' },
