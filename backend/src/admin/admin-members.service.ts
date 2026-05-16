@@ -2659,21 +2659,20 @@ export class AdminMembersService {
     return { ok: true, temporaryPassword: newPassword, email: user.email };
   }
 
-  /** Admin: Eğitmen şifresini sıfırla (yeni şifre oluştur) */
-  async resetTrainerPassword(tenantId: string, userId: string) {
+  /** Admin: Eğitmen şifresini değiştir */
+  async changeTrainerPassword(tenantId: string, userId: string, newPassword: string) {
     const user = await this.usersRepo.findOne({
       where: { id: userId, tenantId, role: UserRole.TRAINER },
     });
     if (!user) throw new NotFoundException('Eğitmen bulunamadı');
 
-    const newPassword = `Temp${Date.now().toString(36).slice(-4)}!`;
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.usersRepo.update(
       { id: userId },
       { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
     );
 
-    return { ok: true, temporaryPassword: newPassword, email: user.email };
+    return { ok: true, email: user.email };
   }
 
   /** Admin: Üye profilini güncelle */

@@ -1187,24 +1187,36 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                 {saving ? 'Kaydediliyor...' : editId ? 'Güncelle' : 'Ekle'}
               </button>
               {editId && (
-                <button
-                  type="button"
-                  className="secondary"
-                  style={{ background: '#fef3c7', borderColor: '#f59e0b', color: '#92400e' }}
-                  onClick={async () => {
-                    if (!confirm('Eğitmenin şifresi sıfırlanacak. Devam edilsin mi?')) return;
-                    try {
-                      const trainer = trainers.find(t => t.id === editId);
-                      if (!trainer) return;
-                      const res = await apiJson<{ temporaryPassword: string; email: string }>(`/admin/trainers/${trainer.userId}/reset-password`, { method: 'POST' });
-                      alert(`✅ Şifre sıfırlandı!\n\nYeni şifre: ${res.temporaryPassword}\nE-posta: ${res.email}\n\nBu şifreyi eğitmene iletin.`);
-                    } catch (e) {
-                      alert(e instanceof ApiError ? e.message : 'Şifre sıfırlama başarısız');
-                    }
-                  }}
-                >
-                  🔑 Şifre Sıfırla
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="text"
+                    placeholder="Yeni şifre (min 6 karakter)"
+                    id="trainer-new-password"
+                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.82rem', width: 180 }}
+                  />
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ background: '#fef3c7', borderColor: '#f59e0b', color: '#92400e', whiteSpace: 'nowrap' }}
+                    onClick={async () => {
+                      const input = document.getElementById('trainer-new-password') as HTMLInputElement;
+                      const pw = input?.value?.trim();
+                      if (!pw || pw.length < 6) { alert('Şifre en az 6 karakter olmalıdır'); return; }
+                      if (!confirm('Eğitmenin şifresi değiştirilecek. Devam edilsin mi?')) return;
+                      try {
+                        const trainer = trainers.find(t => t.id === editId);
+                        if (!trainer) return;
+                        await apiJson(`/admin/trainers/${trainer.userId}/change-password`, { method: 'POST', body: JSON.stringify({ password: pw }) });
+                        alert('✅ Şifre değiştirildi!');
+                        input.value = '';
+                      } catch (e) {
+                        alert(e instanceof ApiError ? e.message : 'Şifre değiştirme başarısız');
+                      }
+                    }}
+                  >
+                    🔑 Şifreyi Değiştir
+                  </button>
+                </div>
               )}
               <button
                 type="button"

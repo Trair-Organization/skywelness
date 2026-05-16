@@ -820,16 +820,20 @@ export class AdminController {
     return result;
   }
 
-  /** Admin: Eğitmen şifresini sıfırla */
-  @Post('trainers/:userId/reset-password')
+  /** Admin: Eğitmen şifresini değiştir */
+  @Post('trainers/:userId/change-password')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)
-  async resetTrainerPassword(
+  async changeTrainerPassword(
     @CurrentUser() admin: User,
     @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { password: string },
   ) {
-    const result = await this.adminMembers.resetTrainerPassword(admin.tenantId, userId);
-    void this.logAction(admin, 'password_reset', 'trainer', userId);
+    if (!body.password || body.password.length < 6) {
+      throw new BadRequestException('Şifre en az 6 karakter olmalıdır');
+    }
+    const result = await this.adminMembers.changeTrainerPassword(admin.tenantId, userId, body.password);
+    void this.logAction(admin, 'password_change', 'trainer', userId);
     return result;
   }
 
