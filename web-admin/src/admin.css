@@ -4393,3 +4393,127 @@ button.primary:disabled {
 .agenda-td-past .agenda-empty-plus {
   color: #94a3b8 !important;
 }
+
+
+/* ─── Therapist Cards Professional ─────────────────────────────────────────── */
+.trainers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.trainer-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.2s;
+}
+.trainer-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.06);
+}
+.trainer-card-inactive {
+  opacity: 0.6;
+  border-color: #fecaca;
+}
+.trainer-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.trainer-avatar-lg {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.08);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--accent);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.trainer-avatar-lg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.trainer-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.trainer-card-info h3 {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.trainer-phone {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.trainer-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.trainer-status-badge {
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.trainer-active {
+  background: #dcfce7;
+  color: #166534;
+}
+.trainer-inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.trainer-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trainer-bio {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+.trainer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.trainer-hours-summary {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.trainer-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.trainer-actions .btn-sm {
+  flex: none;
+}
+.trainer-actions .btn-primary {
+  flex: 1;
+}

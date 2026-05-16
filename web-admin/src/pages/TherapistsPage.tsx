@@ -1016,7 +1016,7 @@ export function TherapistsPage({}: { embedded?: boolean } = {}) {
       ) : (
         <div className="trainers-grid">
           {therapists.map((t) => (
-            <div key={t.id} className="trainer-card">
+            <div key={t.id} className={`trainer-card ${!t.active ? 'trainer-card-inactive' : ''}`}>
               <div className="trainer-card-header">
                 <div className="trainer-avatar-lg">
                   {t.photoUrl ? <img src={t.photoUrl} alt={t.name} /> : <span>{t.name[0]}</span>}
@@ -1024,40 +1024,36 @@ export function TherapistsPage({}: { embedded?: boolean } = {}) {
                 <div className="trainer-card-info">
                   <h3>{t.name}</h3>
                   {t.phone && <p className="trainer-phone">📞 {t.phone}</p>}
+                  <div className="trainer-rating">
+                    <span className="rating-star">⭐</span>
+                    <span>{Number(t.avgRating).toFixed(1)}</span>
+                    <span style={{ color: 'var(--muted)', fontSize: '0.75rem', marginLeft: 4 }}>· {t.totalSessions || 0} seans</span>
+                  </div>
                 </div>
-                <div className="trainer-rating">
-                  <span className="rating-star">⭐</span>
-                  <span>{Number(t.avgRating).toFixed(1)}</span>
-                </div>
+                <span className={`trainer-status-badge ${t.active ? 'trainer-active' : 'trainer-inactive'}`}>
+                  {t.active ? 'Aktif' : 'Pasif'}
+                </span>
               </div>
               <div className="trainer-card-body">
+                {t.bio && <p className="trainer-bio">{t.bio.slice(0, 80)}{t.bio.length > 80 ? '...' : ''}</p>}
                 {t.specialties && t.specialties.length > 0 && (
                   <div className="trainer-tags">
                     {t.specialties.map((sp, i) => (
-                      <span key={i} className="tag">
-                        {sp}
-                      </span>
+                      <span key={i} className="tag">{sp}</span>
                     ))}
                   </div>
                 )}
-                <div className="trainer-stats-row">
-                  <span>{t.active ? '🟢 Aktif' : '🔴 Pasif'}</span>
-                  <span>📊 {t.totalSessions || 0} seans</span>
-                </div>
+                {t.workingHours && Object.keys(t.workingHours).length > 0 && (
+                  <div className="trainer-hours-summary">
+                    🕐 {Object.entries(t.workingHours).filter(([,v]) => v).length} gün çalışıyor
+                  </div>
+                )}
               </div>
               <div className="trainer-actions">
-                <button className="btn-sm btn-schedule" onClick={() => openCalendar(t)}>
-                  🗓️ Ajanda
-                </button>
-                <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>
-                  ✏️ Düzenle
-                </button>
-                <button className="btn-sm btn-outline" onClick={() => void toggleActive(t)}>
-                  {t.active ? '⏸ Pasif' : '▶ Aktif'}
-                </button>
-                <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>
-                  🗑
-                </button>
+                <button className="btn-sm btn-primary" onClick={() => openCalendar(t)}>🗓️ Ajanda</button>
+                <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>✏️</button>
+                <button className="btn-sm btn-outline" onClick={() => void toggleActive(t)}>{t.active ? '⏸' : '▶'}</button>
+                <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>🗑</button>
               </div>
             </div>
           ))}
