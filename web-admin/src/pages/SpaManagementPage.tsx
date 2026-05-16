@@ -167,10 +167,19 @@ function AgendaTab() {
     if (!selectedAction) return;
     setActionLoading(true);
     try {
-      await apiJson(`/admin/therapists/${selectedAction.therapist.therapistId}/calendar/bulk`, {
-        method: 'POST',
-        body: JSON.stringify({ startDate: date, endDate: date, weekdays: [0, 1, 2, 3, 4, 5, 6], startTime: `${String(bulkStartHour).padStart(2, '0')}:00`, endTime: `${String(bulkEndHour).padStart(2, '0')}:00` }),
-      });
+      // Her saat için ayrı slot oluştur (08:00-09:00, 09:00-10:00, ...)
+      const promises = [];
+      for (let h = bulkStartHour; h < bulkEndHour; h++) {
+        const startTime = `${String(h).padStart(2, '0')}:00`;
+        const endTime = `${String(h + 1).padStart(2, '0')}:00`;
+        promises.push(
+          apiJson(`/admin/therapists/${selectedAction.therapist.therapistId}/calendar`, {
+            method: 'POST',
+            body: JSON.stringify({ date, startTime, endTime }),
+          }).catch(() => null)
+        );
+      }
+      await Promise.all(promises);
       closeModal(); void load();
     } catch (err) { alert(err instanceof Error ? err.message : 'Slot eklenemedi'); }
     finally { setActionLoading(false); }
