@@ -140,7 +140,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
     setError(null);
     try {
       const data = await apiJson<TrainerRow[]>('/admin/trainers');
-      setTrainers(data);
+      setTrainers(data.filter(t => t.offersSessionTypes?.includes('personal_training')));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Eğitmenler yüklenemedi');
     } finally {
