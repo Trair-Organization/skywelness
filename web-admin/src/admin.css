@@ -4521,3 +4521,11 @@ button.primary:disabled {
   padding: 4px 10px;
   font-size: 0.72rem;
 }
+
+
+/* ─── Force stat-card white background ─────────────────────────────────────── */
+.stat-card,
+.dashboard-page .stat-card {
+  background: #fff !important;
+  color: var(--text);
+}
