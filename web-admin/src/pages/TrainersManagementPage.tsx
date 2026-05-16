@@ -1027,6 +1027,17 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
       {showForm && (
         <div className="card" style={{ marginBottom: 24 }}>
           <h3>{editId ? '✏️ Eğitmen Düzenle' : '➕ Yeni Eğitmen Ekle'}</h3>
+          {/* Fotoğraf - Kare */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', border: '2px dashed var(--border)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', flexShrink: 0 }}>
+              {form.photoUrl ? <img src={form.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '1.5rem', color: 'var(--muted)' }}>📷</span>}
+            </div>
+            <div>
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleImageUpload(f); }} disabled={uploading} style={{ fontSize: '0.78rem' }} />
+              {uploading && <span className="muted" style={{ fontSize: '0.72rem' }}>⏳ Yükleniyor...</span>}
+              <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: 'var(--muted)' }}>Kare fotoğraf önerilir (min 200x200)</p>
+            </div>
+          </div>
           <form onSubmit={(e) => void handleSubmit(e)} className="form-grid">
             <label>
               Ad *{' '}
@@ -1132,26 +1143,6 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                   </label>
                 ))}
               </div>
-            </label>
-            <label>
-              Fotoğraf
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void handleImageUpload(f);
-                }}
-                disabled={uploading}
-              />
-              {uploading && <span className="muted">⏳ Yükleniyor...</span>}
-              {form.photoUrl && (
-                <img
-                  src={form.photoUrl}
-                  alt=""
-                  style={{ marginTop: 8, maxHeight: 60, borderRadius: 8 }}
-                />
-              )}
             </label>
             {/* Öğrenci Yönetimi (düzenleme modunda) */}
             {editId && studentsModal && (
