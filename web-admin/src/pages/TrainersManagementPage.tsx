@@ -1142,51 +1142,40 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
         <div className="trainers-grid">
           {trainers.map((t) => (
             <div key={t.id} className="trainer-card">
-              {/* Header: Avatar + Info + Rating */}
-              <div className="trainer-card-header">
-                <div className="trainer-avatar-lg">
-                  {t.photoUrl ? (
-                    <img src={t.photoUrl} alt={t.firstName} />
-                  ) : (
-                    <span>{t.firstName[0]}{t.lastName[0]}</span>
-                  )}
+              {/* Header: Centered Avatar + Name */}
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <div className="trainer-avatar-lg" style={{ margin: '0 auto 10px' }}>
+                  {t.photoUrl ? <img src={t.photoUrl} alt={t.firstName} /> : <span>{t.firstName[0]}{t.lastName[0]}</span>}
                 </div>
-                <div className="trainer-card-info">
-                  <h3>{t.firstName} {t.lastName}</h3>
-                  <p className="trainer-email">{t.email}</p>
-                  {t.phone && <p className="trainer-phone">📞 {t.phone}</p>}
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="trainer-rating"><span className="rating-star">⭐</span><span>{Number(t.avgRating).toFixed(1)}</span></div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>{t.totalSessions} seans</div>
+                <h3 style={{ margin: '0 0 2px', fontSize: '0.95rem' }}>{t.firstName} {t.lastName}</h3>
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.phone || t.email}</div>
+                <div className="trainer-rating" style={{ justifyContent: 'center', marginTop: 6 }}>
+                  <span className="rating-star">⭐</span><span>{Number(t.avgRating).toFixed(1)}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: '0.72rem', marginLeft: 6 }}>{t.totalSessions} seans</span>
                 </div>
               </div>
 
-              {/* Body: Tags + Specs + Bio */}
-              <div className="trainer-card-body">
-                <div className="trainer-tags">
-                  {t.offersSessionTypes?.map((st) => (
-                    <span key={st} className="tag">{st === 'personal_training' ? '🏋️ PT' : st === 'massage' ? '💆 Masaj' : st}</span>
-                  ))}
-                  {t.specializations && (t.specializations as string[]).slice(0, 3).map((s, i) => (
-                    <span key={i} className="spec-tag">{s}</span>
-                  ))}
-                </div>
-                {t.bio && <p className="trainer-bio">{(t.bio as string).slice(0, 100)}{(t.bio as string).length > 100 ? '...' : ''}</p>}
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
-                  <span>📅 Kayıt: {new Date(t.createdAt).toLocaleDateString('tr-TR')}</span>
-                  {t.certifications && (t.certifications as string[]).length > 0 && <span>📜 {(t.certifications as string[]).length} sertifika</span>}
-                </div>
+              {/* Tags */}
+              <div className="trainer-tags" style={{ justifyContent: 'center', marginBottom: 8 }}>
+                {t.offersSessionTypes?.map((st) => (
+                  <span key={st} className="tag">{st === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}</span>
+                ))}
+                {t.specializations && (t.specializations as string[]).slice(0, 2).map((s, i) => (
+                  <span key={i} className="spec-tag">{s}</span>
+                ))}
               </div>
+
+              {/* Bio (short) */}
+              {t.bio && <p className="trainer-bio" style={{ textAlign: 'center', fontSize: '0.72rem', margin: '0 0 8px' }}>{(t.bio as string).slice(0, 80)}{(t.bio as string).length > 80 ? '...' : ''}</p>}
 
               {/* Stats Panel (expandable) */}
               {selectedStats?.id === t.id && (
                 <div className="trainer-detail-panel">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
-                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#059669' }}>{selectedStats.stats.completedSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Tamamlanan</div></div>
-                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)' }}>{selectedStats.stats.confirmedSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Onaylı</div></div>
-                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#dc2626' }}>{selectedStats.stats.cancelledSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>İptal</div></div>
-                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#d97706' }}>{selectedStats.stats.thisMonthSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Bu Ay</div></div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem', textAlign: 'center' }}>
+                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#059669' }}>{selectedStats.stats.completedSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Biten</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--accent)' }}>{selectedStats.stats.confirmedSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Onaylı</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#dc2626' }}>{selectedStats.stats.cancelledSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>İptal</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '1rem', color: '#d97706' }}>{selectedStats.stats.thisMonthSessions}</div><div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Bu Ay</div></div>
                   </div>
                 </div>
               )}
