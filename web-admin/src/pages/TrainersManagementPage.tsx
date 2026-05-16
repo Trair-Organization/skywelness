@@ -1142,88 +1142,61 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
         <div className="trainers-grid">
           {trainers.map((t) => (
             <div key={t.id} className="trainer-card">
+              {/* Header: Avatar + Info + Rating */}
               <div className="trainer-card-header">
                 <div className="trainer-avatar-lg">
                   {t.photoUrl ? (
                     <img src={t.photoUrl} alt={t.firstName} />
                   ) : (
-                    <span>
-                      {t.firstName[0]}
-                      {t.lastName[0]}
-                    </span>
+                    <span>{t.firstName[0]}{t.lastName[0]}</span>
                   )}
                 </div>
                 <div className="trainer-card-info">
-                  <h3>
-                    {t.firstName} {t.lastName}
-                  </h3>
+                  <h3>{t.firstName} {t.lastName}</h3>
                   <p className="trainer-email">{t.email}</p>
                   {t.phone && <p className="trainer-phone">📞 {t.phone}</p>}
                 </div>
-                <div className="trainer-rating">
-                  <span className="rating-star">⭐</span>
-                  <span>{Number(t.avgRating).toFixed(1)}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="trainer-rating"><span className="rating-star">⭐</span><span>{Number(t.avgRating).toFixed(1)}</span></div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>{t.totalSessions} seans</div>
                 </div>
               </div>
 
+              {/* Body: Tags + Specs + Bio */}
               <div className="trainer-card-body">
                 <div className="trainer-tags">
                   {t.offersSessionTypes?.map((st) => (
-                    <span key={st} className="tag">
-                      {st === 'personal_training' ? 'PT' : st === 'massage' ? 'Masaj' : st}
-                    </span>
+                    <span key={st} className="tag">{st === 'personal_training' ? '🏋️ PT' : st === 'massage' ? '💆 Masaj' : st}</span>
+                  ))}
+                  {t.specializations && (t.specializations as string[]).slice(0, 3).map((s, i) => (
+                    <span key={i} className="spec-tag">{s}</span>
                   ))}
                 </div>
-                {t.specializations && (t.specializations as string[]).length > 0 && (
-                  <div className="trainer-specs">
-                    {(t.specializations as string[]).map((s, i) => (
-                      <span key={i} className="spec-tag">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="trainer-stats-row">
-                  <span>📊 {t.totalSessions} seans</span>
-                  <span>📅 {new Date(t.createdAt).toLocaleDateString('tr-TR')}</span>
+                {t.bio && <p className="trainer-bio">{(t.bio as string).slice(0, 100)}{(t.bio as string).length > 100 ? '...' : ''}</p>}
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                  <span>📅 Kayıt: {new Date(t.createdAt).toLocaleDateString('tr-TR')}</span>
+                  {t.certifications && (t.certifications as string[]).length > 0 && <span>📜 {(t.certifications as string[]).length} sertifika</span>}
                 </div>
               </div>
 
-              {/* İstatistikler */}
+              {/* Stats Panel (expandable) */}
               {selectedStats?.id === t.id && (
                 <div className="trainer-detail-panel">
-                  <h4>📈 Performans</h4>
-                  <div className="mini-stats">
-                    <span>
-                      ✅ Tamamlanan: <strong>{selectedStats.stats.completedSessions}</strong>
-                    </span>
-                    <span>
-                      📋 Onaylı: <strong>{selectedStats.stats.confirmedSessions}</strong>
-                    </span>
-                    <span>
-                      ❌ İptal: <strong>{selectedStats.stats.cancelledSessions}</strong>
-                    </span>
-                    <span>
-                      📅 Bu Ay: <strong>{selectedStats.stats.thisMonthSessions}</strong>
-                    </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#059669' }}>{selectedStats.stats.completedSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Tamamlanan</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)' }}>{selectedStats.stats.confirmedSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Onaylı</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#dc2626' }}>{selectedStats.stats.cancelledSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>İptal</div></div>
+                    <div><div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#d97706' }}>{selectedStats.stats.thisMonthSessions}</div><div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Bu Ay</div></div>
                   </div>
                 </div>
               )}
 
-              {/* Aksiyon Butonları */}
+              {/* Actions */}
               <div className="trainer-actions">
-                <button className="btn-sm btn-schedule" onClick={() => openSchedule(t)}>
-                  🗓️ Ajanda
-                </button>
-                <button className="btn-sm btn-outline" onClick={() => void loadStats(t.id)}>
-                  📊 İstatistik
-                </button>
-                <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>
-                  ✏️ Düzenle
-                </button>
-                <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>
-                  🗑
-                </button>
+                <button className="btn-sm btn-primary" onClick={() => openSchedule(t)}>🗓️ Ajanda</button>
+                <button className="btn-sm btn-outline" onClick={() => void loadStats(t.id)}>📊</button>
+                <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>✏️</button>
+                <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>🗑</button>
               </div>
             </div>
           ))}
