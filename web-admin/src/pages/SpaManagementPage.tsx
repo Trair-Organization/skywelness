@@ -1034,7 +1034,8 @@ function PackagesTab() {
         apiJson<Array<{ id: string; name: string; sessionCount: number; price: string; validityDays: number; sessionType: string; active: boolean }>>('/admin/package-types'),
       ]);
       setLoadMembers(members);
-      setLoadPackageTypes(pkgTypes.filter(pt => pt.sessionType === 'massage' && pt.active));
+      // Tüm aktif paketler (masaj + PT hepsi)
+      setLoadPackageTypes(pkgTypes.filter(pt => pt.active));
     } catch { /* */ }
   }
 
