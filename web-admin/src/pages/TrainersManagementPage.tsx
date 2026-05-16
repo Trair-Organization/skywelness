@@ -5,6 +5,7 @@ import { apiBaseUrl } from '../lib/config';
 type TrainerRow = {
   id: string;
   userId: string;
+  publicId: string | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -1027,6 +1028,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
       {showForm && (
         <div className="card" style={{ marginBottom: 24 }}>
           <h3>{editId ? '✏️ Eğitmen Düzenle' : '➕ Yeni Eğitmen Ekle'}</h3>
+          {editId && (() => { const tr = trainers.find(t => t.id === editId); return tr?.publicId ? <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace', margin: '-4px 0 12px', padding: '6px 12px', background: 'rgba(37,99,235,0.06)', borderRadius: 8, display: 'inline-block' }}>🆔 {tr.publicId}</div> : null; })()}
           {/* Fotoğraf - Kare */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <div style={{ width: 80, height: 80, borderRadius: '50%', border: '2px dashed var(--border)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', flexShrink: 0 }}>
@@ -1272,7 +1274,6 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                   {t.photoUrl ? <img src={t.photoUrl} alt={t.firstName} /> : <span>{t.firstName[0]}{t.lastName[0]}</span>}
                 </div>
                 <h3 style={{ margin: '0 0 2px', fontSize: '0.92rem' }}>{t.firstName} {t.lastName}</h3>
-                <div style={{ fontSize: '0.68rem', color: 'var(--accent)', fontFamily: 'monospace', marginBottom: 2 }}>ID: {t.userId}</div>
                 <div style={{ fontSize: '0.73rem', color: 'var(--muted)' }}>{t.phone || t.email}</div>
               </div>
 

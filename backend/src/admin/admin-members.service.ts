@@ -318,6 +318,7 @@ export class AdminMembersService {
       return {
         id: t.id,
         userId: t.userId,
+        publicId: t.user.publicId,
         firstName: t.user.firstName,
         lastName: t.user.lastName,
         email: t.user.email,
