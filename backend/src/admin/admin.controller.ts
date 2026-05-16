@@ -58,6 +58,32 @@ export class AdminController {
     return this.adminMembers.listAllMembers(admin.tenantId, status, search);
   }
 
+  /** Public ID veya email ile kullanıcı ara (cross-tenant lookup) */
+  @Get('members/lookup')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  lookupUser(@CurrentUser() admin: User, @Query('q') query: string) {
+    return this.adminMembers.lookupUserForAdd(admin.tenantId, query);
+  }
+
+  /** Mevcut kullanıcıyı kulübe ekle (public ID ile) */
+  @Post('members/add-by-code')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async addMemberByCode(
+    @CurrentUser() admin: User,
+    @Body() body: { publicId: string; mode: 'direct' | 'invite' },
+  ) {
+    if (!body.publicId) throw new BadRequestException('publicId gerekli');
+    const result = await this.adminMembers.addMemberByPublicId(
+      admin.tenantId,
+      body.publicId,
+      body.mode || 'direct',
+    );
+    void this.logAction(admin, 'member_add_by_code', 'user', result.id);
+    return result;
+  }
+
   /** Eğitmenleri listele */
   @Get('trainers')
   @UseGuards(JwtAuthGuard, RolesGuard)

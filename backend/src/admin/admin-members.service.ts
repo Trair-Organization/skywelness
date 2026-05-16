@@ -151,6 +151,119 @@ export class AdminMembersService {
     };
   }
 
+  /** Cross-tenant: Public ID veya email ile kullanıcı ara */
+  async lookupUserForAdd(tenantId: string, query: string) {
+    if (!query || query.trim().length < 3) {
+      return { found: false, message: 'En az 3 karakter gerekli' };
+    }
+    const q = query.trim().toUpperCase();
+
+    // Public ID ile ara
+    if (q.startsWith('UYE-') || q.startsWith('EGT-') || q.startsWith('KLB-')) {
+      const user = await this.usersRepo.findOne({
+        where: { publicId: q },
+        select: ['id', 'publicId', 'firstName', 'lastName', 'email', 'phone', 'photoUrl', 'tenantId', 'role'],
+      });
+      if (!user) return { found: false, message: 'Bu kodla kayıtlı kullanıcı bulunamadı' };
+      // Zaten bu kulüpte mi?
+      const existsInTenant = await this.usersRepo.findOne({
+        where: { tenantId, email: user.email.toLowerCase() },
+        select: ['id', 'accountStatus'],
+      });
+      return {
+        found: true,
+        user: {
+          publicId: user.publicId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          photoUrl: user.photoUrl,
+          role: user.role,
+        },
+        alreadyMember: !!existsInTenant,
+        existingStatus: existsInTenant?.accountStatus || null,
+      };
+    }
+
+    // Email ile ara
+    const emailQuery = query.trim().toLowerCase();
+    const user = await this.usersRepo.findOne({
+      where: { email: emailQuery },
+      select: ['id', 'publicId', 'firstName', 'lastName', 'email', 'phone', 'photoUrl', 'tenantId', 'role'],
+    });
+    if (!user) return { found: false, message: 'Bu e-posta ile kayıtlı kullanıcı bulunamadı' };
+    const existsInTenant = await this.usersRepo.findOne({
+      where: { tenantId, email: emailQuery },
+      select: ['id', 'accountStatus'],
+    });
+    return {
+      found: true,
+      user: {
+        publicId: user.publicId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        photoUrl: user.photoUrl,
+        role: user.role,
+      },
+      alreadyMember: !!existsInTenant,
+      existingStatus: existsInTenant?.accountStatus || null,
+    };
+  }
+
+  /** Mevcut kullanıcıyı public ID ile kulübe ekle */
+  async addMemberByPublicId(tenantId: string, publicId: string, mode: 'direct' | 'invite') {
+    const source = await this.usersRepo.findOne({
+      where: { publicId: publicId.trim().toUpperCase() },
+    });
+    if (!source) throw new NotFoundException('Bu kodla kayıtlı kullanıcı bulunamadı');
+
+    // Zaten bu tenant'ta var mı?
+    const existing = await this.usersRepo.findOne({
+      where: { tenantId, email: source.email.toLowerCase() },
+    });
+    if (existing?.accountStatus === MemberAccountStatus.ACTIVE) {
+      throw new BadRequestException('Bu kullanıcı zaten kulübünüzün aktif üyesi');
+    }
+    if (existing?.accountStatus === MemberAccountStatus.PENDING_APPROVAL) {
+      throw new BadRequestException('Bu kullanıcının zaten bekleyen bir başvurusu var');
+    }
+
+    // Yeni user row oluştur (bu tenant için)
+    const newPublicId = await this.generatePublicId('UYE');
+    const username = source.email.split('@')[0] + '_' + Date.now().toString(36);
+    const accountStatus = mode === 'direct'
+      ? MemberAccountStatus.ACTIVE
+      : MemberAccountStatus.PENDING_APPROVAL;
+
+    const newUser = this.usersRepo.create({
+      tenantId,
+      email: source.email.toLowerCase(),
+      username,
+      publicId: newPublicId,
+      passwordHash: source.passwordHash,
+      firstName: source.firstName,
+      lastName: source.lastName,
+      phone: source.phone,
+      photoUrl: source.photoUrl,
+      role: UserRole.MEMBER,
+      accountStatus,
+    });
+    await this.usersRepo.save(newUser);
+
+    return {
+      id: newUser.id,
+      publicId: newUser.publicId,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      email: newUser.email,
+      status: accountStatus,
+      mode,
+    };
+  }
+
   /** Tüm üyeleri listele (filtreleme destekli) */
   async listAllMembers(tenantId: string, status?: string, search?: string) {
     const qb = this.usersRepo

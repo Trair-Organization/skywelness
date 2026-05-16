@@ -100,6 +100,9 @@ export function MembersPage() {
   const [selectedPkgTrainer, setSelectedPkgTrainer] = useState('');
   const [assigningPkg, setAssigningPkg] = useState(false);
 
+  // Smart Add Modal
+  const [smartAddOpen, setSmartAddOpen] = useState(false);
+
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<'sms' | 'mail' | 'package' | null>(null);
@@ -428,24 +431,7 @@ export function MembersPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => {
-              setDetail({
-                id: '',
-                username: null,
-                firstName: '',
-                lastName: '',
-                email: '',
-                phone: null,
-                photoUrl: null,
-                accountStatus: 'active',
-                lastLogin: null,
-                createdAt: new Date().toISOString(),
-                membership: null,
-                assignedTrainers: [],
-                packages: [],
-                reservations: [],
-              });
-            }}
+            onClick={() => setSmartAddOpen(true)}
             style={{
               padding: '8px 16px',
               borderRadius: 8,
@@ -1230,6 +1216,14 @@ export function MembersPage() {
           {/* Son 5 İşlem */}
           <RecentTransactions memberId={detail.id} />
         </div>
+      )}
+
+      {/* Smart Add Modal */}
+      {smartAddOpen && (
+        <SmartAddModal
+          onClose={() => setSmartAddOpen(false)}
+          onAdded={() => { setSmartAddOpen(false); void load(statusFilter, search); }}
+        />
       )}
 
       {loadingDetail && <p style={{ color: '#64748b', marginBottom: 16 }}>Detay yükleniyor...</p>}
@@ -2624,3 +2618,318 @@ function RecentTransactions({ memberId }: { memberId: string }) {
     </div>
   );
 }
+
+// ─── SmartAddModal Component ────────────────────────────────────────────────────
+
+type LookupResult = {
+  found: boolean;
+  message?: string;
+  user?: {
+    publicId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    photoUrl: string | null;
+    role: string;
+  };
+  alreadyMember?: boolean;
+  existingStatus?: string | null;
+};
+
+function SmartAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<LookupResult | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualForm, setManualForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+  const [manualSaving, setManualSaving] = useState(false);
+
+  const handleSearch = async () => {
+    if (query.trim().length < 3) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await apiJson<LookupResult>(`/admin/members/lookup?q=${encodeURIComponent(query.trim())}`);
+      setResult(res);
+    } catch {
+      setResult({ found: false, message: 'Arama yapılamadı' });
+    }
+    setLoading(false);
+  };
+
+  const handleAdd = async (mode: 'direct' | 'invite') => {
+    if (!result?.user?.publicId) return;
+    setAdding(true);
+    try {
+      await apiJson('/admin/members/add-by-code', {
+        method: 'POST',
+        body: JSON.stringify({ publicId: result.user.publicId, mode }),
+      });
+      alert(mode === 'direct'
+        ? `✅ ${result.user.firstName} ${result.user.lastName} kulübe eklendi!`
+        : `✅ ${result.user.firstName} ${result.user.lastName} davet gönderildi!`
+      );
+      onAdded();
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : 'Ekleme başarısız');
+    }
+    setAdding(false);
+  };
+
+  const handleManualSave = async () => {
+    if (!manualForm.firstName.trim() || !manualForm.lastName.trim()) {
+      alert('Ad ve soyad zorunlu');
+      return;
+    }
+    setManualSaving(true);
+    try {
+      await apiJson('/admin/members/create-walk-in', {
+        method: 'POST',
+        body: JSON.stringify(manualForm),
+      });
+      alert(`✅ ${manualForm.firstName} ${manualForm.lastName} eklendi!`);
+      onAdded();
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : 'Ekleme başarısız');
+    }
+    setManualSaving(false);
+  };
+
+  return (
+    <div style={smartStyles.overlay} onClick={onClose}>
+      <div style={smartStyles.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={smartStyles.header}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>+ Üye Ekle</h3>
+          <button style={smartStyles.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        {/* Akıllı Arama */}
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 8px' }}>
+            Üye kodu, e-posta veya isim yazın — sistem otomatik bulacak.
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
+              placeholder="UYE-XXXX, email@ornek.com veya isim..."
+              style={smartStyles.input}
+            />
+            <button
+              onClick={() => void handleSearch()}
+              disabled={loading || query.trim().length < 3}
+              style={smartStyles.searchBtn}
+            >
+              {loading ? '⏳' : '🔍 Ara'}
+            </button>
+          </div>
+        </div>
+
+        {/* Sonuç */}
+        {result && !result.found && (
+          <div style={smartStyles.notFound}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+              {result.message || 'Kullanıcı bulunamadı'}
+            </p>
+            <button
+              style={smartStyles.manualBtn}
+              onClick={() => setShowManual(true)}
+            >
+              Manuel yeni üye oluştur →
+            </button>
+          </div>
+        )}
+
+        {result?.found && result.user && (
+          <div style={smartStyles.foundCard}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={smartStyles.avatar}>
+                {result.user.firstName[0]}{result.user.lastName[0]}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>
+                  {result.user.firstName} {result.user.lastName}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#2563eb', fontFamily: 'monospace' }}>
+                  {result.user.publicId}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  {result.user.email}{result.user.phone ? ` · ${result.user.phone}` : ''}
+                </div>
+              </div>
+            </div>
+
+            {result.alreadyMember ? (
+              <p style={{ fontSize: '0.85rem', color: '#d97706', fontWeight: 600, margin: 0 }}>
+                ⚠️ Bu kişi zaten kulübünüzde kayıtlı ({result.existingStatus})
+              </p>
+            ) : (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  style={smartStyles.directBtn}
+                  disabled={adding}
+                  onClick={() => void handleAdd('direct')}
+                >
+                  ✓ Direkt Ekle
+                </button>
+                <button
+                  style={smartStyles.inviteBtn}
+                  disabled={adding}
+                  onClick={() => void handleAdd('invite')}
+                >
+                  📩 Davet Gönder
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manuel Form */}
+        {showManual && (
+          <div style={{ marginTop: 16, padding: 16, border: '1px solid #e2e8f0', borderRadius: 10, background: '#fafafa' }}>
+            <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', fontWeight: 700 }}>Manuel Üye Oluştur</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <input placeholder="Ad *" value={manualForm.firstName} onChange={(e) => setManualForm({ ...manualForm, firstName: e.target.value })} style={smartStyles.formInput} />
+              <input placeholder="Soyad *" value={manualForm.lastName} onChange={(e) => setManualForm({ ...manualForm, lastName: e.target.value })} style={smartStyles.formInput} />
+              <input placeholder="E-posta" value={manualForm.email} onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })} style={smartStyles.formInput} />
+              <input placeholder="Telefon" value={manualForm.phone} onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })} style={smartStyles.formInput} />
+            </div>
+            <button
+              style={{ ...smartStyles.directBtn, marginTop: 12, width: '100%' }}
+              disabled={manualSaving}
+              onClick={() => void handleManualSave()}
+            >
+              {manualSaving ? '⏳ Kaydediliyor...' : '✓ Oluştur ve Ekle'}
+            </button>
+          </div>
+        )}
+
+        {/* Alt link */}
+        {!showManual && !result?.found && !result && (
+          <button style={smartStyles.manualBtn} onClick={() => setShowManual(true)}>
+            Manuel yeni üye oluştur →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const smartStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.4)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    background: '#fff',
+    borderRadius: 16,
+    padding: '24px 28px',
+    width: '100%',
+    maxWidth: 480,
+    boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '1.2rem',
+    cursor: 'pointer',
+    color: '#64748b',
+  },
+  input: {
+    flex: 1,
+    padding: '10px 14px',
+    borderRadius: 8,
+    border: '1px solid #e2e8f0',
+    fontSize: '0.9rem',
+    outline: 'none',
+  },
+  searchBtn: {
+    padding: '10px 16px',
+    borderRadius: 8,
+    border: 'none',
+    background: '#2563eb',
+    color: '#fff',
+    fontWeight: 600,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  notFound: {
+    padding: 16,
+    background: '#f8fafc',
+    borderRadius: 10,
+    border: '1px solid #e2e8f0',
+    textAlign: 'center',
+  },
+  foundCard: {
+    padding: 16,
+    background: '#f0fdf4',
+    borderRadius: 10,
+    border: '1px solid #bbf7d0',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    background: '#eff6ff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 800,
+    fontSize: 13,
+    color: '#2563eb',
+    flexShrink: 0,
+  },
+  directBtn: {
+    padding: '10px 20px',
+    borderRadius: 8,
+    border: 'none',
+    background: '#059669',
+    color: '#fff',
+    fontWeight: 600,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+  },
+  inviteBtn: {
+    padding: '10px 20px',
+    borderRadius: 8,
+    border: '1px solid #e2e8f0',
+    background: '#fff',
+    color: '#374151',
+    fontWeight: 600,
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+  },
+  manualBtn: {
+    marginTop: 12,
+    background: 'none',
+    border: 'none',
+    color: '#2563eb',
+    fontWeight: 600,
+    fontSize: '0.82rem',
+    cursor: 'pointer',
+    padding: 0,
+  },
+  formInput: {
+    padding: '9px 12px',
+    borderRadius: 8,
+    border: '1px solid #e2e8f0',
+    fontSize: '0.85rem',
+    outline: 'none',
+  },
+};
