@@ -117,15 +117,25 @@ export class TenantJoinRequestService {
   }
 
   private async generateMemberPublicId(): Promise<string> {
-    const last = await this.usersRepo.findOne({
-      where: {},
-      order: { publicId: 'DESC' },
-      select: ['publicId'],
-    });
-    const lastNum = last?.publicId?.startsWith('UYE-')
-      ? parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0
-      : 0;
-    return `UYE-${String(lastNum + 1).padStart(4, '0')}`;
+    const chars = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+    const generate = () => {
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return `UYE-${code}`;
+    };
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = generate();
+      const exists = await this.usersRepo.findOne({ where: { publicId: candidate }, select: ['id'] });
+      if (!exists) return candidate;
+    }
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return `UYE-${code}`;
   }
 
   /**

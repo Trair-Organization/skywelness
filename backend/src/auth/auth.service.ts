@@ -88,29 +88,34 @@ export class AuthService {
     return value.trim().toLocaleLowerCase('tr-TR');
   }
 
-  /** Benzersiz public ID oluştur: UYE-0001, EGT-0001, KLB-0001 */
+  /** Benzersiz public ID oluştur: UYE-XXXX, EGT-XXXX, KLB-XXXX (alfanumerik, tahmin edilemez) */
   private async generatePublicId(prefix: 'UYE' | 'EGT' | 'KLB'): Promise<string> {
-    let lastNum = 0;
-    if (prefix === 'KLB') {
-      const last = await this.tenantsRepo.findOne({
-        where: {},
-        order: { publicId: 'DESC' },
-        select: ['publicId'],
-      });
-      if (last?.publicId?.startsWith(prefix)) {
-        lastNum = parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0;
+    const chars = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+    const generate = () => {
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
       }
-    } else {
-      const last = await this.usersRepo.findOne({
-        where: {},
-        order: { publicId: 'DESC' },
-        select: ['publicId'],
-      });
-      if (last?.publicId?.startsWith(prefix)) {
-        lastNum = parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0;
+      return `${prefix}-${code}`;
+    };
+
+    // Retry until unique
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = generate();
+      if (prefix === 'KLB') {
+        const exists = await this.tenantsRepo.findOne({ where: { publicId: candidate }, select: ['id'] });
+        if (!exists) return candidate;
+      } else {
+        const exists = await this.usersRepo.findOne({ where: { publicId: candidate }, select: ['id'] });
+        if (!exists) return candidate;
       }
     }
-    return `${prefix}-${String(lastNum + 1).padStart(4, '0')}`;
+    // Fallback: 6 chars if somehow all 4-char collide
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return `${prefix}-${code}`;
   }
 
   private trimUsername(value: string): string {

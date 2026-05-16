@@ -640,15 +640,25 @@ export class AdminMembersService {
   // ─── Eğitmen CRUD ────────────────────────────────────────────────────────────
 
   private async generatePublicId(prefix: 'UYE' | 'EGT' | 'KLB'): Promise<string> {
-    const last = await this.usersRepo.findOne({
-      where: {},
-      order: { publicId: 'DESC' },
-      select: ['publicId'],
-    });
-    const lastNum = last?.publicId?.startsWith(prefix)
-      ? parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0
-      : 0;
-    return `${prefix}-${String(lastNum + 1).padStart(4, '0')}`;
+    const chars = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+    const generate = () => {
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return `${prefix}-${code}`;
+    };
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = generate();
+      const exists = await this.usersRepo.findOne({ where: { publicId: candidate }, select: ['id'] });
+      if (!exists) return candidate;
+    }
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return `${prefix}-${code}`;
   }
 
   async createTrainer(
@@ -2416,23 +2426,25 @@ export class AdminMembersService {
 
   // ─── Eğitmen Başvuruları (Kulüp Admin) ──────────────────────────────────────
 
-  /** Kulüp davet kodunu getir (yoksa oluştur) */
+  /** Kulüp kodunu getir (publicId) */
   async getClubInviteCode(tenantId: string) {
     const tenantRepo = this.usersRepo.manager.getRepository('Tenant');
     const tenant = (await tenantRepo.findOne({ where: { id: tenantId } })) as {
       id: string;
-      inviteCode: string | null;
+      publicId: string | null;
     } | null;
     if (!tenant) throw new NotFoundException('Kulüp bulunamadı');
 
-    if (!tenant.inviteCode) {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    if (!tenant.publicId) {
+      // Generate a new KLB public ID
+      const chars = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
       let code = '';
-      for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-      await tenantRepo.update({ id: tenantId }, { inviteCode: code });
-      return { inviteCode: code };
+      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      const publicId = `KLB-${code}`;
+      await tenantRepo.update({ id: tenantId }, { publicId });
+      return { inviteCode: publicId };
     }
-    return { inviteCode: tenant.inviteCode };
+    return { inviteCode: tenant.publicId };
   }
 
   /** Kulübe başvuran eğitmenleri listele (preferredClubSubdomain eşleşen) */
