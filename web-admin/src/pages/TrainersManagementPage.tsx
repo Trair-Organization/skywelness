@@ -1085,6 +1085,14 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
               />
             </label>
             <label>
+              Sertifikalar{' '}
+              <input
+                value={form.certifications}
+                onChange={(e) => setForm({ ...form, certifications: e.target.value })}
+                placeholder="ACE, NASM"
+              />
+            </label>
+            <label>
               Uzmanlık Alanları
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
                 {SPECIALIZATION_OPTIONS.map(spec => (
@@ -1097,14 +1105,6 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                   </label>
                 ))}
               </div>
-            </label>
-            <label>
-              Sertifikalar{' '}
-              <input
-                value={form.certifications}
-                onChange={(e) => setForm({ ...form, certifications: e.target.value })}
-                placeholder="ACE, NASM"
-              />
             </label>
             <label>
               Hizmet Türleri
