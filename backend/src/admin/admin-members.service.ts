@@ -239,6 +239,22 @@ export class AdminMembersService {
       relations: ['user'],
       order: { createdAt: 'ASC' },
     });
+
+    // Öğrenci sayılarını toplu çek
+    const trainerIds = trainers.map(t => t.id);
+    let studentCountMap = new Map<string, number>();
+    if (trainerIds.length > 0) {
+      const counts = await this.trainerMemberLinksRepo
+        .createQueryBuilder('l')
+        .select('l.trainerId', 'trainerId')
+        .addSelect('COUNT(l.id)', 'count')
+        .where('l.trainerId IN (:...ids)', { ids: trainerIds })
+        .andWhere('l.status = :status', { status: 'active' })
+        .groupBy('l.trainerId')
+        .getRawMany<{ trainerId: string; count: string }>();
+      for (const c of counts) studentCountMap.set(c.trainerId, parseInt(c.count));
+    }
+
     return trainers.map((t) => ({
       id: t.id,
       userId: t.userId,
@@ -253,6 +269,7 @@ export class AdminMembersService {
       offersSessionTypes: t.offersSessionTypes,
       avgRating: t.avgRating,
       totalSessions: t.totalSessions,
+      studentCount: studentCountMap.get(t.id) || 0,
       createdAt: t.createdAt,
     }));
   }

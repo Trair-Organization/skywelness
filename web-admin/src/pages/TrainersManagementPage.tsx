@@ -16,6 +16,7 @@ type TrainerRow = {
   offersSessionTypes: string[];
   avgRating: string;
   totalSessions: number;
+  studentCount: number;
   createdAt: string;
 };
 
@@ -1151,7 +1152,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                 <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{t.phone || t.email}</div>
                 <div className="trainer-rating" style={{ justifyContent: 'center', marginTop: 6 }}>
                   <span className="rating-star">⭐</span><span>{Number(t.avgRating).toFixed(1)}</span>
-                  <span style={{ color: 'var(--muted)', fontSize: '0.72rem', marginLeft: 6 }}>{t.totalSessions} seans</span>
+                  <span style={{ color: 'var(--muted)', fontSize: '0.72rem', marginLeft: 6 }}>{t.totalSessions} seans · 👥 {t.studentCount} öğrenci</span>
                 </div>
               </div>
 
