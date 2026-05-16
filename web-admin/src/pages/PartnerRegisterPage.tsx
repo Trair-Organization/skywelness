@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiJson, ApiError } from '../lib/api';
+import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 type PartnerType = null | 'corporate' | 'trainer';
 
@@ -24,7 +25,7 @@ export function PartnerRegisterPage() {
   // Corporate form
   const [corp, setCorp] = useState({
     companyName: '', contactName: '', email: '', phone: '',
-    city: '', clubCount: '', website: '', notes: '',
+    city: '', district: '', clubCount: '', website: '', notes: '',
   });
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -32,7 +33,7 @@ export function PartnerRegisterPage() {
   // Trainer form
   const [trainer, setTrainer] = useState({
     firstName: '', lastName: '', email: '', username: '', phone: '',
-    password: '', passwordConfirm: '', city: '', bio: '',
+    password: '', passwordConfirm: '', city: '', district: '', bio: '',
     experienceYears: '', pricingNote: '', preferredClubSubdomain: '',
   });
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export function PartnerRegisterPage() {
           email: corp.email.trim().toLowerCase(),
           phone: corp.phone.trim(),
           city: corp.city.trim(),
+          district: corp.district?.trim() || undefined,
           clubCount: corp.clubCount ? Number(corp.clubCount) : undefined,
           website: corp.website.trim() || undefined,
           logoUrl: logoUrl || undefined,
@@ -119,6 +121,7 @@ export function PartnerRegisterPage() {
           phone: trainer.phone.trim(),
           password: trainer.password,
           city: trainer.city.trim(),
+          district: trainer.district?.trim() || undefined,
           bio: trainer.bio.trim(),
           specialties,
           certifications: certifications.length > 0 ? certifications : undefined,
@@ -247,7 +250,10 @@ export function PartnerRegisterPage() {
                 <label><span>Telefon *</span><input type="tel" value={corp.phone} onChange={(e) => updateCorp('phone', e.target.value)} required minLength={6} placeholder="+90 5XX XXX XX XX" /></label>
               </div>
               <div className="auth-row">
-                <label><span>Şehir *</span><input type="text" value={corp.city} onChange={(e) => updateCorp('city', e.target.value)} required minLength={2} /></label>
+                <label><span>İl *</span><select value={corp.city} onChange={(e) => { updateCorp('city', e.target.value); updateCorp('district', ''); }} required style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}><option value="">Seçin...</option>{CITY_LIST.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
+                <label><span>İlçe</span><select value={corp.district || ''} onChange={(e) => updateCorp('district', e.target.value)} disabled={!corp.city} style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}><option value="">Seçin...</option>{corp.city && getDistricts(corp.city).map(d => <option key={d} value={d}>{d}</option>)}</select></label>
+              </div>
+              <div className="auth-row">
                 <label><span>Şube Sayısı</span><input type="number" value={corp.clubCount} onChange={(e) => updateCorp('clubCount', e.target.value)} min={1} placeholder="1" /></label>
               </div>
               <label><span>Web Sitesi</span><input type="url" value={corp.website} onChange={(e) => updateCorp('website', e.target.value)} placeholder="https://..." /></label>
@@ -321,7 +327,10 @@ export function PartnerRegisterPage() {
             </div>
             <div className="auth-row">
               <label><span>Kullanıcı Adı *</span><input type="text" value={trainer.username} onChange={(e) => updateTrainer('username', e.target.value)} required minLength={3} pattern="[a-z0-9çğıöşü_.\-]+" /></label>
-              <label><span>Şehir *</span><input type="text" value={trainer.city} onChange={(e) => updateTrainer('city', e.target.value)} required /></label>
+            </div>
+            <div className="auth-row">
+              <label><span>İl *</span><select value={trainer.city} onChange={(e) => { updateTrainer('city', e.target.value); updateTrainer('district', ''); }} required style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}><option value="">Seçin...</option>{CITY_LIST.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
+              <label><span>İlçe</span><select value={trainer.district || ''} onChange={(e) => updateTrainer('district', e.target.value)} disabled={!trainer.city} style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}><option value="">Seçin...</option>{trainer.city && getDistricts(trainer.city).map(d => <option key={d} value={d}>{d}</option>)}</select></label>
             </div>
 
             <label><span>Biyografi * (min 20 karakter)</span><textarea value={trainer.bio} onChange={(e) => updateTrainer('bio', e.target.value)} required minLength={20} rows={4} placeholder="Kendinizi tanıtın, deneyimlerinizi ve yaklaşımınızı anlatın..." /></label>

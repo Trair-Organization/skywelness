@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../lib/api';
+import { TURKEY_CITIES, CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 type TenantProfile = {
   id: string;
@@ -7,6 +8,10 @@ type TenantProfile = {
   subdomain: string;
   description: string | null;
   location: string | null;
+  city: string | null;
+  district: string | null;
+  latitude: string | null;
+  longitude: string | null;
   logoUrl: string | null;
   coverImageUrl: string | null;
   galleryImages: string[];
@@ -28,6 +33,8 @@ export function ClubProfileEditPage() {
   // Form state
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
   const [services, setServices] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
@@ -41,6 +48,8 @@ export function ClubProfileEditPage() {
       setProfile(data);
       setDescription(data.description ?? '');
       setLocation(data.location ?? '');
+      setCity(data.city ?? '');
+      setDistrict(data.district ?? '');
       setServices((data.services ?? []).join(', '));
       setLogoUrl(data.logoUrl ?? '');
       setCoverImageUrl(data.coverImageUrl ?? '');
@@ -63,6 +72,8 @@ export function ClubProfileEditPage() {
         body: JSON.stringify({
           description: description.trim() || null,
           location: location.trim() || null,
+          city: city.trim() || null,
+          district: district.trim() || null,
           services: services.split(',').map((s) => s.trim()).filter(Boolean),
           logoUrl: logoUrl.trim() || null,
           coverImageUrl: coverImageUrl.trim() || null,
@@ -145,6 +156,30 @@ export function ClubProfileEditPage() {
               style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}
               placeholder="Örn: Huzur Mah. Azerbaycan Cad. No:4/A, İstanbul"
             />
+          </div>
+
+          {/* İl / İlçe */}
+          <div className="form-card">
+            <label className="form-label">🗺️ İl / İlçe</label>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <select
+                value={city}
+                onChange={(e) => { setCity(e.target.value); setDistrict(''); }}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.9rem' }}
+              >
+                <option value="">İl seçin...</option>
+                {CITY_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                disabled={!city}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.9rem', opacity: city ? 1 : 0.5 }}
+              >
+                <option value="">İlçe seçin...</option>
+                {city && getDistricts(city).map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* Hizmetler */}

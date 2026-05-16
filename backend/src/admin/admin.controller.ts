@@ -1113,6 +1113,10 @@ export class AdminController {
     body: {
       description?: string;
       location?: string;
+      city?: string;
+      district?: string;
+      latitude?: number;
+      longitude?: number;
       services?: string[];
       logoUrl?: string;
       coverImageUrl?: string;

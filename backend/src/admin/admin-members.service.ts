@@ -2686,6 +2686,10 @@ export class AdminMembersService {
       subdomain: tenant.subdomain,
       description: tenant.description,
       location: tenant.location,
+      city: tenant.city,
+      district: tenant.district,
+      latitude: tenant.latitude,
+      longitude: tenant.longitude,
       logoUrl: tenant.logoUrl,
       coverImageUrl: tenant.coverImageUrl,
       galleryImages: tenant.galleryImages ?? [],
@@ -2705,6 +2709,10 @@ export class AdminMembersService {
     data: {
       description?: string;
       location?: string;
+      city?: string;
+      district?: string;
+      latitude?: number;
+      longitude?: number;
       services?: string[];
       logoUrl?: string;
       coverImageUrl?: string;
@@ -2720,6 +2728,10 @@ export class AdminMembersService {
 
     if (data.description !== undefined) tenant.description = data.description?.trim() || null;
     if (data.location !== undefined) tenant.location = data.location?.trim() || null;
+    if (data.city !== undefined) tenant.city = data.city?.trim() || null;
+    if (data.district !== undefined) tenant.district = data.district?.trim() || null;
+    if (data.latitude !== undefined) tenant.latitude = data.latitude != null ? String(data.latitude) : null;
+    if (data.longitude !== undefined) tenant.longitude = data.longitude != null ? String(data.longitude) : null;
     if (data.services !== undefined) tenant.services = data.services;
     if (data.logoUrl !== undefined) tenant.logoUrl = data.logoUrl?.trim() || null;
     if (data.coverImageUrl !== undefined) tenant.coverImageUrl = data.coverImageUrl?.trim() || null;
