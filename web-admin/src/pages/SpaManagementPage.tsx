@@ -144,8 +144,8 @@ function AgendaTab() {
     setDate(d.toISOString().slice(0, 10));
   }
 
-  // Generate time slots for the grid (9:00 to 21:00)
-  const hours = Array.from({ length: 13 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
+  // Generate time slots for the grid (11:00 to 22:00 for Skyland Wellness)
+  const hours = Array.from({ length: 11 }, (_, i) => `${String(i + 11).padStart(2, '0')}:00`);
 
   // For week view, get days
   const weekDays: string[] = [];
@@ -197,9 +197,12 @@ function AgendaTab() {
             {/* Header row - hours */}
             <div className="agenda-row agenda-header-row">
               <div className="agenda-cell agenda-label-cell">Masöz</div>
-              {hours.map((h) => (
-                <div key={h} className="agenda-cell agenda-hour-cell">{h}</div>
-              ))}
+              {hours.map((h) => {
+                const nextH = `${String(parseInt(h) + 1).padStart(2, '0')}:00`;
+                return (
+                  <div key={h} className="agenda-cell agenda-hour-cell">{h}–{nextH}</div>
+                );
+              })}
             </div>
             {/* Therapist rows */}
             {agenda.map((t) => {
@@ -219,13 +222,13 @@ function AgendaTab() {
                       return (
                         <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-booked" title={`${slot.reservation.memberName || 'Üye'} · ${slot.startTime}–${slot.endTime}`}>
                           <span className="agenda-slot-name">{slot.reservation.memberName?.split(' ')[0] || '—'}</span>
-                          <span className="agenda-slot-time">{slot.startTime}</span>
+                          <span className="agenda-slot-time">{slot.startTime}–{slot.endTime}</span>
                         </div>
                       );
                     }
                     return (
                       <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-available" title={`Müsait: ${slot.startTime}–${slot.endTime}`}>
-                        <span className="agenda-slot-time">{slot.startTime}</span>
+                        <span className="agenda-slot-time">{slot.startTime}–{slot.endTime}</span>
                       </div>
                     );
                   })}

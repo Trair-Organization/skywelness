@@ -3922,7 +3922,7 @@ button.primary:disabled {
 }
 .agenda-grid {
   display: grid;
-  grid-template-columns: 140px repeat(13, minmax(70px, 1fr));
+  grid-template-columns: 140px repeat(11, minmax(80px, 1fr));
   min-width: 1100px;
 }
 .agenda-grid-week {
