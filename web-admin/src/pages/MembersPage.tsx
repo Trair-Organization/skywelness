@@ -2694,25 +2694,6 @@ function SmartAddModal({ onClose, onAdded, onManualAdd }: { onClose: () => void;
     setAdding(false);
   };
 
-  const handleManualSave = async () => {
-    if (!manualForm.firstName.trim() || !manualForm.lastName.trim()) {
-      alert('Ad ve soyad zorunlu');
-      return;
-    }
-    setManualSaving(true);
-    try {
-      await apiJson('/admin/members/create-walk-in', {
-        method: 'POST',
-        body: JSON.stringify(manualForm),
-      });
-      alert(`✅ ${manualForm.firstName} ${manualForm.lastName} eklendi!`);
-      onAdded();
-    } catch (e) {
-      alert(e instanceof ApiError ? e.message : 'Ekleme başarısız');
-    }
-    setManualSaving(false);
-  };
-
   return (
     <div style={smartStyles.overlay} onClick={onClose}>
       <div style={smartStyles.modal} onClick={(e) => e.stopPropagation()}>
