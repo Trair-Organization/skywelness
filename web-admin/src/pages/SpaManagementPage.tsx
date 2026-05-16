@@ -702,20 +702,18 @@ function AppointmentsTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div className="booking-filters">
-          {['confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
-            <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setStatusFilter(s)}>
-              {STATUS_LABELS[s]} 
-            </button>
-          ))}
-        </div>
-        <input type="text" className="form-input" style={{ minWidth: 180 }} placeholder="Üye veya masöz ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <input type="date" className="form-input" style={{ width: 140 }} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} title="Başlangıç tarihi" />
-        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>–</span>
-        <input type="date" className="form-input" style={{ width: 140 }} value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="Bitiş tarihi" />
+      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {['confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
+          <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => setStatusFilter(s)}>
+            {STATUS_LABELS[s]}
+          </button>
+        ))}
+        <input type="text" className="form-input" style={{ minWidth: 140, padding: '4px 10px', fontSize: '0.75rem', height: 28 }} placeholder="Üye veya masöz ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <input type="date" className="form-input" style={{ width: 120, padding: '4px 8px', fontSize: '0.72rem', height: 28 }} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>–</span>
+        <input type="date" className="form-input" style={{ width: 120, padding: '4px 8px', fontSize: '0.72rem', height: 28 }} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         {(searchTerm || dateFrom || dateTo) && (
-          <button className="btn-sm btn-outline" onClick={() => { setSearchTerm(''); setDateFrom(''); setDateTo(''); }}>✕ Temizle</button>
+          <button className="btn-sm btn-outline" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={() => { setSearchTerm(''); setDateFrom(''); setDateTo(''); }}>✕</button>
         )}
       </div>
 
@@ -736,7 +734,7 @@ function AppointmentsTab() {
           if (dateFrom && new Date(r.startTime) < new Date(dateFrom + 'T00:00:00')) return false;
           if (dateTo && new Date(r.startTime) > new Date(dateTo + 'T23:59:59')) return false;
           return true;
-        });
+        }).sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
         if (filtered.length === 0) return <div className="empty-state"><span className="empty-icon">🔍</span><p>Aramanızla eşleşen randevu yok</p></div>;
         return (
         <div className="members-table-wrapper">
