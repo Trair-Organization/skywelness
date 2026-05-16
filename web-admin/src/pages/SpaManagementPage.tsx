@@ -117,11 +117,13 @@ function AgendaTab() {
 
   // Action modal
   const [selectedAction, setSelectedAction] = useState<{ slot: AgendaSlot | null; therapist: TherapistAgenda; hour: string; type: 'available' | 'booked' | 'empty' } | null>(null);
-  const [actionMode, setActionMode] = useState<'menu' | 'book' | 'addSlot' | null>(null);
+  const [actionMode, setActionMode] = useState<'menu' | 'book' | 'addSlot' | 'bulkSlot' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [allMembers, setAllMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null }>>([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedMember, setSelectedMember] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
+  const [bulkStartHour, setBulkStartHour] = useState(11);
+  const [bulkEndHour, setBulkEndHour] = useState(22);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -153,6 +155,26 @@ function AgendaTab() {
   }
 
   function closeModal() { setSelectedAction(null); setActionMode(null); setSelectedMember(null); setMemberSearch(''); }
+
+  function openBulkSlotMenu(therapist: TherapistAgenda) {
+    setSelectedAction({ slot: null, therapist, hour: '11:00', type: 'empty' });
+    setActionMode('bulkSlot');
+    setBulkStartHour(11);
+    setBulkEndHour(22);
+  }
+
+  async function handleBulkAddSlots() {
+    if (!selectedAction) return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/admin/therapists/${selectedAction.therapist.therapistId}/calendar/bulk`, {
+        method: 'POST',
+        body: JSON.stringify({ startDate: date, endDate: date, weekdays: [0, 1, 2, 3, 4, 5, 6], startTime: `${String(bulkStartHour).padStart(2, '0')}:00`, endTime: `${String(bulkEndHour).padStart(2, '0')}:00` }),
+      });
+      closeModal(); void load();
+    } catch (err) { alert(err instanceof Error ? err.message : 'Slot eklenemedi'); }
+    finally { setActionLoading(false); }
+  }
 
   async function handleDeleteSlot() {
     if (!selectedAction?.slot) return;
@@ -264,7 +286,7 @@ function AgendaTab() {
                   const daySlots = t.slots.filter(s => s.date === date);
                   const booked = daySlots.filter(s => s.booked).length;
                   return (
-                    <th key={t.therapistId} className="agenda-th-therapist">
+                    <th key={t.therapistId} className="agenda-th-therapist" style={{ cursor: 'pointer' }} onClick={() => openBulkSlotMenu(t)} title={`${t.therapistName} — Tıkla: Çalışma saati ekle`}>
                       <div className="agenda-therapist-name">{t.therapistName}</div>
                       <div className="agenda-therapist-stat">{booked}/{daySlots.length} dolu</div>
                     </th>
@@ -406,6 +428,47 @@ function AgendaTab() {
                       {actionLoading ? '⏳...' : '✓ Oluştur'}
                     </button>
                     <button className="btn-sm btn-outline" onClick={() => setActionMode('menu')}>Geri</button>
+                  </div>
+                </div>
+              </>
+            )}
+            {/* Bulk Slot Mode */}
+            {actionMode === 'bulkSlot' && selectedAction && (
+              <>
+                <div className="agenda-modal-header">
+                  <h3>🕐 Çalışma Saati Ekle</h3>
+                  <button className="agenda-modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="agenda-modal-info">
+                  <span>💆 {selectedAction.therapist.therapistName}</span>
+                  <span>📅 {new Date(date).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                </div>
+                <div className="agenda-modal-form">
+                  <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: '0 0 0.75rem' }}>
+                    Seçilen saat aralığında her saat için müsait slot oluşturulur.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span className="form-label">Başlangıç</span>
+                      <select value={bulkStartHour} onChange={(e) => setBulkStartHour(Number(e.target.value))} className="form-input">
+                        {Array.from({ length: 14 }, (_, i) => i + 8).map(h => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
+                      </select>
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span className="form-label">Bitiş</span>
+                      <select value={bulkEndHour} onChange={(e) => setBulkEndHour(Number(e.target.value))} className="form-input">
+                        {Array.from({ length: 14 }, (_, i) => i + 9).map(h => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text)', margin: '0.5rem 0 0', fontWeight: 600 }}>
+                    {bulkEndHour - bulkStartHour} slot oluşturulacak ({String(bulkStartHour).padStart(2, '0')}:00 – {String(bulkEndHour).padStart(2, '0')}:00)
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button className="btn-sm btn-primary" disabled={actionLoading || bulkEndHour <= bulkStartHour} onClick={() => void handleBulkAddSlots()}>
+                      {actionLoading ? '⏳...' : `✓ ${bulkEndHour - bulkStartHour} Slot Oluştur`}
+                    </button>
+                    <button className="btn-sm btn-outline" onClick={closeModal}>İptal</button>
                   </div>
                 </div>
               </>
