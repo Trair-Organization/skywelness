@@ -679,6 +679,9 @@ function AppointmentsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('confirmed');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -699,12 +702,21 @@ function AppointmentsTab() {
 
   return (
     <div>
-      <div className="booking-filters">
-        {['confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
-          <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setStatusFilter(s)}>
-            {STATUS_LABELS[s]} 
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="booking-filters">
+          {['confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
+            <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setStatusFilter(s)}>
+              {STATUS_LABELS[s]} 
+            </button>
+          ))}
+        </div>
+        <input type="text" className="form-input" style={{ minWidth: 180 }} placeholder="Üye veya masöz ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <input type="date" className="form-input" style={{ width: 140 }} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} title="Başlangıç tarihi" />
+        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>–</span>
+        <input type="date" className="form-input" style={{ width: 140 }} value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="Bitiş tarihi" />
+        {(searchTerm || dateFrom || dateTo) && (
+          <button className="btn-sm btn-outline" onClick={() => { setSearchTerm(''); setDateFrom(''); setDateTo(''); }}>✕ Temizle</button>
+        )}
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -714,7 +726,19 @@ function AppointmentsTab() {
         <div className="empty-state"><span className="empty-icon">📋</span><p>Bu filtrede randevu yok</p></div>
       )}
 
-      {!loading && reservations.length > 0 && (
+      {!loading && reservations.length > 0 && (() => {
+        const filtered = reservations.filter(r => {
+          if (searchTerm) {
+            const q = searchTerm.toLowerCase();
+            const match = (r.memberName || '').toLowerCase().includes(q) || (r.therapistName || '').toLowerCase().includes(q) || (r.serviceName || '').toLowerCase().includes(q);
+            if (!match) return false;
+          }
+          if (dateFrom && new Date(r.startTime) < new Date(dateFrom + 'T00:00:00')) return false;
+          if (dateTo && new Date(r.startTime) > new Date(dateTo + 'T23:59:59')) return false;
+          return true;
+        });
+        if (filtered.length === 0) return <div className="empty-state"><span className="empty-icon">🔍</span><p>Aramanızla eşleşen randevu yok</p></div>;
+        return (
         <div className="members-table-wrapper">
           <table className="data-table">
             <thead>
@@ -729,7 +753,7 @@ function AppointmentsTab() {
               </tr>
             </thead>
             <tbody>
-              {reservations.map((r) => (
+              {filtered.map((r) => (
                 <tr key={r.id}>
                   <td>
                     <strong>{r.memberName || '—'}</strong>
@@ -759,7 +783,8 @@ function AppointmentsTab() {
             </tbody>
           </table>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
