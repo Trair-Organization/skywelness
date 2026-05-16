@@ -115,6 +115,15 @@ function AgendaTab() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'day' | 'week'>('day');
 
+  // Action modal state
+  const [selectedAction, setSelectedAction] = useState<{ slot: AgendaSlot; therapist: TherapistAgenda; type: 'available' | 'booked' } | null>(null);
+  const [actionMode, setActionMode] = useState<'menu' | 'book' | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberResults, setMemberResults] = useState<Array<{ id: string; firstName: string; lastName: string; email: string }>>([]);
+  const [selectedMember, setSelectedMember] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
+  const [searchingMembers, setSearchingMembers] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -142,6 +151,76 @@ function AgendaTab() {
     const d = new Date(date);
     d.setDate(d.getDate() + (view === 'week' ? offset * 7 : offset));
     setDate(d.toISOString().slice(0, 10));
+  }
+
+  function openSlotMenu(slot: AgendaSlot, therapist: TherapistAgenda) {
+    setSelectedAction({ slot, therapist, type: slot.booked ? 'booked' : 'available' });
+    setActionMode('menu');
+    setSelectedMember(null);
+    setMemberSearch('');
+    setMemberResults([]);
+  }
+
+  function closeModal() { setSelectedAction(null); setActionMode(null); setSelectedMember(null); setMemberSearch(''); }
+
+  async function searchMembersForBooking(query: string) {
+    setMemberSearch(query);
+    if (query.length < 2) { setMemberResults([]); return; }
+    setSearchingMembers(true);
+    try {
+      const data = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string }>>(`/admin/members?search=${encodeURIComponent(query)}&status=active`);
+      setMemberResults(data.slice(0, 8));
+    } catch { /* */ }
+    finally { setSearchingMembers(false); }
+  }
+
+  async function handleDeleteSlot() {
+    if (!selectedAction) return;
+    if (!confirm(`${selectedAction.slot.startTime}–${selectedAction.slot.endTime} slotu silinecek. Emin misiniz?`)) return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/admin/therapists/${selectedAction.therapist.therapistId}/calendar/${selectedAction.slot.id}`, { method: 'DELETE' });
+      closeModal(); void load();
+    } catch (err) { alert(err instanceof Error ? err.message : 'Slot silinemedi'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function handleCancelReservation() {
+    if (!selectedAction?.slot.reservation) return;
+    if (!confirm('Bu randevu iptal edilecek. Emin misiniz?')) return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/admin/reservations/${selectedAction.slot.reservation.id}/cancel`, { method: 'POST' });
+      closeModal(); void load();
+    } catch (err) { alert(err instanceof Error ? err.message : 'İptal edilemedi'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function handleCompleteReservation() {
+    if (!selectedAction?.slot.reservation) return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/admin/reservations/${selectedAction.slot.reservation.id}/complete`, { method: 'POST' });
+      closeModal(); void load();
+    } catch (err) { alert(err instanceof Error ? err.message : 'Tamamlanamadı'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function handleBookSlot() {
+    if (!selectedAction || !selectedMember) return;
+    setActionLoading(true);
+    try {
+      const slotDate = selectedAction.slot.date;
+      const startTime = selectedAction.slot.startTime;
+      const endTime = selectedAction.slot.endTime;
+      const therapistId = selectedAction.therapist.therapistId;
+      await apiJson('/admin/therapists/reservations/create', {
+        method: 'POST',
+        body: JSON.stringify({ therapistId, userId: selectedMember.id, date: slotDate, startTime, endTime }),
+      });
+      closeModal(); void load();
+    } catch (err) { alert(err instanceof Error ? err.message : 'Randevu oluşturulamadı'); }
+    finally { setActionLoading(false); }
   }
 
   // Generate time slots for the grid (11:00 to 22:00 for Skyland Wellness)
@@ -220,14 +299,14 @@ function AgendaTab() {
                     if (!slot) return <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-empty" />;
                     if (slot.booked && slot.reservation) {
                       return (
-                        <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-booked" title={`${slot.reservation.memberName || 'Üye'} · ${slot.startTime}–${slot.endTime}`}>
+                        <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-booked agenda-slot-clickable" onClick={() => openSlotMenu(slot, t)} title={`${slot.reservation.memberName || 'Üye'} · Tıkla: İşlemler`}>
                           <span className="agenda-slot-name">{slot.reservation.memberName?.split(' ')[0] || '—'}</span>
                           <span className="agenda-slot-time">{slot.startTime}–{slot.endTime}</span>
                         </div>
                       );
                     }
                     return (
-                      <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-available" title={`Müsait: ${slot.startTime}–${slot.endTime}`}>
+                      <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-available agenda-slot-clickable" onClick={() => openSlotMenu(slot, t)} title={`Müsait — Tıkla: İşlemler`}>
                         <span className="agenda-slot-time">{slot.startTime}–{slot.endTime}</span>
                       </div>
                     );
@@ -274,6 +353,89 @@ function AgendaTab() {
                 })}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Action Modal ═══ */}
+      {selectedAction && actionMode && (
+        <div className="agenda-modal-overlay" onClick={closeModal}>
+          <div className="agenda-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Menu for Available Slot */}
+            {actionMode === 'menu' && selectedAction.type === 'available' && (
+              <>
+                <div className="agenda-modal-header">
+                  <h3>🟢 Müsait Slot</h3>
+                  <button className="agenda-modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="agenda-modal-info">
+                  <span>💆 {selectedAction.therapist.therapistName}</span>
+                  <span>📅 {selectedAction.slot.date} · {selectedAction.slot.startTime}–{selectedAction.slot.endTime}</span>
+                </div>
+                <div className="agenda-modal-actions">
+                  <button className="agenda-action-btn agenda-action-book" onClick={() => setActionMode('book')}>📅 Randevu Oluştur</button>
+                  <button className="agenda-action-btn agenda-action-cancel" onClick={() => void handleDeleteSlot()} disabled={actionLoading}>🚫 Slotu Kapat / Sil</button>
+                </div>
+              </>
+            )}
+            {/* Menu for Booked Slot */}
+            {actionMode === 'menu' && selectedAction.type === 'booked' && (
+              <>
+                <div className="agenda-modal-header">
+                  <h3>🔵 Randevu Detay</h3>
+                  <button className="agenda-modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="agenda-modal-info">
+                  <span>👤 {selectedAction.slot.reservation?.memberName || '—'}</span>
+                  <span>💆 {selectedAction.therapist.therapistName}</span>
+                  <span>📅 {selectedAction.slot.date} · {selectedAction.slot.startTime}–{selectedAction.slot.endTime}</span>
+                  <span>📌 {selectedAction.slot.reservation?.status === 'confirmed' ? 'Onaylı' : 'Bekliyor'}</span>
+                </div>
+                <div className="agenda-modal-actions">
+                  <button className="agenda-action-btn agenda-action-complete" onClick={() => void handleCompleteReservation()} disabled={actionLoading}>✅ Tamamlandı</button>
+                  <button className="agenda-action-btn agenda-action-cancel" onClick={() => void handleCancelReservation()} disabled={actionLoading}>❌ İptal Et</button>
+                </div>
+              </>
+            )}
+            {/* Book Mode */}
+            {actionMode === 'book' && (
+              <>
+                <div className="agenda-modal-header">
+                  <h3>📅 Hızlı Randevu</h3>
+                  <button className="agenda-modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="agenda-modal-info">
+                  <span>💆 {selectedAction.therapist.therapistName} · {selectedAction.slot.date} · {selectedAction.slot.startTime}–{selectedAction.slot.endTime}</span>
+                </div>
+                <div className="agenda-modal-form">
+                  <label className="form-label">Üye Ara</label>
+                  <input type="text" className="form-input" placeholder="İsim veya e-posta..." value={memberSearch} onChange={(e) => void searchMembersForBooking(e.target.value)} autoFocus />
+                  {searchingMembers && <p className="muted" style={{ fontSize: '0.78rem', margin: '4px 0' }}>Aranıyor...</p>}
+                  {memberResults.length > 0 && !selectedMember && (
+                    <div className="agenda-member-list">
+                      {memberResults.map((m) => (
+                        <div key={m.id} className="agenda-member-item" onClick={() => { setSelectedMember(m); setMemberResults([]); }}>
+                          <strong>{m.firstName} {m.lastName}</strong>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{m.email}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedMember && (
+                    <div className="agenda-selected-member">
+                      ✅ {selectedMember.firstName} {selectedMember.lastName}
+                      <button className="btn-sm btn-outline" style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => setSelectedMember(null)}>Değiştir</button>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button className="btn-sm btn-primary" disabled={!selectedMember || actionLoading} onClick={() => void handleBookSlot()}>
+                      {actionLoading ? '⏳...' : '✓ Oluştur'}
+                    </button>
+                    <button className="btn-sm btn-outline" onClick={() => setActionMode('menu')}>Geri</button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

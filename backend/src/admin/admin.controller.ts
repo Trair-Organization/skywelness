@@ -344,6 +344,17 @@ export class AdminController {
     return this.adminMembers.cancelReservationByAdmin(admin.tenantId, reservationId);
   }
 
+  /** Admin bir rezervasyonu tamamlandı olarak işaretler */
+  @Post('reservations/:reservationId/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  completeReservationByAdmin(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+  ) {
+    return this.adminMembers.completeReservationByAdmin(admin.tenantId, reservationId);
+  }
+
   /** Admin üye adına randevu oluşturur */
   @Post('reservations/create')
   @UseGuards(JwtAuthGuard, RolesGuard)

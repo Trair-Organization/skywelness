@@ -840,6 +840,23 @@ export class AdminMembersService {
     return { ok: true as const, cancelledReservationId: reservationId };
   }
 
+  /** Admin bir rezervasyonu tamamlandı olarak işaretler */
+  async completeReservationByAdmin(tenantId: string, reservationId: string) {
+    const reservation = await this.reservationsRepo.findOne({
+      where: { id: reservationId, tenantId },
+    });
+    if (!reservation) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (reservation.status === ReservationStatus.COMPLETED) {
+      throw new BadRequestException('Bu rezervasyon zaten tamamlanmış');
+    }
+    if (reservation.status === ReservationStatus.CANCELLED) {
+      throw new BadRequestException('İptal edilmiş rezervasyon tamamlanamaz');
+    }
+    reservation.status = ReservationStatus.COMPLETED;
+    await this.reservationsRepo.save(reservation);
+    return { ok: true as const, completedReservationId: reservationId };
+  }
+
   /** Admin üye adına randevu oluşturur (telefonda arayan üye için) */
   async createReservationByAdmin(
     tenantId: string,
