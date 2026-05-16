@@ -27,6 +27,7 @@ import { ConnectionsModule } from './connections/connections.module';
 import { ResourceBookingModule } from './resource-booking/resource-booking.module';
 import { UnifiedBookingModule } from './unified-booking/unified-booking.module';
 import { PaymentsModule } from './payments/payments.module';
+import { TransactionCenterModule } from './transaction-center/transaction-center.module';
 import { AppService } from './app.service';
 import { typeOrmEntities } from './database/typeorm-entities';
 
@@ -86,6 +87,7 @@ import { typeOrmEntities } from './database/typeorm-entities';
     ResourceBookingModule,
     UnifiedBookingModule,
     PaymentsModule,
+    TransactionCenterModule,
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {

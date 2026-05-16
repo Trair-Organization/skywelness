@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiJson, ApiError } from '../lib/api';
 
 type Member = {
@@ -86,7 +86,9 @@ export function MembersPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'massage' | 'pt' | 'membership'>('createdAt');
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'massage' | 'pt' | 'membership'>(
+    'createdAt',
+  );
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Detail panel
@@ -189,7 +191,8 @@ export function MembersPage() {
         method: 'POST',
         body: JSON.stringify({
           packageTypeId: selectedPkgType,
-          assignedTrainerId: pkg?.sessionType === 'personal_training' ? selectedPkgTrainer : undefined,
+          assignedTrainerId:
+            pkg?.sessionType === 'personal_training' ? selectedPkgTrainer : undefined,
         }),
       });
       const d = await apiJson<MemberDetail>(`/admin/members/${detail.id}/detail`);
@@ -259,13 +262,19 @@ export function MembersPage() {
   }
 
   async function executeBulkSms() {
-    if (!bulkSmsMessage.trim()) { alert('Mesaj boş olamaz'); return; }
+    if (!bulkSmsMessage.trim()) {
+      alert('Mesaj boş olamaz');
+      return;
+    }
     setBulkLoading(true);
     try {
-      const res = await apiJson<{ total: number; sent: number; failed: number }>('/admin/members/bulk-sms', {
-        method: 'POST',
-        body: JSON.stringify({ memberIds: [...selectedIds], message: bulkSmsMessage }),
-      });
+      const res = await apiJson<{ total: number; sent: number; failed: number }>(
+        '/admin/members/bulk-sms',
+        {
+          method: 'POST',
+          body: JSON.stringify({ memberIds: [...selectedIds], message: bulkSmsMessage }),
+        },
+      );
       alert(`✅ SMS: ${res.sent} gönderildi, ${res.failed} başarısız (toplam ${res.total})`);
       setBulkAction(null);
       setBulkSmsMessage('');
@@ -278,13 +287,23 @@ export function MembersPage() {
   }
 
   async function executeBulkMail() {
-    if (!bulkMailSubject.trim() || !bulkMailMessage.trim()) { alert('Konu ve mesaj zorunludur'); return; }
+    if (!bulkMailSubject.trim() || !bulkMailMessage.trim()) {
+      alert('Konu ve mesaj zorunludur');
+      return;
+    }
     setBulkLoading(true);
     try {
-      const res = await apiJson<{ total: number; sent: number; failed: number }>('/admin/members/bulk-mail', {
-        method: 'POST',
-        body: JSON.stringify({ memberIds: [...selectedIds], subject: bulkMailSubject, message: bulkMailMessage }),
-      });
+      const res = await apiJson<{ total: number; sent: number; failed: number }>(
+        '/admin/members/bulk-mail',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            memberIds: [...selectedIds],
+            subject: bulkMailSubject,
+            message: bulkMailMessage,
+          }),
+        },
+      );
       alert(`✅ Mail: ${res.sent} gönderildi, ${res.failed} başarısız (toplam ${res.total})`);
       setBulkAction(null);
       setBulkMailSubject('');
@@ -298,13 +317,23 @@ export function MembersPage() {
   }
 
   async function executeBulkPackage() {
-    if (!bulkPkgTypeId) { alert('Paket tipi seçiniz'); return; }
+    if (!bulkPkgTypeId) {
+      alert('Paket tipi seçiniz');
+      return;
+    }
     setBulkLoading(true);
     try {
-      const res = await apiJson<{ assigned: number; failed: number }>('/admin/members/bulk-package', {
-        method: 'POST',
-        body: JSON.stringify({ memberIds: [...selectedIds], packageTypeId: bulkPkgTypeId, trainerId: bulkPkgTrainerId || undefined }),
-      });
+      const res = await apiJson<{ assigned: number; failed: number }>(
+        '/admin/members/bulk-package',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            memberIds: [...selectedIds],
+            packageTypeId: bulkPkgTypeId,
+            trainerId: bulkPkgTrainerId || undefined,
+          }),
+        },
+      );
       alert(`✅ Paket: ${res.assigned} atandı, ${res.failed} başarısız`);
       setBulkAction(null);
       setBulkPkgTypeId('');
@@ -320,22 +349,36 @@ export function MembersPage() {
 
   // Sıralama + uyarı hesaplama
   const today = new Date().toISOString().slice(0, 10);
-  const sevenDaysLater = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })();
+  const sevenDaysLater = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 10);
+  })();
 
   const sortedMembers = [...members].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
     switch (sortBy) {
-      case 'name': return dir * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'tr');
-      case 'massage': return dir * (a.massageSessions - b.massageSessions);
-      case 'pt': return dir * (a.ptSessions - b.ptSessions);
-      case 'membership': return dir * ((a.membershipEndDate || '9999') > (b.membershipEndDate || '9999') ? 1 : -1);
-      default: return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      case 'name':
+        return (
+          dir * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'tr')
+        );
+      case 'massage':
+        return dir * (a.massageSessions - b.massageSessions);
+      case 'pt':
+        return dir * (a.ptSessions - b.ptSessions);
+      case 'membership':
+        return dir * ((a.membershipEndDate || '9999') > (b.membershipEndDate || '9999') ? 1 : -1);
+      default:
+        return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     }
   });
 
   function toggleSort(col: typeof sortBy) {
     if (sortBy === col) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    else { setSortBy(col); setSortDir('desc'); }
+    else {
+      setSortBy(col);
+      setSortDir('desc');
+    }
   }
 
   const statusBadge = (s: string) => {
@@ -609,7 +652,17 @@ export function MembersPage() {
           >
             {/* Sol: Profil Bilgileri */}
             <div>
-              <ProfileEditor detail={detail} onSaved={() => { if (!detail.id) { setDetail(null); void load(statusFilter, search); } else { void openDetail(detail as unknown as Member); } }} />
+              <ProfileEditor
+                detail={detail}
+                onSaved={() => {
+                  if (!detail.id) {
+                    setDetail(null);
+                    void load(statusFilter, search);
+                  } else {
+                    void openDetail(detail as unknown as Member);
+                  }
+                }}
+              />
 
               {/* Üyelik Bilgisi */}
               <div style={{ marginTop: 16 }}>
@@ -857,7 +910,10 @@ export function MembersPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <select
                       value={selectedPkgType}
-                      onChange={(e) => { setSelectedPkgType(e.target.value); setSelectedPkgTrainer(''); }}
+                      onChange={(e) => {
+                        setSelectedPkgType(e.target.value);
+                        setSelectedPkgTrainer('');
+                      }}
                       style={{
                         padding: '6px 10px',
                         borderRadius: 6,
@@ -878,7 +934,11 @@ export function MembersPage() {
                       const pkg = packageTypes.find((p) => p.id === selectedPkgType);
                       if (pkg?.sessionType !== 'personal_training') return null;
                       return (
-                        <TrainerSelectForPackage userId={detail.id} value={selectedPkgTrainer} onChange={setSelectedPkgTrainer} />
+                        <TrainerSelectForPackage
+                          userId={detail.id}
+                          value={selectedPkgTrainer}
+                          onChange={setSelectedPkgTrainer}
+                        />
                       );
                     })()}
                     <button
@@ -904,31 +964,72 @@ export function MembersPage() {
 
               {/* PT Ataması (Yeni Paket Ata altında) */}
               <div style={{ marginTop: 16 }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 10px' }}>
+                <h3
+                  style={{
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    margin: '0 0 10px',
+                  }}
+                >
                   🏋️ Atanmış Eğitmen
                 </h3>
                 {detail.assignedTrainers.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {detail.assignedTrainers.map((t) => (
-                      <div key={t.linkId} style={{ padding: '8px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e40af' }}>🏋️ {t.trainerName}</span>
-                        <button onClick={() => {
-                          if (!confirm(`${t.trainerName} ataması kaldırılsın mı?`)) return;
-                          void apiJson(`/admin/members/${detail.id}/remove-trainer`, {
-                            method: 'POST',
-                            body: JSON.stringify({ trainerId: t.trainerId }),
-                          }).then(() => void openDetail(detail as unknown as Member))
-                            .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
-                        }} style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid #fee2e2', background: '#fff', color: '#dc2626', fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer' }}>
+                      <div
+                        key={t.linkId}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          background: '#eff6ff',
+                          border: '1px solid #dbeafe',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e40af' }}>
+                          🏋️ {t.trainerName}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (!confirm(`${t.trainerName} ataması kaldırılsın mı?`)) return;
+                            void apiJson(`/admin/members/${detail.id}/remove-trainer`, {
+                              method: 'POST',
+                              body: JSON.stringify({ trainerId: t.trainerId }),
+                            })
+                              .then(() => void openDetail(detail as unknown as Member))
+                              .catch((e: unknown) =>
+                                alert(e instanceof Error ? e.message : 'Hata'),
+                              );
+                          }}
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: 5,
+                            border: '1px solid #fee2e2',
+                            background: '#fff',
+                            color: '#dc2626',
+                            fontWeight: 600,
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                          }}
+                        >
                           ✕
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>Eğitmen atanmamış</p>
+                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>
+                    Eğitmen atanmamış
+                  </p>
                 )}
-                <TrainerAssignForm userId={detail.id} tenantTrainers={[]} onSaved={() => void openDetail(detail as unknown as Member)} />
+                <TrainerAssignForm
+                  userId={detail.id}
+                  tenantTrainers={[]}
+                  onSaved={() => void openDetail(detail as unknown as Member)}
+                />
               </div>
             </div>
           </div>
@@ -1124,6 +1225,9 @@ export function MembersPage() {
               </div>
             </div>
           )}
+
+          {/* Son 5 İşlem */}
+          <RecentTransactions memberId={detail.id} />
         </div>
       )}
 
@@ -1150,13 +1254,29 @@ export function MembersPage() {
           <button onClick={() => setSelectedIds(new Set())} style={bulkBtnStyle}>
             ✕ Seçimi Kaldır
           </button>
-          <button onClick={() => setBulkAction('sms')} style={{ ...bulkBtnStyle, background: '#dcfce7', color: '#166534' }}>
+          <button
+            onClick={() => setBulkAction('sms')}
+            style={{ ...bulkBtnStyle, background: '#dcfce7', color: '#166534' }}
+          >
             📱 Toplu SMS
           </button>
-          <button onClick={() => setBulkAction('mail')} style={{ ...bulkBtnStyle, background: '#dbeafe', color: '#1e40af' }}>
+          <button
+            onClick={() => setBulkAction('mail')}
+            style={{ ...bulkBtnStyle, background: '#dbeafe', color: '#1e40af' }}
+          >
             📧 Toplu Mail
           </button>
-          <button onClick={() => { setBulkAction('package'); if (packageTypes.length === 0) { void apiJson<PackageType[]>('/admin/package-types').then(setPackageTypes).catch(() => {}); } }} style={{ ...bulkBtnStyle, background: '#fef3c7', color: '#92400e' }}>
+          <button
+            onClick={() => {
+              setBulkAction('package');
+              if (packageTypes.length === 0) {
+                void apiJson<PackageType[]>('/admin/package-types')
+                  .then(setPackageTypes)
+                  .catch(() => {});
+              }
+            }}
+            style={{ ...bulkBtnStyle, background: '#fef3c7', color: '#92400e' }}
+          >
             📦 Toplu Paket
           </button>
         </div>
@@ -1165,7 +1285,9 @@ export function MembersPage() {
       {/* Bulk SMS Modal */}
       {bulkAction === 'sms' && (
         <div style={bulkModalStyle}>
-          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>📱 Toplu SMS Gönder ({selectedIds.size} üye)</h3>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>
+            📱 Toplu SMS Gönder ({selectedIds.size} üye)
+          </h3>
           <textarea
             value={bulkSmsMessage}
             onChange={(e) => setBulkSmsMessage(e.target.value)}
@@ -1174,8 +1296,14 @@ export function MembersPage() {
             style={bulkTextareaStyle}
           />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>İptal</button>
-            <button onClick={() => void executeBulkSms()} disabled={bulkLoading} style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}>
+            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>
+              İptal
+            </button>
+            <button
+              onClick={() => void executeBulkSms()}
+              disabled={bulkLoading}
+              style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}
+            >
               {bulkLoading ? 'Gönderiliyor...' : 'Gönder'}
             </button>
           </div>
@@ -1185,7 +1313,9 @@ export function MembersPage() {
       {/* Bulk Mail Modal */}
       {bulkAction === 'mail' && (
         <div style={bulkModalStyle}>
-          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>📧 Toplu Mail Gönder ({selectedIds.size} üye)</h3>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>
+            📧 Toplu Mail Gönder ({selectedIds.size} üye)
+          </h3>
           <input
             value={bulkMailSubject}
             onChange={(e) => setBulkMailSubject(e.target.value)}
@@ -1200,8 +1330,14 @@ export function MembersPage() {
             style={bulkTextareaStyle}
           />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>İptal</button>
-            <button onClick={() => void executeBulkMail()} disabled={bulkLoading} style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}>
+            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>
+              İptal
+            </button>
+            <button
+              onClick={() => void executeBulkMail()}
+              disabled={bulkLoading}
+              style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}
+            >
               {bulkLoading ? 'Gönderiliyor...' : 'Gönder'}
             </button>
           </div>
@@ -1211,16 +1347,32 @@ export function MembersPage() {
       {/* Bulk Package Modal */}
       {bulkAction === 'package' && (
         <div style={bulkModalStyle}>
-          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>📦 Toplu Paket Ata ({selectedIds.size} üye)</h3>
-          <select value={bulkPkgTypeId} onChange={(e) => setBulkPkgTypeId(e.target.value)} style={{ ...bulkTextareaStyle, marginBottom: 8 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>
+            📦 Toplu Paket Ata ({selectedIds.size} üye)
+          </h3>
+          <select
+            value={bulkPkgTypeId}
+            onChange={(e) => setBulkPkgTypeId(e.target.value)}
+            style={{ ...bulkTextareaStyle, marginBottom: 8 }}
+          >
             <option value="">Paket tipi seçin...</option>
-            {packageTypes.filter((p) => p.active).map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.sessionCount} seans / {p.validityDays} gün)</option>
-            ))}
+            {packageTypes
+              .filter((p) => p.active)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.sessionCount} seans / {p.validityDays} gün)
+                </option>
+              ))}
           </select>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>İptal</button>
-            <button onClick={() => void executeBulkPackage()} disabled={bulkLoading} style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}>
+            <button onClick={() => setBulkAction(null)} style={bulkBtnStyle}>
+              İptal
+            </button>
+            <button
+              onClick={() => void executeBulkPackage()}
+              disabled={bulkLoading}
+              style={{ ...bulkBtnStyle, background: '#2563eb', color: '#fff' }}
+            >
               {bulkLoading ? 'Atanıyor...' : 'Paket Ata'}
             </button>
           </div>
@@ -1255,150 +1407,188 @@ export function MembersPage() {
                     style={{ cursor: 'pointer', width: 16, height: 16 }}
                   />
                 </th>
-                <th style={thStyle} onClick={() => toggleSort('name')} className="sortable">Üye {sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th style={thStyle} onClick={() => toggleSort('name')} className="sortable">
+                  Üye {sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                </th>
                 <th style={thStyle}>E-posta</th>
-                <th style={thStyle} onClick={() => toggleSort('membership')} className="sortable">Üyelik Bitiş {sortBy === 'membership' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
-                <th style={thStyle} onClick={() => toggleSort('massage')} className="sortable">Masaj {sortBy === 'massage' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
-                <th style={thStyle} onClick={() => toggleSort('pt')} className="sortable">PT {sortBy === 'pt' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th style={thStyle} onClick={() => toggleSort('membership')} className="sortable">
+                  Üyelik Bitiş {sortBy === 'membership' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th style={thStyle} onClick={() => toggleSort('massage')} className="sortable">
+                  Masaj {sortBy === 'massage' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th style={thStyle} onClick={() => toggleSort('pt')} className="sortable">
+                  PT {sortBy === 'pt' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                </th>
                 <th style={thStyle}>Durum</th>
                 <th style={thStyle}>İşlemler</th>
               </tr>
             </thead>
             <tbody>
               {sortedMembers.map((m) => {
-                const membershipExpiring = m.membershipEndDate && m.membershipEndDate <= sevenDaysLater && m.membershipEndDate >= today;
-                const lowSessions = (m.massageSessions > 0 && m.massageSessions <= 2) || (m.ptSessions > 0 && m.ptSessions <= 2);
+                const membershipExpiring =
+                  m.membershipEndDate &&
+                  m.membershipEndDate <= sevenDaysLater &&
+                  m.membershipEndDate >= today;
+                const lowSessions =
+                  (m.massageSessions > 0 && m.massageSessions <= 2) ||
+                  (m.ptSessions > 0 && m.ptSessions <= 2);
                 const rowBg = membershipExpiring ? '#fffbeb' : lowSessions ? '#fef2f2' : undefined;
                 return (
-                <tr
-                  key={m.id}
-                  onClick={() => void openDetail(m)}
-                  style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: rowBg }}
-                >
-                  <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(m.id)}
-                      onChange={() => toggleSelect(m.id)}
-                      style={{ cursor: 'pointer', width: 16, height: 16 }}
-                    />
-                  </td>
-                  <td style={tdStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
+                  <tr
+                    key={m.id}
+                    onClick={() => void openDetail(m)}
+                    style={{
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f1f5f9',
+                      background: rowBg,
+                    }}
+                  >
+                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(m.id)}
+                        onChange={() => toggleSelect(m.id)}
+                        style={{ cursor: 'pointer', width: 16, height: 16 }}
+                      />
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            background: '#eff6ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: 11,
+                            color: '#2563eb',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {m.firstName[0]}
+                          {m.lastName[0]}
+                        </div>
+                        <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                          {m.firstName} {m.lastName}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={tdStyle}>{m.email}</td>
+                    <td style={tdStyle}>
+                      {m.membershipEndDate ? (
+                        <span
+                          style={{
+                            fontSize: '0.8rem',
+                            color: m.membershipStatus === 'active' ? '#059669' : '#dc2626',
+                          }}
+                        >
+                          {m.membershipEndDate}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>
+                      )}
+                    </td>
+                    <td style={tdStyle}>
+                      <span
                         style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          background: '#eff6ff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: 11,
-                          color: '#2563eb',
-                          flexShrink: 0,
+                          fontWeight: 700,
+                          color: m.massageSessions > 0 ? '#059669' : '#94a3b8',
                         }}
                       >
-                        {m.firstName[0]}
-                        {m.lastName[0]}
-                      </div>
-                      <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                        {m.firstName} {m.lastName}
+                        {m.massageSessions}
                       </span>
-                    </div>
-                  </td>
-                  <td style={tdStyle}>{m.email}</td>
-                  <td style={tdStyle}>
-                    {m.membershipEndDate ? (
-                      <span style={{ fontSize: '0.8rem', color: m.membershipStatus === 'active' ? '#059669' : '#dc2626' }}>
-                        {m.membershipEndDate}
+                    </td>
+                    <td style={tdStyle}>
+                      <span
+                        style={{ fontWeight: 700, color: m.ptSessions > 0 ? '#2563eb' : '#94a3b8' }}
+                      >
+                        {m.ptSessions}
                       </span>
-                    ) : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>}
-                  </td>
-                  <td style={tdStyle}>
-                    <span style={{ fontWeight: 700, color: m.massageSessions > 0 ? '#059669' : '#94a3b8' }}>{m.massageSessions}</span>
-                  </td>
-                  <td style={tdStyle}>
-                    <span style={{ fontWeight: 700, color: m.ptSessions > 0 ? '#2563eb' : '#94a3b8' }}>{m.ptSessions}</span>
-                  </td>
-                  <td style={tdStyle}>{statusBadge(m.accountStatus)}</td>
-                  <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                    {m.accountStatus === 'pending_approval' && (
+                    </td>
+                    <td style={tdStyle}>{statusBadge(m.accountStatus)}</td>
+                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                      {m.accountStatus === 'pending_approval' && (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            onClick={() => void approve(m.id)}
+                            disabled={actingId !== null}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              border: 'none',
+                              background: '#dcfce7',
+                              color: '#166534',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => void reject(m.id)}
+                            disabled={actingId !== null}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              border: 'none',
+                              background: '#fee2e2',
+                              color: '#991b1b',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            ✗
+                          </button>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button
-                          onClick={() => void approve(m.id)}
-                          disabled={actingId !== null}
+                          onClick={() => void openDetail(m)}
+                          title="Ayarlar"
                           style={{
-                            padding: '4px 10px',
+                            padding: '4px 8px',
                             borderRadius: 6,
-                            border: 'none',
-                            background: '#dcfce7',
-                            color: '#166534',
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
+                            border: '1px solid #e2e8f0',
+                            background: '#fff',
                             cursor: 'pointer',
+                            fontSize: '0.8rem',
                           }}
                         >
-                          ✓
+                          ⚙️
                         </button>
                         <button
-                          onClick={() => void reject(m.id)}
-                          disabled={actingId !== null}
+                          onClick={() => {
+                            if (!confirm(`${m.firstName} ${m.lastName} silinecek. Emin misiniz?`))
+                              return;
+                            void apiJson(`/admin/members/${m.id}/delete`, { method: 'DELETE' })
+                              .then(() => void load(statusFilter, search))
+                              .catch((e: unknown) =>
+                                alert(e instanceof Error ? e.message : 'Hata'),
+                              );
+                          }}
+                          title="Sil"
                           style={{
-                            padding: '4px 10px',
+                            padding: '4px 8px',
                             borderRadius: 6,
-                            border: 'none',
-                            background: '#fee2e2',
-                            color: '#991b1b',
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
+                            border: '1px solid #fee2e2',
+                            background: '#fff',
                             cursor: 'pointer',
+                            fontSize: '0.8rem',
                           }}
                         >
-                          ✗
+                          🗑
                         </button>
                       </div>
-                    )}
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button
-                        onClick={() => void openDetail(m)}
-                        title="Ayarlar"
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: 6,
-                          border: '1px solid #e2e8f0',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                        }}
-                      >
-                        ⚙️
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!confirm(`${m.firstName} ${m.lastName} silinecek. Emin misiniz?`))
-                            return;
-                          void apiJson(`/admin/members/${m.id}/delete`, { method: 'DELETE' })
-                            .then(() => void load(statusFilter, search))
-                            .catch((e: unknown) => alert(e instanceof Error ? e.message : 'Hata'));
-                        }}
-                        title="Sil"
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: 6,
-                          border: '1px solid #fee2e2',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                        }}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                ); })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1490,7 +1680,9 @@ function MemberNotes({ userId }: { userId: string }) {
       .catch(() => setNotes([]));
   }, [userId]);
 
-  useEffect(() => { loadNotes(); }, [loadNotes]);
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
 
   async function addNote() {
     if (!newNote.trim()) return;
@@ -1502,8 +1694,11 @@ function MemberNotes({ userId }: { userId: string }) {
       });
       setNewNote('');
       loadNotes();
-    } catch { /* */ }
-    finally { setSaving(false); }
+    } catch {
+      /* */
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function updateNote(idx: number, text: string) {
@@ -1514,7 +1709,9 @@ function MemberNotes({ userId }: { userId: string }) {
       });
       setEditIdx(null);
       loadNotes();
-    } catch { /* */ }
+    } catch {
+      /* */
+    }
   }
 
   async function deleteNote(idx: number) {
@@ -1525,42 +1722,167 @@ function MemberNotes({ userId }: { userId: string }) {
         body: JSON.stringify({ index: idx }),
       });
       loadNotes();
-    } catch { /* */ }
+    } catch {
+      /* */
+    }
   }
 
   return (
     <div>
-      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>📝 Notlar</h3>
+      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>
+        📝 Notlar
+      </h3>
       <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-        <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Not ekle..."
-          onKeyDown={(e) => { if (e.key === 'Enter') void addNote(); }}
-          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.82rem', background: '#fff', color: '#0f172a' }} />
-        <button onClick={() => void addNote()} disabled={saving || !newNote.trim()}
-          style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', opacity: !newNote.trim() ? 0.5 : 1 }}>+</button>
+        <input
+          type="text"
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          placeholder="Not ekle..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void addNote();
+          }}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid #e2e8f0',
+            fontSize: '0.82rem',
+            background: '#fff',
+            color: '#0f172a',
+          }}
+        />
+        <button
+          onClick={() => void addNote()}
+          disabled={saving || !newNote.trim()}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: 'none',
+            background: '#2563eb',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            opacity: !newNote.trim() ? 0.5 : 1,
+          }}
+        >
+          +
+        </button>
       </div>
       {notes.length === 0 ? (
         <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Henüz not yok</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            maxHeight: 200,
+            overflowY: 'auto',
+          }}
+        >
           {notes.map((n, i) => (
-            <div key={i} style={{ padding: '8px 12px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fef3c7', fontSize: '0.8rem' }}>
+            <div
+              key={i}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: '#fffbeb',
+                border: '1px solid #fef3c7',
+                fontSize: '0.8rem',
+              }}
+            >
               {editIdx === i ? (
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <input value={editText} onChange={(e) => setEditText(e.target.value)} style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: '0.8rem' }} />
-                  <button onClick={() => void updateNote(i, editText)} style={{ padding: '4px 8px', borderRadius: 4, border: 'none', background: '#2563eb', color: '#fff', fontSize: '0.7rem', cursor: 'pointer' }}>💾</button>
-                  <button onClick={() => setEditIdx(null)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '0.7rem', cursor: 'pointer' }}>✕</button>
+                  <input
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      border: '1px solid #e2e8f0',
+                      fontSize: '0.8rem',
+                    }}
+                  />
+                  <button
+                    onClick={() => void updateNote(i, editText)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      border: 'none',
+                      background: '#2563eb',
+                      color: '#fff',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    💾
+                  </button>
+                  <button
+                    onClick={() => setEditIdx(null)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      border: '1px solid #e2e8f0',
+                      background: '#fff',
+                      color: '#64748b',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
                   <div>
                     <div style={{ color: '#0f172a' }}>{n.text}</div>
                     <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: 2 }}>
-                      {new Date(n.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(n.date).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                    <button onClick={() => { setEditIdx(i); setEditText(n.text); }} style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#fff', fontSize: '0.65rem', cursor: 'pointer' }}>✏️</button>
-                    <button onClick={() => void deleteNote(i)} style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #fee2e2', background: '#fff', fontSize: '0.65rem', cursor: 'pointer' }}>🗑</button>
+                    <button
+                      onClick={() => {
+                        setEditIdx(i);
+                        setEditText(n.text);
+                      }}
+                      style={{
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        border: '1px solid #e2e8f0',
+                        background: '#fff',
+                        fontSize: '0.65rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => void deleteNote(i)}
+                      style={{
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        border: '1px solid #fee2e2',
+                        background: '#fff',
+                        fontSize: '0.65rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🗑
+                    </button>
                   </div>
                 </div>
               )}
@@ -1738,14 +2060,27 @@ const inputStyle: React.CSSProperties = {
 
 // ─── TrainerAssignForm Component ────────────────────────────────────────────────
 
-function TrainerAssignForm({ userId, onSaved }: { userId: string; tenantTrainers: unknown[]; onSaved: () => void }) {
-  const [trainers, setTrainers] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+function TrainerAssignForm({
+  userId,
+  onSaved,
+}: {
+  userId: string;
+  tenantTrainers: unknown[];
+  onSaved: () => void;
+}) {
+  const [trainers, setTrainers] = useState<
+    Array<{ id: string; firstName: string; lastName: string }>
+  >([]);
   const [selectedTrainer, setSelectedTrainer] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    apiJson<Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>>('/admin/trainers')
-      .then((data) => setTrainers(data.filter((t) => t.offersSessionTypes?.includes('personal_training'))))
+    apiJson<
+      Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>
+    >('/admin/trainers')
+      .then((data) =>
+        setTrainers(data.filter((t) => t.offersSessionTypes?.includes('personal_training'))),
+      )
       .catch(() => setTrainers([]));
   }, []);
 
@@ -1759,23 +2094,52 @@ function TrainerAssignForm({ userId, onSaved }: { userId: string; tenantTrainers
       });
       setSelectedTrainer('');
       onSaved();
-    } catch (e) { alert(e instanceof Error ? e.message : 'Hata'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hata');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (trainers.length === 0) return null;
 
   return (
     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-      <select value={selectedTrainer} onChange={(e) => setSelectedTrainer(e.target.value)}
-        style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.82rem', background: '#fff', color: '#0f172a' }}>
+      <select
+        value={selectedTrainer}
+        onChange={(e) => setSelectedTrainer(e.target.value)}
+        style={{
+          flex: 1,
+          padding: '6px 10px',
+          borderRadius: 6,
+          border: '1px solid #e2e8f0',
+          fontSize: '0.82rem',
+          background: '#fff',
+          color: '#0f172a',
+        }}
+      >
         <option value="">Eğitmen seçin...</option>
         {trainers.map((t) => (
-          <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+          <option key={t.id} value={t.id}>
+            {t.firstName} {t.lastName}
+          </option>
         ))}
       </select>
-      <button onClick={() => void assign()} disabled={!selectedTrainer || saving}
-        style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', opacity: !selectedTrainer ? 0.5 : 1 }}>
+      <button
+        onClick={() => void assign()}
+        disabled={!selectedTrainer || saving}
+        style={{
+          padding: '6px 14px',
+          borderRadius: 6,
+          border: 'none',
+          background: '#2563eb',
+          color: '#fff',
+          fontWeight: 600,
+          fontSize: '0.8rem',
+          cursor: 'pointer',
+          opacity: !selectedTrainer ? 0.5 : 1,
+        }}
+      >
         {saving ? '...' : 'Ata'}
       </button>
     </div>
@@ -1784,21 +2148,47 @@ function TrainerAssignForm({ userId, onSaved }: { userId: string; tenantTrainers
 
 // ─── TrainerSelectForPackage ────────────────────────────────────────────────────
 
-function TrainerSelectForPackage({ userId, value, onChange }: { userId: string; value: string; onChange: (v: string) => void }) {
-  const [trainers, setTrainers] = useState<Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>>([]);
+function TrainerSelectForPackage({
+  userId,
+  value,
+  onChange,
+}: {
+  userId: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [trainers, setTrainers] = useState<
+    Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>
+  >([]);
 
   useEffect(() => {
-    apiJson<Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>>('/admin/trainers')
-      .then((data) => setTrainers(data.filter((t) => t.offersSessionTypes?.includes('personal_training'))))
+    apiJson<
+      Array<{ id: string; firstName: string; lastName: string; offersSessionTypes?: string[] }>
+    >('/admin/trainers')
+      .then((data) =>
+        setTrainers(data.filter((t) => t.offersSessionTypes?.includes('personal_training'))),
+      )
       .catch(() => setTrainers([]));
   }, [userId]);
 
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.8rem', background: '#fff', color: '#0f172a' }}>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        padding: '6px 10px',
+        borderRadius: 6,
+        border: '1px solid #e2e8f0',
+        fontSize: '0.8rem',
+        background: '#fff',
+        color: '#0f172a',
+      }}
+    >
       <option value="">Eğitmen seçin (zorunlu)...</option>
       {trainers.map((t) => (
-        <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
+        <option key={t.id} value={t.id}>
+          {t.firstName} {t.lastName}
+        </option>
       ))}
     </select>
   );
@@ -1815,6 +2205,7 @@ function ProfileEditor({ detail, onSaved }: { detail: MemberDetail; onSaved: () 
   const [phone, setPhone] = useState(detail.phone || '');
   const [saving, setSaving] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setFirstName(detail.firstName);
     setLastName(detail.lastName);
@@ -1822,86 +2213,409 @@ function ProfileEditor({ detail, onSaved }: { detail: MemberDetail; onSaved: () 
     setPhone(detail.phone || '');
     setEditing(!detail.id);
   }, [detail]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function save() {
-    if (!firstName.trim() || !lastName.trim()) { alert('Ad ve soyad zorunlu'); return; }
+    if (!firstName.trim() || !lastName.trim()) {
+      alert('Ad ve soyad zorunlu');
+      return;
+    }
     setSaving(true);
     try {
       if (isNew) {
         await apiJson('/admin/members/quick-create', {
           method: 'POST',
-          body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || undefined, phone: phone.trim() || undefined }),
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim() || undefined,
+            phone: phone.trim() || undefined,
+          }),
         });
         alert('✅ Üye oluşturuldu');
       } else {
         await apiJson(`/admin/members/${detail.id}/update-profile`, {
           method: 'PATCH',
-          body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() || null }),
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim(),
+            phone: phone.trim() || null,
+          }),
         });
       }
       setEditing(false);
       onSaved();
-    } catch (e) { alert(e instanceof Error ? e.message : 'Hata'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hata');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const fieldStyle: React.CSSProperties = editing
-    ? { padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: '0.82rem', fontWeight: 600, color: '#0f172a', background: '#fff', width: '100%' }
+    ? {
+        padding: '5px 8px',
+        borderRadius: 6,
+        border: '1px solid #e2e8f0',
+        fontSize: '0.82rem',
+        fontWeight: 600,
+        color: '#0f172a',
+        background: '#fff',
+        width: '100%',
+      }
     : { fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 12,
+        }}
+      >
         <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
           {isNew ? '➕ Yeni Üye Oluştur' : 'Profil Bilgileri'}
         </h3>
         {!editing && !isNew ? (
-          <button onClick={() => setEditing(true)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#2563eb', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
+          <button
+            onClick={() => setEditing(true)}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 6,
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              color: '#2563eb',
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+            }}
+          >
             ✏️ Düzenle
           </button>
         ) : (
           <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => void save()} disabled={saving} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>
+            <button
+              onClick={() => void save()}
+              disabled={saving}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: 'none',
+                background: '#2563eb',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+              }}
+            >
               {saving ? '...' : isNew ? '✓ Kaydet' : '💾 Kaydet'}
             </button>
-            {!isNew && <button onClick={() => setEditing(false)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}>İptal</button>}
+            {!isNew && (
+              <button
+                onClick={() => setEditing(false)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  border: '1px solid #e2e8f0',
+                  background: '#fff',
+                  color: '#64748b',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                }}
+              >
+                İptal
+              </button>
+            )}
           </div>
         )}
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
         {!isNew && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '6px 0',
+              borderBottom: '1px solid #f8fafc',
+            }}
+          >
             <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Üye ID</span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', fontFamily: 'monospace' }}>{detail.id.slice(0, 8)}</span>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: '#94a3b8',
+                fontFamily: 'monospace',
+              }}
+            >
+              {detail.id.slice(0, 8)}
+            </span>
           </div>
         )}
         {!isNew && detail.username && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '6px 0',
+              borderBottom: '1px solid #f8fafc',
+            }}
+          >
             <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Kullanıcı Adı</span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>@{detail.username}</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>
+              @{detail.username}
+            </span>
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '6px 0',
+            borderBottom: '1px solid #f8fafc',
+          }}
+        >
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Ad</span>
-          {editing ? <input value={firstName} onChange={(e) => setFirstName(e.target.value)} style={fieldStyle} placeholder="Ad *" /> : <span style={fieldStyle}>{detail.firstName}</span>}
+          {editing ? (
+            <input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              style={fieldStyle}
+              placeholder="Ad *"
+            />
+          ) : (
+            <span style={fieldStyle}>{detail.firstName}</span>
+          )}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '6px 0',
+            borderBottom: '1px solid #f8fafc',
+          }}
+        >
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Soyad</span>
-          {editing ? <input value={lastName} onChange={(e) => setLastName(e.target.value)} style={fieldStyle} placeholder="Soyad *" /> : <span style={fieldStyle}>{detail.lastName}</span>}
+          {editing ? (
+            <input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              style={fieldStyle}
+              placeholder="Soyad *"
+            />
+          ) : (
+            <span style={fieldStyle}>{detail.lastName}</span>
+          )}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '6px 0',
+            borderBottom: '1px solid #f8fafc',
+          }}
+        >
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>E-posta</span>
-          {editing ? <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" style={fieldStyle} placeholder="email@ornek.com" /> : <span style={fieldStyle}>{detail.email}</span>}
+          {editing ? (
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              style={fieldStyle}
+              placeholder="email@ornek.com"
+            />
+          ) : (
+            <span style={fieldStyle}>{detail.email}</span>
+          )}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '6px 0',
+            borderBottom: '1px solid #f8fafc',
+          }}
+        >
           <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Telefon</span>
-          {editing ? <input value={phone} onChange={(e) => setPhone(e.target.value)} style={fieldStyle} placeholder="05xx..." /> : <span style={fieldStyle}>{detail.phone || '—'}</span>}
+          {editing ? (
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              style={fieldStyle}
+              placeholder="05xx..."
+            />
+          ) : (
+            <span style={fieldStyle}>{detail.phone || '—'}</span>
+          )}
         </div>
-        {!isNew && <InfoRow label="Kayıt Tarihi" value={new Date(detail.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} />}
-        {!isNew && <InfoRow label="Son Giriş" value={detail.lastLogin ? new Date(detail.lastLogin).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Hiç giriş yapmadı'} />}
-        {!isNew && <InfoRow label="Durum" value={detail.accountStatus === 'active' ? 'Aktif Üye' : detail.accountStatus === 'pending_approval' ? 'Onay Bekliyor' : detail.accountStatus === 'suspended' ? 'Dondurulmuş' : 'Reddedildi'} />}
+        {!isNew && (
+          <InfoRow
+            label="Kayıt Tarihi"
+            value={new Date(detail.createdAt).toLocaleDateString('tr-TR', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          />
+        )}
+        {!isNew && (
+          <InfoRow
+            label="Son Giriş"
+            value={
+              detail.lastLogin
+                ? new Date(detail.lastLogin).toLocaleDateString('tr-TR', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : 'Hiç giriş yapmadı'
+            }
+          />
+        )}
+        {!isNew && (
+          <InfoRow
+            label="Durum"
+            value={
+              detail.accountStatus === 'active'
+                ? 'Aktif Üye'
+                : detail.accountStatus === 'pending_approval'
+                  ? 'Onay Bekliyor'
+                  : detail.accountStatus === 'suspended'
+                    ? 'Dondurulmuş'
+                    : 'Reddedildi'
+            }
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+// ─── RecentTransactions Component (Son 5 İşlem) ─────────────────────────────────
+
+type RecentTx = {
+  id: string;
+  date: string;
+  serviceType: string;
+  description: string;
+  amount: number;
+  currency: string;
+  status: string;
+};
+
+const TX_SERVICE_LABELS: Record<string, string> = {
+  massage: 'Masaj',
+  personal_training: 'PT',
+  padel: 'Padel',
+  cafe: 'Kafe',
+  event: 'Etkinlik',
+};
+
+function RecentTransactions({ memberId }: { memberId: string }) {
+  const navigate = useNavigate();
+  const [txs, setTxs] = useState<RecentTx[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await apiJson<RecentTx[]>(`/admin/transactions/member/${memberId}/recent`);
+        if (!cancelled) setTxs(data);
+      } catch {
+        if (!cancelled) setTxs([]);
+      }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [memberId]);
+
+  return (
+    <div style={{ padding: '0 24px 20px' }}>
+      <h3
+        style={{
+          fontSize: '0.9rem',
+          fontWeight: 700,
+          color: '#0f172a',
+          margin: '0 0 12px',
+        }}
+      >
+        💳 Son 5 İşlem
+      </h3>
+      {loading ? (
+        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Yükleniyor...</p>
+      ) : txs.length === 0 ? (
+        <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Henüz işlem bulunmuyor.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {txs.map((t) => (
+            <div
+              key={t.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px solid #f1f5f9',
+                background: '#fafafa',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0f172a' }}>
+                  {new Date(t.date).toLocaleDateString('tr-TR')}
+                </span>
+                <span
+                  style={{
+                    marginLeft: 8,
+                    fontSize: '0.72rem',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: '#eff6ff',
+                    color: '#2563eb',
+                    fontWeight: 600,
+                  }}
+                >
+                  {TX_SERVICE_LABELS[t.serviceType] || t.serviceType}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                ₺{t.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        style={{
+          marginTop: 10,
+          background: 'none',
+          border: 'none',
+          color: '#2563eb',
+          fontWeight: 600,
+          fontSize: '0.82rem',
+          cursor: 'pointer',
+          padding: 0,
+        }}
+        onClick={() => navigate(`/transaction-center?memberId=${memberId}`)}
+      >
+        İşlem Merkezi'ne Git →
+      </button>
     </div>
   );
 }

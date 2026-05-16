@@ -17,6 +17,7 @@ const WELLNESS_NAV: NavItem[] = [
   { path: '/club/logs', icon: '📜', label: 'İşlem Kayıtları' },
   { path: '/club/profile', icon: '🏢', label: 'Kulüp Profili' },
   { path: '/club/insights', icon: '📈', label: 'İstatistikler' },
+  { path: '/transaction-center', icon: '💳', label: 'İşlem Merkezi' },
 ];
 
 const GENERIC_NAV: NavItem[] = [
@@ -32,6 +33,7 @@ const GENERIC_NAV: NavItem[] = [
   { path: '/connections', icon: '🔗', label: 'Bağlantılar' },
   { path: '/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/events', icon: '📅', label: 'Etkinlikler' },
+  { path: '/transaction-center', icon: '💳', label: 'İşlem Merkezi' },
 ];
 
 const PLATFORM_NAV: NavItem[] = [

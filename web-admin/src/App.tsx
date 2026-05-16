@@ -36,6 +36,7 @@ import { MarketingPricingPage } from './pages/MarketingPricingPage';
 import { MarketingContactPage } from './pages/MarketingContactPage';
 import { MarketingPrivacyPage } from './pages/MarketingPrivacyPage';
 import { MarketingTermsPage } from './pages/MarketingTermsPage';
+import { TransactionCenterPage } from './pages/TransactionCenterPage';
 import { ClubInsightsPage } from './pages/ClubInsightsPage';
 import { ClubLogsPage } from './pages/ClubLogsPage';
 import { ClubCafeOrdersPage } from './pages/ClubCafeOrdersPage';
@@ -103,6 +104,7 @@ function AppRoutes() {
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/schedule-slots" element={<ScheduleSlotsPage />} />
         <Route path="/services" element={<ServiceCatalogPage />} />
+        <Route path="/transaction-center" element={<TransactionCenterPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboardPage />} />
