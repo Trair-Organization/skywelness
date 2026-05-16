@@ -675,23 +675,17 @@ function AgendaTab() {
 // ─── Appointments Tab (Unified: spa_booking + v2/appointments) ──────────────────
 
 function AppointmentsTab() {
-  const [spaBookings, setSpaBookings] = useState<SpaBookingRow[]>([]);
-  const [roomAppointments, setRoomAppointments] = useState<AppointmentRow[]>([]);
+  const [reservations, setReservations] = useState<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; therapistName: string | null; sessionType: string; createdAt: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('pending');
-  const [source, setSource] = useState<'all' | 'therapist' | 'room'>('all');
+  const [statusFilter, setStatusFilter] = useState('confirmed');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [spa, room] = await Promise.all([
-        apiJson<SpaBookingRow[]>(`/spa/admin/bookings?status=${statusFilter}`),
-        apiJson<AppointmentRow[]>(`/v2/appointments?status=${statusFilter}`).catch(() => [] as AppointmentRow[]),
-      ]);
-      setSpaBookings(spa);
-      setRoomAppointments(room);
+      const data = await apiJson<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; therapistName: string | null; sessionType: string; createdAt: string }>>(`/admin/spa-reservations?status=${statusFilter}`);
+      setReservations(data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Yüklenemedi');
     } finally {
@@ -701,114 +695,45 @@ function AppointmentsTab() {
 
   useEffect(() => { queueMicrotask(() => { void load(); }); }, [load]);
 
-  async function updateSpaStatus(id: string, status: string) {
-    try {
-      await apiJson(`/spa/admin/bookings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
-      void load();
-    } catch (e) { setError(e instanceof ApiError ? e.message : 'İşlem başarısız'); }
-  }
-
-  async function updateRoomStatus(id: string, status: string) {
-    try {
-      await apiJson(`/v2/appointments/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
-      void load();
-    } catch (e) { setError(e instanceof ApiError ? e.message : 'İşlem başarısız'); }
-  }
-
   const STATUS_LABELS: Record<string, string> = { pending: 'Bekliyor', confirmed: 'Onaylandı', completed: 'Tamamlandı', cancelled: 'İptal' };
-
-  const filteredSpa = source === 'room' ? [] : spaBookings;
-  const filteredRoom = source === 'therapist' ? [] : roomAppointments;
 
   return (
     <div>
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div className="booking-filters">
-          {['pending', 'confirmed', 'completed', 'cancelled'].map((s) => (
-            <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setStatusFilter(s)}>
-              {STATUS_LABELS[s]}
-            </button>
-          ))}
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
-          {[
-            { key: 'all', label: 'Tümü' },
-            { key: 'therapist', label: '💆 Masöz' },
-            { key: 'room', label: '🏠 Oda' },
-          ].map((opt) => (
-            <button key={opt.key} className={`btn-sm ${source === opt.key ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSource(opt.key as typeof source)}>
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <div className="booking-filters">
+        {['confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
+          <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setStatusFilter(s)}>
+            {STATUS_LABELS[s]} 
+          </button>
+        ))}
       </div>
 
       {error && <p className="error">{error}</p>}
       {loading && <p className="muted">Yükleniyor...</p>}
 
-      {!loading && filteredSpa.length === 0 && filteredRoom.length === 0 && (
-        <div className="empty-state"><span className="empty-icon">📅</span><p>Bu filtrede randevu yok</p></div>
+      {!loading && reservations.length === 0 && (
+        <div className="empty-state"><span className="empty-icon">📋</span><p>Bu filtrede randevu yok</p></div>
       )}
 
-      {!loading && (filteredSpa.length > 0 || filteredRoom.length > 0) && (
+      {!loading && reservations.length > 0 && (
         <div className="members-table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Tür</th>
                 <th>Üye</th>
-                <th>Hizmet</th>
-                <th>Masöz / Oda</th>
+                <th>Masöz</th>
                 <th>Tarih</th>
                 <th>Saat</th>
-                <th>Tutar</th>
-                <th>İşlemler</th>
+                <th>Durum</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSpa.map((b) => (
-                <tr key={`spa-${b.id}`}>
-                  <td><span className="badge-therapist">💆 Masöz</span></td>
-                  <td><strong>{b.user ? `${b.user.firstName} ${b.user.lastName}` : '—'}</strong></td>
-                  <td>{b.service?.name || '—'}</td>
-                  <td>{b.therapist?.name || '—'}</td>
-                  <td>{b.bookingDate}</td>
-                  <td>{b.timeSlot}</td>
-                  <td>—</td>
-                  <td>
-                    {b.status === 'pending' && (
-                      <div className="action-btns">
-                        <button className="btn-sm btn-success" onClick={() => void updateSpaStatus(b.id, 'confirmed')}>✓</button>
-                        <button className="btn-sm btn-danger" onClick={() => void updateSpaStatus(b.id, 'cancelled')}>✕</button>
-                      </div>
-                    )}
-                    {b.status === 'confirmed' && (
-                      <button className="btn-sm btn-success" onClick={() => void updateSpaStatus(b.id, 'completed')}>✓ Tamamla</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filteredRoom.map((a) => (
-                <tr key={`room-${a.id}`}>
-                  <td><span className="badge-room">🏠 Oda</span></td>
-                  <td><strong>{a.user.firstName} {a.user.lastName}</strong></td>
-                  <td>{a.service.name}</td>
-                  <td>Masaj Odası</td>
-                  <td>{a.slot.date}</td>
-                  <td>{a.slot.startTime}–{a.slot.endTime}</td>
-                  <td><span style={{ color: '#059669', fontWeight: 700 }}>{a.totalAmount}₺</span></td>
-                  <td>
-                    {a.status === 'pending' && (
-                      <div className="action-btns">
-                        <button className="btn-sm btn-success" onClick={() => void updateRoomStatus(a.id, 'confirmed')}>✓</button>
-                        <button className="btn-sm btn-danger" onClick={() => void updateRoomStatus(a.id, 'cancelled')}>✕</button>
-                      </div>
-                    )}
-                    {a.status === 'confirmed' && (
-                      <button className="btn-sm btn-success" onClick={() => void updateRoomStatus(a.id, 'completed')}>✓ Tamamla</button>
-                    )}
-                  </td>
+              {reservations.map((r) => (
+                <tr key={r.id}>
+                  <td><strong>{r.memberName || '—'}</strong></td>
+                  <td>{r.therapistName || '—'}</td>
+                  <td>{new Date(r.startTime).toLocaleDateString('tr-TR')}</td>
+                  <td>{new Date(r.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}–{new Date(r.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</td>
+                  <td><span className={`status-badge status-spa-${r.status}`}>{STATUS_LABELS[r.status] || r.status}</span></td>
                 </tr>
               ))}
             </tbody>

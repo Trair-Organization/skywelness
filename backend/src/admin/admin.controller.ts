@@ -333,6 +333,14 @@ export class AdminController {
     return this.bookingService.rejectReservationByAdmin(admin.tenantId, reservationId);
   }
 
+  /** Admin: Tüm spa (masöz) randevularını listele (Geçmiş tab için) */
+  @Get('spa-reservations')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listSpaReservations(@CurrentUser() admin: User, @Query('status') status?: string) {
+    return this.adminMembers.listSpaReservations(admin.tenantId, status);
+  }
+
   /** Admin herhangi bir rezervasyonu iptal edebilir (pending veya confirmed) */
   @Post('reservations/:reservationId/cancel')
   @UseGuards(JwtAuthGuard, RolesGuard)

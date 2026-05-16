@@ -807,6 +807,32 @@ export class AdminMembersService {
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
 
+  /** Admin: Tüm spa (masöz) randevularını listele */
+  async listSpaReservations(tenantId: string, status?: string) {
+    const qb = this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .leftJoinAndSelect('r.spaTherapist', 'st')
+      .where('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.spaTherapistId IS NOT NULL');
+    if (status && status !== 'all') {
+      qb.andWhere('r.status = :status', { status });
+    }
+    qb.orderBy('r.startTime', 'DESC').take(100);
+    const rows = await qb.getMany();
+    return rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      memberName: r.user ? `${r.user.firstName} ${r.user.lastName}` : null,
+      memberEmail: r.user?.email || null,
+      therapistName: r.spaTherapist?.name || null,
+      sessionType: r.sessionType,
+      createdAt: r.createdAt,
+    }));
+  }
+
   /** Admin herhangi bir rezervasyonu iptal eder (pending veya confirmed) */
   async cancelReservationByAdmin(tenantId: string, reservationId: string) {
     const reservation = await this.reservationsRepo.findOne({
