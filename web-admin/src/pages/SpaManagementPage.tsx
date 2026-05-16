@@ -11,6 +11,7 @@ type SpaServiceRow = {
   category: string;
   durationMinutes: number;
   price: number;
+  sessionCost: number;
   active: boolean;
   sortOrder: number;
 };
@@ -346,11 +347,11 @@ function AgendaTab() {
   })();
 
   // Spa services for booking
-  const [spaServices, setSpaServices] = useState<Array<{ id: string; name: string; category: string; durationMinutes: number }>>([]);
+  const [spaServices, setSpaServices] = useState<Array<{ id: string; name: string; category: string; durationMinutes: number; sessionCost: number }>>([]);
   const [selectedServiceId, setSelectedServiceId] = useState('');
 
   useEffect(() => {
-    apiJson<Array<{ id: string; name: string; category: string; durationMinutes: number }>>('/spa/admin/services')
+    apiJson<Array<{ id: string; name: string; category: string; durationMinutes: number; sessionCost: number }>>('/spa/admin/services')
       .then(setSpaServices).catch(() => {});
   }, []);
 
@@ -538,7 +539,7 @@ function AgendaTab() {
                   <label className="form-label">Hizmet Seç</label>
                   <select className="form-input" value={selectedServiceId} onChange={(e) => setSelectedServiceId(e.target.value)}>
                     <option value="">— Hizmet seçin (opsiyonel) —</option>
-                    {spaServices.map(s => <option key={s.id} value={s.id}>{s.name} ({s.durationMinutes} dk)</option>)}
+                    {spaServices.map(s => <option key={s.id} value={s.id}>{s.name} ({s.durationMinutes} dk · {s.sessionCost || 1} kredi)</option>)}
                   </select>
                   <label className="form-label" style={{ marginTop: '0.5rem' }}>Üye Seç veya Ara</label>
                   <input type="text" className="form-input" placeholder="İsim veya e-posta ile filtrele..." value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
@@ -844,6 +845,7 @@ function ServicesTab() {
   const [category, setCategory] = useState('relax');
   const [duration, setDuration] = useState(60);
   const [price, setPrice] = useState('');
+  const [sessionCost, setSessionCost] = useState(1);
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -856,16 +858,16 @@ function ServicesTab() {
 
   useEffect(() => { queueMicrotask(() => { void loadServices(); }); }, [loadServices]);
 
-  function resetForm() { setEditId(null); setName(''); setDescription(''); setCategory('relax'); setDuration(60); setPrice(''); setActive(true); setShowForm(false); }
+  function resetForm() { setEditId(null); setName(''); setDescription(''); setCategory('relax'); setDuration(60); setPrice(''); setSessionCost(1); setActive(true); setShowForm(false); }
 
-  function startEdit(s: SpaServiceRow) { setEditId(s.id); setName(s.name); setDescription(s.description || ''); setCategory(s.category); setDuration(s.durationMinutes); setPrice(String(s.price)); setActive(s.active); setShowForm(true); }
+  function startEdit(s: SpaServiceRow) { setEditId(s.id); setName(s.name); setDescription(s.description || ''); setCategory(s.category); setDuration(s.durationMinutes); setPrice(String(s.price)); setSessionCost(s.sessionCost || 1); setActive(s.active); setShowForm(true); }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !price) return;
     setSaving(true);
     try {
-      const body = { name: name.trim(), description: description.trim() || null, category, durationMinutes: duration, price: parseFloat(price), active };
+      const body = { name: name.trim(), description: description.trim() || null, category, durationMinutes: duration, price: parseFloat(price), sessionCost, active };
       if (editId) { await apiJson(`/spa/admin/services/${editId}`, { method: 'PATCH', body: JSON.stringify(body) }); }
       else { await apiJson('/spa/admin/services', { method: 'POST', body: JSON.stringify(body) }); }
       resetForm(); await loadServices();
@@ -907,7 +909,7 @@ function ServicesTab() {
             <span className="form-label">Açıklama</span>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Hizmet açıklaması..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               <span className="form-label">Süre (dk) *</span>
               <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} min={15} className="form-input" />
@@ -917,6 +919,10 @@ function ServicesTab() {
               <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="2000" required className="form-input" />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span className="form-label">Seans Kredisi *</span>
+              <input type="number" value={sessionCost} onChange={(e) => setSessionCost(Number(e.target.value))} min={1} className="form-input" title="Bu hizmet paketten kaç seans düşer" />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               <span className="form-label">Durum</span>
               <select value={active ? 'true' : 'false'} onChange={(e) => setActive(e.target.value === 'true')} className="form-input">
                 <option value="true">Aktif</option>
@@ -924,6 +930,9 @@ function ServicesTab() {
               </select>
             </label>
           </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: '0.25rem 0 0' }}>
+            ℹ️ {duration} dk = {Math.ceil(duration / 60)} slot kapatılır · Paketten {sessionCost} seans düşer
+          </p>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
             <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
             <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
@@ -944,7 +953,7 @@ function ServicesTab() {
               <h3 className="service-name">{s.name}</h3>
               {s.description && <p className="service-desc">{s.description.slice(0, 120)}</p>}
               <div className="service-meta">
-                <span>⏱ {s.durationMinutes} dk</span>
+                <span>⏱ {s.durationMinutes} dk · 🎫 {s.sessionCost || 1} kredi</span>
                 <span className="service-price">₺{s.price.toLocaleString('tr-TR')}</span>
               </div>
               <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.75rem' }}>
