@@ -40,16 +40,16 @@ type AppointmentRow = {
   slot: { id: string; date: string; startTime: string; endTime: string };
 };
 
-type TabType = 'overview' | 'appointments' | 'services' | 'therapists' | 'packages' | 'rooms';
+type TabType = 'agenda' | 'appointments' | 'services' | 'therapists' | 'packages' | 'rooms';
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export function SpaManagementPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('agenda');
 
   const tabs: { key: TabType; icon: string; label: string }[] = [
-    { key: 'overview', icon: '📊', label: 'Özet' },
-    { key: 'appointments', icon: '📅', label: 'Randevular' },
+    { key: 'agenda', icon: '📅', label: 'Ajanda' },
+    { key: 'appointments', icon: '📝', label: 'Randevular' },
     { key: 'services', icon: '🧴', label: 'Hizmetler' },
     { key: 'therapists', icon: '💆', label: 'Masözler' },
     { key: 'packages', icon: '📦', label: 'Paketler' },
@@ -79,7 +79,7 @@ export function SpaManagementPage() {
         </div>
       </div>
 
-      {activeTab === 'overview' && <OverviewTab />}
+      {activeTab === 'agenda' && <AgendaTab />}
       {activeTab === 'appointments' && <AppointmentsTab />}
       {activeTab === 'services' && <ServicesTab />}
       {activeTab === 'therapists' && <TherapistsPage embedded />}
@@ -90,104 +90,190 @@ export function SpaManagementPage() {
 }
 
 
-// ─── Overview Tab ───────────────────────────────────────────────────────────────
+// ─── Agenda Tab (Calendar Grid) ─────────────────────────────────────────────────
 
-function OverviewTab() {
-  const [data, setData] = useState<{
-    pendingBookings: number;
-    todayBookings: number;
-    completedToday: number;
-    activeTherapists: number;
-    totalServices: number;
-    recentBookings: SpaBookingRow[];
-    pendingAppointments: AppointmentRow[];
-  } | null>(null);
+type AgendaSlot = {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  available: boolean;
+  booked: boolean;
+  reservation: { id: string; memberName: string | null; status: string } | null;
+};
+
+type TherapistAgenda = {
+  therapistId: string;
+  therapistName: string;
+  photoUrl: string | null;
+  slots: AgendaSlot[];
+};
+
+function AgendaTab() {
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [agenda, setAgenda] = useState<TherapistAgenda[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'day' | 'week'>('day');
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      apiJson<SpaBookingRow[]>('/spa/admin/bookings?status=pending'),
-      apiJson<SpaBookingRow[]>('/spa/admin/bookings?status=confirmed'),
-      apiJson<SpaBookingRow[]>('/spa/admin/bookings?status=completed'),
-      apiJson<SpaServiceRow[]>('/spa/admin/services'),
-      apiJson<AppointmentRow[]>('/v2/appointments?status=pending').catch(() => [] as AppointmentRow[]),
-    ]).then(([pending, confirmed, completed, services, appointments]) => {
-      if (cancelled) return;
-      const today = new Date().toISOString().slice(0, 10);
-      const todayConfirmed = confirmed.filter(b => b.bookingDate === today);
-      const todayCompleted = completed.filter(b => b.bookingDate === today);
-      setData({
-        pendingBookings: pending.length + appointments.length,
-        todayBookings: todayConfirmed.length,
-        completedToday: todayCompleted.length,
-        activeTherapists: 0,
-        totalServices: services.length,
-        recentBookings: [...pending, ...todayConfirmed].slice(0, 5),
-        pendingAppointments: appointments.slice(0, 5),
-      });
-      setLoading(false);
-    }).catch(() => setLoading(false));
-    return () => { cancelled = true; };
-  }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      let from = date;
+      let to = date;
+      if (view === 'week') {
+        const d = new Date(date);
+        const dayOfWeek = d.getDay();
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        from = monday.toISOString().slice(0, 10);
+        to = sunday.toISOString().slice(0, 10);
+      }
+      const data = await apiJson<TherapistAgenda[]>(`/admin/therapists/agenda?from=${from}&to=${to}`);
+      setAgenda(data);
+    } catch { /* */ }
+    finally { setLoading(false); }
+  }, [date, view]);
 
-  if (loading) return <p className="muted">Yükleniyor...</p>;
-  if (!data) return <p className="muted">Veri alınamadı.</p>;
+  useEffect(() => { queueMicrotask(() => { void load(); }); }, [load]);
+
+  function navigateDate(offset: number) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + (view === 'week' ? offset * 7 : offset));
+    setDate(d.toISOString().slice(0, 10));
+  }
+
+  // Generate time slots for the grid (9:00 to 21:00)
+  const hours = Array.from({ length: 13 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
+
+  // For week view, get days
+  const weekDays: string[] = [];
+  if (view === 'week') {
+    const d = new Date(date);
+    const dayOfWeek = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + i);
+      weekDays.push(day.toISOString().slice(0, 10));
+    }
+  }
+
+  const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
   return (
     <div>
-      {/* Stat Cards */}
-      <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <StatCard icon="⏳" label="Bekleyen Onay" value={data.pendingBookings} color="#f59e0b" />
-        <StatCard icon="📅" label="Bugün Randevu" value={data.todayBookings} color="#2563eb" />
-        <StatCard icon="✅" label="Bugün Tamamlanan" value={data.completedToday} color="#059669" />
-        <StatCard icon="🧴" label="Toplam Hizmet" value={data.totalServices} color="#8b5cf6" />
+      {/* Toolbar */}
+      <div className="agenda-toolbar">
+        <div className="agenda-nav">
+          <button className="btn-sm btn-outline" onClick={() => navigateDate(-1)}>‹</button>
+          <button className="btn-sm btn-outline" onClick={() => setDate(new Date().toISOString().slice(0, 10))}>Bugün</button>
+          <button className="btn-sm btn-outline" onClick={() => navigateDate(1)}>›</button>
+          <span className="agenda-date-label">
+            {view === 'day'
+              ? new Date(date).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+              : `${new Date(weekDays[0] || date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} — ${new Date(weekDays[6] || date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+            }
+          </span>
+        </div>
+        <div className="agenda-view-toggle">
+          <button className={`btn-sm ${view === 'day' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('day')}>Günlük</button>
+          <button className={`btn-sm ${view === 'week' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('week')}>Haftalık</button>
+        </div>
       </div>
 
-      {/* Pending Actions */}
-      {data.pendingBookings > 0 && (
-        <div className="spa-section">
-          <h3 className="spa-section-title">⏳ Onay Bekleyen Randevular</h3>
-          <div className="spa-list">
-            {data.recentBookings.map((b) => (
-              <div key={b.id} className="spa-list-item">
-                <div className="spa-list-item-left">
-                  <strong>{b.user ? `${b.user.firstName} ${b.user.lastName}` : '—'}</strong>
-                  <span className="spa-list-meta">{b.service?.name || '—'} · {b.therapist?.name || 'Masöz atanmadı'}</span>
+      {loading && <p className="muted">Yükleniyor...</p>}
+
+      {!loading && agenda.length === 0 && (
+        <div className="empty-state"><span className="empty-icon">💆</span><p>Aktif masöz bulunamadı. Önce masöz ekleyin ve çalışma slotları oluşturun.</p></div>
+      )}
+
+      {/* Daily Grid View */}
+      {!loading && agenda.length > 0 && view === 'day' && (
+        <div className="agenda-grid-wrapper">
+          <div className="agenda-grid">
+            {/* Header row - hours */}
+            <div className="agenda-row agenda-header-row">
+              <div className="agenda-cell agenda-label-cell">Masöz</div>
+              {hours.map((h) => (
+                <div key={h} className="agenda-cell agenda-hour-cell">{h}</div>
+              ))}
+            </div>
+            {/* Therapist rows */}
+            {agenda.map((t) => {
+              const daySlots = t.slots.filter((s) => s.date === date);
+              return (
+                <div key={t.therapistId} className="agenda-row">
+                  <div className="agenda-cell agenda-label-cell">
+                    <div className="agenda-therapist-name">{t.therapistName}</div>
+                    <div className="agenda-therapist-stat">
+                      {daySlots.filter(s => s.booked).length}/{daySlots.length} dolu
+                    </div>
+                  </div>
+                  {hours.map((h) => {
+                    const slot = daySlots.find((s) => s.startTime === h);
+                    if (!slot) return <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-empty" />;
+                    if (slot.booked && slot.reservation) {
+                      return (
+                        <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-booked" title={`${slot.reservation.memberName || 'Üye'} · ${slot.startTime}–${slot.endTime}`}>
+                          <span className="agenda-slot-name">{slot.reservation.memberName?.split(' ')[0] || '—'}</span>
+                          <span className="agenda-slot-time">{slot.startTime}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={h} className="agenda-cell agenda-slot-cell agenda-slot-available" title={`Müsait: ${slot.startTime}–${slot.endTime}`}>
+                        <span className="agenda-slot-time">{slot.startTime}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="spa-list-item-right">
-                  <span className="spa-date">{b.bookingDate}</span>
-                  <span className="spa-time">{b.timeSlot}</span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Weekly Grid View */}
+      {!loading && agenda.length > 0 && view === 'week' && (
+        <div className="agenda-grid-wrapper">
+          <div className="agenda-grid agenda-grid-week">
+            {/* Header row - days */}
+            <div className="agenda-row agenda-header-row">
+              <div className="agenda-cell agenda-label-cell">Masöz</div>
+              {weekDays.map((d, i) => (
+                <div key={d} className={`agenda-cell agenda-hour-cell ${d === new Date().toISOString().slice(0, 10) ? 'agenda-today' : ''}`}>
+                  <div>{DAY_NAMES[i]}</div>
+                  <div style={{ fontWeight: 700 }}>{new Date(d).getDate()}</div>
                 </div>
-              </div>
-            ))}
-            {data.pendingAppointments.map((a) => (
-              <div key={a.id} className="spa-list-item">
-                <div className="spa-list-item-left">
-                  <strong>{a.user.firstName} {a.user.lastName}</strong>
-                  <span className="spa-list-meta">{a.service.name} · Oda Randevusu</span>
+              ))}
+            </div>
+            {/* Therapist rows */}
+            {agenda.map((t) => (
+              <div key={t.therapistId} className="agenda-row">
+                <div className="agenda-cell agenda-label-cell">
+                  <div className="agenda-therapist-name">{t.therapistName}</div>
                 </div>
-                <div className="spa-list-item-right">
-                  <span className="spa-date">{a.slot.date}</span>
-                  <span className="spa-time">{a.slot.startTime}–{a.slot.endTime}</span>
-                </div>
+                {weekDays.map((d) => {
+                  const daySlots = t.slots.filter((s) => s.date === d);
+                  const booked = daySlots.filter(s => s.booked).length;
+                  const total = daySlots.length;
+                  if (total === 0) return <div key={d} className="agenda-cell agenda-slot-cell agenda-slot-empty"><span className="agenda-slot-time">—</span></div>;
+                  const pct = Math.round((booked / total) * 100);
+                  return (
+                    <div key={d} className={`agenda-cell agenda-slot-cell ${pct >= 80 ? 'agenda-slot-booked' : pct > 0 ? 'agenda-slot-partial' : 'agenda-slot-available'}`}>
+                      <span className="agenda-slot-name">{booked}/{total}</span>
+                      <span className="agenda-slot-time">{pct}%</span>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
-  return (
-    <div className="stat-card">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-        <span style={{ fontSize: '1.2rem' }}>{icon}</span>
-        <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>{label}</span>
-      </div>
-      <div style={{ fontSize: '1.75rem', fontWeight: 800, color }}>{value}</div>
     </div>
   );
 }

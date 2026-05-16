@@ -3888,3 +3888,131 @@ button.primary:disabled {
   background: #fee2e2;
   color: #991b1b;
 }
+
+
+/* ─── Agenda Calendar Grid ─────────────────────────────────────────────────── */
+.agenda-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.agenda-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.agenda-date-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  margin-left: 0.75rem;
+}
+.agenda-view-toggle {
+  display: flex;
+  gap: 0.4rem;
+}
+.agenda-grid-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+.agenda-grid {
+  display: grid;
+  grid-template-columns: 140px repeat(13, minmax(70px, 1fr));
+  min-width: 1100px;
+}
+.agenda-grid-week {
+  grid-template-columns: 140px repeat(7, 1fr);
+  min-width: 700px;
+}
+.agenda-row {
+  display: contents;
+}
+.agenda-header-row .agenda-cell {
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.agenda-cell {
+  padding: 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  font-size: 0.78rem;
+}
+.agenda-label-cell {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 2;
+  align-items: flex-start;
+  padding: 0.6rem 0.75rem;
+  border-right: 2px solid var(--border);
+}
+.agenda-header-row .agenda-label-cell {
+  background: var(--surface);
+}
+.agenda-therapist-name {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+.agenda-therapist-stat {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.agenda-hour-cell {
+  text-align: center;
+}
+.agenda-today {
+  background: rgba(37, 99, 235, 0.06) !important;
+  color: var(--accent) !important;
+}
+
+/* Slot states */
+.agenda-slot-cell {
+  border-radius: 0;
+  cursor: default;
+  transition: background 0.1s;
+}
+.agenda-slot-empty {
+  background: #fafafa;
+}
+.agenda-slot-available {
+  background: #f0fdf4;
+  border-left: 3px solid #22c55e;
+}
+.agenda-slot-booked {
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+}
+.agenda-slot-partial {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+.agenda-slot-name {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.agenda-slot-time {
+  font-size: 0.65rem;
+  color: var(--muted);
+}

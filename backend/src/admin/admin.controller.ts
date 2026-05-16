@@ -548,6 +548,18 @@ export class AdminController {
 
   // ─── Masöz Ajanda Yönetimi ───────────────────────────────────────────────────
 
+  /** Tüm masözlerin ajandası (günlük/haftalık grid için) */
+  @Get('therapists/agenda')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTherapistsAgenda(
+    @CurrentUser() admin: User,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.adminMembers.listAllTherapistsAgenda(admin.tenantId, from, to);
+  }
+
   @Get('therapists/schedules')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMINISTRATOR)

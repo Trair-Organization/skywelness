@@ -1184,6 +1184,72 @@ export class AdminMembersService {
 
   // ─── Masöz Takvim Yönetimi (Eğitmenlerle aynı mantık) ────────────────────────
 
+  /** Tüm aktif masözlerin belirli tarih aralığı için ajanda verisi */
+  async listAllTherapistsAgenda(tenantId: string, from: string, to: string) {
+    const therapists = await this.spaTherapistsRepo.find({
+      where: { tenantId, active: true },
+      order: { name: 'ASC' },
+    });
+
+    const allSlots = await this.availabilityRepo
+      .createQueryBuilder('a')
+      .where('a.spaTherapistId IN (:...ids)', { ids: therapists.map((t) => t.id) })
+      .andWhere('a.date >= :from', { from })
+      .andWhere('a.date <= :to', { to })
+      .orderBy('a.date', 'ASC')
+      .addOrderBy('a.startTime', 'ASC')
+      .getMany();
+
+    const allReservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .where('r.spaTherapistId IN (:...ids)', { ids: therapists.map((t) => t.id) })
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :fromTs', { fromTs: new Date(`${from}T00:00:00`) })
+      .andWhere('r.startTime <= :toTs', { toTs: new Date(`${to}T23:59:59`) })
+      .getMany();
+
+    return therapists.map((therapist) => {
+      const slots = allSlots.filter((s) => s.spaTherapistId === therapist.id);
+      const reservations = allReservations.filter((r) => r.spaTherapistId === therapist.id);
+
+      return {
+        therapistId: therapist.id,
+        therapistName: therapist.name,
+        photoUrl: therapist.photoUrl,
+        slots: slots.map((slot) => {
+          const dateStr =
+            typeof slot.date === 'string'
+              ? slot.date.slice(0, 10)
+              : new Date(slot.date).toISOString().slice(0, 10);
+          const slotStart = new Date(`${dateStr}T${slot.startTime}`);
+          const slotEnd = new Date(`${dateStr}T${slot.endTime}`);
+          const reservation = reservations.find(
+            (r) => r.startTime >= slotStart && r.startTime < slotEnd,
+          );
+          return {
+            id: slot.id,
+            date: dateStr,
+            startTime: slot.startTime.slice(0, 5),
+            endTime: slot.endTime.slice(0, 5),
+            available: slot.available,
+            booked: !!reservation,
+            reservation: reservation
+              ? {
+                  id: reservation.id,
+                  memberName: reservation.user
+                    ? `${reservation.user.firstName} ${reservation.user.lastName}`
+                    : null,
+                  status: reservation.status,
+                }
+              : null,
+          };
+        }),
+      };
+    });
+  }
+
   async listTherapistCalendar(tenantId: string, therapistId: string, from: string, to: string) {
     const therapist = await this.spaTherapistsRepo.findOne({
       where: { id: therapistId, tenantId },
