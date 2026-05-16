@@ -3,7 +3,7 @@ import { apiJson, ApiError } from '../lib/api';
 import { TrainersManagementPage } from './TrainersManagementPage';
 import { PtAgendaTab } from './PtAgendaTab';
 
-type TabType = 'agenda' | 'reservations' | 'trainers' | 'packages' | 'reports';
+type TabType = 'agenda' | 'reservations' | 'trainers' | 'students' | 'packages' | 'reports';
 
 export function PtManagementPage() {
   const [activeTab, setActiveTab] = useState<TabType>('agenda');
@@ -12,6 +12,7 @@ export function PtManagementPage() {
     { key: 'agenda', icon: '📅', label: 'Ajanda' },
     { key: 'reservations', icon: '📋', label: 'Randevu Yönetimi' },
     { key: 'trainers', icon: '🏋️', label: 'Eğitmenler' },
+    { key: 'students', icon: '👥', label: 'Öğrenciler' },
     { key: 'packages', icon: '📦', label: 'PT Paketleri' },
     { key: 'reports', icon: '📊', label: 'Raporlar' },
   ];
@@ -38,6 +39,7 @@ export function PtManagementPage() {
       {activeTab === 'agenda' && <PtAgendaTab />}
       {activeTab === 'reservations' && <PtReservationsTab />}
       {activeTab === 'trainers' && <TrainersManagementPage embedded />}
+      {activeTab === 'students' && <PtStudentsTab />}
       {activeTab === 'packages' && <PtPackagesTab />}
       {activeTab === 'reports' && <PtReportsTab />}
     </div>
@@ -107,6 +109,124 @@ function PtReservationsTab() {
   );
 }
 
+
+// ─── PT Students Tab ────────────────────────────────────────────────────────────
+
+type StudentRow = {
+  memberId: string; memberName: string | null; memberPhone: string | null; memberEmail: string | null;
+  trainers: string[];
+  packageStartDate: string | null; packageExpiresAt: string | null;
+  totalSessions: number; remainingSessions: number; usedSessions: number; totalCompletedAll: number;
+  lastLessonDate: string | null; daysSinceLastLesson: number | null;
+  recentLessons30d: number; weeklyAverage: number;
+  riskLevel: 'green' | 'yellow' | 'red'; hasActivePackage: boolean;
+};
+
+function PtStudentsTab() {
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'green' | 'yellow' | 'red'>('all');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    apiJson<StudentRow[]>('/admin/pt-students').then(setStudents).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const filtered = students.filter(s => {
+    if (filter !== 'all' && s.riskLevel !== filter) return false;
+    if (search && !(s.memberName || '').toLowerCase().includes(search.toLowerCase()) && !(s.trainers.join(' ')).toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalActive = students.length;
+  const riskCount = students.filter(s => s.riskLevel === 'red').length;
+  const warningCount = students.filter(s => s.riskLevel === 'yellow').length;
+  const thisWeekLessons = students.reduce((s, st) => s + st.recentLessons30d, 0);
+
+  if (loading) return <p className="muted">Yükleniyor...</p>;
+
+  return (
+    <div>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="stat-card"><div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>Aktif Öğrenci</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)' }}>{totalActive}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>Risk Grubu</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#dc2626' }}>{riskCount}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>Uyarı</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#d97706' }}>{warningCount}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>30 Gün Ders</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669' }}>{thisWeekLessons}</div></div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {[{ k: 'all', l: 'Tümü' }, { k: 'red', l: '🔴 Risk' }, { k: 'yellow', l: '🟡 Uyarı' }, { k: 'green', l: '🟢 Düzenli' }].map(f => (
+          <button key={f.k} className={`btn-sm ${filter === f.k ? 'btn-primary' : 'btn-outline'}`} style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => setFilter(f.k as typeof filter)}>{f.l}</button>
+        ))}
+        <input type="text" className="form-input" style={{ minWidth: 140, padding: '4px 10px', fontSize: '0.75rem', height: 28 }} placeholder="Üye veya eğitmen ara..." value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty-state"><span className="empty-icon">👥</span><p>Bu filtrede öğrenci yok</p></div>
+      ) : (
+        <div className="members-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Durum</th>
+                <th>Öğrenci</th>
+                <th>Eğitmen</th>
+                <th>Paket</th>
+                <th>Kalan</th>
+                <th>Son Ders</th>
+                <th>30g Ders</th>
+                <th>Haftalık Ort.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(s => (
+                <tr key={s.memberId}>
+                  <td>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', display: 'inline-block', background: s.riskLevel === 'red' ? '#dc2626' : s.riskLevel === 'yellow' ? '#f59e0b' : '#22c55e' }}></span>
+                  </td>
+                  <td>
+                    <strong>{s.memberName || '—'}</strong>
+                    {s.memberPhone && <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{s.memberPhone}</div>}
+                  </td>
+                  <td style={{ fontSize: '0.78rem' }}>{s.trainers.join(', ') || '—'}</td>
+                  <td>
+                    {s.hasActivePackage ? (
+                      <div style={{ fontSize: '0.75rem' }}>
+                        <div>Bitiş: {s.packageExpiresAt ? new Date(s.packageExpiresAt).toLocaleDateString('tr-TR') : '—'}</div>
+                      </div>
+                    ) : <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: 600 }}>Paket yok</span>}
+                  </td>
+                  <td>
+                    {s.hasActivePackage ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden', minWidth: 30 }}>
+                          <div style={{ width: `${s.totalSessions > 0 ? Math.round((s.usedSessions / s.totalSessions) * 100) : 0}%`, height: '100%', background: s.remainingSessions > 2 ? '#22c55e' : s.remainingSessions > 0 ? '#f59e0b' : '#ef4444', borderRadius: 3 }}></div>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{s.remainingSessions}</span>
+                      </div>
+                    ) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                  </td>
+                  <td>
+                    {s.lastLessonDate ? (
+                      <div>
+                        <div style={{ fontSize: '0.75rem' }}>{new Date(s.lastLessonDate).toLocaleDateString('tr-TR')}</div>
+                        <div style={{ fontSize: '0.68rem', color: s.daysSinceLastLesson! > 14 ? '#dc2626' : 'var(--muted)' }}>{s.daysSinceLastLesson} gün önce</div>
+                      </div>
+                    ) : <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Henüz yok</span>}
+                  </td>
+                  <td style={{ fontWeight: 700, textAlign: 'center' }}>{s.recentLessons30d}</td>
+                  <td style={{ fontWeight: 700, textAlign: 'center', color: s.weeklyAverage >= 2 ? '#059669' : s.weeklyAverage >= 1 ? '#d97706' : '#dc2626' }}>{s.weeklyAverage}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── PT Packages Tab ────────────────────────────────────────────────────────────
 

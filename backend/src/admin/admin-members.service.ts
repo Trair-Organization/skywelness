@@ -919,6 +919,104 @@ export class AdminMembersService {
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
 
+  /** Admin: PT öğrenci gelişim listesi (tüm aktif PT öğrencileri) */
+  async listPtStudents(tenantId: string) {
+    // Tüm aktif trainer-member link'leri
+    const links = await this.trainerMemberLinksRepo.find({
+      where: { tenantId, status: 'active' },
+      relations: ['memberUser', 'trainer', 'trainer.user'],
+    });
+    if (links.length === 0) return [];
+
+    const memberIds = [...new Set(links.map(l => l.memberUserId))];
+
+    // PT paketleri (aktif + depleted)
+    const packages = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.packageType', 'pt')
+      .where('p.userId IN (:...ids)', { ids: memberIds })
+      .andWhere('pt.tenantId = :tenantId', { tenantId })
+      .andWhere('pt.sessionType = :st', { st: 'personal_training' })
+      .orderBy('p.createdAt', 'DESC')
+      .getMany();
+
+    // Son ders tarihi + toplam tamamlanan
+    const lastLessons = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .select('r.userId', 'userId')
+      .addSelect('MAX(r.startTime)', 'lastLesson')
+      .addSelect('COUNT(r.id)', 'totalCompleted')
+      .where('r.userId IN (:...ids)', { ids: memberIds })
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.trainerId IS NOT NULL')
+      .andWhere('r.status = :status', { status: 'completed' })
+      .groupBy('r.userId')
+      .getRawMany<{ userId: string; lastLesson: string; totalCompleted: string }>();
+    const lastLessonMap = new Map<string, { lastLesson: string; totalCompleted: number }>();
+    for (const r of lastLessons) lastLessonMap.set(r.userId, { lastLesson: r.lastLesson, totalCompleted: parseInt(r.totalCompleted) });
+
+    // Son 30 gün ders sayısı (devam oranı)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentLessons = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .select('r.userId', 'userId')
+      .addSelect('COUNT(r.id)', 'recentCount')
+      .where('r.userId IN (:...ids)', { ids: memberIds })
+      .andWhere('r.tenantId = :tenantId', { tenantId })
+      .andWhere('r.trainerId IS NOT NULL')
+      .andWhere('r.status IN (:...statuses)', { statuses: ['completed', 'confirmed'] })
+      .andWhere('r.startTime >= :since', { since: thirtyDaysAgo })
+      .groupBy('r.userId')
+      .getRawMany<{ userId: string; recentCount: string }>();
+    const recentMap = new Map<string, number>();
+    for (const r of recentLessons) recentMap.set(r.userId, parseInt(r.recentCount));
+
+    // Unique members
+    const memberMap = new Map<string, typeof links[0]>();
+    for (const l of links) { if (!memberMap.has(l.memberUserId)) memberMap.set(l.memberUserId, l); }
+
+    return [...memberMap.values()].map(l => {
+      const memberPkgs = packages.filter(p => p.userId === l.memberUserId);
+      const activePkg = memberPkgs.find(p => p.status === 'active');
+      const totalRemaining = memberPkgs.filter(p => p.status === 'active').reduce((s, p) => s + p.remainingSessions, 0);
+      const totalSessions = activePkg ? activePkg.packageType.sessionCount : 0;
+      const lessonData = lastLessonMap.get(l.memberUserId);
+      const recent = recentMap.get(l.memberUserId) || 0;
+      const daysSinceLastLesson = lessonData?.lastLesson ? Math.floor((Date.now() - new Date(lessonData.lastLesson).getTime()) / 86400000) : null;
+      const trainers = links.filter(link => link.memberUserId === l.memberUserId).map(link => link.trainer?.user ? `${link.trainer.user.firstName} ${link.trainer.user.lastName}` : '').filter(Boolean);
+
+      let riskLevel: 'green' | 'yellow' | 'red' = 'green';
+      if (daysSinceLastLesson !== null && daysSinceLastLesson > 21) riskLevel = 'red';
+      else if (daysSinceLastLesson !== null && daysSinceLastLesson > 10) riskLevel = 'yellow';
+      else if (totalRemaining === 0) riskLevel = 'red';
+      else if (totalRemaining <= 2) riskLevel = 'yellow';
+
+      return {
+        memberId: l.memberUserId,
+        memberName: l.memberUser ? `${l.memberUser.firstName} ${l.memberUser.lastName}` : null,
+        memberPhone: l.memberUser?.phone || null,
+        memberEmail: l.memberUser?.email || null,
+        trainers,
+        packageStartDate: activePkg?.createdAt || null,
+        packageExpiresAt: activePkg?.expiresAt || null,
+        totalSessions,
+        remainingSessions: totalRemaining,
+        usedSessions: totalSessions - totalRemaining,
+        totalCompletedAll: lessonData?.totalCompleted || 0,
+        lastLessonDate: lessonData?.lastLesson || null,
+        daysSinceLastLesson,
+        recentLessons30d: recent,
+        weeklyAverage: Math.round((recent / 4) * 10) / 10,
+        riskLevel,
+        hasActivePackage: !!activePkg,
+      };
+    }).sort((a, b) => {
+      const riskOrder = { red: 0, yellow: 1, green: 2 };
+      return riskOrder[a.riskLevel] - riskOrder[b.riskLevel];
+    });
+  }
+
   /** Admin: Tüm PT randevularını listele */
   async listPtReservations(tenantId: string, status?: string) {
     const qb = this.reservationsRepo
