@@ -940,13 +940,11 @@ function ServicesTab() {
 type SpaPackageRow = {
   id: string;
   name: string;
-  description: string | null;
   sessionCount: number;
   price: string;
   validityDays: number;
-  applicableCategories: string[];
+  sessionType: string;
   active: boolean;
-  sortOrder: number;
 };
 
 type PackageSaleRow = {
@@ -971,21 +969,20 @@ function PackagesTab() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [sessionCount, setSessionCount] = useState(10);
   const [price, setPrice] = useState('');
-  const [validityDays, setValidityDays] = useState(30);
+  const [validityDays, setValidityDays] = useState(365);
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [pkgs, salesData] = await Promise.all([
-        apiJson<SpaPackageRow[]>('/spa/admin/packages'),
+      const [pkgTypes, salesData] = await Promise.all([
+        apiJson<SpaPackageRow[]>('/admin/package-types'),
         apiJson<PackageSaleRow[]>('/admin/spa-package-sales'),
       ]);
-      setPackages(pkgs);
+      setPackages(pkgTypes.filter(p => p.sessionType === 'massage'));
       setSales(salesData);
     } catch { /* */ }
     finally { setLoading(false); }
@@ -993,17 +990,17 @@ function PackagesTab() {
 
   useEffect(() => { queueMicrotask(() => { void loadAll(); }); }, [loadAll]);
 
-  function resetForm() { setEditId(null); setName(''); setDescription(''); setSessionCount(10); setPrice(''); setValidityDays(30); setActive(true); setShowForm(false); }
-  function startEdit(p: SpaPackageRow) { setEditId(p.id); setName(p.name); setDescription(p.description || ''); setSessionCount(p.sessionCount); setPrice(p.price); setValidityDays(p.validityDays); setActive(p.active); setShowForm(true); }
+  function resetForm() { setEditId(null); setName(''); setSessionCount(10); setPrice(''); setValidityDays(365); setActive(true); setShowForm(false); }
+  function startEdit(p: SpaPackageRow) { setEditId(p.id); setName(p.name); setSessionCount(p.sessionCount); setPrice(p.price); setValidityDays(p.validityDays); setActive(p.active); setShowForm(true); }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !price) return;
     setSaving(true);
     try {
-      const body = { name: name.trim(), description: description.trim() || null, sessionCount, price: parseFloat(price), validityDays, active };
-      if (editId) { await apiJson(`/spa/admin/packages/${editId}`, { method: 'PATCH', body: JSON.stringify(body) }); }
-      else { await apiJson('/spa/admin/packages', { method: 'POST', body: JSON.stringify(body) }); }
+      const body = { name: name.trim(), sessionCount, price: parseFloat(price), validityDays, sessionType: 'massage', active };
+      if (editId) { await apiJson(`/admin/package-types/${editId}`, { method: 'PATCH', body: JSON.stringify(body) }); }
+      else { await apiJson('/admin/package-types', { method: 'POST', body: JSON.stringify(body) }); }
       resetForm(); await loadAll();
     } catch (err) { alert(err instanceof Error ? err.message : 'Hata'); }
     finally { setSaving(false); }
@@ -1087,11 +1084,11 @@ function PackagesTab() {
 
           {showForm && (
             <form onSubmit={(e) => void handleSave(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
-              <h4>{editId ? '✏️ Paket Düzenle' : '+ Yeni Paket'}</h4>
+              <h4>{editId ? '✏️ Paket Düzenle' : '+ Yeni Masaj Paketi'}</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   <span className="form-label">Paket Adı *</span>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn: 10 Seans Masaj" required className="form-input" />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn: 10 Seans Masaj Paketi" required className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   <span className="form-label">Durum</span>
@@ -1101,10 +1098,6 @@ function PackagesTab() {
                   </select>
                 </label>
               </div>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <span className="form-label">Açıklama</span>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Paket açıklaması..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
-              </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   <span className="form-label">Seans Sayısı *</span>
@@ -1112,7 +1105,7 @@ function PackagesTab() {
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   <span className="form-label">Fiyat (₺) *</span>
-                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="15000" required className="form-input" />
+                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="18000" required className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   <span className="form-label">Geçerlilik (gün) *</span>
@@ -1145,7 +1138,6 @@ function PackagesTab() {
                       <span className={`service-status ${p.active ? 'active' : 'inactive'}`}>{p.active ? 'Aktif' : 'Pasif'}</span>
                     </div>
                     <h3 className="service-name">{p.name}</h3>
-                    {p.description && <p className="service-desc">{p.description.slice(0, 80)}</p>}
                     <div className="service-meta">
                       <span>📅 {p.validityDays} gün</span>
                       <span className="service-price">₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
@@ -1154,7 +1146,7 @@ function PackagesTab() {
                       <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Seans/₺{Math.round(perSession).toLocaleString('tr-TR')} · {soldCount} satış</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button className="btn-sm btn-outline" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => startEdit(p)}>✏️</button>
-                        <button className="btn-sm btn-danger" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => { if (confirm(`"${p.name}" pasif yapılacak. Emin misiniz?`)) { void apiJson(`/spa/admin/packages/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: false }) }).then(() => void loadAll()); } }}>🗑</button>
+                        <button className="btn-sm btn-danger" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => { if (confirm(`"${p.name}" pasif yapılacak?`)) { void apiJson(`/admin/package-types/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: false }) }).then(() => void loadAll()); } }}>🗑</button>
                       </div>
                     </div>
                   </div>
