@@ -1014,6 +1014,49 @@ function PackagesTab() {
   const totalRevenue = sales.reduce((sum, s) => sum + parseFloat(s.price), 0);
   const activePkgs = sales.filter(s => s.status === 'active').length;
 
+  // Paket Yükleme Modal
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [loadMembers, setLoadMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null; massageSessions: number }>>([]);
+  const [loadMemberSearch, setLoadMemberSearch] = useState('');
+  const [loadSelectedMember, setLoadSelectedMember] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
+  const [loadSelectedPkg, setLoadSelectedPkg] = useState('');
+  const [loadPackageTypes, setLoadPackageTypes] = useState<Array<{ id: string; name: string; sessionCount: number; price: string; validityDays: number }>>([]);
+  const [loadSaving, setLoadSaving] = useState(false);
+
+  async function openLoadModal() {
+    setShowLoadModal(true);
+    setLoadSelectedMember(null);
+    setLoadSelectedPkg('');
+    setLoadMemberSearch('');
+    try {
+      const [members, pkgTypes] = await Promise.all([
+        apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null; massageSessions: number }>>('/admin/members?status=active'),
+        apiJson<Array<{ id: string; name: string; sessionCount: number; price: string; validityDays: number; sessionType: string; active: boolean }>>('/admin/package-types'),
+      ]);
+      setLoadMembers(members);
+      setLoadPackageTypes(pkgTypes.filter(pt => pt.sessionType === 'massage' && pt.active));
+    } catch { /* */ }
+  }
+
+  async function handleLoadPackage() {
+    if (!loadSelectedMember || !loadSelectedPkg) return;
+    setLoadSaving(true);
+    try {
+      await apiJson(`/admin/members/${loadSelectedMember.id}/assign-package`, {
+        method: 'POST',
+        body: JSON.stringify({ packageTypeId: loadSelectedPkg }),
+      });
+      setShowLoadModal(false);
+      await loadAll();
+      alert('✅ Paket başarıyla yüklendi');
+    } catch (err) { alert(err instanceof Error ? err.message : 'Paket yüklenemedi'); }
+    finally { setLoadSaving(false); }
+  }
+
+  const filteredLoadMembers = loadMemberSearch.length > 0
+    ? loadMembers.filter(m => `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(loadMemberSearch.toLowerCase())).slice(0, 10)
+    : loadMembers.slice(0, 10);
+
   if (loading) return <p className="muted">Yükleniyor...</p>;
 
   return (
@@ -1026,9 +1069,12 @@ function PackagesTab() {
       </div>
 
       {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', alignItems: 'center' }}>
         <button className={`btn-sm ${subTab === 'definitions' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('definitions')}>📦 Paket Tanımları ({packages.length})</button>
         <button className={`btn-sm ${subTab === 'sales' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('sales')}>🧾 Satış Geçmişi ({sales.length})</button>
+        <div style={{ marginLeft: 'auto' }}>
+          <button className="btn-sm btn-primary" onClick={() => void openLoadModal()}>🎫 Üyeye Paket Yükle</button>
+        </div>
       </div>
 
       {/* Definitions Sub-tab */}
@@ -1165,6 +1211,80 @@ function PackagesTab() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Paket Yükleme Modal */}
+      {showLoadModal && (
+        <div className="agenda-modal-overlay" onClick={() => setShowLoadModal(false)}>
+          <div className="agenda-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="agenda-modal-header">
+              <h3>🎫 Üyeye Paket Yükle</h3>
+              <button className="agenda-modal-close" onClick={() => setShowLoadModal(false)}>✕</button>
+            </div>
+
+            <div className="agenda-modal-form">
+              {/* Paket Seçimi */}
+              <label className="form-label">Paket Seç *</label>
+              <select className="form-input" value={loadSelectedPkg} onChange={(e) => setLoadSelectedPkg(e.target.value)}>
+                <option value="">— Paket seçin —</option>
+                {loadPackageTypes.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.sessionCount} seans · ₺{parseFloat(p.price).toLocaleString('tr-TR')})</option>
+                ))}
+              </select>
+
+              {/* Üye Seçimi */}
+              <label className="form-label" style={{ marginTop: '0.75rem' }}>Üye Seç *</label>
+              <input type="text" className="form-input" placeholder="İsim veya e-posta ile ara..." value={loadMemberSearch} onChange={(e) => setLoadMemberSearch(e.target.value)} />
+
+              {loadSelectedMember ? (
+                <div className="agenda-selected-member">
+                  ✅ {loadSelectedMember.firstName} {loadSelectedMember.lastName}
+                  <button className="btn-sm btn-outline" style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => setLoadSelectedMember(null)}>Değiştir</button>
+                </div>
+              ) : (
+                <div className="agenda-member-list">
+                  {filteredLoadMembers.map((m) => (
+                    <div key={m.id} className="agenda-member-item" onClick={() => setLoadSelectedMember(m)}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <div>
+                          <strong>{m.firstName} {m.lastName}</strong>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'block' }}>{m.email}</span>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: m.massageSessions > 0 ? '#dcfce7' : '#f1f5f9', color: m.massageSessions > 0 ? '#166534' : '#64748b' }}>
+                          {m.massageSessions > 0 ? `💆 ${m.massageSessions}` : 'Paket yok'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Özet */}
+              {loadSelectedPkg && loadSelectedMember && (() => {
+                const pkg = loadPackageTypes.find(p => p.id === loadSelectedPkg);
+                if (!pkg) return null;
+                return (
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 4 }}>Özet</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
+                      {loadSelectedMember.firstName} {loadSelectedMember.lastName} → {pkg.name}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>
+                      {pkg.sessionCount} seans · ₺{parseFloat(pkg.price).toLocaleString('tr-TR')} · {pkg.validityDays} gün geçerli
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button className="btn-sm btn-primary" disabled={!loadSelectedMember || !loadSelectedPkg || loadSaving} onClick={() => void handleLoadPackage()}>
+                  {loadSaving ? '⏳...' : '✓ Paketi Yükle'}
+                </button>
+                <button className="btn-sm btn-outline" onClick={() => setShowLoadModal(false)}>İptal</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
