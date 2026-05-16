@@ -127,6 +127,10 @@ function AgendaTab() {
   const [bulkStartHour, setBulkStartHour] = useState(11);
   const [bulkEndHour, setBulkEndHour] = useState(22);
 
+  // Drag & Drop
+  const [dragData, setDragData] = useState<{ reservationId: string; fromTherapistId: string; fromHour: string } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ therapistId: string; hour: string } | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -266,6 +270,54 @@ function AgendaTab() {
     finally { setActionLoading(false); }
   }
 
+  // ─── Drag & Drop Handlers ────────────────────────────────────────────────────
+
+  function handleDragStart(e: React.DragEvent, reservationId: string, therapistId: string, hour: string) {
+    setDragData({ reservationId, fromTherapistId: therapistId, fromHour: hour });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', reservationId);
+  }
+
+  function handleDragOver(e: React.DragEvent, therapistId: string, hour: string) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget({ therapistId, hour });
+  }
+
+  function handleDragLeave() {
+    setDropTarget(null);
+  }
+
+  async function handleDrop(e: React.DragEvent, targetTherapistId: string, targetHour: string) {
+    e.preventDefault();
+    setDropTarget(null);
+    if (!dragData) return;
+
+    const { reservationId, fromTherapistId, fromHour } = dragData;
+    setDragData(null);
+
+    // Aynı yere bırakıldıysa işlem yapma
+    if (fromTherapistId === targetTherapistId && fromHour === targetHour) return;
+
+    const endH = String(parseInt(targetHour) + 1).padStart(2, '0');
+    const newEndTime = `${endH}:00`;
+
+    try {
+      await apiJson(`/admin/therapists/reservations/${reservationId}/reschedule`, {
+        method: 'POST',
+        body: JSON.stringify({ newDate: date, newStartTime: targetHour, newEndTime, therapistId: targetTherapistId !== fromTherapistId ? targetTherapistId : undefined }),
+      });
+      void load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Taşıma başarısız');
+    }
+  }
+
+  function handleDragEnd() {
+    setDragData(null);
+    setDropTarget(null);
+  }
+
   // Grid config - fully dynamic: grid hours adapt to actual slot data
   const filteredAgenda = filterTherapist === 'all' ? agenda : agenda.filter(t => t.therapistId === filterTherapist);
   const allSlotTimes = filteredAgenda.flatMap(t => t.slots.filter(s => s.date === date).map(s => parseInt(s.startTime)));
@@ -370,14 +422,14 @@ function AgendaTab() {
                       const slot = daySlots.find(s => s.startTime === h);
                       if (!slot) {
                         return (
-                          <td key={t.therapistId} className="agenda-td agenda-td-empty" onClick={() => openSlotMenu(null, t, h)} title="Slot yok — Tıkla: Ekle">
-                            <span className="agenda-empty-plus">+</span>
+                          <td key={t.therapistId} className={`agenda-td agenda-td-empty ${dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? 'agenda-td-drop-target' : ''}`} onClick={() => openSlotMenu(null, t, h)} onDragOver={(e) => handleDragOver(e, t.therapistId, h)} onDragLeave={handleDragLeave} onDrop={(e) => void handleDrop(e, t.therapistId, h)} title="Slot yok — Tıkla: Ekle / Bırak: Taşı">
+                            <span className="agenda-empty-plus">{dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? '⬇' : '+'}</span>
                           </td>
                         );
                       }
                       if (slot.booked && slot.reservation) {
                         return (
-                          <td key={t.therapistId} className="agenda-td agenda-td-booked" onClick={() => openSlotMenu(slot, t, h)} title={`${slot.reservation.memberName || 'Üye'} — Tıkla: İşlemler`}>
+                          <td key={t.therapistId} className="agenda-td agenda-td-booked agenda-td-draggable" draggable onDragStart={(e) => handleDragStart(e, slot.reservation!.id, t.therapistId, h)} onDragEnd={handleDragEnd} onClick={() => openSlotMenu(slot, t, h)} title={`${slot.reservation.memberName || 'Üye'} — Sürükle: Taşı / Tıkla: İşlemler`}>
                             <div className="agenda-td-content">
                               <span className="agenda-td-name">{slot.reservation.memberName || '—'}</span>
                               <span className="agenda-td-status">{slot.reservation.status === 'confirmed' ? '✓' : '⏳'}</span>
@@ -386,8 +438,8 @@ function AgendaTab() {
                         );
                       }
                       return (
-                        <td key={t.therapistId} className="agenda-td agenda-td-free" onClick={() => openSlotMenu(slot, t, h)} title="Müsait — Tıkla: Randevu/Sil">
-                          <span className="agenda-free-label">Müsait</span>
+                        <td key={t.therapistId} className={`agenda-td agenda-td-free ${dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? 'agenda-td-drop-target' : ''}`} onClick={() => openSlotMenu(slot, t, h)} onDragOver={(e) => handleDragOver(e, t.therapistId, h)} onDragLeave={handleDragLeave} onDrop={(e) => void handleDrop(e, t.therapistId, h)} title="Müsait — Tıkla: Randevu / Bırak: Taşı">
+                          <span className="agenda-free-label">{dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? '⬇ Bırak' : 'Müsait'}</span>
                         </td>
                       );
                     })}

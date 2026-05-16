@@ -4350,3 +4350,22 @@ button.primary:disabled {
 .agenda-th-therapist {
   position: relative;
 }
+
+
+/* ─── Agenda Drag & Drop ───────────────────────────────────────────────────── */
+.agenda-td-draggable {
+  cursor: grab;
+}
+.agenda-td-draggable:active {
+  cursor: grabbing;
+  opacity: 0.6;
+}
+.agenda-td-drop-target {
+  background: #dbeafe !important;
+  border: 2px dashed #2563eb !important;
+  animation: agendaPulse 0.8s ease infinite;
+}
+@keyframes agendaPulse {
+  0%, 100% { background: #dbeafe; }
+  50% { background: #bfdbfe; }
+}
