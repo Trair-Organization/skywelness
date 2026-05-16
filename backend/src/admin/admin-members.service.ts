@@ -253,6 +253,18 @@ export class AdminMembersService {
     });
     await this.usersRepo.save(newUser);
 
+    // Invite modunda: kaynak kullanıcıya push notification gönder
+    if (mode === 'invite') {
+      const tenant = await this.tenantsRepo.findOne({ where: { id: tenantId }, select: ['id', 'name'] });
+      const clubName = tenant?.name || 'Kulüp';
+      void this.pushService.sendToUser(
+        source.id,
+        '📩 Kulüp Daveti',
+        `${clubName} sizi üye olarak davet ediyor. Uygulamadan onaylayabilirsiniz.`,
+        { type: 'club_invite', tenantId },
+      );
+    }
+
     return {
       id: newUser.id,
       publicId: newUser.publicId,
