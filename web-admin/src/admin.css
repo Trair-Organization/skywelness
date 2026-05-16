@@ -4157,3 +4157,25 @@ button.primary:disabled {
   display: flex;
   align-items: center;
 }
+
+
+/* ─── Force readable text colors on Spa page ───────────────────────────────── */
+.dashboard-page,
+.dashboard-page h1,
+.dashboard-page h2,
+.dashboard-page h3,
+.dashboard-page h4,
+.dashboard-page p,
+.dashboard-page span,
+.dashboard-page label,
+.dashboard-page td,
+.dashboard-page th {
+  color: var(--text);
+}
+.dashboard-page .muted,
+.dashboard-page .form-label,
+.dashboard-page .agenda-therapist-stat,
+.dashboard-page .agenda-slot-time,
+.dashboard-page .spa-list-meta {
+  color: var(--muted);
+}
