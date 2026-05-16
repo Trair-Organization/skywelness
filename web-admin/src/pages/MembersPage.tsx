@@ -1223,6 +1223,25 @@ export function MembersPage() {
         <SmartAddModal
           onClose={() => setSmartAddOpen(false)}
           onAdded={() => { setSmartAddOpen(false); void load(statusFilter, search); }}
+          onManualAdd={() => {
+            setSmartAddOpen(false);
+            setDetail({
+              id: '',
+              username: null,
+              firstName: '',
+              lastName: '',
+              email: '',
+              phone: null,
+              photoUrl: null,
+              accountStatus: 'active',
+              lastLogin: null,
+              createdAt: new Date().toISOString(),
+              membership: null,
+              assignedTrainers: [],
+              packages: [],
+              reservations: [],
+            });
+          }}
         />
       )}
 
@@ -2637,14 +2656,11 @@ type LookupResult = {
   existingStatus?: string | null;
 };
 
-function SmartAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
+function SmartAddModal({ onClose, onAdded, onManualAdd }: { onClose: () => void; onAdded: () => void; onManualAdd: () => void }) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LookupResult | null>(null);
   const [adding, setAdding] = useState(false);
-  const [showManual, setShowManual] = useState(false);
-  const [manualForm, setManualForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
-  const [manualSaving, setManualSaving] = useState(false);
 
   const handleSearch = async () => {
     if (query.trim().length < 3) return;
@@ -2737,7 +2753,7 @@ function SmartAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
             </p>
             <button
               style={smartStyles.manualBtn}
-              onClick={() => setShowManual(true)}
+              onClick={onManualAdd}
             >
               Manuel yeni üye oluştur →
             </button>
@@ -2788,29 +2804,9 @@ function SmartAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
           </div>
         )}
 
-        {/* Manuel Form */}
-        {showManual && (
-          <div style={{ marginTop: 16, padding: 16, border: '1px solid #e2e8f0', borderRadius: 10, background: '#fafafa' }}>
-            <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', fontWeight: 700 }}>Manuel Üye Oluştur</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <input placeholder="Ad *" value={manualForm.firstName} onChange={(e) => setManualForm({ ...manualForm, firstName: e.target.value })} style={smartStyles.formInput} />
-              <input placeholder="Soyad *" value={manualForm.lastName} onChange={(e) => setManualForm({ ...manualForm, lastName: e.target.value })} style={smartStyles.formInput} />
-              <input placeholder="E-posta" value={manualForm.email} onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })} style={smartStyles.formInput} />
-              <input placeholder="Telefon" value={manualForm.phone} onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })} style={smartStyles.formInput} />
-            </div>
-            <button
-              style={{ ...smartStyles.directBtn, marginTop: 12, width: '100%' }}
-              disabled={manualSaving}
-              onClick={() => void handleManualSave()}
-            >
-              {manualSaving ? '⏳ Kaydediliyor...' : '✓ Oluştur ve Ekle'}
-            </button>
-          </div>
-        )}
-
         {/* Alt link */}
-        {!showManual && !result?.found && !result && (
-          <button style={smartStyles.manualBtn} onClick={() => setShowManual(true)}>
+        {!result?.found && !result && (
+          <button style={smartStyles.manualBtn} onClick={onManualAdd}>
             Manuel yeni üye oluştur →
           </button>
         )}
