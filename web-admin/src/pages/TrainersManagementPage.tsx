@@ -51,10 +51,6 @@ type AvailabilityRow = {
   } | null;
 };
 
-const SESSION_TYPE_OPTIONS = [
-  { value: 'personal_training', label: 'Personal Training' },
-];
-
 const SPECIALIZATION_OPTIONS = [
   'Fonksiyonel Antrenman',
   'Kuvvet & Kondisyon',
