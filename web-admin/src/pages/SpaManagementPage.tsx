@@ -119,7 +119,7 @@ function AgendaTab() {
 
   // Action modal
   const [selectedAction, setSelectedAction] = useState<{ slot: AgendaSlot | null; therapist: TherapistAgenda; hour: string; type: 'available' | 'booked' | 'empty' } | null>(null);
-  const [actionMode, setActionMode] = useState<'menu' | 'book' | 'addSlot' | 'bulkSlot' | null>(null);
+  const [actionMode, setActionMode] = useState<'menu' | 'book' | 'addSlot' | 'bulkSlot' | 'reschedule' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [allMembers, setAllMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string | null }>>([]);
   const [memberSearch, setMemberSearch] = useState('');
@@ -130,6 +130,10 @@ function AgendaTab() {
   // Drag & Drop
   const [dragData, setDragData] = useState<{ reservationId: string; fromTherapistId: string; fromHour: string } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ therapistId: string; hour: string } | null>(null);
+
+  // Reschedule form
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleHour, setRescheduleHour] = useState('11');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -506,18 +510,7 @@ function AgendaTab() {
                 <div className="agenda-modal-actions">
                   <button className="agenda-action-btn agenda-action-complete" onClick={() => void handleCompleteReservation()} disabled={actionLoading}>✅ Tamamlandı</button>
                   <button className="agenda-action-btn agenda-action-cancel" onClick={() => void handleCancelReservation()} disabled={actionLoading}>❌ İptal Et</button>
-                  <button className="agenda-action-btn agenda-action-book" onClick={() => {
-                    const newDate = prompt('Yeni tarih (YYYY-MM-DD):', date);
-                    if (!newDate) return;
-                    const newTime = prompt('Yeni başlangıç saati (HH:00):', selectedAction?.slot?.startTime || '11:00');
-                    if (!newTime) return;
-                    const endH = String(parseInt(newTime) + 1).padStart(2, '0');
-                    setActionLoading(true);
-                    apiJson(`/admin/therapists/reservations/${selectedAction!.slot!.reservation!.id}/reschedule`, {
-                      method: 'POST',
-                      body: JSON.stringify({ newDate, newStartTime: newTime, newEndTime: `${endH}:00`, therapistId: selectedAction!.therapist.therapistId }),
-                    }).then(() => { closeModal(); void load(); }).catch((err) => alert(err instanceof Error ? err.message : 'Taşıma başarısız')).finally(() => setActionLoading(false));
-                  }} disabled={actionLoading}>📅 İleri Tarihe Al</button>
+                  <button className="agenda-action-btn agenda-action-book" onClick={() => { setRescheduleDate(date); setRescheduleHour(selectedAction?.slot?.startTime?.slice(0, 2) || '11'); setActionMode('reschedule'); }} disabled={actionLoading}>📅 İleri Tarihe Al</button>
                   <button className="agenda-action-btn agenda-action-book" onClick={() => { if (selectedAction?.slot?.reservation) { void apiJson(`/admin/reservations/${selectedAction.slot.reservation.id}/remind`, { method: 'POST' }).then(() => alert('✅ Hatırlatma gönderildi (SMS + Mail + Push)')).catch(() => alert('Gönderilemedi')); } }} disabled={actionLoading}>📱 SMS & Mail & Push Hatırlatma</button>
                 </div>
               </>
@@ -561,6 +554,51 @@ function AgendaTab() {
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                     <button className="btn-sm btn-primary" disabled={!selectedMember || actionLoading} onClick={() => void handleBookSlot()}>
                       {actionLoading ? '⏳...' : '✓ Oluştur'}
+                    </button>
+                    <button className="btn-sm btn-outline" onClick={() => setActionMode('menu')}>Geri</button>
+                  </div>
+                </div>
+              </>
+            )}
+            {/* Reschedule Mode */}
+            {actionMode === 'reschedule' && selectedAction?.slot?.reservation && (
+              <>
+                <div className="agenda-modal-header">
+                  <h3>📅 İleri Tarihe Al</h3>
+                  <button className="agenda-modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="agenda-modal-info">
+                  <span>👤 {selectedAction.slot.reservation.memberName || '—'}</span>
+                  <span>💆 {selectedAction.therapist.therapistName}</span>
+                  <span>🕐 Mevcut: {selectedAction.slot.startTime}–{selectedAction.slot.endTime}</span>
+                </div>
+                <div className="agenda-modal-form">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span className="form-label">Yeni Tarih</span>
+                      <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} className="form-input" min={new Date().toISOString().slice(0, 10)} />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span className="form-label">Yeni Saat</span>
+                      <select value={rescheduleHour} onChange={(e) => setRescheduleHour(e.target.value)} className="form-input">
+                        {Array.from({ length: 16 }, (_, i) => i + 6).map(h => <option key={h} value={String(h).padStart(2, '0')}>{String(h).padStart(2, '0')}:00–{String(h + 1).padStart(2, '0')}:00</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--surface)', borderRadius: 8, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    ℹ️ Üyeye otomatik bildirim gönderilecektir (SMS + Push).
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button className="btn-sm btn-primary" disabled={actionLoading || !rescheduleDate} onClick={() => {
+                      setActionLoading(true);
+                      const newStartTime = `${rescheduleHour}:00`;
+                      const endH = String(parseInt(rescheduleHour) + 1).padStart(2, '0');
+                      apiJson(`/admin/therapists/reservations/${selectedAction!.slot!.reservation!.id}/reschedule`, {
+                        method: 'POST',
+                        body: JSON.stringify({ newDate: rescheduleDate, newStartTime, newEndTime: `${endH}:00`, therapistId: selectedAction!.therapist.therapistId }),
+                      }).then(() => { closeModal(); void load(); }).catch((err: unknown) => alert(err instanceof Error ? err.message : 'Taşıma başarısız')).finally(() => setActionLoading(false));
+                    }}>
+                      {actionLoading ? '⏳...' : '✓ Tarihi Güncelle'}
                     </button>
                     <button className="btn-sm btn-outline" onClick={() => setActionMode('menu')}>Geri</button>
                   </div>
