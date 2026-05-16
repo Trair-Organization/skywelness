@@ -5,6 +5,7 @@ import { Between, IsNull, Not, Repository } from 'typeorm';
 import { Reservation } from '../database/entities/reservation.entity';
 import { ReservationStatus, SessionType } from '../database/enums';
 import { NotificationDispatcher } from './notification-dispatcher.service';
+import { PushService } from './push.service';
 
 /**
  * Randevu hatırlatma scheduler'ı.
@@ -22,6 +23,7 @@ export class ReservationReminderService {
   constructor(
     @InjectRepository(Reservation) private readonly reservationsRepo: Repository<Reservation>,
     private readonly notifier: NotificationDispatcher,
+    private readonly pushService: PushService,
   ) {}
 
   /** Her gün 09:00 (Europe/Istanbul). Sabah vardiyası için yeterli bir saat. */
@@ -205,6 +207,50 @@ export class ReservationReminderService {
         });
       } catch (e) {
         this.logger.error(`[TRAINER DAILY] ${data.trainerUser.id} failed: ${String(e)}`);
+      }
+    }
+  }
+
+  // ─── SEANS BİTİNCE OTOMATİK TAMAMLA + DEĞERLENDİRME BİLDİRİMİ ─────────────
+
+  /** Her 15 dakikada bir. Bitiş saati geçmiş masaj randevularını tamamla ve değerlendirme iste. */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async autoCompleteAndRequestReview() {
+    const now = new Date();
+
+    // Bitiş saati geçmiş, hala confirmed olan masaj randevuları
+    const rows = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.user', 'u')
+      .leftJoinAndSelect('r.spaTherapist', 'st')
+      .where('r.status = :status', { status: ReservationStatus.CONFIRMED })
+      .andWhere('r.spaTherapistId IS NOT NULL')
+      .andWhere('r.endTime < :now', { now })
+      .andWhere('r.endTime > :cutoff', { cutoff: new Date(now.getTime() - 24 * 60 * 60 * 1000) })
+      .getMany();
+
+    if (rows.length === 0) return;
+
+    this.logger.log(`[AUTO-COMPLETE] ${rows.length} masaj seansı tamamlanıyor`);
+
+    for (const r of rows) {
+      try {
+        // Tamamlandı yap
+        r.status = ReservationStatus.COMPLETED;
+        await this.reservationsRepo.save(r);
+
+        // Üyeye değerlendirme push bildirimi gönder
+        if (r.user) {
+          const therapistName = r.spaTherapist?.name || 'Masöz';
+          await this.pushService.sendToUser(
+            r.user.id,
+            '⭐ Seansınızı Değerlendirin',
+            `${therapistName} ile seansınız nasıldı? Deneyiminizi puanlayın.`,
+            { type: 'review_request', reservationId: r.id },
+          );
+        }
+      } catch (e) {
+        this.logger.error(`[AUTO-COMPLETE] ${r.id} failed: ${String(e)}`);
       }
     }
   }

@@ -423,32 +423,35 @@ function AgendaTab() {
             <tbody>
               {hours.map((h) => {
                 const nextH = `${String(parseInt(h) + 1).padStart(2, '0')}:00`;
+                const now = new Date();
+                const isToday = date === now.toISOString().slice(0, 10);
+                const isPastHour = isToday && parseInt(h) < now.getHours();
                 return (
-                  <tr key={h}>
+                  <tr key={h} className={isPastHour ? 'agenda-row-past' : ''}>
                     <td className="agenda-td-hour">{h}–{nextH}</td>
                     {filteredAgenda.map((t) => {
                       const daySlots = t.slots.filter(s => s.date === date);
                       const slot = daySlots.find(s => s.startTime === h);
                       if (!slot) {
                         return (
-                          <td key={t.therapistId} className={`agenda-td agenda-td-empty ${dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? 'agenda-td-drop-target' : ''}`} onClick={() => openSlotMenu(null, t, h)} onDragOver={(e) => handleDragOver(e, t.therapistId, h)} onDragLeave={handleDragLeave} onDrop={(e) => void handleDrop(e, t.therapistId, h)} title="Slot yok — Tıkla: Ekle / Bırak: Taşı">
-                            <span className="agenda-empty-plus">{dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? '⬇' : '+'}</span>
+                          <td key={t.therapistId} className={`agenda-td agenda-td-empty ${isPastHour ? 'agenda-td-past' : ''} ${dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? 'agenda-td-drop-target' : ''}`} onClick={isPastHour ? undefined : () => openSlotMenu(null, t, h)} onDragOver={isPastHour ? undefined : (e) => handleDragOver(e, t.therapistId, h)} onDragLeave={handleDragLeave} onDrop={isPastHour ? undefined : (e) => void handleDrop(e, t.therapistId, h)}>
+                            <span className="agenda-empty-plus">{isPastHour ? '—' : dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? '⬇' : '+'}</span>
                           </td>
                         );
                       }
                       if (slot.booked && slot.reservation) {
                         return (
-                          <td key={t.therapistId} className="agenda-td agenda-td-booked agenda-td-draggable" draggable onDragStart={(e) => handleDragStart(e, slot.reservation!.id, t.therapistId, h)} onDragEnd={handleDragEnd} onClick={() => openSlotMenu(slot, t, h)} title={`${slot.reservation.memberName || 'Üye'} — Sürükle: Taşı / Tıkla: İşlemler`}>
+                          <td key={t.therapistId} className={`agenda-td agenda-td-booked ${isPastHour ? 'agenda-td-past' : 'agenda-td-draggable'}`} draggable={!isPastHour} onDragStart={isPastHour ? undefined : (e) => handleDragStart(e, slot.reservation!.id, t.therapistId, h)} onDragEnd={handleDragEnd} onClick={() => openSlotMenu(slot, t, h)} title={`${slot.reservation.memberName || 'Üye'}${isPastHour ? ' (geçmiş)' : ''}`}>
                             <div className="agenda-td-content">
                               <span className="agenda-td-name">{slot.reservation.memberName || '—'}</span>
-                              <span className="agenda-td-status">{slot.reservation.status === 'confirmed' ? '✓' : '⏳'}</span>
+                              <span className="agenda-td-status">{isPastHour ? '✓' : slot.reservation.status === 'confirmed' ? '✓' : '⏳'}</span>
                             </div>
                           </td>
                         );
                       }
                       return (
-                        <td key={t.therapistId} className={`agenda-td agenda-td-free ${dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? 'agenda-td-drop-target' : ''}`} onClick={() => openSlotMenu(slot, t, h)} onDragOver={(e) => handleDragOver(e, t.therapistId, h)} onDragLeave={handleDragLeave} onDrop={(e) => void handleDrop(e, t.therapistId, h)} title="Müsait — Tıkla: Randevu / Bırak: Taşı">
-                          <span className="agenda-free-label">{dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? '⬇ Bırak' : 'Müsait'}</span>
+                        <td key={t.therapistId} className={`agenda-td agenda-td-free ${isPastHour ? 'agenda-td-past' : ''} ${dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? 'agenda-td-drop-target' : ''}`} onClick={isPastHour ? undefined : () => openSlotMenu(slot, t, h)} onDragOver={isPastHour ? undefined : (e) => handleDragOver(e, t.therapistId, h)} onDragLeave={handleDragLeave} onDrop={isPastHour ? undefined : (e) => void handleDrop(e, t.therapistId, h)}>
+                          <span className="agenda-free-label">{isPastHour ? '—' : dropTarget?.therapistId === t.therapistId && dropTarget?.hour === h ? '⬇ Bırak' : 'Müsait'}</span>
                         </td>
                       );
                     })}

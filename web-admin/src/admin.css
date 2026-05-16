@@ -4376,3 +4376,20 @@ button.primary:disabled {
   0%, 100% { background: #dbeafe; }
   50% { background: #bfdbfe; }
 }
+
+
+/* ─── Agenda Past Hours ────────────────────────────────────────────────────── */
+.agenda-row-past .agenda-td-hour {
+  color: #94a3b8;
+}
+.agenda-td-past {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  background: #f1f5f9 !important;
+  border-left-color: #e2e8f0 !important;
+}
+.agenda-td-past .agenda-td-name,
+.agenda-td-past .agenda-free-label,
+.agenda-td-past .agenda-empty-plus {
+  color: #94a3b8 !important;
+}
