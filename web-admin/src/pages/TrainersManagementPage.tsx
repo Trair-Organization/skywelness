@@ -52,7 +52,6 @@ type AvailabilityRow = {
 
 const SESSION_TYPE_OPTIONS = [
   { value: 'personal_training', label: 'Personal Training' },
-  { value: 'massage', label: 'Masaj' },
 ];
 
 const SPECIALIZATION_OPTIONS = [
@@ -1094,16 +1093,15 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
             </label>
             <label>
               Uzmanlık Alanları
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
-                {SPECIALIZATION_OPTIONS.map(spec => (
-                  <label key={spec} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '4px 10px', borderRadius: 8, border: `1px solid ${(form.specializations as string[]).includes(spec) ? 'var(--accent)' : 'var(--border)'}`, background: (form.specializations as string[]).includes(spec) ? 'rgba(37,99,235,0.06)' : '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 500 }}>
-                    <input type="checkbox" checked={(form.specializations as string[]).includes(spec)} onChange={(e) => {
-                      const current = form.specializations as string[];
-                      setForm({ ...form, specializations: e.target.checked ? [...current, spec] : current.filter(s => s !== spec) });
-                    }} style={{ width: 14, height: 14 }} />
-                    {spec}
-                  </label>
-                ))}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                {SPECIALIZATION_OPTIONS.map(spec => {
+                  const checked = (form.specializations as string[]).includes(spec);
+                  return (
+                    <span key={spec} onClick={() => { const c = form.specializations as string[]; setForm({ ...form, specializations: checked ? c.filter(s => s !== spec) : [...c, spec] }); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: 20, border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`, background: checked ? 'rgba(37,99,235,0.08)' : '#fff', cursor: 'pointer', fontSize: '0.76rem', fontWeight: checked ? 600 : 400, color: checked ? 'var(--accent)' : 'var(--text)' }}>
+                      {checked ? '✓' : '○'} {spec}
+                    </span>
+                  );
+                })}
               </div>
             </label>
             <label>
