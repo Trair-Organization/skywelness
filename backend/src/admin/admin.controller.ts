@@ -820,6 +820,19 @@ export class AdminController {
     return result;
   }
 
+  /** Admin: Eğitmen şifresini sıfırla */
+  @Post('trainers/:userId/reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async resetTrainerPassword(
+    @CurrentUser() admin: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    const result = await this.adminMembers.resetTrainerPassword(admin.tenantId, userId);
+    void this.logAction(admin, 'password_reset', 'trainer', userId);
+    return result;
+  }
+
   /** Admin: Üye profilini güncelle */
   @Patch('members/:userId/update-profile')
   @UseGuards(JwtAuthGuard, RolesGuard)

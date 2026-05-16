@@ -1216,6 +1216,26 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
               <button type="submit" className="primary" disabled={saving}>
                 {saving ? 'Kaydediliyor...' : editId ? 'Güncelle' : 'Ekle'}
               </button>
+              {editId && (
+                <button
+                  type="button"
+                  className="secondary"
+                  style={{ background: '#fef3c7', borderColor: '#f59e0b', color: '#92400e' }}
+                  onClick={async () => {
+                    if (!confirm('Eğitmenin şifresi sıfırlanacak. Devam edilsin mi?')) return;
+                    try {
+                      const trainer = trainers.find(t => t.id === editId);
+                      if (!trainer) return;
+                      const res = await apiJson<{ temporaryPassword: string; email: string }>(`/admin/trainers/${trainer.userId}/reset-password`, { method: 'POST' });
+                      alert(`✅ Şifre sıfırlandı!\n\nYeni şifre: ${res.temporaryPassword}\nE-posta: ${res.email}\n\nBu şifreyi eğitmene iletin.`);
+                    } catch (e) {
+                      alert(e instanceof ApiError ? e.message : 'Şifre sıfırlama başarısız');
+                    }
+                  }}
+                >
+                  🔑 Şifre Sıfırla
+                </button>
+              )}
               <button
                 type="button"
                 className="secondary"
@@ -1252,6 +1272,7 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
                   {t.photoUrl ? <img src={t.photoUrl} alt={t.firstName} /> : <span>{t.firstName[0]}{t.lastName[0]}</span>}
                 </div>
                 <h3 style={{ margin: '0 0 2px', fontSize: '0.92rem' }}>{t.firstName} {t.lastName}</h3>
+                <div style={{ fontSize: '0.68rem', color: 'var(--accent)', fontFamily: 'monospace', marginBottom: 2 }}>ID: {t.userId}</div>
                 <div style={{ fontSize: '0.73rem', color: 'var(--muted)' }}>{t.phone || t.email}</div>
               </div>
 
