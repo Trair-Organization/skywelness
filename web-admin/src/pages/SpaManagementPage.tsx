@@ -50,7 +50,7 @@ export function SpaManagementPage() {
 
   const tabs: { key: TabType; icon: string; label: string }[] = [
     { key: 'agenda', icon: '📅', label: 'Ajanda' },
-    { key: 'appointments', icon: '📋', label: 'Geçmiş' },
+    { key: 'appointments', icon: '📋', label: 'Randevu Yönetimi' },
     { key: 'services', icon: '🧴', label: 'Hizmetler' },
     { key: 'therapists', icon: '💆', label: 'Masözler' },
     { key: 'packages', icon: '📦', label: 'Paketler' },
@@ -678,7 +678,7 @@ function AppointmentsTab() {
   const [reservations, setReservations] = useState<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; therapistName: string | null; serviceName: string | null; serviceDuration: number | null; sessionCost: number; sessionsBefore: number | null; sessionsAfter: number | null; remainingSessions: number | null; sessionType: string; createdAt: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('confirmed');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -703,9 +703,9 @@ function AppointmentsTab() {
   return (
     <div>
       <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        {['confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
+        {['all', 'confirmed', 'completed', 'cancelled', 'pending'].map((s) => (
           <button key={s} className={`btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`} style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => setStatusFilter(s)}>
-            {STATUS_LABELS[s]}
+            {s === 'all' ? 'Tümü' : STATUS_LABELS[s]}
           </button>
         ))}
         <input type="text" className="form-input" style={{ minWidth: 140, padding: '4px 10px', fontSize: '0.75rem', height: 28 }} placeholder="Üye veya masöz ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
