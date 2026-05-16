@@ -402,7 +402,11 @@ export class SpaServiceService {
       throw new BadRequestException('This slot is already booked');
     }
 
-    // 3. Check member has active massage package with remainingSessions > 0
+    // 3. Get service sessionCost
+    const service = await this.servicesRepo.findOne({ where: { id: serviceId } });
+    const sessionCost = service?.sessionCost || 1;
+
+    // 4. Check member has active massage package with enough sessions
     const packages = await this.memberPackagesRepo.find({
       where: {
         userId,
@@ -415,16 +419,17 @@ export class SpaServiceService {
       (p) =>
         p.packageType &&
         p.packageType.sessionType === SessionType.MASSAGE &&
-        p.remainingSessions > 0 &&
+        p.remainingSessions >= sessionCost &&
         p.expiresAt >= today,
     );
     if (!massagePackage) {
-      throw new BadRequestException('No active massage package with remaining sessions');
+      throw new BadRequestException(`Yeterli seans yok (bu hizmet ${sessionCost} kredi gerektirir)`);
     }
 
-    // 4. Deduct 1 session from the package
-    massagePackage.remainingSessions -= 1;
-    if (massagePackage.remainingSessions === 0) {
+    // 5. Deduct sessionCost from package
+    massagePackage.remainingSessions -= sessionCost;
+    if (massagePackage.remainingSessions <= 0) {
+      massagePackage.remainingSessions = 0;
       massagePackage.status = PackageStatus.DEPLETED;
     }
     await this.memberPackagesRepo.save(massagePackage);
@@ -505,13 +510,19 @@ export class SpaServiceService {
     reservation.cancelledAt = now;
     await this.reservationsRepo.save(reservation);
 
-    // If more than 3 hours before start → refund 1 session
+    // If more than 3 hours before start → refund sessionCost
     if (diffMs > threeHoursMs && reservation.packageId) {
+      // Get service sessionCost
+      let refundAmount = 1;
+      if (reservation.spaServiceId) {
+        const svc = await this.servicesRepo.findOne({ where: { id: reservation.spaServiceId } });
+        if (svc) refundAmount = svc.sessionCost || 1;
+      }
       const pkg = await this.memberPackagesRepo.findOne({
         where: { id: reservation.packageId },
       });
       if (pkg) {
-        pkg.remainingSessions += 1;
+        pkg.remainingSessions += refundAmount;
         if (pkg.status === PackageStatus.DEPLETED && pkg.remainingSessions > 0) {
           pkg.status = PackageStatus.ACTIVE;
         }
@@ -521,8 +532,8 @@ export class SpaServiceService {
     }
 
     const message = refunded
-      ? 'Reservation cancelled. 1 session refunded to your package.'
-      : 'Reservation cancelled. No refund (less than 3 hours before start).';
+      ? 'Rezervasyon iptal edildi. Seans kredisi iade edildi.'
+      : 'Rezervasyon iptal edildi. İade yok (3 saatten az kaldı).';
 
     return { refunded, message };
   }
