@@ -1135,11 +1135,16 @@ export class AdminMembersService {
 
   /** Tüm aktif eğitmenlerin belirli tarih aralığı için ajanda verisi */
   async listAllTrainersAgenda(tenantId: string, from: string, to: string) {
-    const trainers = await this.trainersRepo.find({
+    const allTrainers = await this.trainersRepo.find({
       where: { tenantId },
       relations: ['user'],
       order: { createdAt: 'ASC' },
     });
+
+    // Sadece PT eğitmenleri (masözleri hariç tut)
+    const trainers = allTrainers.filter(t =>
+      Array.isArray(t.offersSessionTypes) && t.offersSessionTypes.includes('personal_training')
+    );
 
     const trainerIds = trainers.map(t => t.id);
     if (trainerIds.length === 0) return [];
