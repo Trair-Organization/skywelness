@@ -305,7 +305,7 @@ function AgendaTab() {
     try {
       await apiJson(`/admin/therapists/reservations/${reservationId}/reschedule`, {
         method: 'POST',
-        body: JSON.stringify({ newDate: date, newStartTime: targetHour, newEndTime, therapistId: targetTherapistId !== fromTherapistId ? targetTherapistId : undefined }),
+        body: JSON.stringify({ newDate: date, newStartTime: targetHour, newEndTime, therapistId: targetTherapistId }),
       });
       void load();
     } catch (err) {
@@ -506,7 +506,19 @@ function AgendaTab() {
                 <div className="agenda-modal-actions">
                   <button className="agenda-action-btn agenda-action-complete" onClick={() => void handleCompleteReservation()} disabled={actionLoading}>✅ Tamamlandı</button>
                   <button className="agenda-action-btn agenda-action-cancel" onClick={() => void handleCancelReservation()} disabled={actionLoading}>❌ İptal Et</button>
-                  <button className="agenda-action-btn agenda-action-book" onClick={() => { if (selectedAction?.slot?.reservation) { void apiJson(`/admin/reservations/${selectedAction.slot.reservation.id}/remind`, { method: 'POST' }).then(() => alert('✅ Hatırlatma gönderildi')).catch(() => alert('Gönderilemedi')); } }} disabled={actionLoading}>📱 SMS Hatırlatma</button>
+                  <button className="agenda-action-btn agenda-action-book" onClick={() => {
+                    const newDate = prompt('Yeni tarih (YYYY-MM-DD):', date);
+                    if (!newDate) return;
+                    const newTime = prompt('Yeni başlangıç saati (HH:00):', selectedAction?.slot?.startTime || '11:00');
+                    if (!newTime) return;
+                    const endH = String(parseInt(newTime) + 1).padStart(2, '0');
+                    setActionLoading(true);
+                    apiJson(`/admin/therapists/reservations/${selectedAction!.slot!.reservation!.id}/reschedule`, {
+                      method: 'POST',
+                      body: JSON.stringify({ newDate, newStartTime: newTime, newEndTime: `${endH}:00`, therapistId: selectedAction!.therapist.therapistId }),
+                    }).then(() => { closeModal(); void load(); }).catch((err) => alert(err instanceof Error ? err.message : 'Taşıma başarısız')).finally(() => setActionLoading(false));
+                  }} disabled={actionLoading}>📅 İleri Tarihe Al</button>
+                  <button className="agenda-action-btn agenda-action-book" onClick={() => { if (selectedAction?.slot?.reservation) { void apiJson(`/admin/reservations/${selectedAction.slot.reservation.id}/remind`, { method: 'POST' }).then(() => alert('✅ Hatırlatma gönderildi (SMS + Mail + Push)')).catch(() => alert('Gönderilemedi')); } }} disabled={actionLoading}>📱 SMS & Mail & Push Hatırlatma</button>
                 </div>
               </>
             )}

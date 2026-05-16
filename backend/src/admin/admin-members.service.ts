@@ -1605,6 +1605,10 @@ export class AdminMembersService {
         });
         await this.availabilityRepo.save(newAv);
       }
+      // Masöz değişiyorsa güncelle
+      if (therapistId !== reservation.spaTherapistId) {
+        reservation.spaTherapistId = therapistId;
+      }
     }
 
     reservation.startTime = newStart;
