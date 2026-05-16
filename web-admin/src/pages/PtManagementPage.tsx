@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson, ApiError } from '../lib/api';
 import { TrainersManagementPage } from './TrainersManagementPage';
+import { PtAgendaTab } from './PtAgendaTab';
 
 type TabType = 'agenda' | 'reservations' | 'trainers' | 'packages' | 'reports';
 
@@ -45,123 +46,6 @@ export function PtManagementPage() {
 
 
 // ─── PT Agenda Tab ──────────────────────────────────────────────────────────────
-
-type AgendaSlot = { id: string; date: string; startTime: string; endTime: string; available: boolean; booked: boolean; reservation: { id: string; memberName: string | null; status: string } | null };
-type TrainerAgenda = { trainerId: string; trainerName: string; photoUrl: string | null; slots: AgendaSlot[] };
-
-function PtAgendaTab() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [agenda, setAgenda] = useState<TrainerAgenda[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterTrainer, setFilterTrainer] = useState('all');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await apiJson<TrainerAgenda[]>(`/admin/trainers/agenda?from=${date}&to=${date}`);
-      setAgenda(data);
-    } catch { /* */ }
-    finally { setLoading(false); }
-  }, [date]);
-
-  useEffect(() => { queueMicrotask(() => { void load(); }); }, [load]);
-
-  function navigateDate(offset: number) { const d = new Date(date); d.setDate(d.getDate() + offset); setDate(d.toISOString().slice(0, 10)); }
-
-  const filteredAgenda = filterTrainer === 'all' ? agenda : agenda.filter(t => t.trainerId === filterTrainer);
-  const allSlotTimes = filteredAgenda.flatMap(t => t.slots.filter(s => s.date === date).map(s => parseInt(s.startTime)));
-  const minHour = allSlotTimes.length > 0 ? Math.min(...allSlotTimes) : 9;
-  const maxHour = allSlotTimes.length > 0 ? Math.max(...allSlotTimes) + 1 : 22;
-  const hours = Array.from({ length: maxHour - minHour }, (_, i) => `${String(i + minHour).padStart(2, '0')}:00`);
-
-  const totalSlots = filteredAgenda.reduce((sum, t) => sum + t.slots.filter(s => s.date === date).length, 0);
-  const bookedSlots = filteredAgenda.reduce((sum, t) => sum + t.slots.filter(s => s.date === date && s.booked).length, 0);
-  const freeSlots = totalSlots - bookedSlots;
-  const occupancyPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
-
-  return (
-    <div>
-      <div className="agenda-toolbar">
-        <div className="agenda-nav">
-          <button className="btn-sm btn-outline" onClick={() => navigateDate(-1)}>‹</button>
-          <button className="btn-sm btn-outline" onClick={() => setDate(new Date().toISOString().slice(0, 10))}>Bugün</button>
-          <button className="btn-sm btn-outline" onClick={() => navigateDate(1)}>›</button>
-          <span className="agenda-date-label">{new Date(date).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-        </div>
-        <div className="agenda-view-toggle">
-          <select className="form-input" style={{ minWidth: 160 }} value={filterTrainer} onChange={(e) => setFilterTrainer(e.target.value)}>
-            <option value="all">Tüm Eğitmenler</option>
-            {agenda.map(t => <option key={t.trainerId} value={t.trainerId}>{t.trainerName}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {!loading && totalSlots > 0 && (
-        <div className="agenda-stats-bar">
-          <div className="agenda-stat"><span className="agenda-stat-value">{bookedSlots}</span><span className="agenda-stat-label">Ders</span></div>
-          <div className="agenda-stat"><span className="agenda-stat-value">{freeSlots}</span><span className="agenda-stat-label">Müsait</span></div>
-          <div className="agenda-stat"><span className="agenda-stat-value">{totalSlots}</span><span className="agenda-stat-label">Toplam</span></div>
-          <div className="agenda-stat"><span className="agenda-stat-value" style={{ color: occupancyPct >= 80 ? '#059669' : occupancyPct >= 50 ? '#d97706' : '#64748b' }}>%{occupancyPct}</span><span className="agenda-stat-label">Doluluk</span></div>
-          <div className="agenda-legend">
-            <span className="agenda-legend-item"><span className="agenda-legend-dot" style={{ background: '#22c55e' }}></span>Müsait</span>
-            <span className="agenda-legend-item"><span className="agenda-legend-dot" style={{ background: '#2563eb' }}></span>Dolu</span>
-            <span className="agenda-legend-item"><span className="agenda-legend-dot" style={{ background: '#e2e8f0' }}></span>Slot Yok</span>
-          </div>
-        </div>
-      )}
-
-      {loading && <p className="muted">Yükleniyor...</p>}
-      {!loading && agenda.length === 0 && <div className="empty-state"><span className="empty-icon">🏋️</span><p>Aktif eğitmen bulunamadı veya slot tanımlı değil.</p></div>}
-
-      {!loading && filteredAgenda.length > 0 && (
-        <div className="agenda-grid-wrapper">
-          <table className="agenda-table">
-            <thead>
-              <tr>
-                <th className="agenda-th-hour">Saat</th>
-                {filteredAgenda.map(t => {
-                  const daySlots = t.slots.filter(s => s.date === date);
-                  const booked = daySlots.filter(s => s.booked).length;
-                  return (
-                    <th key={t.trainerId} className="agenda-th-therapist">
-                      <div>{t.photoUrl && <img src={t.photoUrl} alt="" className="agenda-avatar" />}</div>
-                      <div className="agenda-therapist-name">{t.trainerName}</div>
-                      <div className="agenda-therapist-stat">{booked}/{daySlots.length} dolu</div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {hours.map(h => {
-                const nextH = `${String(parseInt(h) + 1).padStart(2, '0')}:00`;
-                const now = new Date();
-                const isToday = date === now.toISOString().slice(0, 10);
-                const isPast = isToday && parseInt(h) < now.getHours();
-                return (
-                  <tr key={h} className={isPast ? 'agenda-row-past' : ''}>
-                    <td className="agenda-td-hour">{h}–{nextH}</td>
-                    {filteredAgenda.map(t => {
-                      const slot = t.slots.filter(s => s.date === date).find(s => s.startTime === h);
-                      if (!slot) return <td key={t.trainerId} className={`agenda-td agenda-td-empty ${isPast ? 'agenda-td-past' : ''}`}><span className="agenda-empty-plus">{isPast ? '—' : '+'}</span></td>;
-                      if (slot.booked && slot.reservation) return (
-                        <td key={t.trainerId} className={`agenda-td agenda-td-booked ${isPast ? 'agenda-td-past' : ''}`}>
-                          <div className="agenda-td-content"><span className="agenda-td-name">{slot.reservation.memberName?.split(' ')[0] || '—'}</span><span className="agenda-td-status">{slot.reservation.status === 'confirmed' ? '✓' : '⏳'}</span></div>
-                        </td>
-                      );
-                      return <td key={t.trainerId} className={`agenda-td agenda-td-free ${isPast ? 'agenda-td-past' : ''}`}><span className="agenda-free-label">{isPast ? '—' : 'Müsait'}</span></td>;
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 
 // ─── PT Reservations Tab ────────────────────────────────────────────────────────
 
