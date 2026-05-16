@@ -124,6 +124,9 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
   );
   // Students modal
   const [studentsModal, setStudentsModal] = useState<{ trainerId: string; trainerName: string; students: Array<{ linkId: string; memberId: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; ptSessions: number }> } | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentMembers, setStudentMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string }>>([]);
+  const [assigningStudent, setAssigningStudent] = useState(false);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -189,8 +192,10 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
     });
     setEditId(t.id);
     setShowForm(true);
-    // Load students for this trainer
+    setStudentSearch('');
+    // Load students + member list
     void loadStudents(t.id);
+    apiJson<Array<{ id: string; firstName: string; lastName: string; email: string }>>('/admin/members?status=active').then(setStudentMembers).catch(() => {});
   }
 
   async function handleImageUpload(file: File) {
@@ -293,7 +298,10 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
       const trainer = trainers.find(t => t.id === trainerId);
       const students = await apiJson<Array<{ linkId: string; memberId: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; ptSessions: number }>>(`/admin/trainers/${trainerId}/students`);
       setStudentsModal({ trainerId, trainerName: trainer ? `${trainer.firstName} ${trainer.lastName}` : '', students });
-    } catch { /* */ }
+    } catch {
+      const trainer = trainers.find(t => t.id === trainerId);
+      setStudentsModal({ trainerId, trainerName: trainer ? `${trainer.firstName} ${trainer.lastName}` : '', students: [] });
+    }
   }
 
   async function loadStats(trainerId: string) {
@@ -1128,23 +1136,54 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
             {editId && studentsModal && (
               <div style={{ marginTop: '0.5rem', padding: '1rem', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }}>
                 <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', fontWeight: 700 }}>👥 Öğrenciler ({studentsModal.students.length})</h4>
-                {studentsModal.students.length === 0 ? (
-                  <p className="muted" style={{ fontSize: '0.8rem', margin: 0 }}>Henüz öğrenci atanmamış</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 200, overflowY: 'auto' }}>
+                {studentsModal.students.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 160, overflowY: 'auto', marginBottom: '0.75rem' }}>
                     {studentsModal.students.map(s => (
                       <div key={s.linkId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', borderRadius: 6, background: '#fff', border: '1px solid var(--border)' }}>
                         <div>
                           <strong style={{ fontSize: '0.82rem' }}>{s.memberName}</strong>
                           {s.memberPhone && <span style={{ fontSize: '0.7rem', color: 'var(--muted)', marginLeft: 6 }}>{s.memberPhone}</span>}
                         </div>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: s.ptSessions > 0 ? '#dcfce7' : '#fee2e2', color: s.ptSessions > 0 ? '#166534' : '#991b1b' }}>
-                          {s.ptSessions > 0 ? `${s.ptSessions} seans` : 'Paket yok'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: s.ptSessions > 0 ? '#dcfce7' : '#fee2e2', color: s.ptSessions > 0 ? '#166534' : '#991b1b' }}>
+                            {s.ptSessions > 0 ? `${s.ptSessions} seans` : 'Paket yok'}
+                          </span>
+                          <button type="button" className="btn-sm btn-danger" style={{ padding: '2px 5px', fontSize: '0.6rem' }} onClick={() => { if (confirm('Öğrenci çıkarılacak?')) { void apiJson(`/admin/members/${s.memberId}/remove-trainer`, { method: 'POST', body: JSON.stringify({ trainerId: editId }) }).then(() => void loadStudents(editId!)); } }}>✕</button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
+                {studentsModal.students.length === 0 && <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0 0 0.75rem' }}>Henüz öğrenci atanmamış</p>}
+                {/* Öğrenci Ata */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: '0.3rem' }}>+ Öğrenci Ata</label>
+                  <input type="text" className="form-input" style={{ fontSize: '0.78rem', padding: '5px 10px' }} placeholder="Üye adı ile ara..." value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} />
+                  {studentSearch.length >= 2 && (
+                    <div style={{ maxHeight: 120, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 6, marginTop: '0.3rem' }}>
+                      {studentMembers
+                        .filter(m => `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(studentSearch.toLowerCase()))
+                        .filter(m => !studentsModal.students.some(s => s.memberId === m.id))
+                        .slice(0, 6)
+                        .map(m => (
+                          <div key={m.id} style={{ padding: '0.4rem 0.6rem', borderBottom: '1px solid var(--border)', cursor: 'pointer', fontSize: '0.78rem' }} onClick={async () => {
+                            setAssigningStudent(true);
+                            try {
+                              await apiJson(`/admin/members/${m.id}/assign-trainer`, { method: 'POST', body: JSON.stringify({ trainerId: editId }) });
+                              setStudentSearch('');
+                              void loadStudents(editId!);
+                              void load();
+                            } catch (err) { alert(err instanceof Error ? err.message : 'Atama başarısız'); }
+                            finally { setAssigningStudent(false); }
+                          }}>
+                            <strong>{m.firstName} {m.lastName}</strong> <span style={{ color: 'var(--muted)' }}>— {m.email}</span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  )}
+                  {assigningStudent && <p style={{ fontSize: '0.72rem', color: 'var(--accent)', margin: '0.3rem 0 0' }}>Atanıyor...</p>}
+                </div>
               </div>
             )}
             <div className="form-actions">
