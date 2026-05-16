@@ -675,7 +675,7 @@ function AgendaTab() {
 // ─── Appointments Tab (Unified: spa_booking + v2/appointments) ──────────────────
 
 function AppointmentsTab() {
-  const [reservations, setReservations] = useState<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; therapistName: string | null; sessionType: string; createdAt: string }>>([]);
+  const [reservations, setReservations] = useState<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; therapistName: string | null; serviceName: string | null; serviceDuration: number | null; sessionCost: number; remainingSessions: number | null; sessionType: string; createdAt: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('confirmed');
@@ -684,7 +684,7 @@ function AppointmentsTab() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiJson<Array<{ id: string; status: string; startTime: string; endTime: string; memberName: string | null; memberEmail: string | null; therapistName: string | null; sessionType: string; createdAt: string }>>(`/admin/spa-reservations?status=${statusFilter}`);
+      const data = await apiJson<typeof reservations>(`/admin/spa-reservations?status=${statusFilter}`);
       setReservations(data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Yüklenemedi');
@@ -721,18 +721,38 @@ function AppointmentsTab() {
               <tr>
                 <th>Üye</th>
                 <th>Masöz</th>
-                <th>Tarih</th>
-                <th>Saat</th>
+                <th>Hizmet</th>
+                <th>Tarih & Saat</th>
+                <th>Kredi</th>
+                <th>Kalan</th>
                 <th>Durum</th>
               </tr>
             </thead>
             <tbody>
               {reservations.map((r) => (
                 <tr key={r.id}>
-                  <td><strong>{r.memberName || '—'}</strong></td>
+                  <td>
+                    <strong>{r.memberName || '—'}</strong>
+                    {r.memberPhone && <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{r.memberPhone}</div>}
+                  </td>
                   <td>{r.therapistName || '—'}</td>
-                  <td>{new Date(r.startTime).toLocaleDateString('tr-TR')}</td>
-                  <td>{new Date(r.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}–{new Date(r.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</td>
+                  <td>
+                    {r.serviceName ? (
+                      <span>{r.serviceName} <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>({r.serviceDuration} dk)</span></span>
+                    ) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                  </td>
+                  <td>
+                    <div>{new Date(r.startTime).toLocaleDateString('tr-TR')}</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>{new Date(r.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}–{new Date(r.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
+                  </td>
+                  <td><span style={{ fontWeight: 700 }}>🎫 {r.sessionCost}</span></td>
+                  <td>
+                    {r.remainingSessions !== null ? (
+                      <span style={{ fontWeight: 700, color: r.remainingSessions > 2 ? '#059669' : r.remainingSessions > 0 ? '#d97706' : '#dc2626' }}>
+                        {r.remainingSessions} seans
+                      </span>
+                    ) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                  </td>
                   <td><span className={`status-badge status-spa-${r.status}`}>{STATUS_LABELS[r.status] || r.status}</span></td>
                 </tr>
               ))}

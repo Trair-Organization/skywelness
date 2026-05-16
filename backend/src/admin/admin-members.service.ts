@@ -813,6 +813,7 @@ export class AdminMembersService {
       .createQueryBuilder('r')
       .leftJoinAndSelect('r.user', 'u')
       .leftJoinAndSelect('r.spaTherapist', 'st')
+      .leftJoinAndSelect('r.spaService', 'svc')
       .where('r.tenantId = :tenantId', { tenantId })
       .andWhere('r.spaTherapistId IS NOT NULL');
     if (status && status !== 'all') {
@@ -820,6 +821,25 @@ export class AdminMembersService {
     }
     qb.orderBy('r.startTime', 'DESC').take(100);
     const rows = await qb.getMany();
+
+    // Kalan seans bilgisi için paketleri toplu çek
+    const userIds = [...new Set(rows.map(r => r.userId).filter(Boolean))];
+    let packageMap = new Map<string, number>();
+    if (userIds.length > 0) {
+      const packages = await this.packagesRepo
+        .createQueryBuilder('p')
+        .innerJoin('p.packageType', 'pt')
+        .where('p.userId IN (:...ids)', { ids: userIds })
+        .andWhere('pt.tenantId = :tenantId', { tenantId })
+        .andWhere('pt.sessionType = :st', { st: 'massage' })
+        .andWhere('p.status = :active', { active: 'active' })
+        .select(['p.userId', 'p.remainingSessions'])
+        .getMany();
+      for (const p of packages) {
+        packageMap.set(p.userId, (packageMap.get(p.userId) || 0) + p.remainingSessions);
+      }
+    }
+
     return rows.map((r) => ({
       id: r.id,
       status: r.status,
@@ -827,7 +847,12 @@ export class AdminMembersService {
       endTime: r.endTime,
       memberName: r.user ? `${r.user.firstName} ${r.user.lastName}` : null,
       memberEmail: r.user?.email || null,
+      memberPhone: r.user?.phone || null,
       therapistName: r.spaTherapist?.name || null,
+      serviceName: r.spaService?.name || null,
+      serviceDuration: r.spaService?.durationMinutes || null,
+      sessionCost: r.spaService?.sessionCost || 1,
+      remainingSessions: packageMap.get(r.userId) ?? null,
       sessionType: r.sessionType,
       createdAt: r.createdAt,
     }));
