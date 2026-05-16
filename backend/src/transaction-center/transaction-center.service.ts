@@ -105,6 +105,68 @@ export class TransactionCenterService {
       filters.serviceType === ServiceTypeFilter.PERSONAL_TRAINING ||
       filters.serviceType === ServiceTypeFilter.PADEL
     ) {
+      // 1a. Reservations (session-based: massage, PT, padel)
+      const resQb = this.reservationRepo
+        .createQueryBuilder('r')
+        .innerJoin('r.user', 'u')
+        .leftJoin('r.package', 'pkg')
+        .leftJoin('pkg.packageType', 'ptype')
+        .leftJoin('r.spaService', 'spa')
+        .select([
+          'r.id AS id',
+          'r.start_time AS date',
+          "CONCAT(u.first_name, ' ', u.last_name) AS \"memberName\"",
+          'u.id AS "memberId"',
+          'r.session_type AS "serviceType"',
+          "COALESCE(spa.name, ptype.name, 'Seans') AS description",
+          'COALESCE(CAST(ptype.price AS FLOAT) / NULLIF(ptype.session_count, 0), 0) AS amount',
+          "'TRY' AS currency",
+          `CASE
+            WHEN r.status = 'completed' THEN 'succeeded'
+            WHEN r.status = 'confirmed' THEN 'succeeded'
+            WHEN r.status = 'cancelled' THEN 'failed'
+            ELSE 'pending'
+          END AS status`,
+        ])
+        .where('r.tenant_id = :tenantId', { tenantId });
+
+      if (filters.memberId) {
+        resQb.andWhere('u.id = :memberId', { memberId: filters.memberId });
+      }
+      if (filters.startDate) {
+        resQb.andWhere('r.start_time >= :startDate', { startDate: filters.startDate });
+      }
+      if (filters.endDate) {
+        resQb.andWhere('r.start_time <= :endDateEnd', {
+          endDateEnd: filters.endDate + 'T23:59:59.999Z',
+        });
+      }
+      if (filters.serviceType === ServiceTypeFilter.MASSAGE) {
+        resQb.andWhere("r.session_type = 'massage'");
+      } else if (filters.serviceType === ServiceTypeFilter.PERSONAL_TRAINING) {
+        resQb.andWhere("r.session_type = 'personal_training'");
+      } else if (filters.serviceType === ServiceTypeFilter.PADEL) {
+        resQb.andWhere("r.session_type = 'other'");
+      }
+
+      const resRows: RawTransactionRow[] = await resQb.getRawMany();
+      for (const r of resRows) {
+        let serviceType = r.serviceType;
+        if (serviceType === 'other') serviceType = 'padel';
+        allRows.push({
+          id: r.id,
+          date: r.date,
+          memberName: r.memberName,
+          memberId: r.memberId,
+          serviceType,
+          description: r.description || 'Seans',
+          amount: parseFloat(r.amount) || 0,
+          currency: r.currency || 'TRY',
+          status: r.status,
+        });
+      }
+
+      // 1b. Payment Transactions (standalone payments without matching reservation)
       const ptQb = this.paymentRepo
         .createQueryBuilder('pt')
         .innerJoin('pt.user', 'u')
@@ -113,9 +175,9 @@ export class TransactionCenterService {
         .select([
           'pt.id AS id',
           'pt.created_at AS date',
-          'CONCAT(u.first_name, \' \', u.last_name) AS "memberName"',
+          "CONCAT(u.first_name, ' ', u.last_name) AS \"memberName\"",
           'u.id AS "memberId"',
-          'COALESCE(ptype.session_type, \'personal_training\') AS "serviceType"',
+          "COALESCE(ptype.session_type, 'personal_training') AS \"serviceType\"",
           "COALESCE(ptype.name, 'Ödeme') AS description",
           'CAST(pt.amount AS FLOAT) AS amount',
           'pt.currency AS currency',
