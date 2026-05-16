@@ -468,6 +468,17 @@ export class AdminController {
     return this.adminMembers.getTrainerStats(admin.tenantId, trainerId);
   }
 
+  /** Eğitmenin öğrencileri */
+  @Get('trainers/:trainerId/students')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listTrainerStudents(
+    @CurrentUser() admin: User,
+    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
+  ) {
+    return this.adminMembers.listTrainerStudents(admin.tenantId, trainerId);
+  }
+
   // ─── Paket Tipi CRUD ─────────────────────────────────────────────────────────
 
   @Get('package-types')

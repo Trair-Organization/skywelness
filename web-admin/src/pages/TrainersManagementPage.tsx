@@ -122,6 +122,8 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
   const [selectedStats, setSelectedStats] = useState<{ id: string; stats: TrainerStats } | null>(
     null,
   );
+  // Students modal
+  const [studentsModal, setStudentsModal] = useState<{ trainerId: string; trainerName: string; students: Array<{ linkId: string; memberId: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; ptSessions: number }> } | null>(null);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -282,6 +284,14 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Silme başarısız');
     }
+  }
+
+  async function loadStudents(trainerId: string) {
+    try {
+      const trainer = trainers.find(t => t.id === trainerId);
+      const students = await apiJson<Array<{ linkId: string; memberId: string; memberName: string | null; memberEmail: string | null; memberPhone: string | null; ptSessions: number }>>(`/admin/trainers/${trainerId}/students`);
+      setStudentsModal({ trainerId, trainerName: trainer ? `${trainer.firstName} ${trainer.lastName}` : '', students });
+    } catch { /* */ }
   }
 
   async function loadStats(trainerId: string) {
@@ -1184,12 +1194,47 @@ export function TrainersManagementPage({}: { embedded?: boolean } = {}) {
               {/* Actions */}
               <div className="trainer-actions">
                 <button className="btn-sm btn-primary" onClick={() => openSchedule(t)}>🗓️ Ajanda</button>
+                <button className="btn-sm btn-outline" onClick={() => void loadStudents(t.id)}>👥 {t.studentCount}</button>
                 <button className="btn-sm btn-outline" onClick={() => void loadStats(t.id)}>📊</button>
                 <button className="btn-sm btn-outline" onClick={() => openEdit(t)}>✏️</button>
                 <button className="btn-sm btn-danger" onClick={() => void handleDelete(t.id)}>🗑</button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Students Modal */}
+      {studentsModal && (
+        <div className="agenda-modal-overlay" onClick={() => setStudentsModal(null)}>
+          <div className="agenda-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div className="agenda-modal-header">
+              <h3>👥 {studentsModal.trainerName} — Öğrenciler</h3>
+              <button className="agenda-modal-close" onClick={() => setStudentsModal(null)}>✕</button>
+            </div>
+            {studentsModal.students.length === 0 ? (
+              <p className="muted" style={{ textAlign: 'center', padding: '1rem' }}>Bu eğitmene henüz öğrenci atanmamış.</p>
+            ) : (
+              <div className="agenda-member-list" style={{ maxHeight: 350 }}>
+                {studentsModal.students.map((s) => (
+                  <div key={s.linkId} className="agenda-member-item" style={{ cursor: 'default' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <div>
+                        <strong>{s.memberName || '—'}</strong>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--muted)', display: 'block' }}>{s.memberEmail}{s.memberPhone ? ` · ${s.memberPhone}` : ''}</span>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: s.ptSessions > 0 ? '#dcfce7' : '#fee2e2', color: s.ptSessions > 0 ? '#166534' : '#991b1b' }}>
+                        {s.ptSessions > 0 ? `🏋️ ${s.ptSessions} seans` : 'Paket yok'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ padding: '0.75rem 0 0', fontSize: '0.78rem', color: 'var(--muted)', textAlign: 'center' }}>
+              Toplam {studentsModal.students.length} öğrenci
+            </div>
+          </div>
         </div>
       )}
     </div>

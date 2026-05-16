@@ -679,6 +679,36 @@ export class AdminMembersService {
     return { ok: true as const };
   }
 
+  /** Eğitmenin öğrencilerini listele */
+  async listTrainerStudents(tenantId: string, trainerId: string) {
+    const links = await this.trainerMemberLinksRepo.find({
+      where: { trainerId, tenantId, status: 'active' },
+      relations: ['memberUser'],
+    });
+    // Her öğrenci için PT paket bakiyesi
+    const memberIds = links.map(l => l.memberUserId);
+    let ptMap = new Map<string, number>();
+    if (memberIds.length > 0) {
+      const packages = await this.packagesRepo
+        .createQueryBuilder('p')
+        .innerJoin('p.packageType', 'pt')
+        .where('p.userId IN (:...ids)', { ids: memberIds })
+        .andWhere('pt.sessionType = :st', { st: 'personal_training' })
+        .andWhere('p.status = :active', { active: 'active' })
+        .select(['p.userId', 'p.remainingSessions'])
+        .getMany();
+      for (const p of packages) ptMap.set(p.userId, (ptMap.get(p.userId) || 0) + p.remainingSessions);
+    }
+    return links.map(l => ({
+      linkId: l.id,
+      memberId: l.memberUserId,
+      memberName: l.memberUser ? `${l.memberUser.firstName} ${l.memberUser.lastName}` : null,
+      memberEmail: l.memberUser?.email || null,
+      memberPhone: l.memberUser?.phone || null,
+      ptSessions: ptMap.get(l.memberUserId) || 0,
+    }));
+  }
+
   /** Eğitmen bazlı istatistikler */
   async getTrainerStats(tenantId: string, trainerId: string) {
     const trainer = await this.trainersRepo.findOne({
