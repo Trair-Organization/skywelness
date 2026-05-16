@@ -807,6 +807,33 @@ export class AdminMembersService {
 
   // ─── Eğitmen Ajanda Yönetimi ─────────────────────────────────────────────────
 
+  /** Admin: Masaj paketi satış geçmişi */
+  async listSpaPackageSales(tenantId: string) {
+    const rows = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.packageType', 'pt')
+      .innerJoinAndSelect('p.user', 'u')
+      .where('pt.tenantId = :tenantId', { tenantId })
+      .andWhere('pt.sessionType = :st', { st: 'massage' })
+      .orderBy('p.createdAt', 'DESC')
+      .take(100)
+      .getMany();
+    return rows.map((p) => ({
+      id: p.id,
+      memberName: `${p.user.firstName} ${p.user.lastName}`,
+      memberEmail: p.user.email,
+      memberPhone: p.user.phone,
+      packageName: p.packageType.name,
+      sessionCount: p.packageType.sessionCount,
+      remainingSessions: p.remainingSessions,
+      usedSessions: p.packageType.sessionCount - p.remainingSessions,
+      price: p.packageType.price,
+      status: p.status,
+      expiresAt: p.expiresAt,
+      createdAt: p.createdAt,
+    }));
+  }
+
   /** Admin: Tüm spa (masöz) randevularını listele */
   async listSpaReservations(tenantId: string, status?: string) {
     const qb = this.reservationsRepo

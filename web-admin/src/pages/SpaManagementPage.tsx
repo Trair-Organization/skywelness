@@ -949,8 +949,24 @@ type SpaPackageRow = {
   sortOrder: number;
 };
 
+type PackageSaleRow = {
+  id: string;
+  memberName: string;
+  memberPhone: string | null;
+  packageName: string;
+  sessionCount: number;
+  remainingSessions: number;
+  usedSessions: number;
+  price: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+};
+
 function PackagesTab() {
+  const [subTab, setSubTab] = useState<'definitions' | 'sales'>('definitions');
   const [packages, setPackages] = useState<SpaPackageRow[]>([]);
+  const [sales, setSales] = useState<PackageSaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -962,17 +978,22 @@ function PackagesTab() {
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const loadPackages = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
-    try { setPackages(await apiJson<SpaPackageRow[]>('/spa/admin/packages')); }
-    catch { /* */ }
+    try {
+      const [pkgs, salesData] = await Promise.all([
+        apiJson<SpaPackageRow[]>('/spa/admin/packages'),
+        apiJson<PackageSaleRow[]>('/admin/spa-package-sales'),
+      ]);
+      setPackages(pkgs);
+      setSales(salesData);
+    } catch { /* */ }
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { queueMicrotask(() => { void loadPackages(); }); }, [loadPackages]);
+  useEffect(() => { queueMicrotask(() => { void loadAll(); }); }, [loadAll]);
 
   function resetForm() { setEditId(null); setName(''); setDescription(''); setSessionCount(10); setPrice(''); setValidityDays(30); setActive(true); setShowForm(false); }
-
   function startEdit(p: SpaPackageRow) { setEditId(p.id); setName(p.name); setDescription(p.description || ''); setSessionCount(p.sessionCount); setPrice(p.price); setValidityDays(p.validityDays); setActive(p.active); setShowForm(true); }
 
   async function handleSave(e: React.FormEvent) {
@@ -983,82 +1004,163 @@ function PackagesTab() {
       const body = { name: name.trim(), description: description.trim() || null, sessionCount, price: parseFloat(price), validityDays, active };
       if (editId) { await apiJson(`/spa/admin/packages/${editId}`, { method: 'PATCH', body: JSON.stringify(body) }); }
       else { await apiJson('/spa/admin/packages', { method: 'POST', body: JSON.stringify(body) }); }
-      resetForm(); await loadPackages();
+      resetForm(); await loadAll();
     } catch (err) { alert(err instanceof Error ? err.message : 'Hata'); }
     finally { setSaving(false); }
   }
+
+  // Stats
+  const totalSold = sales.length;
+  const totalRevenue = sales.reduce((sum, s) => sum + parseFloat(s.price), 0);
+  const activePkgs = sales.filter(s => s.status === 'active').length;
 
   if (loading) return <p className="muted">Yükleniyor...</p>;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 className="spa-section-title" style={{ margin: 0 }}>Spa Paketleri ({packages.length})</h3>
-        <button className="btn-sm btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ Paket Ekle</button>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="stat-card"><div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Satılan Paket</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)' }}>{totalSold}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Toplam Gelir</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669' }}>₺{totalRevenue.toLocaleString('tr-TR')}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Aktif Paket</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)' }}>{activePkgs}</div></div>
       </div>
 
-      {showForm && (
-        <form onSubmit={(e) => void handleSave(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
-          <h4>{editId ? '✏️ Paket Düzenle' : '+ Yeni Paket'}</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <span className="form-label">Paket Adı *</span>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn: 10 Seans Masaj" required className="form-input" />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <span className="form-label">Durum</span>
-              <select value={active ? 'true' : 'false'} onChange={(e) => setActive(e.target.value === 'true')} className="form-input">
-                <option value="true">Aktif</option>
-                <option value="false">Pasif</option>
-              </select>
-            </label>
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <button className={`btn-sm ${subTab === 'definitions' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('definitions')}>📦 Paket Tanımları ({packages.length})</button>
+        <button className={`btn-sm ${subTab === 'sales' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('sales')}>🧾 Satış Geçmişi ({sales.length})</button>
+      </div>
+
+      {/* Definitions Sub-tab */}
+      {subTab === 'definitions' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <button className="btn-sm btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ Paket Ekle</button>
           </div>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            <span className="form-label">Açıklama</span>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Paket açıklaması..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <span className="form-label">Seans Sayısı *</span>
-              <input type="number" value={sessionCount} onChange={(e) => setSessionCount(Number(e.target.value))} min={1} className="form-input" />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <span className="form-label">Fiyat (₺) *</span>
-              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="15000" required className="form-input" />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <span className="form-label">Geçerlilik (gün) *</span>
-              <input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} min={1} className="form-input" />
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
-            <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
-          </div>
-        </form>
+
+          {showForm && (
+            <form onSubmit={(e) => void handleSave(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}>
+              <h4>{editId ? '✏️ Paket Düzenle' : '+ Yeni Paket'}</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span className="form-label">Paket Adı *</span>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Örn: 10 Seans Masaj" required className="form-input" />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span className="form-label">Durum</span>
+                  <select value={active ? 'true' : 'false'} onChange={(e) => setActive(e.target.value === 'true')} className="form-input">
+                    <option value="true">Aktif</option>
+                    <option value="false">Pasif</option>
+                  </select>
+                </label>
+              </div>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <span className="form-label">Açıklama</span>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Paket açıklaması..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span className="form-label">Seans Sayısı *</span>
+                  <input type="number" value={sessionCount} onChange={(e) => setSessionCount(Number(e.target.value))} min={1} className="form-input" />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span className="form-label">Fiyat (₺) *</span>
+                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="15000" required className="form-input" />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <span className="form-label">Geçerlilik (gün) *</span>
+                  <input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} min={1} className="form-input" />
+                </label>
+              </div>
+              {price && sessionCount > 0 && (
+                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>
+                  💡 Seans başı: ₺{Math.round(parseFloat(price) / sessionCount).toLocaleString('tr-TR')} · {validityDays} gün geçerli
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button>
+                <button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button>
+              </div>
+            </form>
+          )}
+
+          {packages.length === 0 ? (
+            <div className="empty-state"><span className="empty-icon">📦</span><p>Henüz paket tanımlı değil</p></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              {packages.map((p) => {
+                const perSession = parseFloat(p.price) / p.sessionCount;
+                const soldCount = sales.filter(s => s.packageName === p.name).length;
+                return (
+                  <div key={p.id} className={`service-card ${!p.active ? 'trainer-card-inactive' : ''}`}>
+                    <div className="service-card-header">
+                      <span className="service-category">📦 {p.sessionCount} Seans</span>
+                      <span className={`service-status ${p.active ? 'active' : 'inactive'}`}>{p.active ? 'Aktif' : 'Pasif'}</span>
+                    </div>
+                    <h3 className="service-name">{p.name}</h3>
+                    {p.description && <p className="service-desc">{p.description.slice(0, 80)}</p>}
+                    <div className="service-meta">
+                      <span>📅 {p.validityDays} gün</span>
+                      <span className="service-price">₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Seans/₺{Math.round(perSession).toLocaleString('tr-TR')} · {soldCount} satış</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button className="btn-sm btn-outline" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => startEdit(p)}>✏️</button>
+                        <button className="btn-sm btn-danger" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => { if (confirm(`"${p.name}" pasif yapılacak. Emin misiniz?`)) { void apiJson(`/spa/admin/packages/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: false }) }).then(() => void loadAll()); } }}>🗑</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
-      {packages.length === 0 ? (
-        <div className="empty-state"><span className="empty-icon">📦</span><p>Henüz paket tanımlı değil</p></div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {packages.map((p) => (
-            <div key={p.id} className="spa-pkg-card">
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <strong>{p.name}</strong>
-                  <span className={`badge-status ${p.active ? 'badge-active' : 'badge-inactive'}`}>{p.active ? 'Aktif' : 'Pasif'}</span>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>
-                  {p.sessionCount} seans · {p.validityDays} gün geçerli {p.description && `· ${p.description.slice(0, 60)}`}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="spa-pkg-price">₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
-                <button className="btn-sm btn-outline" onClick={() => startEdit(p)}>✏️</button>
-              </div>
+      {/* Sales History Sub-tab */}
+      {subTab === 'sales' && (
+        <div>
+          {sales.length === 0 ? (
+            <div className="empty-state"><span className="empty-icon">🧾</span><p>Henüz paket satışı yok</p></div>
+          ) : (
+            <div className="members-table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Üye</th>
+                    <th>Paket</th>
+                    <th>Kullanım</th>
+                    <th>Fiyat</th>
+                    <th>Bitiş</th>
+                    <th>Durum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sales.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <strong>{s.memberName}</strong>
+                        {s.memberPhone && <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{s.memberPhone}</div>}
+                      </td>
+                      <td>{s.packageName}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.round((s.usedSessions / s.sessionCount) * 100)}%`, height: '100%', background: s.remainingSessions > 0 ? '#22c55e' : '#ef4444', borderRadius: 3 }}></div>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{s.usedSessions}/{s.sessionCount}</span>
+                        </div>
+                      </td>
+                      <td><span style={{ fontWeight: 700 }}>₺{parseFloat(s.price).toLocaleString('tr-TR')}</span></td>
+                      <td><span style={{ fontSize: '0.8rem' }}>{new Date(s.expiresAt).toLocaleDateString('tr-TR')}</span></td>
+                      <td><span className={`status-badge ${s.status === 'active' ? 'status-active' : s.status === 'depleted' ? 'status-spa-completed' : 'status-spa-cancelled'}`}>{s.status === 'active' ? 'Aktif' : s.status === 'depleted' ? 'Tükendi' : s.status === 'expired' ? 'Süresi Doldu' : s.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>

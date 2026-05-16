@@ -341,6 +341,14 @@ export class AdminController {
     return this.adminMembers.listSpaReservations(admin.tenantId, status);
   }
 
+  /** Admin: Masaj paketi satış geçmişi */
+  @Get('spa-package-sales')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listSpaPackageSales(@CurrentUser() admin: User) {
+    return this.adminMembers.listSpaPackageSales(admin.tenantId);
+  }
+
   /** Admin herhangi bir rezervasyonu iptal edebilir (pending veya confirmed) */
   @Post('reservations/:reservationId/cancel')
   @UseGuards(JwtAuthGuard, RolesGuard)
