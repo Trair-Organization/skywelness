@@ -862,6 +862,32 @@ export class AdminMembersService {
     }));
   }
 
+  /** Admin: PT paketi satış geçmişi */
+  async listPtPackageSales(tenantId: string) {
+    const rows = await this.packagesRepo
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.packageType', 'pt')
+      .innerJoinAndSelect('p.user', 'u')
+      .where('pt.tenantId = :tenantId', { tenantId })
+      .andWhere('pt.sessionType = :st', { st: 'personal_training' })
+      .orderBy('p.createdAt', 'DESC')
+      .take(100)
+      .getMany();
+    return rows.map((p) => ({
+      id: p.id,
+      memberName: `${p.user.firstName} ${p.user.lastName}`,
+      memberPhone: p.user.phone,
+      packageName: p.packageType.name,
+      sessionCount: p.packageType.sessionCount,
+      remainingSessions: p.remainingSessions,
+      usedSessions: p.packageType.sessionCount - p.remainingSessions,
+      price: p.packageType.price,
+      status: p.status,
+      expiresAt: p.expiresAt,
+      createdAt: p.createdAt,
+    }));
+  }
+
   /** Admin: Tüm spa (masöz) randevularını listele */
   async listSpaReservations(tenantId: string, status?: string) {
     const qb = this.reservationsRepo

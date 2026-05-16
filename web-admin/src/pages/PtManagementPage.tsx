@@ -112,57 +112,77 @@ function PtReservationsTab() {
 
 function PtPackagesTab() {
   const [packages, setPackages] = useState<Array<{ id: string; name: string; sessionCount: number; price: string; validityDays: number; active: boolean }>>([]);
-  const [sales, setSales] = useState<Array<{ id: string; memberName: string; packageName: string; sessionCount: number; remainingSessions: number; usedSessions: number; price: string; status: string; expiresAt: string; createdAt: string }>>([]);
+  const [sales, setSales] = useState<Array<{ id: string; memberName: string; memberPhone: string | null; packageName: string; sessionCount: number; remainingSessions: number; usedSessions: number; price: string; status: string; expiresAt: string; createdAt: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<'defs' | 'sales'>('defs');
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [sessionCount, setSessionCount] = useState(10);
+  const [price, setPrice] = useState('');
+  const [validityDays, setValidityDays] = useState(365);
+  const [active, setActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  // Load modal
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [loadMembers, setLoadMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; ptSessions: number }>>([]);
+  const [loadMemberSearch, setLoadMemberSearch] = useState('');
+  const [loadSelectedMember, setLoadSelectedMember] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
+  const [loadSelectedPkg, setLoadSelectedPkg] = useState('');
+  const [loadSaving, setLoadSaving] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      apiJson<Array<{ id: string; name: string; sessionCount: number; price: string; validityDays: number; sessionType: string; active: boolean }>>('/admin/package-types'),
-      apiJson<Array<{ id: string; memberName: string; packageName: string; sessionCount: number; remainingSessions: number; usedSessions: number; price: string; status: string; expiresAt: string; createdAt: string }>>('/admin/spa-package-sales'), // reuse same endpoint, filter client-side
-    ]).then(([pkgs, allSales]) => {
-      setPackages(pkgs.filter(p => p.sessionType === 'personal_training'));
-      // PT sales = packages where packageName includes PT keywords or sessionType matching
-      setSales(allSales); // TODO: separate endpoint for PT sales if needed
-      setLoading(false);
-    }).catch(() => setLoading(false));
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [pkgTypes, salesData] = await Promise.all([
+        apiJson<Array<{ id: string; name: string; sessionCount: number; price: string; validityDays: number; sessionType: string; active: boolean }>>('/admin/package-types'),
+        apiJson<typeof sales>('/admin/pt-package-sales'),
+      ]);
+      setPackages(pkgTypes.filter(p => p.sessionType === 'personal_training'));
+      setSales(salesData);
+    } catch { /* */ } finally { setLoading(false); }
   }, []);
+  useEffect(() => { queueMicrotask(() => { void loadAll(); }); }, [loadAll]);
+
+  function resetForm() { setEditId(null); setName(''); setSessionCount(10); setPrice(''); setValidityDays(365); setActive(true); setShowForm(false); }
+  function startEdit(p: { id: string; name: string; sessionCount: number; price: string; validityDays: number; active: boolean }) { setEditId(p.id); setName(p.name); setSessionCount(p.sessionCount); setPrice(p.price); setValidityDays(p.validityDays); setActive(p.active); setShowForm(true); }
+  async function handleSave(e: React.FormEvent) { e.preventDefault(); if (!name.trim() || !price) return; setSaving(true); try { const body = { name: name.trim(), sessionCount, price: parseFloat(price), validityDays, sessionType: 'personal_training', active }; if (editId) await apiJson(`/admin/package-types/${editId}`, { method: 'PATCH', body: JSON.stringify(body) }); else await apiJson('/admin/package-types', { method: 'POST', body: JSON.stringify(body) }); resetForm(); await loadAll(); } catch (err) { alert(err instanceof Error ? err.message : 'Hata'); } finally { setSaving(false); } }
+  async function openLoadModal() { setShowLoadModal(true); setLoadSelectedMember(null); setLoadSelectedPkg(''); setLoadMemberSearch(''); try { const m = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; ptSessions: number }>>('/admin/members?status=active'); setLoadMembers(m); } catch { /* */ } }
+  async function handleLoadPackage() { if (!loadSelectedMember || !loadSelectedPkg) return; setLoadSaving(true); try { await apiJson(`/admin/members/${loadSelectedMember.id}/assign-package`, { method: 'POST', body: JSON.stringify({ packageTypeId: loadSelectedPkg }) }); setShowLoadModal(false); await loadAll(); alert('✅ PT Paketi yüklendi'); } catch (err) { alert(err instanceof Error ? err.message : 'Hata'); } finally { setLoadSaving(false); } }
+
+  const totalSold = sales.length;
+  const totalRevenue = sales.reduce((s, p) => s + parseFloat(p.price), 0);
+  const activePkgs = sales.filter(s => s.status === 'active').length;
+  const filteredLoadMembers = loadMemberSearch ? loadMembers.filter(m => `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(loadMemberSearch.toLowerCase())).slice(0, 10) : loadMembers.slice(0, 10);
 
   if (loading) return <p className="muted">Yükleniyor...</p>;
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
-        <button className={`btn-sm ${subTab === 'defs' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('defs')}>📦 Paket Tanımları ({packages.length})</button>
-        <button className={`btn-sm ${subTab === 'sales' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('sales')}>🧾 Satış Geçmişi</button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="stat-card"><div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Satılan PT</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)' }}>{totalSold}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Toplam Gelir</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669' }}>₺{totalRevenue.toLocaleString('tr-TR')}</div></div>
+        <div className="stat-card"><div style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>Aktif Paket</div><div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)' }}>{activePkgs}</div></div>
       </div>
 
-      {subTab === 'defs' && (
-        packages.length === 0 ? (
-          <div className="empty-state"><span className="empty-icon">📦</span><p>PT paketi tanımlı değil. Sidebar → Paketler'den ekleyebilirsiniz.</p></div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {packages.map(p => (
-              <div key={p.id} className="service-card">
-                <div className="service-card-header">
-                  <span className="service-category">🏋️ {p.sessionCount} Seans</span>
-                  <span className={`service-status ${p.active ? 'active' : 'inactive'}`}>{p.active ? 'Aktif' : 'Pasif'}</span>
-                </div>
-                <h3 className="service-name">{p.name}</h3>
-                <div className="service-meta">
-                  <span>📅 {p.validityDays} gün</span>
-                  <span className="service-price">₺{parseFloat(p.price).toLocaleString('tr-TR')}</span>
-                </div>
-                <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--muted)' }}>Seans/₺{Math.round(parseFloat(p.price) / p.sessionCount).toLocaleString('tr-TR')}</div>
-              </div>
-            ))}
-          </div>
-        )
-      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', alignItems: 'center' }}>
+        <button className={`btn-sm ${subTab === 'defs' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('defs')}>📦 Tanımlar ({packages.length})</button>
+        <button className={`btn-sm ${subTab === 'sales' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSubTab('sales')}>🧾 Satış ({sales.length})</button>
+        <div style={{ marginLeft: 'auto' }}><button className="btn-sm btn-primary" onClick={() => void openLoadModal()}>🎫 Üyeye PT Yükle</button></div>
+      </div>
 
-      {subTab === 'sales' && (
-        <div className="empty-state"><span className="empty-icon">🧾</span><p>PT paket satış geçmişi henüz entegre edilmedi.</p></div>
-      )}
+      {subTab === 'defs' && (<div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}><button className="btn-sm btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ PT Paketi Ekle</button></div>
+        {showForm && (<form onSubmit={(e) => void handleSave(e)} className="spa-form-panel" style={{ display: 'grid', gap: '0.75rem' }}><h4>{editId ? '✏️ Düzenle' : '+ Yeni PT Paketi'}</h4><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}><label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}><span className="form-label">Paket Adı *</span><input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="form-input" /></label><label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}><span className="form-label">Durum</span><select value={active?'true':'false'} onChange={(e) => setActive(e.target.value==='true')} className="form-input"><option value="true">Aktif</option><option value="false">Pasif</option></select></label></div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}><label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}><span className="form-label">Seans *</span><input type="number" value={sessionCount} onChange={(e) => setSessionCount(Number(e.target.value))} min={1} className="form-input" /></label><label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}><span className="form-label">Fiyat (₺) *</span><input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required className="form-input" /></label><label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}><span className="form-label">Geçerlilik (gün)</span><input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} min={1} className="form-input" /></label></div>{price && sessionCount > 0 && <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>💡 Seans/₺{Math.round(parseFloat(price)/sessionCount).toLocaleString('tr-TR')}</p>}<div style={{ display: 'flex', gap: '0.5rem' }}><button type="submit" className="btn-sm btn-primary" disabled={saving}>{saving ? '⏳...' : editId ? '✓ Güncelle' : '✓ Oluştur'}</button><button type="button" className="btn-sm btn-outline" onClick={resetForm}>İptal</button></div></form>)}
+        {packages.length === 0 ? <div className="empty-state"><span className="empty-icon">📦</span><p>PT paketi tanımlı değil</p></div> : (<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>{packages.map(p => { const sold = sales.filter(s => s.packageName === p.name).length; return (<div key={p.id} className="service-card"><div className="service-card-header"><span className="service-category">🏋️ {p.sessionCount} Seans</span><span className={`service-status ${p.active?'active':'inactive'}`}>{p.active?'Aktif':'Pasif'}</span></div><h3 className="service-name">{p.name}</h3><div className="service-meta"><span>📅 {p.validityDays} gün</span><span className="service-price">₺{parseFloat(p.price).toLocaleString('tr-TR')}</span></div><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}><span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Seans/₺{Math.round(parseFloat(p.price)/p.sessionCount).toLocaleString('tr-TR')} · {sold} satış</span><div style={{ display: 'flex', gap: '4px' }}><button className="btn-sm btn-outline" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => startEdit(p)}>✏️</button><button className="btn-sm btn-danger" style={{ padding: '3px 6px', fontSize: '0.68rem' }} onClick={() => { if (confirm('Pasif yapılacak?')) void apiJson(`/admin/package-types/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: false }) }).then(() => void loadAll()); }}>🗑</button></div></div></div>);})}</div>)}
+      </div>)}
+
+      {subTab === 'sales' && (<div>{sales.length === 0 ? <div className="empty-state"><span className="empty-icon">🧾</span><p>PT satışı yok</p></div> : <div className="members-table-wrapper"><table className="data-table"><thead><tr><th>Üye</th><th>Paket</th><th>Kullanım</th><th>Fiyat</th><th>Tarih</th><th>Bitiş</th><th>Durum</th></tr></thead><tbody>{sales.map(s => (<tr key={s.id}><td><strong>{s.memberName}</strong>{s.memberPhone && <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{s.memberPhone}</div>}</td><td>{s.packageName}</td><td><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden', minWidth: 40 }}><div style={{ width: `${Math.round((s.usedSessions/s.sessionCount)*100)}%`, height: '100%', background: s.remainingSessions > 0 ? '#22c55e' : '#ef4444', borderRadius: 3 }}></div></div><span style={{ fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{s.usedSessions}/{s.sessionCount}</span></div></td><td style={{ fontWeight: 700 }}>₺{parseFloat(s.price).toLocaleString('tr-TR')}</td><td style={{ fontSize: '0.78rem' }}>{new Date(s.createdAt).toLocaleDateString('tr-TR')}</td><td style={{ fontSize: '0.78rem' }}>{new Date(s.expiresAt).toLocaleDateString('tr-TR')}</td><td><span className={`status-badge ${s.status==='active'?'status-active':s.status==='depleted'?'status-spa-completed':'status-spa-cancelled'}`}>{s.status==='active'?'Aktif':s.status==='depleted'?'Tükendi':'Doldu'}</span></td></tr>))}</tbody></table></div>}</div>)}
+
+      {showLoadModal && (<div className="agenda-modal-overlay" onClick={() => setShowLoadModal(false)}><div className="agenda-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}><div className="agenda-modal-header"><h3>🎫 Üyeye PT Paketi Yükle</h3><button className="agenda-modal-close" onClick={() => setShowLoadModal(false)}>✕</button></div><div className="agenda-modal-form"><label className="form-label">Paket *</label><select className="form-input" value={loadSelectedPkg} onChange={(e) => setLoadSelectedPkg(e.target.value)}><option value="">— Seçin —</option>{packages.filter(p=>p.active).map(p => <option key={p.id} value={p.id}>{p.name} ({p.sessionCount} seans · ₺{parseFloat(p.price).toLocaleString('tr-TR')})</option>)}</select><label className="form-label" style={{ marginTop: '0.75rem' }}>Üye *</label><input type="text" className="form-input" placeholder="İsim ile ara..." value={loadMemberSearch} onChange={(e) => setLoadMemberSearch(e.target.value)} />{loadSelectedMember ? <div className="agenda-selected-member">✅ {loadSelectedMember.firstName} {loadSelectedMember.lastName}<button className="btn-sm btn-outline" style={{ marginLeft: 8, padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => setLoadSelectedMember(null)}>Değiştir</button></div> : <div className="agenda-member-list">{filteredLoadMembers.map(m => <div key={m.id} className="agenda-member-item" onClick={() => setLoadSelectedMember(m)}><div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}><div><strong>{m.firstName} {m.lastName}</strong><span style={{ fontSize: '0.72rem', color: 'var(--muted)', display: 'block' }}>{m.email}</span></div>{m.ptSessions > 0 ? <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534' }}>🏋️ {m.ptSessions}</span> : <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: 6, background: '#f1f5f9', color: '#64748b' }}>Paket yok</span>}</div></div>)}</div>}<div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}><button className="btn-sm btn-primary" disabled={!loadSelectedMember || !loadSelectedPkg || loadSaving} onClick={() => void handleLoadPackage()}>{loadSaving ? '⏳...' : '✓ Yükle'}</button><button className="btn-sm btn-outline" onClick={() => setShowLoadModal(false)}>İptal</button></div></div></div></div>)}
+    </div>
+  );
+}
     </div>
   );
 }

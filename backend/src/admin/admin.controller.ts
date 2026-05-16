@@ -349,6 +349,14 @@ export class AdminController {
     return this.adminMembers.listSpaPackageSales(admin.tenantId);
   }
 
+  /** Admin: PT paketi satış geçmişi */
+  @Get('pt-package-sales')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listPtPackageSales(@CurrentUser() admin: User) {
+    return this.adminMembers.listPtPackageSales(admin.tenantId);
+  }
+
   /** Admin: Tüm PT randevularını listele */
   @Get('pt-reservations')
   @UseGuards(JwtAuthGuard, RolesGuard)
