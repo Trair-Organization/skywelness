@@ -355,6 +355,17 @@ export class AdminController {
     return this.adminMembers.completeReservationByAdmin(admin.tenantId, reservationId);
   }
 
+  /** Admin: Manuel SMS hatırlatma gönder */
+  @Post('reservations/:reservationId/remind')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  sendManualReminder(
+    @CurrentUser() admin: User,
+    @Param('reservationId', new ParseUUIDPipe({ version: '4' })) reservationId: string,
+  ) {
+    return this.adminMembers.sendManualReminder(admin.tenantId, reservationId);
+  }
+
   /** Admin üye adına randevu oluşturur */
   @Post('reservations/create')
   @UseGuards(JwtAuthGuard, RolesGuard)

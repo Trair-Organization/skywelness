@@ -857,6 +857,33 @@ export class AdminMembersService {
     return { ok: true as const, completedReservationId: reservationId };
   }
 
+  /** Admin: Manuel SMS hatırlatma gönder */
+  async sendManualReminder(tenantId: string, reservationId: string) {
+    const reservation = await this.reservationsRepo.findOne({
+      where: { id: reservationId, tenantId },
+      relations: ['user', 'trainer', 'spaTherapist'],
+    });
+    if (!reservation) throw new NotFoundException('Rezervasyon bulunamadı');
+    if (!reservation.user) throw new BadRequestException('Üye bulunamadı');
+
+    const date = reservation.startTime.toLocaleDateString('tr-TR');
+    const time = reservation.startTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    const providerName = reservation.spaTherapist?.name || '';
+    const sessionType = reservation.spaTherapistId ? 'massage' : 'personal_training';
+
+    await this.notifier.reservationReminder({
+      member: reservation.user,
+      providerName,
+      sessionType: sessionType as 'massage' | 'personal_training',
+      date,
+      time,
+      reservationId,
+      window: 'day',
+    });
+
+    return { ok: true as const, sent: true };
+  }
+
   /** Admin üye adına randevu oluşturur (telefonda arayan üye için) */
   async createReservationByAdmin(
     tenantId: string,

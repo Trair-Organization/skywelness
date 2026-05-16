@@ -454,6 +454,7 @@ function AgendaTab() {
                 <div className="agenda-modal-actions">
                   <button className="agenda-action-btn agenda-action-complete" onClick={() => void handleCompleteReservation()} disabled={actionLoading}>✅ Tamamlandı</button>
                   <button className="agenda-action-btn agenda-action-cancel" onClick={() => void handleCancelReservation()} disabled={actionLoading}>❌ İptal Et</button>
+                  <button className="agenda-action-btn agenda-action-book" onClick={() => { if (selectedAction?.slot?.reservation) { void apiJson(`/admin/reservations/${selectedAction.slot.reservation.id}/remind`, { method: 'POST' }).then(() => alert('✅ Hatırlatma gönderildi')).catch(() => alert('Gönderilemedi')); } }} disabled={actionLoading}>📱 SMS Hatırlatma</button>
                 </div>
               </>
             )}
