@@ -639,6 +639,18 @@ export class AdminMembersService {
 
   // ─── Eğitmen CRUD ────────────────────────────────────────────────────────────
 
+  private async generatePublicId(prefix: 'UYE' | 'EGT' | 'KLB'): Promise<string> {
+    const last = await this.usersRepo.findOne({
+      where: {},
+      order: { publicId: 'DESC' },
+      select: ['publicId'],
+    });
+    const lastNum = last?.publicId?.startsWith(prefix)
+      ? parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0
+      : 0;
+    return `${prefix}-${String(lastNum + 1).padStart(4, '0')}`;
+  }
+
   async createTrainer(
     tenantId: string,
     data: {
@@ -669,6 +681,7 @@ export class AdminMembersService {
       tenantId,
       email: data.email.toLowerCase().trim(),
       username,
+      publicId: await this.generatePublicId('EGT'),
       passwordHash,
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
@@ -2079,6 +2092,7 @@ export class AdminMembersService {
       tenantId,
       email,
       username,
+      publicId: await this.generatePublicId('UYE'),
       passwordHash,
       firstName,
       lastName,

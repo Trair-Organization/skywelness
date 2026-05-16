@@ -122,10 +122,10 @@ export class TenantJoinRequestService {
       order: { publicId: 'DESC' },
       select: ['publicId'],
     });
-    const lastNum = last?.publicId?.startsWith('MBR-')
+    const lastNum = last?.publicId?.startsWith('UYE-')
       ? parseInt(last.publicId.split('-')[1] ?? '0', 10) || 0
       : 0;
-    return `MBR-${String(lastNum + 1).padStart(4, '0')}`;
+    return `UYE-${String(lastNum + 1).padStart(4, '0')}`;
   }
 
   /**

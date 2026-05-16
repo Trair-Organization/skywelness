@@ -28,7 +28,7 @@ export class ConnectionsService {
   /** Public ID ile kullanıcı veya kulüp bul */
   async findByPublicId(publicId: string) {
     const code = publicId.trim().toUpperCase();
-    if (code.startsWith('CLB-')) {
+    if (code.startsWith('KLB-')) {
       const tenant = await this.tenantsRepo.findOne({ where: { publicId: code } });
       if (!tenant) throw new NotFoundException('Kulüp bulunamadı');
       return { type: 'tenant' as const, id: tenant.id, name: tenant.name, publicId: code };

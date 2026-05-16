@@ -88,10 +88,10 @@ export class AuthService {
     return value.trim().toLocaleLowerCase('tr-TR');
   }
 
-  /** Benzersiz public ID oluştur: MBR-0001, TRN-0001, CLB-0001 */
-  private async generatePublicId(prefix: 'MBR' | 'TRN' | 'CLB'): Promise<string> {
+  /** Benzersiz public ID oluştur: UYE-0001, EGT-0001, KLB-0001 */
+  private async generatePublicId(prefix: 'UYE' | 'EGT' | 'KLB'): Promise<string> {
     let lastNum = 0;
-    if (prefix === 'CLB') {
+    if (prefix === 'KLB') {
       const last = await this.tenantsRepo.findOne({
         where: {},
         order: { publicId: 'DESC' },
@@ -247,7 +247,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const publicId = await this.generatePublicId('MBR');
+    const publicId = await this.generatePublicId('UYE');
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email: dto.email.toLowerCase(),
@@ -334,12 +334,12 @@ export class AuthService {
       settings: { workspaceType: 'independent_trainer' },
     });
     await this.tenantsRepo.save(tenant);
-    // Assign CLB public ID to tenant
-    tenant.publicId = await this.generatePublicId('CLB');
+    // Assign KLB public ID to tenant
+    tenant.publicId = await this.generatePublicId('KLB');
     await this.tenantsRepo.save(tenant);
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const trainerPublicId = await this.generatePublicId('TRN');
+    const trainerPublicId = await this.generatePublicId('EGT');
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email,
