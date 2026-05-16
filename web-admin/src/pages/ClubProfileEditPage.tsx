@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../lib/api';
-import { TURKEY_CITIES, CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
+import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 type TenantProfile = {
   id: string;
