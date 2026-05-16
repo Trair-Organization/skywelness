@@ -4179,3 +4179,97 @@ button.primary:disabled {
 .dashboard-page .spa-list-meta {
   color: var(--muted);
 }
+
+
+/* ─── Agenda Table (Transposed: rows=hours, cols=therapists) ───────────────── */
+.agenda-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  table-layout: fixed;
+}
+.agenda-table th,
+.agenda-table td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.agenda-th-hour {
+  width: 90px;
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.agenda-th-therapist {
+  background: var(--surface);
+  min-width: 110px;
+  padding: 0.6rem 0.5rem;
+}
+.agenda-td-hour {
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--text);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+.agenda-td {
+  cursor: pointer;
+  transition: background 0.1s;
+  height: 48px;
+}
+.agenda-td:hover {
+  opacity: 0.8;
+}
+.agenda-td-empty {
+  background: #fafafa;
+}
+.agenda-td-empty:hover {
+  background: #f0f0f0;
+}
+.agenda-empty-plus {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+.agenda-td-empty:hover .agenda-empty-plus {
+  color: var(--accent);
+}
+.agenda-td-free {
+  background: #f0fdf4;
+  border-left: 3px solid #22c55e;
+}
+.agenda-free-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #16a34a;
+}
+.agenda-td-booked {
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+}
+.agenda-td-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.agenda-td-name {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.agenda-td-status {
+  font-size: 0.7rem;
+}
