@@ -366,4 +366,30 @@ export class TrainerPanelController {
   ) {
     return this.service.deletePackage(user, id);
   }
+
+  // ─── Etkinlik Yönetimi ──────────────────────────────────────────────────────
+
+  /** Eğitmen: kendi etkinliklerini listele */
+  @Get('events')
+  listMyEvents(@CurrentUser() user: User) {
+    return this.service.listTrainerEvents(user);
+  }
+
+  /** Eğitmen: etkinlik oluştur (onaya gider) */
+  @Post('events')
+  createEvent(@CurrentUser() user: User, @Body() body: {
+    title: string;
+    description?: string;
+    location: string;
+    startsAt: string;
+    endsAt?: string;
+    capacity?: number;
+    category?: string;
+    price?: number;
+    requirements?: string;
+    imageUrl?: string;
+    recurringRule?: { frequency: 'daily' | 'weekly' | 'monthly'; daysOfWeek?: number[]; endDate?: string; interval?: number };
+  }) {
+    return this.service.createTrainerEvent(user, body);
+  }
 }

@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { Availability } from '../database/entities/availability.entity';
+import { ClubEvent } from '../database/entities/club-event.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -35,6 +36,7 @@ export class TrainerPanelService {
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
     @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
+    @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
     private readonly pushService: PushService,
     private readonly notifier: NotificationDispatcher,
   ) {}
@@ -1401,5 +1403,53 @@ export class TrainerPanelService {
     if (!pkg) throw new NotFoundException('Paket bulunamadı');
     await this.packageTypesRepo.remove(pkg);
     return { ok: true };
+  }
+
+  // ─── Etkinlik Yönetimi ──────────────────────────────────────────────────────
+
+  async listTrainerEvents(user: User) {
+    return this.eventsRepo.find({
+      where: { createdByUserId: user.id },
+      order: { startsAt: 'DESC' },
+      take: 50,
+    });
+  }
+
+  async createTrainerEvent(user: User, data: {
+    title: string;
+    description?: string;
+    location: string;
+    startsAt: string;
+    endsAt?: string;
+    capacity?: number;
+    category?: string;
+    price?: number;
+    requirements?: string;
+    imageUrl?: string;
+    recurringRule?: { frequency: 'daily' | 'weekly' | 'monthly'; daysOfWeek?: number[]; endDate?: string; interval?: number };
+  }) {
+    const startsAt = new Date(data.startsAt);
+    const endsAt = data.endsAt ? new Date(data.endsAt) : null;
+
+    const event = this.eventsRepo.create({
+      tenantId: user.tenantId,
+      title: data.title.trim(),
+      description: data.description?.trim() || null,
+      coachName: `${user.firstName} ${user.lastName}`,
+      location: data.location.trim(),
+      imageUrl: data.imageUrl?.trim() || null,
+      startsAt,
+      endsAt,
+      capacity: data.capacity ?? 20,
+      category: data.category?.trim() || 'general',
+      requirements: data.requirements?.trim() || null,
+      price: data.price != null ? String(data.price) : '0',
+      published: false,
+      status: 'pending_approval',
+      createdByUserId: user.id,
+      recurringRule: data.recurringRule || null,
+    });
+
+    return this.eventsRepo.save(event);
   }
 }

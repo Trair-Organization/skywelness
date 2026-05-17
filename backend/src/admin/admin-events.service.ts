@@ -25,7 +25,7 @@ export class AdminEventsService {
     });
   }
 
-  async create(tenantId: string, dto: CreateClubEventDto) {
+  async create(tenantId: string, dto: CreateClubEventDto, createdByUserId?: string) {
     const startsAt = new Date(dto.startsAt);
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
     if (endsAt && endsAt <= startsAt) {
@@ -45,9 +45,77 @@ export class AdminEventsService {
       requirements: dto.requirements?.trim() || null,
       schedule: dto.schedule ?? null,
       price: dto.price != null ? String(dto.price) : '0',
-      published: dto.published ?? true,
+      published: false,
+      status: 'pending_approval',
+      createdByUserId: createdByUserId || null,
     });
-    return this.eventsRepo.save(row);
+    const saved = await this.eventsRepo.save(row);
+
+    // Recurring: oluştur
+    if (dto.recurringRule) {
+      await this.generateRecurringEvents(saved, dto.recurringRule);
+    }
+
+    return saved;
+  }
+
+  /** Tekrarlayan etkinlikleri oluştur */
+  private async generateRecurringEvents(
+    parent: ClubEvent,
+    rule: { frequency: string; daysOfWeek?: number[]; endDate?: string; interval?: number },
+  ) {
+    const endDate = rule.endDate ? new Date(rule.endDate) : new Date(parent.startsAt.getTime() + 90 * 24 * 60 * 60 * 1000);
+    const interval = rule.interval || 1;
+    const duration = parent.endsAt ? parent.endsAt.getTime() - parent.startsAt.getTime() : 0;
+
+    const events: Partial<ClubEvent>[] = [];
+    let current = new Date(parent.startsAt);
+
+    for (let i = 0; i < 52 && events.length < 52; i++) {
+      // İlerle
+      if (rule.frequency === 'daily') {
+        current = new Date(current.getTime() + interval * 24 * 60 * 60 * 1000);
+      } else if (rule.frequency === 'weekly') {
+        current = new Date(current.getTime() + interval * 7 * 24 * 60 * 60 * 1000);
+      } else if (rule.frequency === 'monthly') {
+        current = new Date(current);
+        current.setMonth(current.getMonth() + interval);
+      }
+
+      if (current > endDate) break;
+
+      // daysOfWeek filtresi (0=Pazar, 1=Pazartesi...)
+      if (rule.daysOfWeek && rule.daysOfWeek.length > 0) {
+        if (!rule.daysOfWeek.includes(current.getDay())) continue;
+      }
+
+      events.push({
+        tenantId: parent.tenantId,
+        title: parent.title,
+        description: parent.description,
+        coachName: parent.coachName,
+        location: parent.location,
+        imageUrl: parent.imageUrl,
+        startsAt: new Date(current),
+        endsAt: duration ? new Date(current.getTime() + duration) : null,
+        capacity: parent.capacity,
+        category: parent.category,
+        requirements: parent.requirements,
+        schedule: parent.schedule,
+        price: parent.price,
+        published: false,
+        status: 'pending_approval',
+        parentEventId: parent.id,
+      });
+    }
+
+    if (events.length > 0) {
+      await this.eventsRepo.save(events as ClubEvent[]);
+    }
+
+    // Parent'a recurring rule kaydet
+    parent.recurringRule = rule as ClubEvent['recurringRule'];
+    await this.eventsRepo.save(parent);
   }
 
   async update(tenantId: string, id: string, dto: UpdateClubEventDto) {

@@ -136,4 +136,26 @@ export class PlatformAdminController {
   ) {
     return this.platformAdminService.updateCommissionRate(tenantId, body.commissionRate);
   }
+
+  /** Onay bekleyen etkinlikleri listele */
+  @Get('events/pending')
+  listPendingEvents() {
+    return this.platformAdminService.listPendingEvents();
+  }
+
+  /** Etkinliği onayla */
+  @Post('events/:eventId/approve')
+  approveEvent(@Param('eventId') eventId: string, @CurrentUser() reviewer: User) {
+    return this.platformAdminService.approveEvent(eventId, reviewer);
+  }
+
+  /** Etkinliği reddet */
+  @Post('events/:eventId/reject')
+  rejectEvent(
+    @Param('eventId') eventId: string,
+    @CurrentUser() reviewer: User,
+    @Body() body: { reason?: string },
+  ) {
+    return this.platformAdminService.rejectEvent(eventId, reviewer, body.reason);
+  }
 }

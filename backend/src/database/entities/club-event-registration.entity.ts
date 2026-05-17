@@ -30,6 +30,22 @@ export class ClubEventRegistration {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
+  /** Ödeme durumu: free, pending, paid, refunded */
+  @Column({ type: 'varchar', length: 20, default: 'free', name: 'payment_status' })
+  paymentStatus!: string;
+
+  /** Kapora tutarı */
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0, name: 'deposit_amount' })
+  depositAmount!: string;
+
+  /** Check-in yapıldı mı */
+  @Column({ type: 'boolean', default: false, name: 'checked_in' })
+  checkedIn!: boolean;
+
+  /** Check-in zamanı */
+  @Column({ type: 'timestamptz', nullable: true, name: 'checked_in_at' })
+  checkedInAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 }

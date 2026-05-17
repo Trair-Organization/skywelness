@@ -86,4 +86,13 @@ export class CreateClubEventDto {
   @Type(() => Number)
   @Min(0)
   price?: number;
+
+  /** Tekrarlayan etkinlik kuralı */
+  @IsOptional()
+  recurringRule?: {
+    frequency: 'daily' | 'weekly' | 'monthly';
+    daysOfWeek?: number[];
+    endDate?: string;
+    interval?: number;
+  };
 }

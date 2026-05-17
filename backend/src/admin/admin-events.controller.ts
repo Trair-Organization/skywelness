@@ -32,7 +32,7 @@ export class AdminEventsController {
 
   @Post()
   create(@CurrentUser() admin: User, @Body() dto: CreateClubEventDto) {
-    return this.adminEvents.create(admin.tenantId, dto);
+    return this.adminEvents.create(admin.tenantId, dto, admin.id);
   }
 
   @Patch(':id')

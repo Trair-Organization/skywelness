@@ -17,6 +17,8 @@ import { SpaService } from './entities/spa-service.entity';
 import { SpaTherapist } from './entities/spa-therapist.entity';
 import { ClubEvent } from './entities/club-event.entity';
 import { ClubEventRegistration } from './entities/club-event-registration.entity';
+import { EventWaitingList } from './entities/event-waiting-list.entity';
+import { EventReview } from './entities/event-review.entity';
 import { CafeOrder } from './entities/cafe-order.entity';
 import { CafeProduct } from './entities/cafe-product.entity';
 import { ApiKey } from './entities/api-key.entity';
@@ -69,6 +71,8 @@ export const typeOrmEntities = [
   CafeProduct,
   ClubEvent,
   ClubEventRegistration,
+  EventWaitingList,
+  EventReview,
   User,
   Trainer,
   TrainerProfile,

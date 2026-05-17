@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MemberAccountStatus, UserRole } from '../database/enums';
+import { ClubEvent } from '../database/entities/club-event.entity';
 import { PlatformAdminAuditLog } from '../database/entities/platform-admin-audit-log.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -25,6 +26,8 @@ export class PlatformAdminService {
     private readonly trainersRepo: Repository<Trainer>,
     @InjectRepository(PlatformAdminAuditLog)
     private readonly auditLogsRepo: Repository<PlatformAdminAuditLog>,
+    @InjectRepository(ClubEvent)
+    private readonly eventsRepo: Repository<ClubEvent>,
     private readonly pushService: PushService,
   ) {}
 
@@ -486,5 +489,103 @@ export class PlatformAdminService {
       commissionRate: rate,
       commissionPercent: `%${(rate * 100).toFixed(1)}`,
     };
+  }
+
+  // ─── Etkinlik Onay Sistemi ──────────────────────────────────────────────────
+
+  async listPendingEvents() {
+    const events = await this.eventsRepo.find({
+      where: { status: 'pending_approval' },
+      order: { createdAt: 'DESC' },
+      take: 100,
+    });
+
+    // Tenant bilgilerini ekle
+    const tenantIds = [...new Set(events.map((e) => e.tenantId))];
+    const tenants = tenantIds.length > 0
+      ? await this.tenantsRepo.find({ where: tenantIds.map((id) => ({ id })) as never })
+      : [];
+    const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
+
+    return events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      category: e.category,
+      startsAt: e.startsAt,
+      endsAt: e.endsAt,
+      capacity: e.capacity,
+      price: e.price,
+      location: e.location,
+      coachName: e.coachName,
+      imageUrl: e.imageUrl,
+      tenantId: e.tenantId,
+      tenantName: tenantMap.get(e.tenantId) || 'Bilinmiyor',
+      createdByUserId: e.createdByUserId,
+      createdAt: e.createdAt,
+    }));
+  }
+
+  async approveEvent(eventId: string, reviewer: User) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId } });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+    if (event.status !== 'pending_approval') {
+      throw new BadRequestException('Bu etkinlik onay bekliyor durumunda değil');
+    }
+
+    event.status = 'approved';
+    event.published = true;
+    await this.eventsRepo.save(event);
+
+    await this.logAction({
+      action: 'event_approved',
+      targetType: 'club_event',
+      targetId: eventId,
+      actorUserId: reviewer.id,
+    });
+
+    // Etkinliği oluşturan kişiye bildirim gönder
+    if (event.createdByUserId) {
+      void this.pushService.sendToUser(
+        event.createdByUserId,
+        '✅ Etkinlik Onaylandı',
+        `"${event.title}" etkinliğiniz onaylandı ve yayına alındı!`,
+        { type: 'event_approved', eventId },
+      );
+    }
+
+    return { ok: true, eventId, status: 'approved' };
+  }
+
+  async rejectEvent(eventId: string, reviewer: User, reason?: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId } });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+    if (event.status !== 'pending_approval') {
+      throw new BadRequestException('Bu etkinlik onay bekliyor durumunda değil');
+    }
+
+    event.status = 'rejected';
+    event.published = false;
+    await this.eventsRepo.save(event);
+
+    await this.logAction({
+      action: 'event_rejected',
+      targetType: 'club_event',
+      targetId: eventId,
+      actorUserId: reviewer.id,
+      details: reason ? { reason } : undefined,
+    });
+
+    // Etkinliği oluşturan kişiye bildirim gönder
+    if (event.createdByUserId) {
+      void this.pushService.sendToUser(
+        event.createdByUserId,
+        '❌ Etkinlik Reddedildi',
+        `"${event.title}" etkinliğiniz reddedildi.${reason ? ` Sebep: ${reason}` : ''}`,
+        { type: 'event_rejected', eventId },
+      );
+    }
+
+    return { ok: true, eventId, status: 'rejected' };
   }
 }

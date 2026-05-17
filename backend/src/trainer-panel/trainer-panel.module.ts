@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Availability } from '../database/entities/availability.entity';
+import { ClubEvent } from '../database/entities/club-event.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -20,6 +21,7 @@ import { TrainerPanelService } from './trainer-panel.service';
   imports: [
     TypeOrmModule.forFeature([
       Availability,
+      ClubEvent,
       Reservation,
       Resource,
       Trainer,

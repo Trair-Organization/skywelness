@@ -70,6 +70,26 @@ export class ClubEvent {
   @Column({ type: 'boolean', default: true })
   published!: boolean;
 
+  /** Etkinlik durumu: draft, pending_approval, approved, rejected, cancelled */
+  @Column({ type: 'varchar', length: 30, default: 'draft' })
+  status!: string;
+
+  /** Etkinliği oluşturan kullanıcı (trainer veya admin) */
+  @Column({ type: 'uuid', nullable: true, name: 'created_by_user_id' })
+  createdByUserId!: string | null;
+
+  /**
+   * Tekrarlayan etkinlik kuralı (JSON).
+   * Örn: { frequency: 'weekly', daysOfWeek: [2], endDate: '2026-06-30' }
+   * null = tek seferlik etkinlik
+   */
+  @Column({ type: 'jsonb', nullable: true, name: 'recurring_rule' })
+  recurringRule!: { frequency: 'daily' | 'weekly' | 'monthly'; daysOfWeek?: number[]; endDate?: string; interval?: number } | null;
+
+  /** Parent event ID (recurring serisinin ilk etkinliği) */
+  @Column({ type: 'uuid', nullable: true, name: 'parent_event_id' })
+  parentEventId!: string | null;
+
   @OneToMany(() => ClubEventRegistration, (r) => r.event, { cascade: false })
   registrations?: ClubEventRegistration[];
 
