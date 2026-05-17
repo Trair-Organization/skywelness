@@ -39,16 +39,19 @@ export function ClubDashboardPage() {
   const [recentMembers, setRecentMembers] = useState<RecentMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [clubInviteCode, setClubInviteCode] = useState('');
+  const [weeklyStats, setWeeklyStats] = useState<Array<{ label: string; revenue: number; newMembers: number }>>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, members] = await Promise.all([
+      const [s, members, weekly] = await Promise.all([
         apiJson<DashboardStats>('/admin/stats'),
         apiJson<RecentMember[]>('/admin/members?status=all'),
+        apiJson<Array<{ label: string; revenue: number; newMembers: number }>>('/admin/weekly-stats'),
       ]);
       setStats(s);
       setRecentMembers(members.slice(0, 5));
+      setWeeklyStats(weekly);
     } catch {
       /* ignore */
     }
@@ -142,6 +145,53 @@ export function ClubDashboardPage() {
           onClick={() => navigate('/packages')}
         />
       </div>
+
+      {/* Haftalık İstatistikler */}
+      {weeklyStats.length > 0 && (
+        <div style={styles.section}>
+          <h2 style={styles.sectionTitle}>📊 Haftalık Trend (Son 4 Hafta)</h2>
+          <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
+            {/* Gelir Grafiği */}
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 8px', fontWeight: 600 }}>💰 Gelir (₺)</p>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
+                {weeklyStats.map((w, i) => {
+                  const max = Math.max(...weeklyStats.map(x => x.revenue), 1);
+                  const pct = (w.revenue / max) * 100;
+                  return (
+                    <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ height: 80, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                        <div style={{ height: `${pct}%`, minHeight: 4, background: '#2563eb', borderRadius: '4px 4px 0 0', transition: 'height 0.3s' }} />
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 4 }}>{w.label}</div>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0f172a' }}>₺{w.revenue.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Yeni Üye Grafiği */}
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 8px', fontWeight: 600 }}>👥 Yeni Üye</p>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 80 }}>
+                {weeklyStats.map((w, i) => {
+                  const max = Math.max(...weeklyStats.map(x => x.newMembers), 1);
+                  const pct = (w.newMembers / max) * 100;
+                  return (
+                    <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ height: 80, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                        <div style={{ height: `${pct}%`, minHeight: 4, background: '#059669', borderRadius: '4px 4px 0 0', transition: 'height 0.3s' }} />
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 4 }}>{w.label}</div>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0f172a' }}>{w.newMembers}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bugünün Programı */}
       <div style={styles.section}>
