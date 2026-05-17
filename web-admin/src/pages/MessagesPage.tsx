@@ -236,7 +236,8 @@ export function MessagesPage() {
   };
 
   const sendBulkMessage = async () => {
-    if (!bulkText.trim() || bulkSelected.size === 0) return;
+    if (bulkSelected.size === 0) { alert('Lütfen en az bir kişi seçin.'); return; }
+    if (!bulkText.trim()) { alert('Lütfen mesaj alanına mesaj yazın.'); return; }
     setBulkSending(true);
     let sent = 0;
     const errors: string[] = [];
@@ -496,7 +497,7 @@ export function MessagesPage() {
             <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder="Mesajınızı yazın..." rows={3} style={{ width: '100%', padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: 14, resize: 'vertical', marginBottom: 12 }} />
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setShowBulkMsg(false); setBulkSelected(new Set()); }} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #e2e8f0', color: '#374151', fontWeight: 600, cursor: 'pointer' }}>Vazgeç</button>
-              <button onClick={() => void sendBulkMessage()} disabled={bulkSending || !bulkText.trim() || bulkSelected.size === 0} style={{ flex: 1, padding: 12, borderRadius: 10, background: '#2563eb', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: (bulkSending || bulkSelected.size === 0) ? 0.5 : 1 }}>{bulkSending ? '⏳...' : `📩 ${bulkSelected.size} Kişiye Gönder`}</button>
+              <button onClick={() => void sendBulkMessage()} disabled={bulkSending} style={{ flex: 1, padding: 12, borderRadius: 10, background: bulkSelected.size === 0 ? '#e2e8f0' : '#2563eb', border: 'none', color: bulkSelected.size === 0 ? '#94a3b8' : '#fff', fontWeight: 700, cursor: bulkSending ? 'not-allowed' : 'pointer' }}>{bulkSending ? '⏳...' : `📩 ${bulkSelected.size} Kişiye Gönder`}</button>
             </div>
           </div>
         </div>
