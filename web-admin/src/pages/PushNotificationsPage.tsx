@@ -77,6 +77,12 @@ export function PushNotificationsPage() {
 
       const res = await apiJson<{ ok: boolean; sent: number; total: number }>(endpoint, { method: 'POST', body: JSON.stringify(body) });
       setResult({ sent: res.sent, total: res.total });
+      // Save to announcements for history
+      if (!isTrainer) {
+        try {
+          await apiJson('/admin/announcements', { method: 'POST', body: JSON.stringify({ title: title.trim(), content: message.trim(), target: isPlatformAdmin ? platformTarget : target, sendPush: false }) });
+        } catch { /* ignore */ }
+      }
       setTitle(''); setMessage(''); setImageUrl('');
       void loadHistory();
     } catch (e) { alert(`Hata: ${e instanceof Error ? e.message : 'Gönderilemedi'}`); }
