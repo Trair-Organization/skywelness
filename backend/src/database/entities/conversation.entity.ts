@@ -61,6 +61,10 @@ export class Conversation {
   @Column({ type: 'boolean', default: false, name: 'deleted_by_b' })
   deletedByB!: boolean;
 
+  /** Admin tarafından eklenen etiketler (örn: VIP, Yeni Üye, İlgili) */
+  @Column({ type: 'jsonb', default: '[]' })
+  tags!: string[];
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

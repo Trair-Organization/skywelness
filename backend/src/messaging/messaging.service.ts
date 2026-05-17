@@ -79,6 +79,7 @@ export class MessagingService {
         lastMessageSenderId: c.lastMessageSenderId,
         isLastMessageMine: c.lastMessageSenderId === userId,
         unreadCount,
+        tags: c.tags || [],
       };
     });
   }
@@ -446,5 +447,14 @@ export class MessagingService {
       const isA = c.participantAId === userId;
       return sum + (isA ? c.unreadCountA : c.unreadCountB);
     }, 0);
+  }
+
+  /** Sohbete etiket ekle/güncelle */
+  async updateConversationTags(conversationId: string, tags: string[]) {
+    const conversation = await this.convRepo.findOne({ where: { id: conversationId } });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    conversation.tags = tags.map(t => t.trim()).filter(Boolean).slice(0, 5);
+    await this.convRepo.save(conversation);
+    return { ok: true, tags: conversation.tags };
   }
 }

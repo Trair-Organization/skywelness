@@ -16,6 +16,7 @@ type ConversationRow = {
   lastMessageSenderId: string | null;
   isLastMessageMine: boolean;
   unreadCount: number;
+  tags: string[];
 };
 
 type BlockedUserRow = {
@@ -400,12 +401,15 @@ export function MessagesPage() {
                     <span className="conv-time">{timeAgo(conv.lastMessageAt)}</span>
                   </div>
                   <span className="conv-role">{roleLabel(conv.otherUser.role)}</span>
+                  {conv.tags && conv.tags.length > 0 && <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>{conv.tags.map((tag, i) => <span key={i} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#eff6ff', color: '#2563eb', fontWeight: 600 }}>{tag}</span>)}</div>}
                   {conv.lastMessagePreview && <span className={`conv-preview ${conv.unreadCount > 0 ? 'conv-preview-unread' : ''}`}>{conv.isLastMessageMine ? '📤 ' : ''}{conv.lastMessagePreview}</span>}
                 </div>
                 {conv.unreadCount > 0 && <span className="conv-badge">{conv.unreadCount}</span>}
                 <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === conv.id ? null : conv.id); }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: 18, cursor: 'pointer', padding: '4px 8px' }}>⋯</button>
                 {menuOpenId === conv.id && (
                   <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', right: 8, top: '100%', zIndex: 10, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 160 }}>
+                    <button onClick={() => { const tag = prompt('Etiket ekle (örn: VIP, Yeni, İlgili):'); if (tag?.trim()) { const newTags = [...(conv.tags || []), tag.trim()].slice(0, 5); void apiJson(`/messages/conversations/${conv.id}/tags`, { method: 'POST', body: JSON.stringify({ tags: newTags }) }).then(() => void loadConversations()); } setMenuOpenId(null); }} style={menuStyle}>🏷️ Etiket Ekle</button>
+                    {(conv.tags || []).length > 0 && <button onClick={() => { void apiJson(`/messages/conversations/${conv.id}/tags`, { method: 'POST', body: JSON.stringify({ tags: [] }) }).then(() => void loadConversations()); setMenuOpenId(null); }} style={menuStyle}>🗑️ Etiketleri Temizle</button>}
                     <button onClick={() => archiveConv(conv.id)} style={menuStyle}>📦 Arşivle</button>
                     <button onClick={() => void blockUser(conv.otherUser.id, conv.id)} style={menuStyle}>🚫 Engelle</button>
                     <button onClick={() => void deleteConv(conv.id)} style={{ ...menuStyle, color: '#dc2626' }}>🗑️ Sil</button>

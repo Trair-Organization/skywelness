@@ -121,4 +121,14 @@ export class MessagingController {
   ) {
     return this.messagingService.getMessages(user.id, conversationId, Number(limit) || 50, before);
   }
+
+  /** Sohbete etiket ekle/güncelle */
+  @Post('conversations/:conversationId/tags')
+  updateTags(
+    @CurrentUser() user: User,
+    @Param('conversationId') conversationId: string,
+    @Body() body: { tags: string[] },
+  ) {
+    return this.messagingService.updateConversationTags(conversationId, body.tags);
+  }
 }
