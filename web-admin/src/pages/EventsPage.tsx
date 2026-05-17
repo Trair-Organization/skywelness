@@ -131,6 +131,9 @@ export function EventsPage() {
       category: ev.category || 'general',
       price: ev.price || '0',
       requirements: ev.requirements || '',
+      recurring: false,
+      frequency: 'weekly',
+      recurringEndDate: '',
     });
     setEditId(ev.id);
     setShowForm(true);
