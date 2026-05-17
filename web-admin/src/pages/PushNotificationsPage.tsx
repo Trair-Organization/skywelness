@@ -54,7 +54,14 @@ export function PushNotificationsPage() {
     try {
       if (user?.role === 'administrator') {
         const rows = await apiJson<Array<{ id: string; title: string; content: string; target: string; recipientCount: number; createdAt: string }>>('/admin/announcements');
-        setHistory(rows.map(r => ({ id: r.id, title: r.title, message: r.content, target: r.target, sent: r.recipientCount, total: r.recipientCount, createdAt: r.createdAt })));
+        setHistory(rows.map(r => {
+          // Extract push stats from content if available
+          const pushMatch = r.content.match(/\[Push: (\d+)\/(\d+) ulaştı\]/);
+          const sent = pushMatch ? parseInt(pushMatch[1]) : r.recipientCount;
+          const total = pushMatch ? parseInt(pushMatch[2]) : r.recipientCount;
+          const cleanContent = r.content.replace(/\s*\[Push:.*?\]/, '');
+          return { id: r.id, title: r.title, message: cleanContent, target: r.target, sent, total, createdAt: r.createdAt };
+        }));
       }
     } catch { /* */ }
   }, [user]);
@@ -234,7 +241,7 @@ export function PushNotificationsPage() {
                     </div>
                     <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{h.message.slice(0, 60)}</p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>📤 {h.sent} kişiye ulaştı</span>
+                      <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>📤 {h.sent}/{h.total} kişiye ulaştı</span>
                       <span style={{ fontSize: 10, color: '#94a3b8' }}>{h.target === 'all' ? '👥 Herkes' : h.target === 'members' ? '🏠 Üyeler' : '🏋️ Personel'}</span>
                     </div>
                   </div>
