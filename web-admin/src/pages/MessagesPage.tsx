@@ -212,11 +212,12 @@ export function MessagesPage() {
 
   const startNewConv = async (otherUserId: string) => {
     try {
-      const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId }) });
+      const conv = await apiJson<{ conversationId?: string; id?: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId }) });
+      const convId = conv.conversationId || conv.id;
       setShowNewConv(false); setNewConvSearch(''); setNewConvResults([]);
       await loadConversations();
       const updated = await apiJson<ConversationRow[]>('/messages/conversations');
-      const found = updated.find(c => c.id === conv.id);
+      const found = updated.find(c => c.id === convId);
       if (found) openConversation(found);
     } catch { alert('Sohbet başlatılamadı'); }
   };
@@ -241,8 +242,10 @@ export function MessagesPage() {
     const errors: string[] = [];
     for (const memberId of bulkSelected) {
       try {
-        const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: memberId }) });
-        await apiJson(`/messages/conversations/${conv.id}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) });
+        const conv = await apiJson<{ conversationId?: string; id?: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: memberId }) });
+        const convId = conv.conversationId || conv.id;
+        if (!convId) { errors.push(memberId + ': no conversation id'); continue; }
+        await apiJson(`/messages/conversations/${convId}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) });
         sent++;
       } catch (e) {
         errors.push(memberId + ': ' + (e instanceof Error ? e.message : 'hata'));
