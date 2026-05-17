@@ -66,25 +66,33 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [badges, setBadges] = useState<Record<string, number>>({});
+  const [clubLogo, setClubLogo] = useState<string | null>(null);
+  const [clubName, setClubName] = useState<string | null>(null);
 
-  // Poll for badge counts
+  // Poll for badge counts + load club info
   const loadBadges = useCallback(async () => {
     if (!user) return;
     try {
       const counts: Record<string, number> = {};
-      // Okunmamış mesajlar
       const unread = await apiJson<number>('/messages/unread-count');
       if (unread > 0) counts['/messages'] = unread;
-      // Bekleyen üyeler (admin only)
       if (user.role === 'administrator') {
         try {
           const pending = await apiJson<Array<unknown>>('/admin/members?status=pending_approval');
           if (pending.length > 0) counts['/members'] = pending.length;
         } catch { /* */ }
+        // Load club logo/name once
+        if (!clubLogo && !clubName) {
+          try {
+            const profile = await apiJson<{ name: string; logoUrl: string | null }>('/admin/tenant/profile');
+            setClubLogo(profile.logoUrl);
+            setClubName(profile.name);
+          } catch { /* */ }
+        }
       }
       setBadges(counts);
     } catch { /* */ }
-  }, [user]);
+  }, [user, clubLogo, clubName]);
 
   useEffect(() => {
     if (!user) return;
@@ -132,8 +140,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
       <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
-          {isWellness ? <img src="/skyland-logo.png" alt="Skyland" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain' }} /> : <span className="sidebar-brand-icon">⚡</span>}
-          <span className="sidebar-brand-text">{isWellness ? 'Skyland Wellness' : 'Wellness Club'}</span>
+          {clubLogo ? (
+            <img src={clubLogo} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain' }} />
+          ) : (
+            <span className="sidebar-brand-icon">⚡</span>
+          )}
+          {!clubLogo && <span className="sidebar-brand-text">{clubName || (isWellness ? 'Skyland Wellness' : 'Wellness Club')}</span>}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#94a3b8', fontSize: 16, cursor: 'pointer', padding: '4px' }}
