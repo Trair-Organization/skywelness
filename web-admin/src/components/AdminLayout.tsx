@@ -116,14 +116,16 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`admin-layout ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
-      {/* Hamburger Button */}
-      <button
-        className="hamburger-btn"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        title={sidebarOpen ? 'Menüyü Kapat' : 'Menüyü Aç'}
-      >
-        {sidebarOpen ? '✕' : '☰'}
-      </button>
+      {/* Hamburger Button (only when sidebar closed) */}
+      {!sidebarOpen && (
+        <button
+          className="hamburger-btn"
+          onClick={() => setSidebarOpen(true)}
+          title="Menüyü Aç"
+        >
+          ☰
+        </button>
+      )}
 
       {/* Overlay for mobile */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
@@ -131,7 +133,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="sidebar-brand-icon">⚡</span>
-          <span className="sidebar-brand-text">Wellness Club</span>
+          <span className="sidebar-brand-text">{isWellness ? 'Skyland Wellness' : 'Wellness Club'}</span>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#94a3b8', fontSize: 16, cursor: 'pointer', padding: '4px' }}
+            title="Menüyü Kapat"
+          >
+            ✕
+          </button>
         </div>
         <nav className="sidebar-nav">
           {nav.map((item) => (
