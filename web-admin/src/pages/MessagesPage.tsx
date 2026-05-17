@@ -234,14 +234,29 @@ export function MessagesPage() {
 
   // New conversation search
   const searchUsers = async (q: string) => {
-    if (q.length < 2) { setNewConvResults([]); return; }
+    if (q.length < 2) {
+      // Show first 3 members by default
+      try {
+        const res = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string; role?: string }>>('/admin/members?status=active');
+        setNewConvResults(res.slice(0, 3).map(u => ({ ...u, role: u.role || 'member' })));
+      } catch { setNewConvResults([]); }
+      return;
+    }
     setNewConvLoading(true);
     try {
-      const res = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; role?: string }>>(`/admin/members?search=${encodeURIComponent(q)}`);
+      const res = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string; role?: string }>>(`/admin/members?search=${encodeURIComponent(q)}`);
       setNewConvResults(res.slice(0, 8).map(u => ({ ...u, role: u.role || 'member' })));
     } catch { setNewConvResults([]); }
     setNewConvLoading(false);
   };
+
+  // Load initial members when modal opens
+  useEffect(() => {
+    if (showNewConv && newConvResults.length === 0 && newConvSearch.length < 2) {
+      void searchUsers('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNewConv]);
 
   const startNewConversation = async (otherUserId: string) => {
     try {
@@ -290,6 +305,18 @@ export function MessagesPage() {
       if (activeConv?.id === convId) setActiveConv(null);
     } catch {
       alert('Sohbet silinemedi');
+    }
+    setMenuOpenId(null);
+  };
+
+  const archiveConversation = async (convId: string) => {
+    // Archive = remove from list (soft hide, same as delete for now)
+    try {
+      await apiJson(`/messages/conversations/${convId}`, { method: 'DELETE' });
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      if (activeConv?.id === convId) setActiveConv(null);
+    } catch {
+      alert('Arşivleme başarısız');
     }
     setMenuOpenId(null);
   };
@@ -580,6 +607,12 @@ export function MessagesPage() {
                         🚫 Engelle
                       </button>
                       <button
+                        onClick={() => void archiveConversation(conv.id)}
+                        style={menuItemStyle('#64748b')}
+                      >
+                        📦 Arşivle
+                      </button>
+                      <button
                         onClick={() => deleteConversation(conv.id)}
                         style={menuItemStyle('#ef4444')}
                       >
@@ -674,15 +707,21 @@ export function MessagesPage() {
             />
             {newConvLoading && <p style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>Aranıyor...</p>}
             <div style={{ maxHeight: 300, overflowY: 'auto', marginTop: 8 }}>
-              {newConvSearch.length < 2 ? (
-                <p style={{ color: '#94a3b8', fontSize: 13, padding: 12, textAlign: 'center' }}>En az 2 karakter yazın...</p>
-              ) : newConvResults.length === 0 && !newConvLoading ? (
+              {newConvResults.length === 0 && newConvLoading ? (
+                <p style={{ color: '#64748b', fontSize: 13, padding: 12, textAlign: 'center' }}>Aranıyor...</p>
+              ) : newConvResults.length === 0 ? (
                 <p style={{ color: '#94a3b8', fontSize: 13, padding: 12, textAlign: 'center' }}>Kullanıcı bulunamadı</p>
               ) : (
                 newConvResults.map(u => (
                   <div key={u.id} onClick={() => void startNewConversation(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
                     <div style={{ width: 36, height: 36, borderRadius: 18, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#2563eb' }}>{u.firstName[0]}{u.lastName[0]}</div>
-                    <div style={{ flex: 1 }}><div style={{ color: '#0f172a', fontWeight: 600, fontSize: 14 }}>{u.firstName} {u.lastName}</div><div style={{ color: '#64748b', fontSize: 12 }}>{u.email}</div></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {(u as { publicId?: string }).publicId && <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#2563eb', fontWeight: 700, background: '#eff6ff', padding: '1px 5px', borderRadius: 4 }}>{(u as { publicId?: string }).publicId}</span>}
+                        <span style={{ color: '#0f172a', fontWeight: 600, fontSize: 14 }}>{u.firstName} {u.lastName}</span>
+                      </div>
+                      <div style={{ color: '#64748b', fontSize: 12 }}>{u.email}</div>
+                    </div>
                     <span style={{ fontSize: 12, color: '#94a3b8' }}>→</span>
                   </div>
                 ))
