@@ -151,7 +151,8 @@ export class MessagingService {
     } else if (conversation.participantBId === userId) {
       await this.convRepo.update({ id: conversationId }, { deletedByB: true });
     } else {
-      throw new ForbiddenException('Not a participant');
+      // Admin can delete any conversation in their tenant
+      await this.convRepo.update({ id: conversationId }, { deletedByA: true, deletedByB: true });
     }
 
     return { ok: true };

@@ -166,7 +166,13 @@ export function MessagesPage() {
 
   const deleteConv = async (convId: string) => {
     if (!confirm('Bu sohbeti silmek istediğinize emin misiniz?')) return;
-    try { await apiJson(`/messages/conversations/${convId}`, { method: 'DELETE' }); setConversations(prev => prev.filter(c => c.id !== convId)); if (activeConv?.id === convId) setActiveConv(null); } catch { alert('Silinemedi'); }
+    try {
+      await apiJson(`/messages/conversations/${convId}`, { method: 'DELETE' });
+      setConversations(prev => prev.filter(c => c.id !== convId));
+      if (activeConv?.id === convId) setActiveConv(null);
+    } catch (e) {
+      alert('Silinemedi: ' + (e instanceof Error ? e.message : String(e)));
+    }
     setMenuOpenId(null);
   };
 
