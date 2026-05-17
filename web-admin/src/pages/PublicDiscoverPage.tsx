@@ -53,6 +53,7 @@ export function PublicDiscoverPage() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [campaigns, setCampaigns] = useState<Array<{ id: string; title: string; description: string | null; discountKind: string; discountValue: string; originalPrice: string | null; discountedPrice: string | null; imageUrl: string | null; endsAt: string; tenant?: { name: string; subdomain: string } }>>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -67,16 +68,18 @@ export function PublicDiscoverPage() {
       params.set('limit', '20');
       if (cityFilter) params.set('city', cityFilter);
       if (districtFilter) params.set('district', districtFilter);
-      const [c, t, e, b] = await Promise.all([
+      const [c, t, e, b, camp] = await Promise.all([
         apiJson<Club[]>(`/discovery/clubs?${params.toString()}`, { auth: false }),
         apiJson<Trainer[]>(`/discovery/trainers?limit=20${cityFilter ? `&city=${encodeURIComponent(cityFilter)}` : ''}`, { auth: false }),
         apiJson<Event[]>('/discovery/events?limit=12', { auth: false }),
         apiJson<Banner[]>('/home-banners', { auth: false }),
+        apiJson<typeof campaigns>('/campaigns/public?limit=10', { auth: false }),
       ]);
       setClubs(c);
       setTrainers(t);
       setEvents(e);
       setBanners(b);
+      setCampaigns(camp);
     } catch {
       /* ignore */
     } finally {
@@ -343,6 +346,43 @@ export function PublicDiscoverPage() {
                 </div>
               </Link>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Kampanyalar */}
+      {campaigns.length > 0 && (
+        <section className="discover-section">
+          <div className="discover-section-header">
+            <h2>🔥 Aktif Kampanyalar</h2>
+            <p>Kulüplerden size özel fırsatlar</p>
+          </div>
+          <div className="discover-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+            {campaigns.map((camp) => {
+              const discountText = camp.discountKind === 'percentage' ? `%${camp.discountValue} İndirim` : `₺${camp.discountValue} İndirim`;
+              return (
+                <div key={camp.id} className="discover-card" style={{ overflow: 'hidden' }}>
+                  {camp.imageUrl && <img src={camp.imageUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover' }} />}
+                  <div style={{ padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                      <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>{camp.title}</h3>
+                      <span style={{ padding: '3px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{discountText}</span>
+                    </div>
+                    {camp.description && <p style={{ margin: '0 0 8px', fontSize: '0.82rem', color: '#64748b' }}>{camp.description.slice(0, 80)}</p>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8' }}>
+                      {camp.tenant && <span>🏢 {camp.tenant.name}</span>}
+                      <span>⏰ {new Date(camp.endsAt).toLocaleDateString('tr-TR')}'e kadar</span>
+                    </div>
+                    {camp.discountedPrice && (
+                      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {camp.originalPrice && <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.82rem' }}>₺{parseFloat(camp.originalPrice).toLocaleString('tr-TR')}</span>}
+                        <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>₺{parseFloat(camp.discountedPrice).toLocaleString('tr-TR')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
