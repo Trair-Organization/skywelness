@@ -218,10 +218,21 @@ export function MessagesPage() {
     if (!bulkText.trim() || bulkSelected.size === 0) return;
     setBulkSending(true);
     let sent = 0;
+    const errors: string[] = [];
     for (const memberId of bulkSelected) {
-      try { const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: memberId }) }); await apiJson(`/messages/conversations/${conv.id}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) }); sent++; } catch { /* */ }
+      try {
+        const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: memberId }) });
+        await apiJson(`/messages/conversations/${conv.id}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) });
+        sent++;
+      } catch (e) {
+        errors.push(memberId + ': ' + (e instanceof Error ? e.message : 'hata'));
+      }
     }
-    alert(`✅ ${sent} kişiye mesaj gönderildi`);
+    if (errors.length > 0) {
+      alert(`✅ ${sent} kişiye gönderildi. ${errors.length} hata:\n${errors.slice(0, 3).join('\n')}`);
+    } else {
+      alert(`✅ ${sent} kişiye mesaj gönderildi`);
+    }
     setAnnouncements(prev => [{ date: new Date().toISOString(), text: bulkText.trim(), recipientCount: sent }, ...prev]);
     setShowBulkMsg(false); setBulkText(''); setBulkSelected(new Set()); await loadConversations();
     setBulkSending(false);
