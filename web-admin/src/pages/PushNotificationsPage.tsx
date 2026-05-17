@@ -54,8 +54,20 @@ export function PushNotificationsPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await apiJson<{ url: string }>('/auth/upload-image', { method: 'POST', body: formData, headers: undefined });
-      setImageUrl(`https://www.wellnessclub.tech${res.url}`);
+      const { readStoredToken } = await import('../auth/storage');
+      const token = readStoredToken();
+      const base = (await import('../lib/config')).apiBaseUrl();
+      const res = await fetch(`${base}/auth/upload-image`, {
+        method: 'POST',
+        body: formData,
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const body = await res.json() as { url?: string };
+      if (body.url) {
+        const serverBase = base.replace('/api/v1', '');
+        setImageUrl(body.url.startsWith('http') ? body.url : `${serverBase}${body.url}`);
+      }
     } catch { alert('Görsel yüklenemedi'); }
     finally { setUploading(false); }
   };
