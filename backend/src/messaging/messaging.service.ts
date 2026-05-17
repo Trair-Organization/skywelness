@@ -146,14 +146,8 @@ export class MessagingService {
     const conversation = await this.convRepo.findOne({ where: { id: conversationId } });
     if (!conversation) throw new NotFoundException('Conversation not found');
 
-    if (conversation.participantAId === userId) {
-      await this.convRepo.update({ id: conversationId }, { deletedByA: true });
-    } else if (conversation.participantBId === userId) {
-      await this.convRepo.update({ id: conversationId }, { deletedByB: true });
-    } else {
-      // Admin hard-delete (not a direct participant)
-      await this.convRepo.delete({ id: conversationId });
-    }
+    // Admin panelinde her zaman hard delete (tamamen sil)
+    await this.convRepo.delete({ id: conversationId });
 
     return { ok: true };
   }
