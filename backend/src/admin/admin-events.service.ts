@@ -254,4 +254,21 @@ export class AdminEventsService {
     });
     return result;
   }
+
+  /** Check-in: Katılımcıyı giriş yaptı olarak işaretle */
+  async checkInParticipant(tenantId: string, eventId: string, registrationId: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId, tenantId } });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const registration = await this.registrationsRepo.findOne({
+      where: { id: registrationId, clubEventId: eventId },
+    });
+    if (!registration) throw new NotFoundException('Registration not found');
+
+    registration.checkedIn = true;
+    registration.checkedInAt = new Date();
+    await this.registrationsRepo.save(registration);
+
+    return { ok: true, checkedIn: true, checkedInAt: registration.checkedInAt };
+  }
 }

@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
+import { EventWaitingList } from '../database/entities/event-waiting-list.entity';
+import { EventReview } from '../database/entities/event-review.entity';
 import type { User } from '../database/entities/user.entity';
 
 export type ClubEventPublicRow = {
@@ -31,6 +33,10 @@ export class ClubEventsMemberService {
     private readonly eventRepo: Repository<ClubEvent>,
     @InjectRepository(ClubEventRegistration)
     private readonly regRepo: Repository<ClubEventRegistration>,
+    @InjectRepository(EventWaitingList)
+    private readonly waitlistRepo: Repository<EventWaitingList>,
+    @InjectRepository(EventReview)
+    private readonly reviewRepo: Repository<EventReview>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -130,5 +136,90 @@ export class ClubEventsMemberService {
       throw new NotFoundException('Registration not found');
     }
     return { ok: true as const };
+  }
+
+  /** Bekleme listesine katıl */
+  async joinWaitlist(user: User, eventId: string) {
+    const event = await this.eventRepo.findOne({
+      where: { id: eventId, tenantId: user.tenantId, status: 'approved' },
+    });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+
+    // Zaten kayıtlı mı?
+    const existingReg = await this.regRepo.findOne({
+      where: { clubEventId: eventId, userId: user.id },
+    });
+    if (existingReg) throw new ConflictException('Zaten bu etkinliğe kayıtlısınız');
+
+    // Zaten bekleme listesinde mi?
+    const existingWait = await this.waitlistRepo.findOne({
+      where: { clubEventId: eventId, userId: user.id },
+    });
+    if (existingWait) throw new ConflictException('Zaten bekleme listesindesiniz');
+
+    // Kapasite dolu mu kontrol et
+    const regCount = await this.regRepo.count({ where: { clubEventId: eventId } });
+    if (regCount < event.capacity) {
+      throw new BadRequestException('Etkinlikte hâlâ yer var, doğrudan katılabilirsiniz');
+    }
+
+    // Sıra numarası bul
+    const lastPos = await this.waitlistRepo
+      .createQueryBuilder('w')
+      .select('MAX(w.position)', 'maxPos')
+      .where('w.clubEventId = :eventId', { eventId })
+      .getRawOne();
+    const position = (lastPos?.maxPos ?? 0) + 1;
+
+    const entry = this.waitlistRepo.create({
+      clubEventId: eventId,
+      userId: user.id,
+      status: 'active',
+      position,
+    });
+    await this.waitlistRepo.save(entry);
+
+    return { ok: true, position };
+  }
+
+  /** Etkinliği değerlendir */
+  async reviewEvent(user: User, eventId: string, rating: number, comment?: string) {
+    if (rating < 1 || rating > 5) throw new BadRequestException('Puan 1-5 arası olmalı');
+
+    const event = await this.eventRepo.findOne({
+      where: { id: eventId, tenantId: user.tenantId },
+    });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+
+    // Etkinlik geçmiş mi?
+    if (new Date(event.startsAt) > new Date()) {
+      throw new BadRequestException('Henüz gerçekleşmemiş etkinliği değerlendiremezsiniz');
+    }
+
+    // Katılmış mı?
+    const registration = await this.regRepo.findOne({
+      where: { clubEventId: eventId, userId: user.id },
+    });
+    if (!registration) throw new BadRequestException('Bu etkinliğe katılmadınız');
+
+    // Zaten değerlendirme var mı?
+    const existing = await this.reviewRepo.findOne({
+      where: { clubEventId: eventId, userId: user.id },
+    });
+    if (existing) {
+      existing.rating = rating;
+      existing.comment = comment?.trim() || null;
+      await this.reviewRepo.save(existing);
+      return { ok: true, updated: true };
+    }
+
+    const review = this.reviewRepo.create({
+      clubEventId: eventId,
+      userId: user.id,
+      rating,
+      comment: comment?.trim() || null,
+    });
+    await this.reviewRepo.save(review);
+    return { ok: true, created: true };
   }
 }

@@ -74,4 +74,14 @@ export class AdminEventsController {
   ) {
     return this.adminEvents.notifyParticipants(admin.tenantId, id, body.title, body.message);
   }
+
+  /** Check-in: Katılımcıyı giriş yaptı olarak işaretle */
+  @Post(':id/check-in/:registrationId')
+  checkIn(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('registrationId', new ParseUUIDPipe({ version: '4' })) registrationId: string,
+  ) {
+    return this.adminEvents.checkInParticipant(admin.tenantId, id, registrationId);
+  }
 }

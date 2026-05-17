@@ -46,4 +46,25 @@ export class MemberEventsController {
   leave(@CurrentUser() user: User, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.clubEvents.leave(user, id);
   }
+
+  /** Bekleme listesine katıl */
+  @Post(':id/waitlist')
+  @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
+  @Roles(UserRole.MEMBER)
+  joinWaitlist(@CurrentUser() user: User, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+    return this.clubEvents.joinWaitlist(user, id);
+  }
+
+  /** Etkinliği değerlendir (1-5 yıldız) */
+  @Post(':id/review')
+  @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
+  @Roles(UserRole.MEMBER)
+  review(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Query('rating', ParseIntPipe) rating: number,
+    @Query('comment') comment?: string,
+  ) {
+    return this.clubEvents.reviewEvent(user, id, rating, comment);
+  }
 }
