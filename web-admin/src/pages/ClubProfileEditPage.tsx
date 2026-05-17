@@ -3,6 +3,13 @@ import { apiJson } from '../lib/api';
 import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 import { readStoredTenantSubdomain } from '../auth/storage';
 
+const SERVICE_OPTIONS = [
+  'Personal Training', 'Yoga', 'Pilates', 'Fitness', 'CrossFit',
+  'Boks', 'Kickboks', 'Yüzme', 'Spa & Masaj', 'Sauna & Hamam',
+  'Padel', 'Tenis', 'Beslenme Danışmanlığı', 'Fizik Tedavi',
+  'Grup Dersleri', 'Fonksiyonel Antrenman', 'TRX', 'Kafe',
+];
+
 type TenantProfile = {
   id: string;
   name: string;
@@ -35,7 +42,7 @@ export function ClubProfileEditPage() {
   const [location, setLocation] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
-  const [services, setServices] = useState('');
+  const [services, setServices] = useState<string[]>([]);
   const [logoUrl, setLogoUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -43,6 +50,10 @@ export function ClubProfileEditPage() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
+  const [workingHours, setWorkingHours] = useState('');
+  const [socialInstagram, setSocialInstagram] = useState('');
+  const [socialFacebook, setSocialFacebook] = useState('');
+  const [socialTwitter, setSocialTwitter] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,7 +64,7 @@ export function ClubProfileEditPage() {
       setLocation(data.location ?? '');
       setCity(data.city ?? '');
       setDistrict(data.district ?? '');
-      setServices((data.services ?? []).join(', '));
+      setServices(data.services ?? []);
       setLogoUrl(data.logoUrl ?? '');
       setCoverImageUrl(data.coverImageUrl ?? '');
       setGalleryImages(data.galleryImages ?? []);
@@ -82,7 +93,7 @@ export function ClubProfileEditPage() {
           location: location.trim() || null,
           city: city.trim() || null,
           district: district.trim() || null,
-          services: services.split(',').map(s => s.trim()).filter(Boolean),
+          services,
           logoUrl: logoUrl.trim() || null,
           coverImageUrl: coverImageUrl.trim() || null,
           galleryImages,
@@ -125,6 +136,7 @@ export function ClubProfileEditPage() {
   const scoreItems = [
     !!description, !!location, !!city, !!logoUrl, !!coverImageUrl,
     galleryImages.length > 0, !!phone, !!email, services.length > 0, !!priceRange,
+    !!workingHours, !!(socialInstagram || socialFacebook || socialTwitter),
   ];
   const completeness = Math.round((scoreItems.filter(Boolean).length / scoreItems.length) * 100);
 
@@ -205,11 +217,41 @@ export function ClubProfileEditPage() {
             </div>
           </div>
 
-          {/* Hizmetler + Fiyat */}
+          {/* Hizmetler (Checkbox) */}
           <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>🎯 Hizmetler & Fiyat</label>
-            <input value={services} onChange={(e) => setServices(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14, marginBottom: 8 }} placeholder="Personal Training, Yoga, Pilates, Spa..." />
-            <input value={priceRange} onChange={(e) => setPriceRange(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="Fiyat aralığı: ₺3.000 - ₺12.000 / ay" />
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>🎯 Hizmetler</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {SERVICE_OPTIONS.map(s => {
+                const checked = services.includes(s);
+                return (
+                  <span key={s} onClick={() => setServices(checked ? services.filter(x => x !== s) : [...services, s])} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: `1px solid ${checked ? '#2563eb' : '#e2e8f0'}`, background: checked ? '#eff6ff' : '#ffffff', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 600 : 400, color: checked ? '#2563eb' : '#374151' }}>
+                    {checked ? '✓' : '○'} {s}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Fiyat Aralığı */}
+          <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>💰 Fiyat Aralığı</label>
+            <input value={priceRange} onChange={(e) => setPriceRange(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="₺3.000 - ₺12.000 / ay" />
+          </div>
+
+          {/* Çalışma Saatleri */}
+          <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>🕐 Çalışma Saatleri</label>
+            <input value={workingHours} onChange={(e) => setWorkingHours(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="Pzt-Cum: 07:00-22:00, Cmt: 09:00-18:00" />
+          </div>
+
+          {/* Sosyal Medya */}
+          <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>📱 Sosyal Medya</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="📷 Instagram: @kulubunuz" />
+              <input value={socialFacebook} onChange={(e) => setSocialFacebook(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="👍 Facebook: facebook.com/kulubunuz" />
+              <input value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="🐦 X/Twitter: @kulubunuz" />
+            </div>
           </div>
         </div>
 
@@ -256,6 +298,27 @@ export function ClubProfileEditPage() {
             </a>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>Üyelerin ve ziyaretçilerin gördüğü profil sayfanız</p>
           </div>
+
+          {/* Eksik Alanlar */}
+          {completeness < 100 && (
+            <div style={{ padding: 16, borderRadius: 12, border: '1px solid #fef3c7', background: '#fffbeb' }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#92400e', display: 'block', marginBottom: 8 }}>⚠️ Eksik Alanlar</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {!description && <span style={{ fontSize: 12, color: '#92400e' }}>• Hakkımızda metni ekleyin</span>}
+                {!location && <span style={{ fontSize: 12, color: '#92400e' }}>• Adres bilgisi girin</span>}
+                {!city && <span style={{ fontSize: 12, color: '#92400e' }}>• İl seçin</span>}
+                {!logoUrl && <span style={{ fontSize: 12, color: '#92400e' }}>• Logo yükleyin</span>}
+                {!coverImageUrl && <span style={{ fontSize: 12, color: '#92400e' }}>• Kapak görseli ekleyin</span>}
+                {galleryImages.length === 0 && <span style={{ fontSize: 12, color: '#92400e' }}>• Galeri fotoğrafı ekleyin</span>}
+                {!phone && <span style={{ fontSize: 12, color: '#92400e' }}>• Telefon numarası girin</span>}
+                {!email && <span style={{ fontSize: 12, color: '#92400e' }}>• E-posta adresi girin</span>}
+                {services.length === 0 && <span style={{ fontSize: 12, color: '#92400e' }}>• Hizmet seçin</span>}
+                {!priceRange && <span style={{ fontSize: 12, color: '#92400e' }}>• Fiyat aralığı belirtin</span>}
+                {!workingHours && <span style={{ fontSize: 12, color: '#92400e' }}>• Çalışma saatleri girin</span>}
+                {!socialInstagram && !socialFacebook && !socialTwitter && <span style={{ fontSize: 12, color: '#92400e' }}>• Sosyal medya hesabı ekleyin</span>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
