@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { Request } from 'express';
 import { Booking } from '../database/entities/booking.entity';
+import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { PushService } from '../notifications/push.service';
 import { StripeService } from './stripe.service';
 
@@ -13,6 +14,7 @@ export class StripeWebhookController {
   constructor(
     private readonly stripeService: StripeService,
     @InjectRepository(Booking) private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(ClubEventRegistration) private readonly eventRegRepo: Repository<ClubEventRegistration>,
     private readonly pushService: PushService,
   ) {}
 
@@ -34,9 +36,11 @@ export class StripeWebhookController {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as {
         id: string;
-        metadata?: { bookingId?: string };
+        metadata?: { bookingId?: string; eventRegistrationId?: string };
         payment_intent?: string;
       };
+
+      // Booking payment
       const bookingId = session.metadata?.bookingId;
       if (bookingId) {
         const booking = await this.bookingRepo.findOne({ where: { id: bookingId } });
@@ -47,16 +51,20 @@ export class StripeWebhookController {
             typeof session.payment_intent === 'string' ? session.payment_intent : null;
           booking.status = 'confirmed';
           await this.bookingRepo.save(booking);
-
-          // Notify user
-          void this.pushService.sendToUser(
-            booking.userId,
-            '💳 Ödeme Alındı',
-            'Rezervasyon ödemeniz başarıyla alındı.',
-            { type: 'payment_confirmed', bookingId },
-          );
-
+          void this.pushService.sendToUser(booking.userId, '💳 Ödeme Alındı', 'Rezervasyon ödemeniz başarıyla alındı.', { type: 'payment_confirmed', bookingId });
           this.logger.log(`Booking ${bookingId} payment confirmed`);
+        }
+      }
+
+      // Event registration payment
+      const eventRegId = session.metadata?.eventRegistrationId;
+      if (eventRegId) {
+        const reg = await this.eventRegRepo.findOne({ where: { id: eventRegId } });
+        if (reg) {
+          reg.paymentStatus = 'paid';
+          await this.eventRegRepo.save(reg);
+          void this.pushService.sendToUser(reg.userId, '💳 Etkinlik Ödemesi Alındı', 'Etkinlik kaydınız onaylandı!', { type: 'event_payment_confirmed', eventRegistrationId: eventRegId });
+          this.logger.log(`Event registration ${eventRegId} payment confirmed`);
         }
       }
     }

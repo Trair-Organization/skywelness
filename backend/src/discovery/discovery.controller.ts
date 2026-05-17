@@ -11,10 +11,14 @@ import { DiscoveryService } from './discovery.service';
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 
-  /** Tüm kulüpler (marketplace listesi). */
+  /** Tüm kulüpler (marketplace listesi). Lokasyon filtresi opsiyonel. */
   @Get('clubs')
-  listClubs(@Query('limit') limit?: string) {
-    return this.discoveryService.listClubs(Number(limit) || 20);
+  listClubs(
+    @Query('limit') limit?: string,
+    @Query('city') city?: string,
+    @Query('district') district?: string,
+  ) {
+    return this.discoveryService.listClubs(Number(limit) || 20, city, district);
   }
 
   /** Öne çıkan kulüpler (admin tarafından seçilmiş). */

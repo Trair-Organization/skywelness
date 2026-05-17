@@ -10,6 +10,7 @@ import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { EventWaitingList } from '../database/entities/event-waiting-list.entity';
 import { EventReview } from '../database/entities/event-review.entity';
+import { StripeService } from '../payments/stripe.service';
 import type { User } from '../database/entities/user.entity';
 
 export type ClubEventPublicRow = {
@@ -37,6 +38,7 @@ export class ClubEventsMemberService {
     private readonly waitlistRepo: Repository<EventWaitingList>,
     @InjectRepository(EventReview)
     private readonly reviewRepo: Repository<EventReview>,
+    private readonly stripeService: StripeService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -86,7 +88,7 @@ export class ClubEventsMemberService {
     }));
   }
 
-  async join(user: User, eventId: string) {
+  async join(user: User, eventId: string): Promise<{ ok: true; paymentRequired?: boolean; checkoutUrl?: string }> {
     const now = new Date();
     return this.dataSource.transaction(async (em) => {
       const event = await em
@@ -112,9 +114,44 @@ export class ClubEventsMemberService {
       if (existing) {
         throw new ConflictException('Already registered');
       }
+
+      const price = parseFloat(event.price) || 0;
+
+      // Ücretli etkinlik → Stripe checkout
+      if (price > 0 && this.stripeService.isEnabled) {
+        const reg = em.getRepository(ClubEventRegistration).create({
+          clubEventId: event.id,
+          userId: user.id,
+          paymentStatus: 'pending',
+          depositAmount: String(price),
+        });
+        await em.getRepository(ClubEventRegistration).save(reg);
+
+        const checkout = await this.stripeService.createCheckoutSession({
+          bookingId: reg.id,
+          amount: Math.round(price * 100), // kuruş
+          currency: event.currency || 'TRY',
+          customerEmail: user.email,
+          description: `Etkinlik: ${event.title}`,
+          successUrl: `https://www.wellnessclub.tech/booking-success?type=event&id=${reg.id}`,
+          cancelUrl: `https://www.wellnessclub.tech/booking-cancel?type=event&id=${reg.id}`,
+          metadata: { eventRegistrationId: reg.id },
+        });
+
+        if (checkout) {
+          return { ok: true as const, paymentRequired: true, checkoutUrl: checkout.url };
+        }
+        // Stripe disabled fallback
+        reg.paymentStatus = 'paid';
+        await em.getRepository(ClubEventRegistration).save(reg);
+        return { ok: true as const };
+      }
+
+      // Ücretsiz etkinlik → direkt kayıt
       await em.getRepository(ClubEventRegistration).insert({
         clubEventId: event.id,
         userId: user.id,
+        paymentStatus: 'free',
       });
       return { ok: true as const };
     });

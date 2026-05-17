@@ -99,6 +99,13 @@ export class Campaign {
   @Column({ type: 'varchar', length: 20, default: 'both', name: 'action_type' })
   actionType!: CampaignActionType;
 
+  /** Lokasyon bazlı kampanya hedefleme */
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'target_city' })
+  targetCity!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'target_district' })
+  targetDistrict!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

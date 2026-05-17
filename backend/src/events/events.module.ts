@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PaymentsModule } from '../payments/payments.module';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { EventWaitingList } from '../database/entities/event-waiting-list.entity';
@@ -17,6 +18,7 @@ import { MemberEventsController } from './member-events.controller';
     TypeOrmModule.forFeature([ClubEvent, ClubEventRegistration, EventWaitingList, EventReview]),
     AuthModule,
     NotificationsModule,
+    PaymentsModule,
   ],
   controllers: [MemberEventsController],
   providers: [ClubEventsMemberService, EventSchedulerService, RolesGuard, MemberApprovalGuard],

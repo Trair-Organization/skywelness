@@ -18,11 +18,16 @@ export class DiscoveryService {
   ) {}
 
   /** Keşif: Tüm kulüpler (featured önce, sonra isim sırasına göre). */
-  async listClubs(limit = 20) {
-    const rows = await this.tenantsRepo.find({
-      order: { featured: 'DESC', name: 'ASC' },
-      take: Math.min(limit, 50),
-    });
+  async listClubs(limit = 20, city?: string, district?: string) {
+    const qb = this.tenantsRepo.createQueryBuilder('t')
+      .orderBy('t.featured', 'DESC')
+      .addOrderBy('t.name', 'ASC')
+      .take(Math.min(limit, 50));
+
+    if (city) qb.andWhere('t.city = :city', { city });
+    if (district) qb.andWhere('t.district = :district', { district });
+
+    const rows = await qb.getMany();
     return rows
       .filter(
         (t) =>
@@ -30,7 +35,6 @@ export class DiscoveryService {
           !t.subdomain.startsWith('e2e') &&
           t.subdomain !== 'independent-hub' &&
           t.subdomain !== 'demo' &&
-          // Private + non-featured kulüpleri keşif'ten gizle (ör. SkyCafe — sadece üyelerine görünür)
           !(t.visibilityMode === 'private' && !t.featured),
       )
       .map((t) => ({
@@ -41,6 +45,8 @@ export class DiscoveryService {
         visibilityMode: t.visibilityMode,
         description: t.description,
         location: t.location,
+        city: t.city,
+        district: t.district,
         logoUrl: t.logoUrl ?? this.extractLegacyLogo(t.branding),
         coverImageUrl: t.coverImageUrl ?? (t.galleryImages?.length > 0 ? t.galleryImages[0] : null),
         galleryImages: t.galleryImages ?? [],
