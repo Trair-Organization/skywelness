@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
+import { readStoredTenantSubdomain } from '../auth/storage';
 
 type NotificationLog = {
   id: string;
@@ -36,6 +37,17 @@ export function PushNotificationsPage() {
   const [uploading, setUploading] = useState(false);
   const [history, setHistory] = useState<NotificationLog[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [clubName, setClubName] = useState('Wellness Club');
+
+  // Load club name
+  useEffect(() => {
+    if (user?.role === 'administrator') {
+      apiJson<{ name: string }>('/admin/tenant/profile').then(p => setClubName(p.name)).catch(() => {
+        const sub = readStoredTenantSubdomain();
+        if (sub) setClubName(sub.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+      });
+    }
+  }, [user]);
 
   // Load notification history (from announcements as proxy)
   const loadHistory = useCallback(async () => {
@@ -199,7 +211,7 @@ export function PushNotificationsPage() {
             <div style={{ background: '#1e293b', borderRadius: 16, padding: '12px 16px', maxWidth: 280 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <div style={{ width: 24, height: 24, borderRadius: 6, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>⚡</div>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>Wellness Club • şimdi</span>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>{clubName} • şimdi</span>
               </div>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{title || 'Bildirim Başlığı'}</p>
               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>{message || 'Bildirim mesajı burada görünecek...'}</p>
