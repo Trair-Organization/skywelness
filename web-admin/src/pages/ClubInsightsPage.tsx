@@ -40,7 +40,6 @@ export function ClubInsightsPage() {
 
   const totalRevenue = weekly.reduce((s, w) => s + w.revenue, 0);
   const totalNewMembers = weekly.reduce((s, w) => s + w.newMembers, 0);
-  const avgRevenuePerWeek = weekly.length > 0 ? Math.round(totalRevenue / weekly.length) : 0;
 
   return (
     <div style={{ maxWidth: 1000 }}>
