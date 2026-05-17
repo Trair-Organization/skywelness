@@ -41,6 +41,36 @@ const ACTION_CATEGORIES: Record<string, string[]> = {
   'Diğer': ['profile_updated', 'trainer_created', 'trainer_deleted', 'push_sent', 'campaign_created'],
 };
 
+function formatDetails(action: string, details: Record<string, unknown>): string {
+  const d = details;
+  switch (action) {
+    case 'member_approved': return 'Üyelik başvurusu onaylandı';
+    case 'member_rejected': return 'Üyelik başvurusu reddedildi';
+    case 'member_deleted': return 'Üye hesabı silindi';
+    case 'member_suspended': return d.reason ? `Sebep: ${d.reason}` : 'Hesap donduruldu';
+    case 'member_reactivated': return 'Hesap tekrar aktifleştirildi';
+    case 'member_add_by_code': return d.mode === 'invite' ? 'Davet olarak eklendi' : 'Direkt eklendi';
+    case 'password_reset': return 'Geçici şifre oluşturuldu';
+    case 'password_change': return 'Yeni şifre atandı';
+    case 'package_assigned': return d.packageName ? `Paket: ${d.packageName}` : 'Paket atandı';
+    case 'package_deleted': return 'Paket silindi';
+    case 'sessions_added': return d.newTotal ? `Yeni toplam: ${d.newTotal} seans` : 'Seans eklendi';
+    case 'membership_set': return d.membershipType ? `Tür: ${d.membershipType}` : 'Üyelik güncellendi';
+    case 'profile_updated': return 'Profil bilgileri güncellendi';
+    case 'event_approved': return 'Etkinlik yayına alındı';
+    case 'event_rejected': return d.reason ? `Sebep: ${d.reason}` : 'Etkinlik reddedildi';
+    case 'trainer_created': return 'Yeni eğitmen hesabı oluşturuldu';
+    case 'trainer_deleted': return 'Eğitmen hesabı silindi';
+    case 'push_sent': return d.target ? `Hedef: ${d.target === 'all' ? 'Herkes' : d.target === 'members' ? 'Üyeler' : 'Personel'}` : 'Bildirim gönderildi';
+    case 'campaign_created': return 'Yeni kampanya oluşturuldu';
+    default: {
+      const entries = Object.entries(d).slice(0, 2);
+      if (entries.length === 0) return '';
+      return entries.map(([k, v]) => `${k}: ${String(v).slice(0, 30)}`).join(', ');
+    }
+  }
+}
+
 export function ClubLogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +179,7 @@ export function ClubLogsPage() {
                     <td style={tdStyle}>
                       {Object.keys(log.details).length > 0 && (
                         <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          {Object.entries(log.details).slice(0, 2).map(([k, v]) => `${k}: ${String(v).slice(0, 20)}`).join(', ')}
+                          {formatDetails(log.action, log.details)}
                         </span>
                       )}
                     </td>
