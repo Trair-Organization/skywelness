@@ -82,7 +82,13 @@ export function MessagesPage() {
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [announcements, setAnnouncements] = useState<DuyuruLog[]>([]);
   const [selectedConvs, setSelectedConvs] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // New conv modal
   const [showNewConv, setShowNewConv] = useState(false);
@@ -236,8 +242,8 @@ export function MessagesPage() {
   };
 
   const sendBulkMessage = async () => {
-    if (bulkSelected.size === 0) { alert('Lütfen en az bir kişi seçin.'); return; }
-    if (!bulkText.trim()) { alert('Lütfen mesaj alanına mesaj yazın.'); return; }
+    if (bulkSelected.size === 0) { showToast('⚠️ Lütfen en az bir kişi seçin.', 'warning'); return; }
+    if (!bulkText.trim()) { showToast('⚠️ Lütfen mesaj alanına mesaj yazın.', 'warning'); return; }
     setBulkSending(true);
     let sent = 0;
     const errors: string[] = [];
@@ -253,9 +259,9 @@ export function MessagesPage() {
       }
     }
     if (errors.length > 0) {
-      alert(`✅ ${sent} kişiye gönderildi. ${errors.length} hata:\n${errors.slice(0, 3).join('\n')}`);
+      showToast(`✅ ${sent} kişiye gönderildi, ${errors.length} başarısız`, sent > 0 ? 'success' : 'error');
     } else {
-      alert(`✅ ${sent} kişiye mesaj gönderildi`);
+      showToast(`✅ ${sent} kişiye mesaj başarıyla gönderildi!`, 'success');
     }
     setAnnouncements(prev => [{ date: new Date().toISOString(), text: bulkText.trim(), recipientCount: sent }, ...prev]);
     setShowBulkMsg(false); setBulkText(''); setBulkSelected(new Set()); await loadConversations();
@@ -283,6 +289,21 @@ export function MessagesPage() {
 
   return (
     <div onClick={() => setMenuOpenId(null)}>
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 24, right: 24, zIndex: 9999,
+          padding: '14px 20px', borderRadius: 12,
+          background: toast.type === 'success' ? '#059669' : toast.type === 'warning' ? '#d97706' : '#dc2626',
+          color: '#ffffff', fontWeight: 600, fontSize: 14,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          animation: 'slideIn 0.3s ease',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          {toast.message}
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer', marginLeft: 8 }}>✕</button>
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>💬 Mesajlar</h1>
