@@ -197,6 +197,8 @@ export class AdminEventsService {
         email: r.user.email,
         phone: r.user.phone,
         registeredAt: r.createdAt,
+        checkedIn: r.checkedIn,
+        checkedInAt: r.checkedInAt,
       })),
     };
   }

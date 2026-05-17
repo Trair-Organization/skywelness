@@ -778,7 +778,6 @@ export class AuthService {
         const sub = m.tenant.subdomain;
         const workspaceType = (m.tenant.settings as { workspaceType?: string } | null)
           ?.workspaceType;
-        // Discovery hub'ı ve coach tenant'ları atla
         return (
           sub !== 'independent-hub' &&
           !sub.startsWith('coach-') &&
@@ -802,5 +801,27 @@ export class AuthService {
           vertical: m.tenant.vertical,
         },
       }));
+  }
+
+  /** Kulüp davetini kabul et */
+  async acceptMembershipInvite(user: User, membershipUserId: string) {
+    const membership = await this.usersRepo.findOne({
+      where: { id: membershipUserId, email: user.email.toLowerCase(), accountStatus: MemberAccountStatus.PENDING_APPROVAL },
+    });
+    if (!membership) throw new NotFoundException('Davet bulunamadı');
+    membership.accountStatus = MemberAccountStatus.ACTIVE;
+    await this.usersRepo.save(membership);
+    return { ok: true, status: 'active' };
+  }
+
+  /** Kulüp davetini reddet */
+  async rejectMembershipInvite(user: User, membershipUserId: string) {
+    const membership = await this.usersRepo.findOne({
+      where: { id: membershipUserId, email: user.email.toLowerCase(), accountStatus: MemberAccountStatus.PENDING_APPROVAL },
+    });
+    if (!membership) throw new NotFoundException('Davet bulunamadı');
+    membership.accountStatus = MemberAccountStatus.REJECTED;
+    await this.usersRepo.save(membership);
+    return { ok: true, status: 'rejected' };
   }
 }

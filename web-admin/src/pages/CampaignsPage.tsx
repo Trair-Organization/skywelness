@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { apiJson, ApiError } from '../lib/api';
+import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 type Campaign = {
   id: string;
@@ -57,6 +58,8 @@ export function CampaignsPage() {
     endsAt: '',
     maxRedemptions: '',
     imageUrl: '',
+    targetCity: '',
+    targetDistrict: '',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -96,6 +99,8 @@ export function CampaignsPage() {
       endsAt: '',
       maxRedemptions: '',
       imageUrl: '',
+      targetCity: '',
+      targetDistrict: '',
     });
     setEditId(null);
   };
@@ -164,6 +169,8 @@ export function CampaignsPage() {
         endsAt: new Date(form.endsAt).toISOString(),
         maxRedemptions: form.maxRedemptions ? Number(form.maxRedemptions) : undefined,
         imageUrl: form.imageUrl || undefined,
+        targetCity: form.targetCity || undefined,
+        targetDistrict: form.targetDistrict || undefined,
       };
       if (editId) {
         await apiJson(`/campaigns/admin/${editId}`, {
@@ -363,6 +370,20 @@ export function CampaignsPage() {
                 onChange={(e) => setForm({ ...form, maxRedemptions: e.target.value })}
                 min={1}
               />
+            </label>
+            <label>
+              Hedef İl (opsiyonel)
+              <select value={form.targetCity} onChange={(e) => setForm({ ...form, targetCity: e.target.value, targetDistrict: '' })}>
+                <option value="">Tüm İller</option>
+                {CITY_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label>
+              Hedef İlçe (opsiyonel)
+              <select value={form.targetDistrict} onChange={(e) => setForm({ ...form, targetDistrict: e.target.value })} disabled={!form.targetCity}>
+                <option value="">Tüm İlçeler</option>
+                {form.targetCity && getDistricts(form.targetCity).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
             </label>
             <div className="form-actions">
               <button type="submit" className="primary" disabled={saving}>

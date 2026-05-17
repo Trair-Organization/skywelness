@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiJson } from '../lib/api';
+import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 type Club = {
   id: string;
@@ -55,13 +56,19 @@ export function PublicDiscoverPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [cityFilter, setCityFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState('');
   const slideInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const params = new URLSearchParams();
+      params.set('limit', '20');
+      if (cityFilter) params.set('city', cityFilter);
+      if (districtFilter) params.set('district', districtFilter);
       const [c, t, e, b] = await Promise.all([
-        apiJson<Club[]>('/discovery/clubs?limit=20', { auth: false }),
+        apiJson<Club[]>(`/discovery/clubs?${params.toString()}`, { auth: false }),
         apiJson<Trainer[]>('/discovery/trainers?limit=20', { auth: false }),
         apiJson<Event[]>('/discovery/events?limit=12', { auth: false }),
         apiJson<Banner[]>('/home-banners', { auth: false }),
@@ -75,7 +82,7 @@ export function PublicDiscoverPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cityFilter, districtFilter]);
 
   useEffect(() => {
     void load();
@@ -191,6 +198,32 @@ export function PublicDiscoverPage() {
       )}
 
       {loading && <div className="discover-loading">Yükleniyor...</div>}
+
+      {/* Lokasyon Filtresi */}
+      {!loading && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>📍 Lokasyon:</span>
+          <select
+            value={cityFilter}
+            onChange={(e) => { setCityFilter(e.target.value); setDistrictFilter(''); }}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+          >
+            <option value="">Tüm İller</option>
+            {CITY_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {cityFilter && (
+            <select
+              value={districtFilter}
+              onChange={(e) => setDistrictFilter(e.target.value)}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
+            >
+              <option value="">Tüm İlçeler</option>
+              {getDistricts(cityFilter).map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          )}
+          {cityFilter && <button onClick={() => { setCityFilter(''); setDistrictFilter(''); }} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.8rem' }}>✕ Temizle</button>}
+        </div>
+      )}
 
       {/* Kulüpler */}
       {clubs.length > 0 && (

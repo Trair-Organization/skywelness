@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Param,
   Post,
   Patch,
   Query,
@@ -142,6 +143,26 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   myMemberships(@CurrentUser() user: User) {
     return this.authService.listMyMemberships(user);
+  }
+
+  /** Kulüp davetini kabul et (pending → active) */
+  @Post('memberships/:membershipUserId/accept')
+  @UseGuards(JwtAuthGuard)
+  acceptMembership(
+    @CurrentUser() user: User,
+    @Param('membershipUserId') membershipUserId: string,
+  ) {
+    return this.authService.acceptMembershipInvite(user, membershipUserId);
+  }
+
+  /** Kulüp davetini reddet (pending → rejected) */
+  @Post('memberships/:membershipUserId/reject')
+  @UseGuards(JwtAuthGuard)
+  rejectMembership(
+    @CurrentUser() user: User,
+    @Param('membershipUserId') membershipUserId: string,
+  ) {
+    return this.authService.rejectMembershipInvite(user, membershipUserId);
   }
 
   @Patch('me')

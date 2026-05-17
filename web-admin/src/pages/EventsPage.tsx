@@ -28,6 +28,8 @@ type Participant = {
   email: string;
   phone: string | null;
   registeredAt: string;
+  checkedIn?: boolean;
+  checkedInAt?: string | null;
 };
 
 type ParticipantsData = {
@@ -84,6 +86,8 @@ export function EventsPage() {
     title: '', description: '', coachName: '', location: '', imageUrl: '',
     eventDate: '', startTime: '', endTime: '', capacity: '30',
     published: true, category: 'general', price: '0', requirements: '',
+    recurring: false, frequency: 'weekly' as 'daily' | 'weekly' | 'monthly',
+    recurringEndDate: '',
   });
 
   const load = useCallback(async () => {
@@ -105,6 +109,7 @@ export function EventsPage() {
       title: '', description: '', coachName: '', location: '', imageUrl: '',
       eventDate: '', startTime: '', endTime: '', capacity: '30',
       published: true, category: 'general', price: '0', requirements: '',
+      recurring: false, frequency: 'weekly', recurringEndDate: '',
     });
     setEditId(null);
   }
@@ -155,7 +160,7 @@ export function EventsPage() {
     try {
       const startsAt = new Date(`${form.eventDate}T${form.startTime}:00`).toISOString();
       const endsAt = form.endTime ? new Date(`${form.eventDate}T${form.endTime}:00`).toISOString() : undefined;
-      const payload = {
+      const payload: Record<string, unknown> = {
         title: form.title, description: form.description || undefined,
         coachName: form.coachName || undefined, location: form.location || undefined,
         imageUrl: form.imageUrl || undefined, startsAt, endsAt,
@@ -163,6 +168,9 @@ export function EventsPage() {
         category: form.category, price: parseFloat(form.price) || 0,
         requirements: form.requirements || undefined,
       };
+      if (form.recurring && !editId) {
+        payload.recurringRule = { frequency: form.frequency, endDate: form.recurringEndDate || undefined };
+      }
       if (editId) {
         await apiJson(`/admin/events/${editId}`, { method: 'PATCH', body: JSON.stringify(payload) });
         setSuccess('✅ Etkinlik güncellendi');
@@ -248,9 +256,10 @@ export function EventsPage() {
               <p className="muted">Henüz katılımcı yok.</p>
             ) : (
               <div className="members-table-wrapper">
-                <table className="data-table"><thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Telefon</th><th>Kayıt</th></tr></thead>
+                <table className="data-table"><thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Telefon</th><th>Kayıt</th><th>Check-in</th></tr></thead>
                 <tbody>{participantsData.participants.map((p) => (
-                  <tr key={p.id}><td><strong>{p.firstName} {p.lastName}</strong></td><td>{p.email}</td><td>{p.phone || '-'}</td><td>{new Date(p.registeredAt).toLocaleDateString('tr-TR')}</td></tr>
+                  <tr key={p.id}><td><strong>{p.firstName} {p.lastName}</strong></td><td>{p.email}</td><td>{p.phone || '-'}</td><td>{new Date(p.registeredAt).toLocaleDateString('tr-TR')}</td>
+                  <td>{p.checkedIn ? <span style={{ color: '#059669', fontWeight: 600 }}>✅ {p.checkedInAt ? new Date(p.checkedInAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</span> : <button className="btn-sm btn-outline" onClick={async () => { try { await apiJson(`/admin/events/${participantsEventId}/check-in/${p.id}`, { method: 'POST' }); void loadParticipants(participantsEventId!); } catch { /* ignore */ } }}>Giriş</button>}</td></tr>
                 ))}</tbody></table>
               </div>
             )}
@@ -331,6 +340,25 @@ export function EventsPage() {
             <label style={{ gridColumn: '1 / -1' }}>Açıklama <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Etkinlik detayları..." /></label>
             <label>Görsel <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleImageUpload(f); }} disabled={uploading} />{uploading && <span className="muted">⏳</span>}{form.imageUrl && <img src={form.imageUrl} alt="" style={{ marginTop: 8, maxHeight: 60, borderRadius: 8 }} />}</label>
             <label className="inlineCheck"><input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} /><span>Yayında</span></label>
+            {/* Tekrarlayan Etkinlik */}
+            {!editId && (
+              <div style={{ gridColumn: '1 / -1', padding: '12px 16px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface, #fafafa)' }}>
+                <label className="inlineCheck" style={{ marginBottom: 8 }}>
+                  <input type="checkbox" checked={form.recurring} onChange={(e) => setForm({ ...form, recurring: e.target.checked })} />
+                  <span style={{ fontWeight: 600 }}>🔁 Tekrarlayan Etkinlik</span>
+                </label>
+                {form.recurring && (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                    <label style={{ flex: 1 }}>Sıklık <select value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' })}>
+                      <option value="daily">Her Gün</option>
+                      <option value="weekly">Her Hafta</option>
+                      <option value="monthly">Her Ay</option>
+                    </select></label>
+                    <label style={{ flex: 1 }}>Bitiş Tarihi <input type="date" value={form.recurringEndDate} onChange={(e) => setForm({ ...form, recurringEndDate: e.target.value })} /></label>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="form-actions">
               <button type="submit" className="primary" disabled={saving}>{saving ? 'Kaydediliyor...' : editId ? 'Güncelle' : 'Oluştur'}</button>
               <button type="button" className="secondary" onClick={() => { setShowForm(false); resetForm(); }}>İptal</button>
