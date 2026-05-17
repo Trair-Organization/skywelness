@@ -69,7 +69,7 @@ export function PublicDiscoverPage() {
       if (districtFilter) params.set('district', districtFilter);
       const [c, t, e, b] = await Promise.all([
         apiJson<Club[]>(`/discovery/clubs?${params.toString()}`, { auth: false }),
-        apiJson<Trainer[]>('/discovery/trainers?limit=20', { auth: false }),
+        apiJson<Trainer[]>(`/discovery/trainers?limit=20${cityFilter ? `&city=${encodeURIComponent(cityFilter)}` : ''}`, { auth: false }),
         apiJson<Event[]>('/discovery/events?limit=12', { auth: false }),
         apiJson<Banner[]>('/home-banners', { auth: false }),
       ]);
