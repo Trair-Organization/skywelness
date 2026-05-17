@@ -246,30 +246,6 @@ export function ClubProfileEditPage() {
             <input value={priceRange} onChange={(e) => setPriceRange(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="₺3.000 - ₺12.000 / ay" />
           </div>
 
-          {/* Çalışma Saatleri */}
-          <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 10 }}>🕐 Çalışma Saatleri</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {Object.entries(workingHours).map(([day, hours]) => (
-                <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 80, fontSize: 13, fontWeight: 600, color: hours.closed ? '#94a3b8' : '#0f172a' }}>{day}</span>
-                  {hours.closed ? (
-                    <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Kapalı</span>
-                  ) : (
-                    <>
-                      <input type="time" value={hours.open} onChange={(e) => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
-                      <span style={{ color: '#64748b', fontSize: 12 }}>—</span>
-                      <input type="time" value={hours.close} onChange={(e) => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
-                    </>
-                  )}
-                  <button onClick={() => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], closed: !prev[day].closed } }))} style={{ marginLeft: 'auto', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: hours.closed ? '#fee2e2' : '#ffffff', color: hours.closed ? '#dc2626' : '#64748b', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                    {hours.closed ? 'Aç' : 'Kapat'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Sosyal Medya */}
           <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>📱 Sosyal Medya</label>
@@ -345,6 +321,30 @@ export function ClubProfileEditPage() {
               </div>
             </div>
           )}
+
+          {/* Çalışma Saatleri */}
+          <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 10 }}>🕐 Çalışma Saatleri</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Object.entries(workingHours).map(([day, hours]) => (
+                <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 80, fontSize: 13, fontWeight: 600, color: hours.closed ? '#94a3b8' : '#0f172a' }}>{day}</span>
+                  {hours.closed ? (
+                    <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Kapalı</span>
+                  ) : (
+                    <>
+                      <input type="time" value={hours.open} onChange={(e) => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
+                      <span style={{ color: '#64748b', fontSize: 12 }}>—</span>
+                      <input type="time" value={hours.close} onChange={(e) => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
+                    </>
+                  )}
+                  <button onClick={() => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], closed: !prev[day].closed } }))} style={{ marginLeft: 'auto', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: hours.closed ? '#fee2e2' : '#ffffff', color: hours.closed ? '#dc2626' : '#64748b', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                    {hours.closed ? 'Aç' : 'Kapat'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
