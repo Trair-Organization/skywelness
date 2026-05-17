@@ -56,7 +56,6 @@ export function ClubInsightsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard icon="👥" value={stats.totalMembers} label="Toplam Üye" sub={`${stats.activeMembers} aktif`} color="#2563eb" />
         <StatCard icon="📈" value={stats.newMembersThisMonth} label="Bu Ay Yeni" sub={`${totalNewMembers} son 4 hafta`} color="#059669" />
-        <StatCard icon="💰" value={`₺${stats.monthlyRevenue.toLocaleString('tr-TR')}`} label="Bu Ay Ciro" sub={`Ort: ₺${avgRevenuePerWeek.toLocaleString('tr-TR')}/hafta`} color="#d97706" />
         <StatCard icon="📦" value={stats.monthlyPackagesSold} label="Satılan Paket" color="#7c3aed" />
         <StatCard icon="📅" value={stats.todayBookingsCount} label="Bugün Randevu" sub={`${stats.upcomingEvents} etkinlik`} color="#0891b2" />
         <StatCard icon="🏋️" value={stats.totalTrainers} label="Eğitmen" color="#dc2626" />
