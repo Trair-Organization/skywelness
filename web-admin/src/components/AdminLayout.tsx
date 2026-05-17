@@ -132,7 +132,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
       <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
-          <span className="sidebar-brand-icon">⚡</span>
+          {isWellness ? <img src="/skyland-logo.png" alt="Skyland" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain' }} /> : <span className="sidebar-brand-icon">⚡</span>}
           <span className="sidebar-brand-text">{isWellness ? 'Skyland Wellness' : 'Wellness Club'}</span>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
