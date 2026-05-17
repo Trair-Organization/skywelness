@@ -283,7 +283,7 @@ export function ClubProfileEditPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
               {galleryImages.map((img, i) => (
                 <div key={i} style={{ position: 'relative' }}>
-                  <img src={img} alt="" style={{ width: 72, height: 54, borderRadius: 6, objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                  <img src={img} alt="" style={{ width: 100, height: 75, borderRadius: 6, objectFit: 'cover', border: '1px solid #e2e8f0' }} />
                   <button onClick={() => removeGalleryImage(i)} style={{ position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: 9, background: '#dc2626', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer', fontWeight: 700 }}>×</button>
                 </div>
               ))}
