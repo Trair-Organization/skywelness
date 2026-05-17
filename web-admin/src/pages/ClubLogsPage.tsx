@@ -29,8 +29,14 @@ const ACTION_LABELS: Record<string, string> = {
   event_rejected: '📅 Etkinlik reddedildi',
   trainer_created: '🏋️ Eğitmen oluşturuldu',
   trainer_deleted: '🗑 Eğitmen silindi',
+  trainer_assigned: '🏋️ Eğitmen atandı',
+  trainer_removed: '🏋️ Eğitmen çıkarıldı',
   push_sent: '🔔 Bildirim gönderildi',
+  bulk_sms: '📱 Toplu SMS',
+  bulk_email: '📧 Toplu Email',
   campaign_created: '🔥 Kampanya oluşturuldu',
+  reservation_cancelled: '❌ Randevu iptal',
+  reservation_created: '📅 Randevu oluşturuldu',
 };
 
 const ACTION_CATEGORIES: Record<string, string[]> = {
@@ -61,12 +67,28 @@ function formatDetails(action: string, details: Record<string, unknown>): string
     case 'event_rejected': return d.reason ? `Sebep: ${d.reason}` : 'Etkinlik reddedildi';
     case 'trainer_created': return 'Yeni eğitmen hesabı oluşturuldu';
     case 'trainer_deleted': return 'Eğitmen hesabı silindi';
+    case 'trainer_assigned': return 'Eğitmen üyeye atandı';
+    case 'trainer_removed': return 'Eğitmen üyeden çıkarıldı';
     case 'push_sent': return d.target ? `Hedef: ${d.target === 'all' ? 'Herkes' : d.target === 'members' ? 'Üyeler' : 'Personel'}` : 'Bildirim gönderildi';
+    case 'bulk_sms': return `${d.sent || 0} kişiye SMS gönderildi`;
+    case 'bulk_email': return `${d.sent || 0} kişiye email gönderildi`;
     case 'campaign_created': return 'Yeni kampanya oluşturuldu';
+    case 'reservation_cancelled': return 'Randevu iptal edildi';
+    case 'reservation_created': return 'Randevu oluşturuldu';
     default: {
       const entries = Object.entries(d).slice(0, 2);
-      if (entries.length === 0) return '';
-      return entries.map(([k, v]) => `${k}: ${String(v).slice(0, 30)}`).join(', ');
+      if (entries.length === 0) return '—';
+      const DETAIL_LABELS: Record<string, string> = {
+        trainerId: 'Eğitmen', userId: 'Kullanıcı', memberId: 'Üye',
+        sent: 'Gönderilen', count: 'Toplam', failed: 'Başarısız',
+        messagePreview: 'Mesaj', reason: 'Sebep', note: 'Not',
+        packageName: 'Paket', newTotal: 'Yeni toplam',
+      };
+      return entries.map(([k, v]) => {
+        const label = DETAIL_LABELS[k] || k;
+        const val = String(v).slice(0, 30);
+        return `${label}: ${val}`;
+      }).join(' • ');
     }
   }
 }
