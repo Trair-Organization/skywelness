@@ -22,6 +22,8 @@ type Campaign = {
   redemptionCount: number;
   viewCount: number;
   clickCount: number;
+  targetCity: string | null;
+  targetDistrict: string | null;
   createdAt: string;
 };
 
@@ -63,6 +65,7 @@ export function CampaignsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'expired' | 'draft'>('all');
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
@@ -120,6 +123,8 @@ export function CampaignsPage() {
       endsAt: c.endsAt.slice(0, 16),
       maxRedemptions: c.maxRedemptions?.toString() ?? '',
       imageUrl: c.imageUrl ?? '',
+      targetCity: (c as Campaign & { targetCity?: string }).targetCity ?? '',
+      targetDistrict: (c as Campaign & { targetDistrict?: string }).targetDistrict ?? '',
     });
     setEditId(c.id);
     setShowForm(true);
@@ -412,65 +417,63 @@ export function CampaignsPage() {
           <p className="muted">Üyelerinize özel teklifler sunarak dönüşüm oranınızı artırın.</p>
         </div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Başlık</th>
-                <th>Tip</th>
-                <th>İndirim</th>
-                <th>Durum</th>
-                <th>Bitiş</th>
-                <th>Görüntülenme</th>
-                <th>Tıklanma</th>
-                <th>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <strong>{c.title}</strong>
-                  </td>
-                  <td>
-                    {CAMPAIGN_TYPES.find((ct) => ct.value === c.campaignType)?.label ??
-                      c.campaignType}
-                  </td>
-                  <td>
-                    {c.discountKind === 'percentage'
-                      ? `%${c.discountValue}`
-                      : `₺${c.discountValue}`}
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${c.status === 'active' ? 'badge-green' : c.status === 'paused' ? 'badge-yellow' : 'badge-gray'}`}
-                    >
-                      {c.status === 'active'
-                        ? 'Aktif'
-                        : c.status === 'paused'
-                          ? 'Duraklatıldı'
-                          : c.status}
-                    </span>
-                  </td>
-                  <td>{new Date(c.endsAt).toLocaleDateString('tr-TR')}</td>
-                  <td>{c.viewCount}</td>
-                  <td>{c.clickCount}</td>
-                  <td>
-                    <button className="small" onClick={() => handleToggleStatus(c)}>
-                      {c.status === 'active' ? '⏸' : '▶'}
-                    </button>
-                    <button className="small" onClick={() => openEdit(c)}>
-                      ✏️
-                    </button>
-                    <button className="small danger" onClick={() => handleDelete(c.id)}>
-                      🗑
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* İstatistik Kartları */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
+            <div className="stat-mini"><span className="stat-mini-val">{campaigns.length}</span><span className="stat-mini-lbl">Toplam</span></div>
+            <div className="stat-mini"><span className="stat-mini-val">{campaigns.filter(c => c.status === 'active').length}</span><span className="stat-mini-lbl">Aktif</span></div>
+            <div className="stat-mini"><span className="stat-mini-val">{campaigns.reduce((s, c) => s + c.viewCount, 0).toLocaleString('tr-TR')}</span><span className="stat-mini-lbl">Görüntülenme</span></div>
+            <div className="stat-mini"><span className="stat-mini-val">{campaigns.reduce((s, c) => s + c.clickCount, 0).toLocaleString('tr-TR')}</span><span className="stat-mini-lbl">Tıklanma</span></div>
+            <div className="stat-mini"><span className="stat-mini-val">{campaigns.reduce((s, c) => s + c.redemptionCount, 0)}</span><span className="stat-mini-lbl">Kullanım</span></div>
+          </div>
+
+          {/* Filtreler */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            {(['all', 'active', 'paused', 'expired', 'draft'] as const).map(f => (
+              <button key={f} onClick={() => setStatusFilter(f)} className={`btn-sm ${statusFilter === f ? 'btn-primary' : 'btn-outline'}`}>
+                {f === 'all' ? 'Tümü' : f === 'active' ? '🟢 Aktif' : f === 'paused' ? '⏸ Duraklatıldı' : f === 'expired' ? '⌛ Süresi Dolmuş' : '📝 Taslak'}
+              </button>
+            ))}
+          </div>
+
+          {/* Kampanya Kartları */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+            {campaigns
+              .filter(c => statusFilter === 'all' || c.status === statusFilter)
+              .map((c) => {
+                const isExpired = new Date(c.endsAt) < new Date();
+                const discountText = c.discountKind === 'percentage' ? `%${c.discountValue}` : `₺${c.discountValue}`;
+                return (
+                  <div key={c.id} style={{ background: 'var(--card-bg, #fff)', border: '1px solid var(--border, #e2e8f0)', borderRadius: 12, overflow: 'hidden', opacity: isExpired ? 0.7 : 1 }}>
+                    {c.imageUrl && <img src={c.imageUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover' }} />}
+                    <div style={{ padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>{c.title}</h3>
+                        <span className={`status-badge ${c.status === 'active' ? 'badge-green' : c.status === 'paused' ? 'badge-yellow' : 'badge-gray'}`}>
+                          {c.status === 'active' ? 'Aktif' : c.status === 'paused' ? 'Durduruldu' : c.status === 'expired' ? 'Dolmuş' : 'Taslak'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, fontSize: '0.78rem', color: 'var(--muted, #64748b)', marginBottom: 8, flexWrap: 'wrap' }}>
+                        <span>🏷️ {discountText}</span>
+                        <span>📅 {new Date(c.endsAt).toLocaleDateString('tr-TR')}</span>
+                        <span>👁️ {c.viewCount}</span>
+                        <span>👆 {c.clickCount}</span>
+                        {c.targetCity && <span>📍 {c.targetCity}{c.targetDistrict ? ` / ${c.targetDistrict}` : ''}</span>}
+                      </div>
+                      {c.description && <p style={{ fontSize: '0.82rem', color: 'var(--text, #374151)', margin: '0 0 10px' }}>{c.description.slice(0, 80)}{c.description.length > 80 ? '...' : ''}</p>}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-sm btn-outline" onClick={() => void handleToggleStatus(c)}>{c.status === 'active' ? '⏸' : '▶'}</button>
+                        <button className="btn-sm btn-outline" onClick={() => openEdit(c)}>✏️</button>
+                        <button className="btn-sm btn-outline" onClick={async () => { try { const res = await apiJson<{ sent: number }>(`/campaigns/admin/${c.id}/notify`, { method: 'POST' }); alert(`🔔 ${res.sent} üyeye bildirim gönderildi`); } catch (e) { alert(e instanceof ApiError ? e.message : 'Hata'); } }}>🔔</button>
+                        <button className="btn-sm btn-outline" onClick={() => { navigator.clipboard.writeText(`https://www.wellnessclub.tech/discover?campaign=${c.id}`); alert('📋 Link kopyalandı!'); }}>🔗</button>
+                        <button className="btn-sm btn-danger" onClick={() => void handleDelete(c.id)}>🗑</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </>
       )}
     </div>
   );

@@ -112,4 +112,15 @@ export class CampaignsController {
   async toggleFeatured(@Param('id') id: string, @Body() body: { featured: boolean }) {
     return this.campaignsService.setFeatured(id, body.featured);
   }
+
+  /** Admin: Kampanya başladığında üyelere bildirim gönder */
+  @Post('admin/:id/notify')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async notifyMembers(@CurrentUser() user: User, @Param('id') id: string) {
+    const campaigns = await this.campaignsService.listByTenant(user.tenantId);
+    const campaign = campaigns.find((c) => c.id === id);
+    if (!campaign) return { sent: 0, total: 0 };
+    return this.campaignsService.notifyMembers(user.tenantId, campaign);
+  }
 }

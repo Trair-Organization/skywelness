@@ -1,15 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { LessThan, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { Campaign } from '../database/entities/campaign.entity';
+import { PushService } from '../notifications/push.service';
+import { User } from '../database/entities/user.entity';
 import type { CreateCampaignDto } from './dto/create-campaign.dto';
 import type { UpdateCampaignDto } from './dto/update-campaign.dto';
 
 @Injectable()
 export class CampaignsService {
+  private readonly logger = new Logger(CampaignsService.name);
+
   constructor(
     @InjectRepository(Campaign)
     private readonly campaignsRepo: Repository<Campaign>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
+    private readonly pushService: PushService,
   ) {}
 
   /** Üyelere gösterilecek aktif kampanyalar (tenant bazlı veya tüm platformda). */
@@ -88,6 +96,8 @@ export class CampaignsService {
       startsAt: new Date(dto.startsAt),
       endsAt: new Date(dto.endsAt),
       maxRedemptions: dto.maxRedemptions ?? null,
+      targetCity: dto.targetCity?.trim() || null,
+      targetDistrict: dto.targetDistrict?.trim() || null,
     });
     return this.campaignsRepo.save(campaign);
   }
@@ -117,6 +127,8 @@ export class CampaignsService {
     if (dto.endsAt !== undefined) campaign.endsAt = new Date(dto.endsAt);
     if (dto.maxRedemptions !== undefined) campaign.maxRedemptions = dto.maxRedemptions;
     if (dto.featured !== undefined) campaign.featured = dto.featured;
+    if (dto.targetCity !== undefined) campaign.targetCity = dto.targetCity?.trim() || null;
+    if (dto.targetDistrict !== undefined) campaign.targetDistrict = dto.targetDistrict?.trim() || null;
     return this.campaignsRepo.save(campaign);
   }
 
@@ -155,5 +167,42 @@ export class CampaignsService {
     }
     campaign.featured = featured;
     return this.campaignsRepo.save(campaign);
+  }
+
+  /** Cron: Her saat süresi dolan kampanyaları expired yap */
+  @Cron('0 0 * * * *')
+  async expireCampaigns() {
+    const now = new Date();
+    const result = await this.campaignsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ status: 'expired' })
+      .where('status = :status', { status: 'active' })
+      .andWhere('ends_at < :now', { now })
+      .execute();
+    if (result.affected && result.affected > 0) {
+      this.logger.log(`Expired ${result.affected} campaigns`);
+    }
+  }
+
+  /** Kampanya başlatıldığında tenant üyelerine bildirim gönder */
+  async notifyMembers(tenantId: string, campaign: Campaign) {
+    const members = await this.usersRepo.find({
+      where: { tenantId, role: 'member' as never, accountStatus: 'active' as never },
+      select: ['id'],
+    });
+    if (members.length === 0) return { sent: 0, total: 0 };
+
+    const userIds = members.map((m) => m.id);
+    const discountText = campaign.discountKind === 'percentage'
+      ? `%${campaign.discountValue} indirim`
+      : `₺${campaign.discountValue} indirim`;
+
+    return this.pushService.sendToMany(
+      userIds,
+      `🔥 ${campaign.title}`,
+      `${discountText}! Son gün: ${campaign.endsAt.toLocaleDateString('tr-TR')}`,
+      { type: 'campaign', campaignId: campaign.id },
+    );
   }
 }

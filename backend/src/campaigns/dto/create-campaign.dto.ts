@@ -63,4 +63,14 @@ export class CreateCampaignDto {
   @IsNumber()
   @Min(1)
   maxRedemptions?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  targetCity?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  targetDistrict?: string;
 }
