@@ -72,4 +72,14 @@ export class UpdateCampaignDto {
 
   @IsOptional()
   featured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  targetCity?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  targetDistrict?: string | null;
 }
