@@ -4534,3 +4534,24 @@ button.primary:disabled {
   background: #fff !important;
   color: var(--text);
 }
+
+/* Stat Mini Cards */
+.stat-mini {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: center;
+}
+.stat-mini-val {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+}
+.stat-mini-lbl {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted, #64748b);
+  margin-top: 2px;
+}

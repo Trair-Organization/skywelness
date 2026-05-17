@@ -5,6 +5,7 @@ import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { CreateClubEventDto } from './dto/create-club-event.dto';
 import { UpdateClubEventDto } from './dto/update-club-event.dto';
+import { PushService } from '../notifications/push.service';
 
 @Injectable()
 export class AdminEventsService {
@@ -13,6 +14,7 @@ export class AdminEventsService {
     private readonly eventsRepo: Repository<ClubEvent>,
     @InjectRepository(ClubEventRegistration)
     private readonly registrationsRepo: Repository<ClubEventRegistration>,
+    private readonly pushService: PushService,
   ) {}
 
   async list(tenantId: string) {
@@ -42,6 +44,7 @@ export class AdminEventsService {
       category: dto.category?.trim() || 'general',
       requirements: dto.requirements?.trim() || null,
       schedule: dto.schedule ?? null,
+      price: dto.price != null ? String(dto.price) : '0',
       published: dto.published ?? true,
     });
     return this.eventsRepo.save(row);
@@ -82,6 +85,15 @@ export class AdminEventsService {
     if (dto.published !== undefined) {
       row.published = dto.published;
     }
+    if (dto.price !== undefined) {
+      row.price = String(dto.price);
+    }
+    if (dto.requirements !== undefined) {
+      row.requirements = dto.requirements === null ? null : dto.requirements.trim() || null;
+    }
+    if (dto.category !== undefined) {
+      row.category = dto.category?.trim() || 'general';
+    }
     return this.eventsRepo.save(row);
   }
 
@@ -119,5 +131,59 @@ export class AdminEventsService {
         registeredAt: r.createdAt,
       })),
     };
+  }
+
+  /** Etkinlik kopyala (yeni tarihle) */
+  async duplicate(tenantId: string, eventId: string, newDate?: string) {
+    const source = await this.eventsRepo.findOne({ where: { id: eventId, tenantId } });
+    if (!source) throw new NotFoundException('Event not found');
+
+    const startsAt = newDate
+      ? new Date(`${newDate}T${source.startsAt.toTimeString().slice(0, 5)}:00`)
+      : new Date(source.startsAt.getTime() + 7 * 24 * 60 * 60 * 1000); // +1 hafta
+
+    let endsAt: Date | null = null;
+    if (source.endsAt) {
+      const diff = source.endsAt.getTime() - source.startsAt.getTime();
+      endsAt = new Date(startsAt.getTime() + diff);
+    }
+
+    const row = this.eventsRepo.create({
+      tenantId,
+      title: source.title,
+      description: source.description,
+      coachName: source.coachName,
+      location: source.location,
+      imageUrl: source.imageUrl,
+      startsAt,
+      endsAt,
+      capacity: source.capacity,
+      category: source.category,
+      requirements: source.requirements,
+      schedule: source.schedule,
+      price: source.price,
+      published: false, // Kopyalar taslak olarak başlar
+    });
+    return this.eventsRepo.save(row);
+  }
+
+  /** Katılımcılara push bildirim gönder */
+  async notifyParticipants(tenantId: string, eventId: string, title: string, message: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId, tenantId } });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const registrations = await this.registrationsRepo.find({
+      where: { clubEventId: eventId },
+      select: ['userId'],
+    });
+
+    if (registrations.length === 0) return { sent: 0, total: 0 };
+
+    const userIds = registrations.map((r) => r.userId);
+    const result = await this.pushService.sendToMany(userIds, title, message, {
+      type: 'event_notification',
+      eventId,
+    });
+    return result;
   }
 }

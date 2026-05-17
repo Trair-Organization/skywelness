@@ -58,4 +58,19 @@ export class UpdateClubEventDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @Min(0)
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  requirements?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  category?: string;
 }

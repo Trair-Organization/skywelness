@@ -81,4 +81,9 @@ export class CreateClubEventDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @Min(0)
+  price?: number;
 }

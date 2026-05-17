@@ -56,4 +56,22 @@ export class AdminEventsController {
   ) {
     return this.adminEvents.listParticipants(admin.tenantId, id);
   }
+
+  @Post(':id/duplicate')
+  duplicate(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { newDate?: string },
+  ) {
+    return this.adminEvents.duplicate(admin.tenantId, id, body.newDate);
+  }
+
+  @Post(':id/notify')
+  notifyParticipants(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { title: string; message: string },
+  ) {
+    return this.adminEvents.notifyParticipants(admin.tenantId, id, body.title, body.message);
+  }
 }
