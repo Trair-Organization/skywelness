@@ -46,6 +46,14 @@ export class AdminController {
     return this.adminMembers.getDashboardStats(admin.tenantId);
   }
 
+  /** Dashboard: Haftalık gelir ve üye büyüme verileri */
+  @Get('weekly-stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  getWeeklyStats(@CurrentUser() admin: User) {
+    return this.adminMembers.getWeeklyStats(admin.tenantId);
+  }
+
   /** Tüm üyeleri listele */
   @Get('members')
   @UseGuards(JwtAuthGuard, RolesGuard)

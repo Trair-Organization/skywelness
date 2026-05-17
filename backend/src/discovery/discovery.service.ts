@@ -85,13 +85,20 @@ export class DiscoveryService {
   }
 
   /** Keşif: Onaylı eğitmenler (profil bilgileriyle). */
-  async listTrainers(limit = 20) {
-    const profiles = await this.profilesRepo.find({
-      relations: ['user', 'trainer', 'tenant'],
-      where: { tenant: { featured: true } },
-      order: { createdAt: 'DESC' },
-      take: Math.min(limit, 50),
-    });
+  async listTrainers(limit = 20, city?: string) {
+    const qb = this.profilesRepo.createQueryBuilder('p')
+      .leftJoinAndSelect('p.user', 'u')
+      .leftJoinAndSelect('p.trainer', 'tr')
+      .leftJoinAndSelect('p.tenant', 't')
+      .where('t.featured = :featured', { featured: true })
+      .orderBy('p.createdAt', 'DESC')
+      .take(Math.min(limit, 50));
+
+    if (city) {
+      qb.andWhere('p.city = :city', { city });
+    }
+
+    const profiles = await qb.getMany();
 
     return profiles.map((p) => ({
       id: p.trainerId,

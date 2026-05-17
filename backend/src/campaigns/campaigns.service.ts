@@ -173,16 +173,38 @@ export class CampaignsService {
   @Cron('0 0 * * * *')
   async expireCampaigns() {
     const now = new Date();
-    const result = await this.campaignsRepo
+    // Find campaigns about to expire (still active but end time passed)
+    const expiring = await this.campaignsRepo.find({
+      where: { status: 'active', endsAt: LessThan(now) },
+    });
+
+    if (expiring.length === 0) return;
+
+    // Mark them expired
+    await this.campaignsRepo
       .createQueryBuilder()
       .update()
       .set({ status: 'expired' })
       .where('status = :status', { status: 'active' })
       .andWhere('ends_at < :now', { now })
       .execute();
-    if (result.affected && result.affected > 0) {
-      this.logger.log(`Expired ${result.affected} campaigns`);
+
+    // Notify admins
+    for (const campaign of expiring) {
+      const admins = await this.usersRepo.find({
+        where: { tenantId: campaign.tenantId, role: 'administrator' as never },
+        select: ['id'],
+      });
+      if (admins.length > 0) {
+        void this.pushService.sendToMany(
+          admins.map(a => a.id),
+          '⌛ Kampanya Süresi Doldu',
+          `"${campaign.title}" kampanyanızın süresi doldu.`,
+          { type: 'campaign_expired', campaignId: campaign.id },
+        );
+      }
     }
+    this.logger.log(`Expired ${expiring.length} campaigns`);
   }
 
   /** Kampanya başlatıldığında tenant üyelerine bildirim gönder */

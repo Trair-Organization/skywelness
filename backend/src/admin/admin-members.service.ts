@@ -3270,4 +3270,32 @@ export class AdminMembersService {
 
     return { assigned, failed };
   }
+
+  /** Dashboard: Son 4 haftanın gelir ve üye büyüme verileri */
+  async getWeeklyStats(tenantId: string) {
+    const weeks: Array<{ label: string; revenue: number; newMembers: number }> = [];
+    for (let i = 3; i >= 0; i--) {
+      const start = new Date();
+      start.setDate(start.getDate() - (i + 1) * 7);
+      const end = new Date();
+      end.setDate(end.getDate() - i * 7);
+
+      const rows = (await this.usersRepo.manager.query(
+        `SELECT COALESCE(SUM(CAST(amount AS FLOAT)), 0) as total FROM payment_transaction pt INNER JOIN "user" u ON pt.user_id = u.id WHERE u.tenant_id = $1 AND pt.status = 'succeeded' AND pt.created_at >= $2 AND pt.created_at < $3`,
+        [tenantId, start, end],
+      )) as Array<{ total: string }>;
+      const revenueVal = parseFloat(rows?.[0]?.total) || 0;
+
+      const newMembers = await this.usersRepo.count({
+        where: { tenantId, role: 'member' as never, createdAt: Between(start, end) as never },
+      });
+
+      weeks.push({
+        label: `${start.getDate()}/${start.getMonth() + 1}`,
+        revenue: revenueVal,
+        newMembers,
+      });
+    }
+    return weeks;
+  }
 }

@@ -29,8 +29,8 @@ export class DiscoveryController {
 
   /** Onaylı eğitmenler (profil bilgileriyle). */
   @Get('trainers')
-  listTrainers(@Query('limit') limit?: string) {
-    return this.discoveryService.listTrainers(Number(limit) || 20);
+  listTrainers(@Query('limit') limit?: string, @Query('city') city?: string) {
+    return this.discoveryService.listTrainers(Number(limit) || 20, city);
   }
 
   /** Yaklaşan etkinlikler (tüm kulüplerden). */
