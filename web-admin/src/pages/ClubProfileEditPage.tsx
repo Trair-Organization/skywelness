@@ -50,7 +50,15 @@ export function ClubProfileEditPage() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
-  const [workingHours, setWorkingHours] = useState('');
+  const [workingHours, setWorkingHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>({
+    Pazartesi: { open: '07:00', close: '22:00', closed: false },
+    Salı: { open: '07:00', close: '22:00', closed: false },
+    Çarşamba: { open: '07:00', close: '22:00', closed: false },
+    Perşembe: { open: '07:00', close: '22:00', closed: false },
+    Cuma: { open: '07:00', close: '22:00', closed: false },
+    Cumartesi: { open: '09:00', close: '18:00', closed: false },
+    Pazar: { open: '09:00', close: '18:00', closed: true },
+  });
   const [socialInstagram, setSocialInstagram] = useState('');
   const [socialFacebook, setSocialFacebook] = useState('');
   const [socialTwitter, setSocialTwitter] = useState('');
@@ -136,7 +144,7 @@ export function ClubProfileEditPage() {
   const scoreItems = [
     !!description, !!location, !!city, !!logoUrl, !!coverImageUrl,
     galleryImages.length > 0, !!phone, !!email, services.length > 0, !!priceRange,
-    !!workingHours, !!(socialInstagram || socialFacebook || socialTwitter),
+    !!Object.values(workingHours).some(d => !d.closed), !!(socialInstagram || socialFacebook || socialTwitter),
   ];
   const completeness = Math.round((scoreItems.filter(Boolean).length / scoreItems.length) * 100);
 
@@ -240,8 +248,26 @@ export function ClubProfileEditPage() {
 
           {/* Çalışma Saatleri */}
           <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>🕐 Çalışma Saatleri</label>
-            <input value={workingHours} onChange={(e) => setWorkingHours(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} placeholder="Pzt-Cum: 07:00-22:00, Cmt: 09:00-18:00" />
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 10 }}>🕐 Çalışma Saatleri</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Object.entries(workingHours).map(([day, hours]) => (
+                <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 80, fontSize: 13, fontWeight: 600, color: hours.closed ? '#94a3b8' : '#0f172a' }}>{day}</span>
+                  {hours.closed ? (
+                    <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Kapalı</span>
+                  ) : (
+                    <>
+                      <input type="time" value={hours.open} onChange={(e) => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
+                      <span style={{ color: '#64748b', fontSize: 12 }}>—</span>
+                      <input type="time" value={hours.close} onChange={(e) => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
+                    </>
+                  )}
+                  <button onClick={() => setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], closed: !prev[day].closed } }))} style={{ marginLeft: 'auto', padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: hours.closed ? '#fee2e2' : '#ffffff', color: hours.closed ? '#dc2626' : '#64748b', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                    {hours.closed ? 'Aç' : 'Kapat'}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Sosyal Medya */}
@@ -314,7 +340,7 @@ export function ClubProfileEditPage() {
                 {!email && <span style={{ fontSize: 12, color: '#92400e' }}>• E-posta adresi girin</span>}
                 {services.length === 0 && <span style={{ fontSize: 12, color: '#92400e' }}>• Hizmet seçin</span>}
                 {!priceRange && <span style={{ fontSize: 12, color: '#92400e' }}>• Fiyat aralığı belirtin</span>}
-                {!workingHours && <span style={{ fontSize: 12, color: '#92400e' }}>• Çalışma saatleri girin</span>}
+                {!Object.values(workingHours).some(d => !d.closed) && <span style={{ fontSize: 12, color: '#92400e' }}>• Çalışma saatleri girin</span>}
                 {!socialInstagram && !socialFacebook && !socialTwitter && <span style={{ fontSize: 12, color: '#92400e' }}>• Sosyal medya hesabı ekleyin</span>}
               </div>
             </div>
