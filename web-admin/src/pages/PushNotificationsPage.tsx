@@ -101,10 +101,10 @@ export function PushNotificationsPage() {
 
       const res = await apiJson<{ ok: boolean; sent: number; total: number }>(endpoint, { method: 'POST', body: JSON.stringify(body) });
       setResult({ sent: res.sent, total: res.total });
-      // Save to announcements for history
+      // Save to announcements for history with actual sent count
       if (!isTrainer) {
         try {
-          await apiJson('/admin/announcements', { method: 'POST', body: JSON.stringify({ title: title.trim(), content: message.trim(), target: isPlatformAdmin ? platformTarget : target, sendPush: false }) });
+          await apiJson('/admin/announcements', { method: 'POST', body: JSON.stringify({ title: title.trim(), content: `${message.trim()} [Push: ${res.sent}/${res.total} ulaştı]`, target: isPlatformAdmin ? platformTarget : target, sendPush: false }) });
         } catch { /* ignore */ }
       }
       setTitle(''); setMessage(''); setImageUrl('');
@@ -233,7 +233,10 @@ export function PushNotificationsPage() {
                       <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(h.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{h.message.slice(0, 60)}</p>
-                    <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>📤 {h.sent} kişiye</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>📤 {h.sent} kişiye ulaştı</span>
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>{h.target === 'all' ? '👥 Herkes' : h.target === 'members' ? '🏠 Üyeler' : '🏋️ Personel'}</span>
+                    </div>
                   </div>
                 ))}
               </div>
