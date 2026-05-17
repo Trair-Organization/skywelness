@@ -515,4 +515,143 @@ ${cancelLine}
     ].join('\n');
     await this.send({ to: [params.to], subject, html, text });
   }
+
+  // ─── Yeni Email Template'leri ──────────────────────────────────────────────────
+
+  /** Hoş geldin e-postası (kayıt sonrası) */
+  async sendWelcome(params: {
+    to: string;
+    firstName: string;
+    clubName: string;
+    publicId: string;
+  }): Promise<void> {
+    const subject = `${params.clubName}'a hoş geldiniz! 🎉`;
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.firstName)},</p>
+<p style="margin:0 0 16px;">${escapeHtml(params.clubName)} ailesine katıldığınız için teşekkür ederiz! 🎉</p>
+<p style="margin:0 0 8px;">Kişisel kodunuz:</p>
+<p style="margin:0 0 16px;font-size:24px;font-weight:800;letter-spacing:2px;color:#2563eb;font-family:monospace;">${escapeHtml(params.publicId)}</p>
+<p style="margin:0 0 16px;">Bu kod ile bağlantı kurabilir, etkinliklere katılabilir ve kulüp hizmetlerinden faydalanabilirsiniz.</p>
+<p style="margin:0;font-size:13px;color:#94a3b8;">Size en iyi deneyimi sunmak için buradayız.</p>`;
+    const html = emailShell({
+      title: 'Hoş Geldiniz!',
+      previewText: `${params.clubName} ailesine katıldınız`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.firstName},`,
+      '',
+      `${params.clubName} ailesine katıldığınız için teşekkür ederiz!`,
+      `Kişisel kodunuz: ${params.publicId}`,
+      '',
+      `${params.clubName}`,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
+  /** Kampanya bildirimi e-postası */
+  async sendCampaignNotification(params: {
+    to: string;
+    firstName: string;
+    clubName: string;
+    campaignTitle: string;
+    discountText: string;
+    endsAt: string;
+    campaignUrl?: string;
+  }): Promise<void> {
+    const subject = `🔥 ${params.campaignTitle} — ${params.discountText}`;
+    const endDate = new Date(params.endsAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.firstName)},</p>
+<p style="margin:0 0 16px;">Size özel bir teklif var! 🎁</p>
+<div style="background:#eff6ff;border-radius:12px;padding:16px 20px;margin:0 0 16px;">
+  <p style="margin:0 0 4px;font-size:18px;font-weight:800;color:#1e40af;">${escapeHtml(params.campaignTitle)}</p>
+  <p style="margin:0;font-size:24px;font-weight:800;color:#059669;">${escapeHtml(params.discountText)}</p>
+</div>
+<p style="margin:0 0 16px;font-size:13px;color:#6b7280;">Son tarih: <strong>${endDate}</strong></p>
+${params.campaignUrl ? `<p style="margin:0 0 16px;"><a href="${escapeHtml(params.campaignUrl)}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">Kampanyayı İncele</a></p>` : ''}`;
+    const html = emailShell({
+      title: params.campaignTitle,
+      previewText: `${params.discountText} — ${params.clubName}`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.firstName},`,
+      '',
+      `${params.campaignTitle} — ${params.discountText}`,
+      `Son tarih: ${endDate}`,
+      '',
+      `${params.clubName}`,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
+  /** Etkinlik onay/red e-postası */
+  async sendEventStatusNotification(params: {
+    to: string;
+    firstName: string;
+    clubName: string;
+    eventTitle: string;
+    status: 'approved' | 'rejected';
+    reason?: string;
+  }): Promise<void> {
+    const isApproved = params.status === 'approved';
+    const subject = isApproved
+      ? `✅ "${params.eventTitle}" etkinliğiniz onaylandı!`
+      : `❌ "${params.eventTitle}" etkinliğiniz reddedildi`;
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.firstName)},</p>
+<p style="margin:0 0 16px;">"<strong>${escapeHtml(params.eventTitle)}</strong>" etkinliğiniz ${isApproved ? 'onaylandı ve yayına alındı! 🎉' : 'reddedildi.'}</p>
+${!isApproved && params.reason ? `<p style="margin:0 0 16px;padding:12px;background:#fef2f2;border-radius:8px;font-size:13px;color:#991b1b;"><strong>Sebep:</strong> ${escapeHtml(params.reason)}</p>` : ''}
+${isApproved ? '<p style="margin:0;font-size:13px;color:#059669;font-weight:600;">Katılımcılar artık etkinliğinize kayıt olabilir.</p>' : '<p style="margin:0;font-size:13px;color:#6b7280;">Etkinliği düzenleyip tekrar gönderebilirsiniz.</p>'}`;
+    const html = emailShell({
+      title: isApproved ? 'Etkinlik Onaylandı' : 'Etkinlik Reddedildi',
+      previewText: subject,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.firstName},`,
+      '',
+      `"${params.eventTitle}" etkinliğiniz ${isApproved ? 'onaylandı!' : 'reddedildi.'}`,
+      params.reason ? `Sebep: ${params.reason}` : '',
+      '',
+      `${params.clubName}`,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
+
+  /** Kulüp daveti e-postası */
+  async sendClubInvitation(params: {
+    to: string;
+    firstName: string;
+    clubName: string;
+    inviterName?: string;
+  }): Promise<void> {
+    const subject = `📩 ${params.clubName} sizi davet ediyor!`;
+    const inner = `
+<p style="margin:0 0 16px;">Merhaba ${escapeHtml(params.firstName)},</p>
+<p style="margin:0 0 16px;"><strong>${escapeHtml(params.clubName)}</strong>${params.inviterName ? ` (${escapeHtml(params.inviterName)})` : ''} sizi üye olarak davet ediyor! 🏋️</p>
+<p style="margin:0 0 16px;">Uygulamaya giriş yaparak daveti kabul edebilir veya reddedebilirsiniz.</p>
+<p style="margin:0 0 16px;"><a href="https://www.wellnessclub.tech/login" style="display:inline-block;padding:12px 24px;background:#059669;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">Daveti Görüntüle</a></p>
+<p style="margin:0;font-size:13px;color:#94a3b8;">Bu daveti beklemiyorsanız görmezden gelebilirsiniz.</p>`;
+    const html = emailShell({
+      title: 'Kulüp Daveti',
+      previewText: `${params.clubName} sizi üye olmaya davet ediyor`,
+      innerHtml: inner,
+      clubName: params.clubName,
+    });
+    const text = [
+      `Merhaba ${params.firstName},`,
+      '',
+      `${params.clubName} sizi üye olarak davet ediyor!`,
+      'Uygulamaya giriş yaparak daveti kabul edebilirsiniz.',
+      'https://www.wellnessclub.tech/login',
+      '',
+      `${params.clubName}`,
+    ].join('\n');
+    await this.send({ to: [params.to], subject, html, text });
+  }
 }

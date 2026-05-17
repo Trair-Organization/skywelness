@@ -89,6 +89,18 @@ export class AdminController {
       body.mode || 'direct',
     );
     void this.logAction(admin, 'member_add_by_code', 'user', result.id);
+
+    // Send invitation email
+    if (body.mode === 'invite' && result.email) {
+      const tenantName = admin.tenant?.name || 'Kulüp';
+      void this.mailService.sendClubInvitation({
+        to: result.email,
+        firstName: result.firstName,
+        clubName: tenantName,
+        inviterName: `${admin.firstName} ${admin.lastName}`,
+      });
+    }
+
     return result;
   }
 
