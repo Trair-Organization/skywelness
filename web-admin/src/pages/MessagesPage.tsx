@@ -81,6 +81,7 @@ export function MessagesPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [announcements, setAnnouncements] = useState<DuyuruLog[]>([]);
+  const [selectedConvs, setSelectedConvs] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // New conv modal
@@ -151,6 +152,19 @@ export function MessagesPage() {
     try { await apiJson(`/messages/conversations/${activeConv.id}`, { method: 'POST', body: JSON.stringify({ content }) }); await loadMessages(activeConv.id); await loadConversations(); }
     catch { setText(content); }
     finally { setSending(false); }
+  };
+
+  // Bulk delete
+  const bulkDeleteConvs = async () => {
+    if (selectedConvs.size === 0) return;
+    if (!confirm(`${selectedConvs.size} sohbeti silmek istediğinize emin misiniz?`)) return;
+    for (const convId of selectedConvs) {
+      try { await apiJson(`/messages/conversations/${convId}`, { method: 'DELETE' }); } catch { /* */ }
+    }
+    setConversations(prev => prev.filter(c => !selectedConvs.has(c.id)));
+    if (activeConv && selectedConvs.has(activeConv.id)) setActiveConv(null);
+    setSelectedConvs(new Set());
+    await loadConversations();
   };
 
   const archiveConv = (convId: string) => {
@@ -339,10 +353,21 @@ export function MessagesPage() {
         <div className="messages-layout">
           {/* Sidebar */}
           <div className="messages-sidebar">
+            {/* Bulk action bar */}
+            {selectedConvs.size > 0 && (
+              <div style={{ padding: '8px 12px', background: '#eff6ff', borderRadius: 8, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#2563eb' }}>{selectedConvs.size} seçili</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => void bulkDeleteConvs()} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>🗑️ Sil</button>
+                  <button onClick={() => setSelectedConvs(new Set())} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>İptal</button>
+                </div>
+              </div>
+            )}
             {loading ? <p style={{ color: '#64748b' }}>Yükleniyor...</p> : currentList.length === 0 ? (
               <p style={{ color: '#64748b' }}>{channel === 'staff' ? 'Personel ile sohbet yok.' : 'Üye ile sohbet yok.'}</p>
             ) : currentList.map(conv => (
               <div key={conv.id} className={`conv-row ${activeConv?.id === conv.id ? 'conv-row-active' : ''}`} onClick={() => openConversation(conv)} style={{ position: 'relative' }}>
+                <input type="checkbox" checked={selectedConvs.has(conv.id)} onChange={(e) => { e.stopPropagation(); const n = new Set(selectedConvs); if (n.has(conv.id)) n.delete(conv.id); else n.add(conv.id); setSelectedConvs(n); }} onClick={(e) => e.stopPropagation()} style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0 }} />
                 <div className="conv-avatar">{conv.otherUser.firstName[0]}{conv.otherUser.lastName[0]}</div>
                 <div className="conv-info">
                   <div className="conv-top">
