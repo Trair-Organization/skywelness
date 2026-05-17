@@ -145,7 +145,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           ) : (
             <span className="sidebar-brand-icon">⚡</span>
           )}
-          {!clubLogo && <span className="sidebar-brand-text">{clubName || (isWellness ? 'Skyland Wellness' : 'Wellness Club')}</span>}
+          <span className="sidebar-brand-text">{clubName || (isWellness ? 'Skyland Wellness' : 'Wellness Club')}</span>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#94a3b8', fontSize: 16, cursor: 'pointer', padding: '4px' }}
