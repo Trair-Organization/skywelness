@@ -87,6 +87,7 @@ function timeAgo(iso: string | null) {
 export function MessagesPage() {
   const { token } = useAuth();
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
+  const [archivedConversations, setArchivedConversations] = useState<ConversationRow[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeConv, setActiveConv] = useState<ConversationRow | null>(null);
@@ -94,7 +95,7 @@ export function MessagesPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'inbox' | 'sent' | 'blocked'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'inbox' | 'sent' | 'archived' | 'blocked'>('all');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Action menu
@@ -310,13 +311,11 @@ export function MessagesPage() {
   };
 
   const archiveConversation = async (convId: string) => {
-    // Archive = remove from list (soft hide, same as delete for now)
-    try {
-      await apiJson(`/messages/conversations/${convId}`, { method: 'DELETE' });
-      setConversations((prev) => prev.filter((c) => c.id !== convId));
+    const conv = conversations.find(c => c.id === convId);
+    if (conv) {
+      setArchivedConversations(prev => [conv, ...prev]);
+      setConversations(prev => prev.filter(c => c.id !== convId));
       if (activeConv?.id === convId) setActiveConv(null);
-    } catch {
-      alert('Arşivleme başarısız');
     }
     setMenuOpenId(null);
   };
@@ -410,6 +409,7 @@ export function MessagesPage() {
           { key: 'all' as const, label: `Tümü (${conversations.length})` },
           { key: 'inbox' as const, label: `📥 Gelen (${inboxCount})` },
           { key: 'sent' as const, label: `📤 Gönderilen (${sentCount})` },
+          { key: 'archived' as const, label: `📦 Arşiv (${archivedConversations.length})` },
           { key: 'blocked' as const, label: `🚫 Engellenenler (${blockedUsers.length})` },
         ].map((tab) => (
           <button
@@ -435,7 +435,27 @@ export function MessagesPage() {
         ))}
       </div>
 
-      {activeTab === 'blocked' ? (
+      {activeTab === 'archived' ? (
+        // Arşiv Listesi
+        <div>
+          {archivedConversations.length === 0 ? (
+            <p className="muted">📦 Arşivde sohbet yok.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {archivedConversations.map((conv) => (
+                <div key={conv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #e2e8f0' }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 21, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#2563eb' }}>{conv.otherUser.firstName[0]}{conv.otherUser.lastName[0]}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#0f172a', fontWeight: 700 }}>{conv.otherUser.firstName} {conv.otherUser.lastName}</div>
+                    <div style={{ color: '#64748b', fontSize: 12 }}>{conv.lastMessagePreview || 'Mesaj yok'}</div>
+                  </div>
+                  <button onClick={() => { setConversations(prev => [conv, ...prev]); setArchivedConversations(prev => prev.filter(c => c.id !== conv.id)); }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Arşivden Çıkar</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'blocked' ? (
         // Engellenenler Listesi
         <div>
           {blockedUsers.length === 0 ? (
