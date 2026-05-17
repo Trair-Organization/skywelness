@@ -151,8 +151,8 @@ export class MessagingService {
     } else if (conversation.participantBId === userId) {
       await this.convRepo.update({ id: conversationId }, { deletedByB: true });
     } else {
-      // Admin can delete any conversation in their tenant
-      await this.convRepo.update({ id: conversationId }, { deletedByA: true, deletedByB: true });
+      // Admin hard-delete (not a direct participant)
+      await this.convRepo.delete({ id: conversationId });
     }
 
     return { ok: true };
