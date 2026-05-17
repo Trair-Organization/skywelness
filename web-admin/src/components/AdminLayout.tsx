@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { readStoredTenantSubdomain } from '../auth/storage';
+import { apiJson } from '../lib/api';
 
 type NavItem = { path: string; icon: string; label: string };
 
@@ -64,6 +65,33 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [badges, setBadges] = useState<Record<string, number>>({});
+
+  // Poll for badge counts
+  const loadBadges = useCallback(async () => {
+    if (!user) return;
+    try {
+      const counts: Record<string, number> = {};
+      // Okunmamış mesajlar
+      const unread = await apiJson<number>('/messages/unread-count');
+      if (unread > 0) counts['/messages'] = unread;
+      // Bekleyen üyeler (admin only)
+      if (user.role === 'administrator') {
+        try {
+          const pending = await apiJson<Array<unknown>>('/admin/members?status=pending_approval');
+          if (pending.length > 0) counts['/members'] = pending.length;
+        } catch { /* */ }
+      }
+      setBadges(counts);
+    } catch { /* */ }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    void loadBadges();
+    const id = setInterval(() => { void loadBadges(); }, 15000);
+    return () => clearInterval(id);
+  }, [user, loadBadges]);
 
   if (!user) return <>{children}</>;
 
@@ -117,6 +145,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             >
               <span className="sidebar-link-icon">{item.icon}</span>
               <span className="sidebar-link-label">{item.label}</span>
+              {badges[item.path] && badges[item.path] > 0 && (
+                <span style={{ marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9, background: '#dc2626', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{badges[item.path]}</span>
+              )}
             </NavLink>
           ))}
         </nav>
