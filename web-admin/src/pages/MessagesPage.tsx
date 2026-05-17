@@ -100,6 +100,33 @@ export function MessagesPage() {
   // Action menu
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
+  // New conversation modal
+  const [showNewConv, setShowNewConv] = useState(false);
+  const [newConvSearch, setNewConvSearch] = useState('');
+  const [newConvResults, setNewConvResults] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; role: string }>>([]);
+  const [newConvLoading, setNewConvLoading] = useState(false);
+
+  // Bulk message
+  const [showBulkMsg, setShowBulkMsg] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkSending, setBulkSending] = useState(false);
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Quick replies
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const QUICK_REPLIES = [
+    'Hoş geldiniz! Size nasıl yardımcı olabilirim?',
+    'Bilgi için teşekkür ederim.',
+    'Randevunuz onaylanmıştır. İyi günler!',
+    'Paketiniz aktifleştirildi. Keyifli antrenmanlar!',
+    'Detaylı bilgi için lütfen kulübümüzü ziyaret edin.',
+  ];
+
+  // Action menu
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+
   // Report modal
   const [reportTarget, setReportTarget] = useState<{
     userId: string;
@@ -208,6 +235,54 @@ export function MessagesPage() {
     }
   };
 
+  // New conversation search
+  const searchUsers = async (q: string) => {
+    if (q.length < 2) { setNewConvResults([]); return; }
+    setNewConvLoading(true);
+    try {
+      const res = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; role?: string }>>(`/admin/members?search=${encodeURIComponent(q)}`);
+      setNewConvResults(res.slice(0, 8).map(u => ({ ...u, role: u.role || 'member' })));
+    } catch { setNewConvResults([]); }
+    setNewConvLoading(false);
+  };
+
+  const startNewConversation = async (otherUserId: string) => {
+    try {
+      const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId }) });
+      setShowNewConv(false);
+      setNewConvSearch('');
+      setNewConvResults([]);
+      await loadConversations();
+      // Open the new conversation
+      const updated = await apiJson<ConversationRow[]>('/messages/conversations');
+      const found = updated.find(c => c.id === conv.id);
+      if (found) openConversation(found);
+    } catch { alert('Sohbet başlatılamadı'); }
+  };
+
+  // Bulk message to all members
+  const sendBulkMessage = async () => {
+    if (!bulkText.trim()) return;
+    setBulkSending(true);
+    try {
+      // Get all members, start conversation with each and send
+      const members = await apiJson<Array<{ id: string }>>('/admin/members?status=active');
+      let sent = 0;
+      for (const m of members.slice(0, 50)) { // Max 50
+        try {
+          const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: m.id }) });
+          await apiJson(`/messages/conversations/${conv.id}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) });
+          sent++;
+        } catch { /* skip */ }
+      }
+      alert(`✅ ${sent} üyeye mesaj gönderildi`);
+      setShowBulkMsg(false);
+      setBulkText('');
+      await loadConversations();
+    } catch { alert('Toplu mesaj gönderilemedi'); }
+    setBulkSending(false);
+  };
+
   // ═══ MODERATION ═══
 
   const deleteConversation = async (convId: string) => {
@@ -277,6 +352,10 @@ export function MessagesPage() {
     if (activeTab === 'inbox') return !c.isLastMessageMine;
     if (activeTab === 'sent') return c.isLastMessageMine;
     return false;
+  }).filter((c) => {
+    if (!searchQuery) return true;
+    const name = `${c.otherUser.firstName} ${c.otherUser.lastName}`.toLowerCase();
+    return name.includes(searchQuery.toLowerCase());
   });
 
   const inboxCount = conversations.filter((c) => !c.isLastMessageMine && c.lastMessageAt).length;
@@ -284,7 +363,22 @@ export function MessagesPage() {
 
   return (
     <div className="shell" onClick={() => setMenuOpenId(null)}>
-      <h1>💬 Mesajlar</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1>💬 Mesajlar</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowNewConv(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>+ Yeni Sohbet</button>
+          <button onClick={() => setShowBulkMsg(true)} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.3)', background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>📢 Toplu Mesaj</button>
+        </div>
+      </div>
+
+      {/* Arama */}
+      <input
+        type="text"
+        placeholder="🔍 Sohbetlerde ara..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(15,23,42,0.4)', color: '#e2e8f0', fontSize: 14, marginBottom: 12 }}
+      />
 
       {/* Tab Bar */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -534,6 +628,7 @@ export function MessagesPage() {
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
+                            {msg.isOwn && <span style={{ marginLeft: 4 }}>{msg.isRead ? '✓✓' : '✓'}</span>}
                           </span>
                         </div>
                       </div>
@@ -542,6 +637,7 @@ export function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
                 <form className="chat-input-bar" onSubmit={sendMessage}>
+                  <button type="button" onClick={() => setShowQuickReplies(!showQuickReplies)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: '4px 8px', color: '#94a3b8' }} title="Hazır Yanıtlar">⚡</button>
                   <input
                     type="text"
                     value={text}
@@ -554,8 +650,62 @@ export function MessagesPage() {
                     {sending ? '...' : 'Gönder'}
                   </button>
                 </form>
+                {showQuickReplies && (
+                  <div style={{ padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid rgba(148,163,184,0.15)' }}>
+                    {QUICK_REPLIES.map((qr, i) => (
+                      <button key={i} onClick={() => { setText(qr); setShowQuickReplies(false); }} style={{ padding: '5px 10px', borderRadius: 16, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(15,23,42,0.3)', color: '#e2e8f0', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{qr.slice(0, 30)}...</button>
+                    ))}
+                  </div>
+                )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* New Conversation Modal */}
+      {showNewConv && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowNewConv(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#0f172a', borderRadius: 16, padding: 24, maxWidth: 420, width: '100%', border: '1px solid rgba(148,163,184,0.2)' }}>
+            <h3 style={{ margin: '0 0 12px', color: '#e2e8f0' }}>+ Yeni Sohbet Başlat</h3>
+            <input
+              type="text"
+              placeholder="İsim veya email ile ara..."
+              value={newConvSearch}
+              onChange={(e) => { setNewConvSearch(e.target.value); void searchUsers(e.target.value); }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: 14 }}
+            />
+            {newConvLoading && <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 8 }}>Aranıyor...</p>}
+            <div style={{ maxHeight: 250, overflowY: 'auto', marginTop: 8 }}>
+              {newConvResults.map(u => (
+                <div key={u.id} onClick={() => void startNewConversation(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', borderBottom: '1px solid rgba(148,163,184,0.1)' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 18, background: 'rgba(56,189,248,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>{u.firstName[0]}{u.lastName[0]}</div>
+                  <div><div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14 }}>{u.firstName} {u.lastName}</div><div style={{ color: '#94a3b8', fontSize: 12 }}>{u.email}</div></div>
+                </div>
+              ))}
+              {newConvSearch.length >= 2 && !newConvLoading && newConvResults.length === 0 && <p style={{ color: '#94a3b8', fontSize: 13, padding: 12 }}>Kullanıcı bulunamadı</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Message Modal */}
+      {showBulkMsg && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowBulkMsg(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#0f172a', borderRadius: 16, padding: 24, maxWidth: 420, width: '100%', border: '1px solid rgba(148,163,184,0.2)' }}>
+            <h3 style={{ margin: '0 0 4px', color: '#e2e8f0' }}>📢 Toplu Mesaj</h3>
+            <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 12px' }}>Tüm aktif üyelerinize mesaj gönderilecek (maks. 50 kişi)</p>
+            <textarea
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              placeholder="Mesajınızı yazın..."
+              rows={4}
+              style={{ width: '100%', padding: 12, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(148,163,184,0.2)', color: '#e2e8f0', fontSize: 14, resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={() => setShowBulkMsg(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(148,163,184,0.3)', color: '#94a3b8', fontWeight: 600, cursor: 'pointer' }}>Vazgeç</button>
+              <button onClick={() => void sendBulkMessage()} disabled={bulkSending || !bulkText.trim()} style={{ flex: 1, padding: '12px', borderRadius: 10, background: '#2563eb', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: bulkSending ? 0.6 : 1 }}>{bulkSending ? '⏳ Gönderiliyor...' : '📩 Gönder'}</button>
+            </div>
           </div>
         </div>
       )}
