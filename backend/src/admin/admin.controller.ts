@@ -26,6 +26,7 @@ import { SmsService } from '../notifications/sms.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClubAuditLog } from '../database/entities/club-audit-log.entity';
+import { Announcement } from '../database/entities/announcement.entity';
 
 @Controller('admin')
 export class AdminController {
@@ -36,6 +37,7 @@ export class AdminController {
     private readonly mailService: MailService,
     private readonly smsService: SmsService,
     @InjectRepository(ClubAuditLog) private readonly auditRepo: Repository<ClubAuditLog>,
+    @InjectRepository(Announcement) private readonly announcementRepo: Repository<Announcement>,
   ) {}
 
   /** Dashboard istatistikleri */
@@ -52,6 +54,64 @@ export class AdminController {
   @Roles(UserRole.ADMINISTRATOR)
   getWeeklyStats(@CurrentUser() admin: User) {
     return this.adminMembers.getWeeklyStats(admin.tenantId);
+  }
+
+  // ─── Duyurular ──────────────────────────────────────────────────────────────
+
+  @Get('announcements')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  listAnnouncements(@CurrentUser() admin: User) {
+    return this.announcementRepo.find({
+      where: { tenantId: admin.tenantId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
+  }
+
+  @Post('announcements')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMINISTRATOR)
+  async createAnnouncement(
+    @CurrentUser() admin: User,
+    @Body() body: { title: string; content: string; target?: string; sendPush?: boolean },
+  ) {
+    if (!body.title?.trim() || !body.content?.trim()) {
+      throw new BadRequestException('Başlık ve içerik zorunlu');
+    }
+    const target = body.target || 'all';
+
+    // Count recipients
+    const where: Record<string, unknown> = { tenantId: admin.tenantId, accountStatus: 'active' };
+    if (target === 'members') where.role = 'member';
+    else if (target === 'staff') where.role = 'trainer';
+    const recipientCount = await this.adminMembers['usersRepo'].count({ where: where as never });
+
+    const announcement = this.announcementRepo.create({
+      tenantId: admin.tenantId,
+      createdByUserId: admin.id,
+      title: body.title.trim(),
+      content: body.content.trim(),
+      target,
+      recipientCount,
+      pushSent: body.sendPush !== false,
+    });
+    await this.announcementRepo.save(announcement);
+
+    // Send push notification
+    if (body.sendPush !== false) {
+      const targetRole = target === 'members' ? 'member' : target === 'staff' ? 'trainer' : 'all';
+      void this.adminMembers['pushService'].sendToTenantMembers(
+        admin.tenantId,
+        `📢 ${body.title.trim()}`,
+        body.content.trim().slice(0, 100),
+        { type: 'announcement', announcementId: announcement.id },
+        null,
+        targetRole as 'member' | 'trainer' | 'all',
+      );
+    }
+
+    return announcement;
   }
 
   /** Tüm üyeleri listele */

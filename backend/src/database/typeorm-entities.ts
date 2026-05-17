@@ -19,6 +19,8 @@ import { ClubEvent } from './entities/club-event.entity';
 import { ClubEventRegistration } from './entities/club-event-registration.entity';
 import { EventWaitingList } from './entities/event-waiting-list.entity';
 import { EventReview } from './entities/event-review.entity';
+import { Announcement } from './entities/announcement.entity';
+import { AnnouncementRead } from './entities/announcement-read.entity';
 import { CafeOrder } from './entities/cafe-order.entity';
 import { CafeProduct } from './entities/cafe-product.entity';
 import { ApiKey } from './entities/api-key.entity';
@@ -73,6 +75,8 @@ export const typeOrmEntities = [
   ClubEventRegistration,
   EventWaitingList,
   EventReview,
+  Announcement,
+  AnnouncementRead,
   User,
   Trainer,
   TrainerProfile,

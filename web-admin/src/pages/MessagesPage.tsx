@@ -265,21 +265,7 @@ export function MessagesPage() {
 
       {/* Announcements Channel */}
       {channel === 'announcements' && (
-        <div>
-          {announcements.length === 0 ? <p style={{ color: '#64748b', fontSize: 14 }}>📢 Henüz duyuru gönderilmedi. "Toplu Mesaj" ile duyuru oluşturabilirsiniz.</p> : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {announcements.map((a, i) => (
-                <div key={i} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: '#64748b' }}>{new Date(a.date).toLocaleString('tr-TR')}</span>
-                    <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>{a.recipientCount} kişiye gönderildi</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 14, color: '#0f172a' }}>{a.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <AnnouncementsChannel announcements={announcements} setAnnouncements={setAnnouncements} />
       )}
 
       {/* Archived Channel */}
@@ -454,3 +440,88 @@ export function MessagesPage() {
 }
 
 const menuStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', border: 'none', background: '#ffffff', color: '#374151', fontSize: 13, fontWeight: 600, textAlign: 'left', cursor: 'pointer', display: 'block' };
+
+// ─── Announcements Component ──────────────────────────────────────────────────
+
+type AnnouncementRow = { id: string; title: string; content: string; target: string; recipientCount: number; readCount: number; createdAt: string };
+
+function AnnouncementsChannel({ announcements, setAnnouncements }: { announcements: DuyuruLog[]; setAnnouncements: React.Dispatch<React.SetStateAction<DuyuruLog[]>> }) {
+  const [rows, setRows] = useState<AnnouncementRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [target, setTarget] = useState('all');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try { setRows(await apiJson<AnnouncementRow[]>('/admin/announcements')); } catch { /* */ }
+      setLoading(false);
+    })();
+  }, []);
+
+  const handleCreate = async () => {
+    if (!title.trim() || !content.trim()) return;
+    setSaving(true);
+    try {
+      const res = await apiJson<AnnouncementRow>('/admin/announcements', { method: 'POST', body: JSON.stringify({ title: title.trim(), content: content.trim(), target, sendPush: true }) });
+      setRows(prev => [res, ...prev]);
+      setAnnouncements(prev => [{ date: res.createdAt, text: res.content, recipientCount: res.recipientCount }, ...prev]);
+      setShowCreate(false); setTitle(''); setContent(''); setTarget('all');
+    } catch { alert('Duyuru oluşturulamadı'); }
+    setSaving(false);
+  };
+
+  const targetLabel = (t: string) => t === 'members' ? '👥 Üyeler' : t === 'staff' ? '🏋️ Personel' : '👥 Tüm Kulüp';
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>{rows.length} duyuru</p>
+        <button onClick={() => setShowCreate(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>+ Yeni Duyuru</button>
+      </div>
+
+      {/* Create Form */}
+      {showCreate && (
+        <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff', marginBottom: 16 }}>
+          <input placeholder="Başlık *" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14, marginBottom: 8 }} />
+          <textarea placeholder="İçerik *" value={content} onChange={(e) => setContent(e.target.value)} rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14, resize: 'vertical', marginBottom: 8 }} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, color: '#64748b' }}>Hedef:</span>
+            {['all', 'members', 'staff'].map(t => (
+              <button key={t} onClick={() => setTarget(t)} style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid', borderColor: target === t ? '#2563eb' : '#e2e8f0', background: target === t ? '#eff6ff' : '#ffffff', color: target === t ? '#2563eb' : '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t === 'all' ? 'Tümü' : t === 'members' ? 'Üyeler' : 'Personel'}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowCreate(false)} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Vazgeç</button>
+            <button onClick={() => void handleCreate()} disabled={saving || !title.trim() || !content.trim()} style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>{saving ? '⏳...' : '📢 Yayınla'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      {loading ? <p style={{ color: '#64748b' }}>Yükleniyor...</p> : rows.length === 0 ? (
+        <p style={{ color: '#64748b', fontSize: 14 }}>📢 Henüz duyuru yok. Üyelerinize ve personelinize duyuru gönderin.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {rows.map(a => (
+            <div key={a.id} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>{a.title}</h4>
+                <span style={{ fontSize: 11, color: '#64748b' }}>{new Date(a.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <p style={{ margin: '0 0 8px', fontSize: 14, color: '#374151' }}>{a.content}</p>
+              <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#64748b' }}>
+                <span>{targetLabel(a.target)}</span>
+                <span>📤 {a.recipientCount} kişiye</span>
+                <span>👁️ {a.readCount} okudu</span>
+                <span style={{ color: '#059669', fontWeight: 600 }}>{a.recipientCount > 0 ? Math.round((a.readCount / a.recipientCount) * 100) : 0}% okunma</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
