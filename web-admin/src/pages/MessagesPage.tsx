@@ -111,6 +111,9 @@ export function MessagesPage() {
   const [showBulkMsg, setShowBulkMsg] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [bulkSending, setBulkSending] = useState(false);
+  const [bulkMembers, setBulkMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>([]);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkFilter, setBulkFilter] = useState('');
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -273,17 +276,22 @@ export function MessagesPage() {
     } catch { alert('Sohbet başlatılamadı'); }
   };
 
-  // Bulk message to all members
+  // Bulk message to selected members
+  const loadBulkMembers = async () => {
+    try {
+      const res = await apiJson<Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>('/admin/members?status=active');
+      setBulkMembers(res);
+    } catch { /* ignore */ }
+  };
+
   const sendBulkMessage = async () => {
-    if (!bulkText.trim()) return;
+    if (!bulkText.trim() || bulkSelected.size === 0) return;
     setBulkSending(true);
     try {
-      // Get all members, start conversation with each and send
-      const members = await apiJson<Array<{ id: string }>>('/admin/members?status=active');
       let sent = 0;
-      for (const m of members.slice(0, 50)) { // Max 50
+      for (const memberId of bulkSelected) {
         try {
-          const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: m.id }) });
+          const conv = await apiJson<{ id: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: memberId }) });
           await apiJson(`/messages/conversations/${conv.id}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) });
           sent++;
         } catch { /* skip */ }
@@ -291,6 +299,7 @@ export function MessagesPage() {
       alert(`✅ ${sent} üyeye mesaj gönderildi`);
       setShowBulkMsg(false);
       setBulkText('');
+      setBulkSelected(new Set());
       await loadConversations();
     } catch { alert('Toplu mesaj gönderilemedi'); }
     setBulkSending(false);
@@ -390,7 +399,7 @@ export function MessagesPage() {
         <h1>💬 Mesajlar</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setShowNewConv(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>+ Yeni Sohbet</button>
-          <button onClick={() => setShowBulkMsg(true)} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.3)', background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>📢 Toplu Mesaj</button>
+          <button onClick={() => { setShowBulkMsg(true); void loadBulkMembers(); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>📢 Toplu Mesaj</button>
         </div>
       </div>
 
@@ -754,19 +763,70 @@ export function MessagesPage() {
       {/* Bulk Message Modal */}
       {showBulkMsg && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowBulkMsg(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#0f172a', borderRadius: 16, padding: 24, maxWidth: 420, width: '100%', border: '1px solid rgba(148,163,184,0.2)' }}>
-            <h3 style={{ margin: '0 0 4px', color: '#e2e8f0' }}>📢 Toplu Mesaj</h3>
-            <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 12px' }}>Tüm aktif üyelerinize mesaj gönderilecek (maks. 50 kişi)</p>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: 16, padding: 24, maxWidth: 520, width: '100%', border: '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: '0 0 4px', color: '#0f172a' }}>📢 Toplu Mesaj</h3>
+            <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 12px' }}>Göndermek istediğiniz üyeleri seçin ({bulkSelected.size} seçili)</p>
+            
+            {/* Filter + Select All */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <input
+                type="text"
+                placeholder="Üye ara..."
+                value={bulkFilter}
+                onChange={(e) => setBulkFilter(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }}
+              />
+              <button
+                onClick={() => {
+                  const filtered = bulkMembers.filter(m => !bulkFilter || `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(bulkFilter.toLowerCase()));
+                  if (bulkSelected.size === filtered.length) {
+                    setBulkSelected(new Set());
+                  } else {
+                    setBulkSelected(new Set(filtered.map(m => m.id)));
+                  }
+                }}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {bulkSelected.size > 0 ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+              </button>
+            </div>
+
+            {/* Member List */}
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: 250, border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 12 }}>
+              {bulkMembers
+                .filter(m => !bulkFilter || `${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(bulkFilter.toLowerCase()))
+                .map(m => (
+                  <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+                    <input
+                      type="checkbox"
+                      checked={bulkSelected.has(m.id)}
+                      onChange={() => {
+                        const next = new Set(bulkSelected);
+                        if (next.has(m.id)) next.delete(m.id); else next.add(m.id);
+                        setBulkSelected(next);
+                      }}
+                      style={{ width: 16, height: 16, cursor: 'pointer' }}
+                    />
+                    {m.publicId && <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#2563eb', fontWeight: 700, background: '#eff6ff', padding: '1px 4px', borderRadius: 3 }}>{m.publicId}</span>}
+                    <span style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{m.firstName} {m.lastName}</span>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>{m.email}</span>
+                  </label>
+                ))
+              }
+              {bulkMembers.length === 0 && <p style={{ padding: 16, color: '#64748b', fontSize: 13, textAlign: 'center' }}>Yükleniyor...</p>}
+            </div>
+
+            {/* Message Input */}
             <textarea
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
               placeholder="Mesajınızı yazın..."
-              rows={4}
-              style={{ width: '100%', padding: 12, borderRadius: 10, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(148,163,184,0.2)', color: '#e2e8f0', fontSize: 14, resize: 'vertical' }}
+              rows={3}
+              style={{ width: '100%', padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: 14, resize: 'vertical', marginBottom: 12 }}
             />
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={() => setShowBulkMsg(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(148,163,184,0.3)', color: '#94a3b8', fontWeight: 600, cursor: 'pointer' }}>Vazgeç</button>
-              <button onClick={() => void sendBulkMessage()} disabled={bulkSending || !bulkText.trim()} style={{ flex: 1, padding: '12px', borderRadius: 10, background: '#2563eb', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: bulkSending ? 0.6 : 1 }}>{bulkSending ? '⏳ Gönderiliyor...' : '📩 Gönder'}</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setShowBulkMsg(false); setBulkSelected(new Set()); setBulkFilter(''); }} style={{ flex: 1, padding: '12px', borderRadius: 10, background: '#ffffff', border: '1px solid #e2e8f0', color: '#374151', fontWeight: 600, cursor: 'pointer' }}>Vazgeç</button>
+              <button onClick={() => void sendBulkMessage()} disabled={bulkSending || !bulkText.trim() || bulkSelected.size === 0} style={{ flex: 1, padding: '12px', borderRadius: 10, background: '#2563eb', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: (bulkSending || bulkSelected.size === 0) ? 0.5 : 1 }}>{bulkSending ? '⏳ Gönderiliyor...' : `📩 ${bulkSelected.size} Kişiye Gönder`}</button>
             </div>
           </div>
         </div>
