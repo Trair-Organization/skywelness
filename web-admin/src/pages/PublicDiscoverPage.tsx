@@ -73,7 +73,7 @@ export function PublicDiscoverPage() {
         apiJson<Trainer[]>(`/discovery/trainers?limit=20${cityFilter ? `&city=${encodeURIComponent(cityFilter)}` : ''}`, { auth: false }),
         apiJson<Event[]>('/discovery/events?limit=12', { auth: false }),
         apiJson<Banner[]>('/home-banners', { auth: false }),
-        apiJson<typeof campaigns>('/campaigns/public?limit=10', { auth: false }),
+        apiJson<typeof campaigns>('/campaigns/featured?limit=10', { auth: false }),
       ]);
       setClubs(c);
       setTrainers(t);

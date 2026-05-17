@@ -37,14 +37,17 @@ export class CampaignsController {
   }
 
   /**
-   * Public: Tüm platformdaki aktif kampanyalar.
-   * Onboarding ekranı ve giriş yapmamış kullanıcılar için.
+   * Public: Global keşif sayfası — sadece Süper Admin tarafından öne çıkarılmış kampanyalar.
+   * Trendyol modeli: öne çıkarma para karşılığı yapılır.
    */
   @Get('public')
   @SkipThrottle()
-  listPublic(@Query('limit') limit?: string) {
+  listPublic(@Query('limit') limit?: string, @Query('tenantSubdomain') tenantSubdomain?: string) {
     const l = Math.min(Number(limit) || 10, 20);
-    return this.campaignsService.listAllActive(l);
+    if (tenantSubdomain) {
+      return this.campaignsService.listBySubdomain(tenantSubdomain, l);
+    }
+    return this.campaignsService.listFeatured(l);
   }
 
   /**

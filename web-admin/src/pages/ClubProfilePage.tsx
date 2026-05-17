@@ -205,12 +205,18 @@ export function ClubProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [galleryIdx, setGalleryIdx] = useState(0);
+  const [clubCampaigns, setClubCampaigns] = useState<Array<{ id: string; title: string; description: string | null; discountKind: string; discountValue: string; originalPrice: string | null; discountedPrice: string | null; imageUrl: string | null; endsAt: string }>>([]);
 
   const loadProfile = useCallback(async () => {
     if (!subdomain) return;
     try {
       const data = await apiJson<ProfileData>(`/tenants/${encodeURIComponent(subdomain)}/profile`, { auth: false });
       setProfile(data);
+      // Kulübe ait aktif kampanyaları yükle
+      try {
+        const camps = await apiJson<typeof clubCampaigns>(`/campaigns/public?tenantSubdomain=${encodeURIComponent(subdomain)}&limit=10`, { auth: false });
+        setClubCampaigns(camps);
+      } catch { /* ignore */ }
     } catch { /* */ }
     finally { setLoading(false); }
   }, [subdomain]);
@@ -357,6 +363,37 @@ export function ClubProfilePage() {
                   {t.avgRating !== '0.00' && <p className="trainer-rating">★ {Number(t.avgRating).toFixed(1)}</p>}
                 </Link>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Kampanyalar */}
+        {clubCampaigns.length > 0 && (
+          <section className="profile-section">
+            <h2>🔥 Kampanyalar</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+              {clubCampaigns.map((c) => {
+                const discountText = c.discountKind === 'percentage' ? `%${c.discountValue}` : `₺${c.discountValue}`;
+                return (
+                  <div key={c.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                    {c.imageUrl && <img src={c.imageUrl} alt="" style={{ width: '100%', height: 100, objectFit: 'cover' }} />}
+                    <div style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700 }}>{c.title}</h4>
+                        <span style={{ padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534', fontSize: '0.72rem', fontWeight: 700 }}>{discountText}</span>
+                      </div>
+                      {c.description && <p style={{ margin: '0 0 6px', fontSize: '0.8rem', color: '#6b7280' }}>{c.description.slice(0, 60)}</p>}
+                      {c.discountedPrice && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {c.originalPrice && <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.8rem' }}>₺{parseFloat(c.originalPrice).toLocaleString('tr-TR')}</span>}
+                          <span style={{ fontWeight: 800, color: '#059669', fontSize: '1rem' }}>₺{parseFloat(c.discountedPrice).toLocaleString('tr-TR')}</span>
+                        </div>
+                      )}
+                      <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: '#9ca3af' }}>⏰ {new Date(c.endsAt).toLocaleDateString('tr-TR')}'e kadar</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

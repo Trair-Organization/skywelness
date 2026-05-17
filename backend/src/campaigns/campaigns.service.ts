@@ -20,6 +20,22 @@ export class CampaignsService {
     private readonly pushService: PushService,
   ) {}
 
+  /** Public: Kulüp sayfasında gösterilecek kampanyalar (subdomain ile) */
+  async listBySubdomain(subdomain: string, limit = 10): Promise<Campaign[]> {
+    const now = new Date();
+    return this.campaignsRepo.find({
+      where: {
+        status: 'active',
+        startsAt: LessThanOrEqual(now),
+        endsAt: MoreThanOrEqual(now),
+        tenant: { subdomain },
+      },
+      relations: ['tenant'],
+      order: { createdAt: 'DESC' },
+      take: Math.min(limit, 20),
+    });
+  }
+
   /** Üyelere gösterilecek aktif kampanyalar (tenant bazlı veya tüm platformda). */
   async listActive(tenantId?: string, limit = 10): Promise<Campaign[]> {
     const now = new Date();
