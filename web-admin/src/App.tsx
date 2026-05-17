@@ -20,7 +20,6 @@ import { MessagesPage } from './pages/MessagesPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { MembersPage } from './pages/MembersPage';
 import { SpaManagementPage } from './pages/SpaManagementPage';
-import { PackageTypesPage } from './pages/PackageTypesPage';
 import { UnifiedSchedulePage } from './pages/UnifiedSchedulePage';
 import { PendingMembersPage } from './pages/PendingMembersPage';
 import { PendingTrainerApplicationsPage } from './pages/PendingTrainerApplicationsPage';
