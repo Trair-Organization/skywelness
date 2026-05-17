@@ -374,7 +374,7 @@ export function MessagesPage() {
         placeholder="🔍 Sohbetlerde ara..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(15,23,42,0.4)', color: '#e2e8f0', fontSize: 14, marginBottom: 12 }}
+        style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14, marginBottom: 12 }}
       />
 
       {/* Tab Bar */}
@@ -663,24 +663,30 @@ export function MessagesPage() {
       {/* New Conversation Modal */}
       {showNewConv && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowNewConv(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#0f172a', borderRadius: 16, padding: 24, maxWidth: 420, width: '100%', border: '1px solid rgba(148,163,184,0.2)' }}>
-            <h3 style={{ margin: '0 0 12px', color: '#e2e8f0' }}>+ Yeni Sohbet Başlat</h3>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: 16, padding: 24, maxWidth: 420, width: '100%', border: '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ margin: '0 0 12px', color: '#0f172a' }}>+ Yeni Sohbet Başlat</h3>
             <input
               type="text"
               placeholder="İsim veya email ile ara..."
               value={newConvSearch}
               onChange={(e) => { setNewConvSearch(e.target.value); void searchUsers(e.target.value); }}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: 14 }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }}
             />
-            {newConvLoading && <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 8 }}>Aranıyor...</p>}
-            <div style={{ maxHeight: 250, overflowY: 'auto', marginTop: 8 }}>
-              {newConvResults.map(u => (
-                <div key={u.id} onClick={() => void startNewConversation(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', borderBottom: '1px solid rgba(148,163,184,0.1)' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 18, background: 'rgba(56,189,248,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>{u.firstName[0]}{u.lastName[0]}</div>
-                  <div><div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14 }}>{u.firstName} {u.lastName}</div><div style={{ color: '#94a3b8', fontSize: 12 }}>{u.email}</div></div>
-                </div>
-              ))}
-              {newConvSearch.length >= 2 && !newConvLoading && newConvResults.length === 0 && <p style={{ color: '#94a3b8', fontSize: 13, padding: 12 }}>Kullanıcı bulunamadı</p>}
+            {newConvLoading && <p style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>Aranıyor...</p>}
+            <div style={{ maxHeight: 300, overflowY: 'auto', marginTop: 8 }}>
+              {newConvSearch.length < 2 ? (
+                <p style={{ color: '#94a3b8', fontSize: 13, padding: 12, textAlign: 'center' }}>En az 2 karakter yazın...</p>
+              ) : newConvResults.length === 0 && !newConvLoading ? (
+                <p style={{ color: '#94a3b8', fontSize: 13, padding: 12, textAlign: 'center' }}>Kullanıcı bulunamadı</p>
+              ) : (
+                newConvResults.map(u => (
+                  <div key={u.id} onClick={() => void startNewConversation(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
+                    <div style={{ width: 36, height: 36, borderRadius: 18, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#2563eb' }}>{u.firstName[0]}{u.lastName[0]}</div>
+                    <div style={{ flex: 1 }}><div style={{ color: '#0f172a', fontWeight: 600, fontSize: 14 }}>{u.firstName} {u.lastName}</div><div style={{ color: '#64748b', fontSize: 12 }}>{u.email}</div></div>
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>→</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
