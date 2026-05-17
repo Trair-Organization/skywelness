@@ -445,7 +445,7 @@ const menuStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', bo
 
 type AnnouncementRow = { id: string; title: string; content: string; target: string; recipientCount: number; readCount: number; createdAt: string };
 
-function AnnouncementsChannel({ announcements, setAnnouncements }: { announcements: DuyuruLog[]; setAnnouncements: React.Dispatch<React.SetStateAction<DuyuruLog[]>> }) {
+function AnnouncementsChannel({ setAnnouncements }: { announcements: DuyuruLog[]; setAnnouncements: React.Dispatch<React.SetStateAction<DuyuruLog[]>> }) {
   const [rows, setRows] = useState<AnnouncementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
