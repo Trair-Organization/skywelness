@@ -124,9 +124,6 @@ export function MessagesPage() {
     'Detaylı bilgi için lütfen kulübümüzü ziyaret edin.',
   ];
 
-  // Action menu
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-
   // Report modal
   const [reportTarget, setReportTarget] = useState<{
     userId: string;
