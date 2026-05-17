@@ -93,9 +93,10 @@ export function MessagesPage() {
   const [showBulkMsg, setShowBulkMsg] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [bulkSending, setBulkSending] = useState(false);
-  const [bulkMembers, setBulkMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>([]);
+  const [bulkMembers, setBulkMembers] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string | null; role?: string }>>([]);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [bulkFilter, setBulkFilter] = useState('');
+  const [bulkTab, setBulkTab] = useState<'members' | 'staff'>('members');
 
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
@@ -202,7 +203,15 @@ export function MessagesPage() {
 
   // Bulk message
   const loadBulkMembers = async () => {
-    try { setBulkMembers(await apiJson<typeof bulkMembers>('/admin/members?status=active')); } catch { /* */ }
+    try {
+      const [members, trainers] = await Promise.all([
+        apiJson<Array<{ id: string; userId?: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>('/admin/members?status=active'),
+        apiJson<Array<{ id: string; userId?: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>('/admin/trainers'),
+      ]);
+      const allMembers = members.map(m => ({ ...m, role: 'member' }));
+      const allStaff = trainers.map(t => ({ ...t, id: t.userId || t.id, role: 'trainer' }));
+      setBulkMembers([...allMembers, ...allStaff]);
+    } catch { /* */ }
   };
 
   const sendBulkMessage = async () => {
@@ -413,19 +422,31 @@ export function MessagesPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowBulkMsg(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: 16, padding: 24, maxWidth: 520, width: '100%', border: '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ margin: '0 0 4px', color: '#0f172a' }}>📢 Toplu Mesaj</h3>
-            <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 12px' }}>{bulkSelected.size} üye seçili</p>
+            <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 12px' }}>{bulkSelected.size} kişi seçili</p>
+            
+            {/* Tabs: Üyeler / Personel */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              <button onClick={() => setBulkTab('members')} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid', borderColor: bulkTab === 'members' ? '#2563eb' : '#e2e8f0', background: bulkTab === 'members' ? '#eff6ff' : '#ffffff', color: bulkTab === 'members' ? '#2563eb' : '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>👥 Üyeler ({bulkMembers.filter(m => m.role === 'member').length})</button>
+              <button onClick={() => setBulkTab('staff')} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid', borderColor: bulkTab === 'staff' ? '#2563eb' : '#e2e8f0', background: bulkTab === 'staff' ? '#eff6ff' : '#ffffff', color: bulkTab === 'staff' ? '#2563eb' : '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🏋️ Personel ({bulkMembers.filter(m => m.role === 'trainer').length})</button>
+            </div>
+
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <input type="text" placeholder="Üye ara..." value={bulkFilter} onChange={(e) => setBulkFilter(e.target.value)} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
-              <button onClick={() => { const filtered = bulkMembers.filter(m => !bulkFilter || `${m.firstName} ${m.lastName}`.toLowerCase().includes(bulkFilter.toLowerCase())); setBulkSelected(bulkSelected.size === filtered.length ? new Set() : new Set(filtered.map(m => m.id))); }} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>{bulkSelected.size > 0 ? 'Temizle' : 'Tümü'}</button>
+              <input type="text" placeholder="Ara..." value={bulkFilter} onChange={(e) => setBulkFilter(e.target.value)} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13 }} />
+              <button onClick={() => { const filtered = bulkMembers.filter(m => m.role === (bulkTab === 'staff' ? 'trainer' : 'member')).filter(m => !bulkFilter || `${m.firstName} ${m.lastName}`.toLowerCase().includes(bulkFilter.toLowerCase())); const allSelected = filtered.every(m => bulkSelected.has(m.id)); const next = new Set(bulkSelected); filtered.forEach(m => allSelected ? next.delete(m.id) : next.add(m.id)); setBulkSelected(next); }} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>Tümünü Seç</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', maxHeight: 220, border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 12 }}>
-              {bulkMembers.filter(m => !bulkFilter || `${m.firstName} ${m.lastName}`.toLowerCase().includes(bulkFilter.toLowerCase())).map(m => (
+              {bulkMembers
+                .filter(m => m.role === (bulkTab === 'staff' ? 'trainer' : 'member'))
+                .filter(m => !bulkFilter || `${m.firstName} ${m.lastName}`.toLowerCase().includes(bulkFilter.toLowerCase()))
+                .map(m => (
                 <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
                   <input type="checkbox" checked={bulkSelected.has(m.id)} onChange={() => { const n = new Set(bulkSelected); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); setBulkSelected(n); }} style={{ width: 16, height: 16 }} />
                   {m.publicId && <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#2563eb', fontWeight: 700, background: '#eff6ff', padding: '1px 4px', borderRadius: 3 }}>{m.publicId}</span>}
                   <span style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{m.firstName} {m.lastName}</span>
+                  <span style={{ fontSize: 11, color: '#64748b', marginLeft: 'auto' }}>{m.role === 'trainer' ? '🏋️' : '👤'}</span>
                 </label>
               ))}
+              {bulkMembers.filter(m => m.role === (bulkTab === 'staff' ? 'trainer' : 'member')).length === 0 && <p style={{ padding: 16, color: '#64748b', fontSize: 13, textAlign: 'center' }}>Yükleniyor...</p>}
             </div>
             <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder="Mesajınızı yazın..." rows={3} style={{ width: '100%', padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: 14, resize: 'vertical', marginBottom: 12 }} />
             <div style={{ display: 'flex', gap: 8 }}>
