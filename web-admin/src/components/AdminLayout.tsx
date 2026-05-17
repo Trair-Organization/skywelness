@@ -47,6 +47,7 @@ const PLATFORM_NAV: NavItem[] = [
   { path: '/super-admin/messages', icon: '💬', label: 'Mesajlar' },
   { path: '/super-admin/audit', icon: '📜', label: 'Audit Log' },
   { path: '/platform/trainers/pending', icon: '⏳', label: 'Eğitmen Başvuruları' },
+  { path: '/super-admin/events', icon: '📅', label: 'Etkinlik Onay' },
 ];
 
 const TRAINER_NAV: NavItem[] = [
@@ -54,6 +55,7 @@ const TRAINER_NAV: NavItem[] = [
   { path: '/trainer/profile', icon: '🏋️', label: 'Profilim' },
   { path: '/trainer/services', icon: '📦', label: 'Hizmet & Paket' },
   { path: '/trainer/students', icon: '👥', label: 'Öğrencilerim' },
+  { path: '/trainer/events', icon: '📅', label: 'Etkinliklerim' },
   { path: '/trainer/push-notifications', icon: '🔔', label: 'Bildirimler' },
   { path: '/trainer/messages', icon: '💬', label: 'Mesajlar' },
 ];

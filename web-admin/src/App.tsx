@@ -28,6 +28,7 @@ import { ClubDashboardPage } from './pages/ClubDashboardPage';
 import { ClubProfileEditPage } from './pages/ClubProfileEditPage';
 import { PushNotificationsPage } from './pages/PushNotificationsPage';
 import { CafeProductsPage } from './pages/CafeProductsPage';
+import { TrainerEventsPage } from './pages/TrainerEventsPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { TrainerServicesPage } from './pages/TrainerServicesPage';
@@ -48,6 +49,7 @@ import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
 import { ScheduleSlotsPage } from './pages/ScheduleSlotsPage';
 import { ServiceCatalogPage } from './pages/ServiceCatalogPage';
+import { SuperAdminEventsPage } from './pages/SuperAdminEventsPage';
 import { SuperAdminDashboardPage } from './pages/SuperAdminDashboardPage';
 import { SuperAdminTenantsPage } from './pages/SuperAdminTenantsPage';
 import { SuperAdminUsersPage } from './pages/SuperAdminUsersPage';
@@ -117,6 +119,7 @@ function AppRoutes() {
         <Route path="/super-admin/messages" element={<MessagesPage />} />
         <Route path="/super-admin/leads" element={<LeadsPage />} />
         <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
+        <Route path="/super-admin/events" element={<SuperAdminEventsPage />} />
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
@@ -125,6 +128,7 @@ function AppRoutes() {
         <Route path="/trainer/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/trainer/students" element={<TrainerStudentsPage />} />
         <Route path="/trainer/messages" element={<MessagesPage />} />
+        <Route path="/trainer/events" element={<TrainerEventsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
