@@ -94,7 +94,6 @@ function AppRoutes() {
         <Route path="/trainers" element={<Navigate to="/pt" replace />} />
         <Route path="/therapists" element={<Navigate to="/spa" replace />} />
         <Route path="/pt" element={<PtManagementPage />} />
-        <Route path="/packages" element={<PackageTypesPage />} />
         <Route path="/schedule" element={<UnifiedSchedulePage />} />
         <Route path="/spa" element={<SpaManagementPage />} />
         <Route path="/events" element={<EventsPage />} />
