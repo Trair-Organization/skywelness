@@ -63,6 +63,16 @@ export function TrainerEventsPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  async function handleDelete(id: string) {
+    if (!confirm('Bu etkinliği silmek istediğinize emin misiniz?')) return;
+    try {
+      await apiJson(`/trainer/events/${id}`, { method: 'DELETE' });
+      setSuccess('✅ Etkinlik silindi');
+      await load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Silinemedi'); }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!form.title || !form.eventDate || !form.startTime) { setError('Başlık, tarih ve saat zorunlu'); return; }
@@ -171,6 +181,7 @@ export function TrainerEventsPage() {
                   </p>
                 </div>
                 <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, background: st.bg, color: st.color }}>{st.label}</span>
+                <button className="btn-sm btn-danger" onClick={() => void handleDelete(ev.id)} title="Sil" style={{ marginLeft: 8 }}>🗑</button>
               </div>
             );
           })}

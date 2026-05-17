@@ -12,6 +12,7 @@ type ClubEventAdmin = {
   startsAt: string;
   endsAt: string | null;
   capacity: number;
+  participantCount: number;
   published: boolean;
   category: string;
   requirements: string | null;
@@ -399,7 +400,7 @@ export function EventsPage() {
                     <span>🕐 {fmtTime(ev.startsAt)}{ev.endsAt ? ` - ${fmtTime(ev.endsAt)}` : ''}</span>
                     {ev.coachName && <span>🏋️ {ev.coachName}</span>}
                     {ev.location && <span>📍 {ev.location}</span>}
-                    <span>👥 {ev.capacity} kişi</span>
+                    <span>👥 {ev.participantCount}/{ev.capacity}</span>
                     {priceNum > 0 && <span>💰 ₺{priceNum.toLocaleString('tr-TR')}</span>}
                     {priceNum === 0 && <span style={{ color: '#059669', fontWeight: 600 }}>Ücretsiz</span>}
                     {ev.requirements && <span>📋 {ev.requirements}</span>}

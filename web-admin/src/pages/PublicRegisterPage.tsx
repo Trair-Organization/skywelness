@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiJson, ApiError } from '../lib/api';
+import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 export function PublicRegisterPage() {
   const [form, setForm] = useState({
@@ -12,6 +13,8 @@ export function PublicRegisterPage() {
     password: '',
     passwordConfirm: '',
     tenantSubdomain: '',
+    city: '',
+    district: '',
   });
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -71,6 +74,8 @@ export function PublicRegisterPage() {
           password: form.password,
           tenantSubdomain: form.tenantSubdomain.trim() || undefined,
           photoUrl: photoUrl || undefined,
+          city: form.city || undefined,
+          district: form.district || undefined,
         }),
       });
       setSuccess(true);
@@ -148,6 +153,23 @@ export function PublicRegisterPage() {
             </label>
 
             <label><span>Telefon</span><input type="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} placeholder="+90 5XX XXX XX XX" /></label>
+
+            <div className="auth-row">
+              <label>
+                <span>İl</span>
+                <select value={form.city} onChange={(e) => { setForm(prev => ({ ...prev, city: e.target.value, district: '' })); }}>
+                  <option value="">İl seçin...</option>
+                  {CITY_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>İlçe</span>
+                <select value={form.district} onChange={(e) => update('district', e.target.value)} disabled={!form.city}>
+                  <option value="">İlçe seçin...</option>
+                  {form.city && getDistricts(form.city).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </label>
+            </div>
 
             <label>
               <span>Kulüp Kodu (opsiyonel)</span>

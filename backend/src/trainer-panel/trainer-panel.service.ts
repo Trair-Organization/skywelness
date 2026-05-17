@@ -1415,6 +1415,13 @@ export class TrainerPanelService {
     });
   }
 
+  async deleteTrainerEvent(user: User, eventId: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId, createdByUserId: user.id } });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+    await this.eventsRepo.remove(event);
+    return { ok: true };
+  }
+
   async createTrainerEvent(user: User, data: {
     title: string;
     description?: string;

@@ -392,4 +392,13 @@ export class TrainerPanelController {
   }) {
     return this.service.createTrainerEvent(user, body);
   }
+
+  /** Eğitmen: kendi etkinliğini sil */
+  @Delete('events/:id')
+  deleteEvent(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteTrainerEvent(user, id);
+  }
 }

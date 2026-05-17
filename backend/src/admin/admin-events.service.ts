@@ -18,11 +18,29 @@ export class AdminEventsService {
   ) {}
 
   async list(tenantId: string) {
-    return this.eventsRepo.find({
+    const events = await this.eventsRepo.find({
       where: { tenantId },
       order: { startsAt: 'DESC' },
       take: 200,
     });
+
+    // Get participant counts
+    const eventIds = events.map(e => e.id);
+    if (eventIds.length === 0) return [];
+
+    const counts = await this.registrationsRepo
+      .createQueryBuilder('r')
+      .select('r.club_event_id', 'eventId')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.club_event_id IN (:...ids)', { ids: eventIds })
+      .groupBy('r.club_event_id')
+      .getRawMany();
+    const countMap = new Map(counts.map((c: { eventId: string; count: string }) => [c.eventId, parseInt(c.count)]));
+
+    return events.map(e => ({
+      ...e,
+      participantCount: countMap.get(e.id) || 0,
+    }));
   }
 
   async create(tenantId: string, dto: CreateClubEventDto, createdByUserId?: string) {
