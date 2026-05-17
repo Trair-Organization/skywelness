@@ -17,6 +17,7 @@ type ClubEventAdmin = {
   requirements: string | null;
   price: string;
   currency: string;
+  status: string;
   createdAt: string;
 };
 
@@ -54,7 +55,7 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
-type FilterType = 'all' | 'upcoming' | 'past' | 'draft';
+type FilterType = 'all' | 'upcoming' | 'past' | 'draft' | 'pending';
 
 export function EventsPage() {
   const [rows, setRows] = useState<ClubEventAdmin[]>([]);
@@ -167,7 +168,7 @@ export function EventsPage() {
         setSuccess('✅ Etkinlik güncellendi');
       } else {
         await apiJson('/admin/events', { method: 'POST', body: JSON.stringify(payload) });
-        setSuccess('✅ Etkinlik oluşturuldu');
+        setSuccess('✅ Etkinlik oluşturuldu! Süper admin onayından sonra yayınlanacak.');
       }
       setShowForm(false); resetForm(); await load();
       setTimeout(() => setSuccess(null), 3000);
@@ -214,9 +215,10 @@ export function EventsPage() {
   // Filtered events
   const now = new Date();
   const filtered = rows.filter((ev) => {
-    if (filter === 'upcoming') return new Date(ev.startsAt) > now && ev.published;
+    if (filter === 'upcoming') return new Date(ev.startsAt) > now && ev.status === 'approved';
     if (filter === 'past') return new Date(ev.startsAt) <= now;
-    if (filter === 'draft') return !ev.published;
+    if (filter === 'draft') return ev.status === 'draft';
+    if (filter === 'pending') return ev.status === 'pending_approval';
     return true;
   }).filter((ev) => {
     if (!searchQuery) return true;
@@ -226,8 +228,9 @@ export function EventsPage() {
 
   // Stats
   const totalEvents = rows.length;
-  const upcomingCount = rows.filter(r => new Date(r.startsAt) > now && r.published).length;
-  const draftCount = rows.filter(r => !r.published).length;
+  const upcomingCount = rows.filter(r => new Date(r.startsAt) > now && r.status === 'approved').length;
+  const pendingCount = rows.filter(r => r.status === 'pending_approval').length;
+  const draftCount = rows.filter(r => r.status === 'draft').length;
   const totalCapacity = rows.filter(r => new Date(r.startsAt) > now).reduce((s, r) => s + r.capacity, 0);
 
   return (
@@ -295,15 +298,16 @@ export function EventsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
         <div className="stat-mini"><span className="stat-mini-val">{totalEvents}</span><span className="stat-mini-lbl">Toplam</span></div>
         <div className="stat-mini"><span className="stat-mini-val">{upcomingCount}</span><span className="stat-mini-lbl">Yaklaşan</span></div>
+        <div className="stat-mini"><span className="stat-mini-val">{pendingCount}</span><span className="stat-mini-lbl">Onay Bekliyor</span></div>
         <div className="stat-mini"><span className="stat-mini-val">{draftCount}</span><span className="stat-mini-lbl">Taslak</span></div>
         <div className="stat-mini"><span className="stat-mini-val">{totalCapacity}</span><span className="stat-mini-lbl">Toplam Kapasite</span></div>
       </div>
 
       {/* Filtreler */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        {(['upcoming', 'past', 'draft', 'all'] as FilterType[]).map((f) => (
+        {(['upcoming', 'pending', 'past', 'draft', 'all'] as FilterType[]).map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={`btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}>
-            {f === 'upcoming' ? '📅 Yaklaşan' : f === 'past' ? '📋 Geçmiş' : f === 'draft' ? '📝 Taslak' : '🗂️ Tümü'}
+            {f === 'upcoming' ? '📅 Yaklaşan' : f === 'pending' ? '⏳ Onay Bekliyor' : f === 'past' ? '📋 Geçmiş' : f === 'draft' ? '📝 Taslak' : '🗂️ Tümü'}
           </button>
         ))}
         <input type="text" placeholder="Ara (başlık, eğitmen, kategori)..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ marginLeft: 'auto', padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.85rem', minWidth: 200 }} />
@@ -352,9 +356,11 @@ export function EventsPage() {
                   <div className="event-card-top">
                     <h3>{ev.title}</h3>
                     <div style={{ display: 'flex', gap: 4 }}>
-                      {!ev.published && <span className="status-badge badge-gray">Taslak</span>}
-                      {ev.published && !isPast && <span className="status-badge badge-green">Yayında</span>}
-                      {isPast && <span className="status-badge badge-gray">Tamamlandı</span>}
+                      {ev.status === 'pending_approval' && <span className="status-badge" style={{ background: '#fef3c7', color: '#92400e' }}>Onay Bekliyor</span>}
+                      {ev.status === 'approved' && !isPast && <span className="status-badge badge-green">Yayında</span>}
+                      {ev.status === 'rejected' && <span className="status-badge" style={{ background: '#fee2e2', color: '#991b1b' }}>Reddedildi</span>}
+                      {ev.status === 'draft' && <span className="status-badge badge-gray">Taslak</span>}
+                      {isPast && ev.status === 'approved' && <span className="status-badge badge-gray">Tamamlandı</span>}
                     </div>
                   </div>
                   <div className="event-card-meta">
