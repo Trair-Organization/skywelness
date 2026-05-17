@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 
 type DashboardStats = {
@@ -17,6 +18,7 @@ type DashboardStats = {
 type WeeklyData = { label: string; revenue: number; newMembers: number };
 
 export function ClubInsightsPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [weekly, setWeekly] = useState<WeeklyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +55,11 @@ export function ClubInsightsPage() {
 
       {/* Ana Metrikler */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <StatCard icon="👥" value={stats.totalMembers} label="Toplam Üye" sub={`${stats.activeMembers} aktif`} color="#2563eb" />
-        <StatCard icon="📈" value={stats.newMembersThisMonth} label="Bu Ay Yeni" sub={`${totalNewMembers} son 4 hafta`} color="#059669" />
-        <StatCard icon="📦" value={stats.monthlyPackagesSold} label="Satılan Paket" color="#7c3aed" />
-        <StatCard icon="📅" value={stats.todayBookingsCount} label="Bugün Randevu" sub={`${stats.upcomingEvents} etkinlik`} color="#0891b2" />
-        <StatCard icon="🏋️" value={stats.totalTrainers} label="Eğitmen" color="#dc2626" />
+        <StatCard icon="👥" value={stats.totalMembers} label="Toplam Üye" sub={`${stats.activeMembers} aktif`} color="#2563eb" onClick={() => navigate('/members')} />
+        <StatCard icon="📈" value={stats.newMembersThisMonth} label="Bu Ay Yeni" sub={`${totalNewMembers} son 4 hafta`} color="#059669" onClick={() => navigate('/members')} />
+        <StatCard icon="📦" value={stats.monthlyPackagesSold} label="Satılan Paket" color="#7c3aed" onClick={() => navigate('/packages')} />
+        <StatCard icon="📅" value={stats.todayBookingsCount} label="Bugün Randevu" sub={`${stats.upcomingEvents} etkinlik`} color="#0891b2" onClick={() => navigate('/appointments')} />
+        <StatCard icon="🏋️" value={stats.totalTrainers} label="Eğitmen" color="#dc2626" onClick={() => navigate('/pt')} />
       </div>
 
       {/* Haftalık Trend Grafikleri */}
@@ -155,9 +157,9 @@ export function ClubInsightsPage() {
 
 // ─── Sub Components ───────────────────────────────────────────────────────────
 
-function StatCard({ icon, value, label, sub, color }: { icon: string; value: string | number; label: string; sub?: string; color: string }) {
+function StatCard({ icon, value, label, sub, color, onClick }: { icon: string; value: string | number; label: string; sub?: string; color: string; onClick?: () => void }) {
   return (
-    <div style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+    <div onClick={onClick} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff', cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { if (onClick) e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
       <div style={{ fontSize: '1.3rem', marginBottom: 4 }}>{icon}</div>
       <div style={{ fontSize: '1.5rem', fontWeight: 800, color }}>{value}</div>
       <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>{label}</div>
