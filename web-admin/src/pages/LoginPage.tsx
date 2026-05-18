@@ -91,55 +91,87 @@ export function LoginPage() {
   // Kulüp seçim ekranı
   if (tenantOptions) {
     return (
-      <div className="shell narrow">
-        <h1>👋 Hoş geldin!</h1>
-        <p className="muted">Hangi kulüple devam etmek istiyorsun?</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
-          {tenantOptions.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => selectTenant(t.subdomain)}
-              disabled={pending}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                padding: '1rem 1.25rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(148,163,184,0.2)',
-                background: 'rgba(0,0,0,0.15)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                width: '100%',
-                transition: 'all 0.15s',
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.5)'; e.currentTarget.style.background = 'rgba(56,189,248,0.05)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(148,163,184,0.2)'; e.currentTarget.style.background = 'rgba(0,0,0,0.15)'; }}
+      <div className="public-shell">
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '3rem 1.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h1
+              style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 800, margin: '0 0 0.5rem' }}
             >
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(56,189,248,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                {t.logoUrl ? (
-                  <img src={t.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : (
-                  <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>{t.name.slice(0, 2)}</span>
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '0.95rem' }}>{t.name}</div>
-                <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
-                  {t.role === 'administrator' ? '👑 Yönetici' : t.role === 'trainer' ? '🏋️ Eğitmen' : '👤 Üye'}
+              👋 Hoş geldin!
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>
+              Hangi kulüple devam etmek istiyorsun?
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {tenantOptions.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => selectTenant(t.subdomain)}
+                disabled={pending}
+                className="tenant-select-card"
+              >
+                <div className="tenant-select-logo">
+                  {t.logoUrl ? (
+                    <img
+                      src={t.logoUrl}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38bdf8' }}>
+                      {t.name.slice(0, 2)}
+                    </span>
+                  )}
                 </div>
-              </div>
-              <span style={{ color: '#38bdf8', fontSize: '1.2rem' }}>→</span>
-            </button>
-          ))}
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem' }}>
+                    {t.name}
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '3px' }}>
+                    {t.role === 'administrator'
+                      ? '👑 Yönetici'
+                      : t.role === 'trainer'
+                        ? '🏋️ Eğitmen'
+                        : '👤 Üye'}
+                  </div>
+                </div>
+                <span style={{ color: '#38bdf8', fontSize: '1.2rem', fontWeight: 700 }}>→</span>
+              </button>
+            ))}
+          </div>
+          {error && (
+            <p
+              style={{
+                color: '#f87171',
+                marginTop: '1rem',
+                textAlign: 'center',
+                fontSize: '0.85rem',
+              }}
+            >
+              {error}
+            </p>
+          )}
+          <button
+            onClick={() => {
+              setTenantOptions(null);
+              setError(null);
+            }}
+            style={{
+              marginTop: '1.5rem',
+              background: 'transparent',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              display: 'block',
+              margin: '1.5rem auto 0',
+            }}
+          >
+            ← Geri dön
+          </button>
         </div>
-        {error && <p className="error" style={{ marginTop: '1rem' }}>{error}</p>}
-        <button
-          onClick={() => { setTenantOptions(null); setError(null); }}
-          style={{ marginTop: '1.5rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontWeight: 600 }}
-        >
-          ← Geri dön
-        </button>
       </div>
     );
   }
