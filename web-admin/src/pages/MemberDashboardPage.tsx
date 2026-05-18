@@ -952,55 +952,14 @@ export function MemberDashboardPage() {
         {/* ═══ MESAJLAR ═══ */}
         {!loading && activeTab === 'messages' && (
           <div className="dashboard-content">
-            <h2>💬 Mesajlarım</h2>
-            {conversations.length === 0 ? (
-              <p className="dashboard-empty">Henüz mesajınız yok.</p>
-            ) : (
-              <div className="dashboard-list">
-                {conversations.map((c) => (
-                  <div key={c.id} className="dashboard-list-item" style={{ cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '50%',
-                          background: 'rgba(56,189,248,0.15)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          overflow: 'hidden',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {c.otherUser.photoUrl ? (
-                          <img
-                            src={c.otherUser.photoUrl}
-                            alt=""
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <span style={{ color: '#38bdf8', fontWeight: 800 }}>
-                            {c.otherUser.firstName[0]}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <strong>
-                          {c.otherUser.firstName} {c.otherUser.lastName}
-                        </strong>
-                        <p>{c.lastMessage || c.lastMessagePreview || 'Henüz mesaj yok'}</p>
-                      </div>
-                    </div>
-                    {c.unreadCount > 0 && (
-                      <span className="topbar-badge" style={{ position: 'static' }}>
-                        {c.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <MessagesView
+              conversations={conversations}
+              onConversationRead={(convId) => {
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === convId ? { ...c, unreadCount: 0 } : c)),
+                );
+              }}
+            />
           </div>
         )}
 
@@ -1084,4 +1043,265 @@ function paymentStatusLabel(s: string): string {
     refunded: 'İade Edildi',
   };
   return map[s] || s;
+}
+
+// ─── Messages View (conversation list + detail) ──────────────────────────────
+
+type MessageItem = {
+  id: string;
+  content: string;
+  isOwn: boolean;
+  createdAt: string;
+};
+
+function MessagesView({
+  conversations,
+  onConversationRead,
+}: {
+  conversations: Conversation[];
+  onConversationRead: (id: string) => void;
+}) {
+  const [selectedConv, setSelectedConv] = useState<string | null>(null);
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [newMsg, setNewMsg] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const selectedConversation = conversations.find((c) => c.id === selectedConv);
+
+  async function openConversation(convId: string) {
+    setSelectedConv(convId);
+    setLoadingMsgs(true);
+    try {
+      const data = await apiJson<{ messages: MessageItem[] }>(`/messages/conversations/${convId}`);
+      setMessages(data.messages || []);
+      onConversationRead(convId);
+    } catch {
+      setMessages([]);
+    } finally {
+      setLoadingMsgs(false);
+    }
+  }
+
+  async function sendMessage() {
+    if (!newMsg.trim() || !selectedConv) return;
+    setSending(true);
+    try {
+      await apiJson(`/messages/conversations/${selectedConv}`, {
+        method: 'POST',
+        body: JSON.stringify({ content: newMsg.trim() }),
+      });
+      setNewMsg('');
+      // Reload messages
+      const data = await apiJson<{ messages: MessageItem[] }>(
+        `/messages/conversations/${selectedConv}`,
+      );
+      setMessages(data.messages || []);
+    } catch {
+      /* ignore */
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // Conversation detail view
+  if (selectedConv && selectedConversation) {
+    return (
+      <div>
+        <button
+          onClick={() => setSelectedConv(null)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#38bdf8',
+            cursor: 'pointer',
+            fontWeight: 600,
+            marginBottom: 12,
+            fontSize: '0.9rem',
+          }}
+        >
+          ← Geri
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(56,189,248,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {selectedConversation.otherUser.photoUrl ? (
+              <img
+                src={selectedConversation.otherUser.photoUrl}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <span style={{ color: '#38bdf8', fontWeight: 800 }}>
+                {selectedConversation.otherUser.firstName[0]}
+              </span>
+            )}
+          </div>
+          <h2 style={{ margin: 0, fontSize: '1rem' }}>
+            {selectedConversation.otherUser.firstName} {selectedConversation.otherUser.lastName}
+          </h2>
+        </div>
+
+        {loadingMsgs ? (
+          <p style={{ color: '#64748b' }}>Yükleniyor...</p>
+        ) : messages.length === 0 ? (
+          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
+            Henüz mesaj yok. İlk mesajı gönderin!
+          </p>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              maxHeight: 400,
+              overflowY: 'auto',
+              marginBottom: 16,
+              padding: '8px 0',
+            }}
+          >
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                style={{
+                  alignSelf: m.isOwn ? 'flex-end' : 'flex-start',
+                  maxWidth: '75%',
+                  padding: '0.6rem 1rem',
+                  borderRadius: m.isOwn ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                  background: m.isOwn ? 'rgba(56,189,248,0.15)' : 'rgba(148,163,184,0.1)',
+                  border: `1px solid ${m.isOwn ? 'rgba(56,189,248,0.25)' : 'rgba(148,163,184,0.12)'}`,
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+                  {m.content}
+                </p>
+                <span
+                  style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 4, display: 'block' }}
+                >
+                  {new Date(m.createdAt).toLocaleTimeString('tr-TR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Message input */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            value={newMsg}
+            onChange={(e) => setNewMsg(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void sendMessage();
+              }
+            }}
+            placeholder="Mesajınızı yazın..."
+            style={{
+              flex: 1,
+              padding: '0.7rem 1rem',
+              borderRadius: 10,
+              border: '1px solid rgba(148,163,184,0.2)',
+              background: 'rgba(15,23,42,0.8)',
+              color: '#e2e8f0',
+              fontSize: '0.9rem',
+            }}
+          />
+          <button
+            onClick={() => void sendMessage()}
+            disabled={sending || !newMsg.trim()}
+            className="btn-primary"
+            style={{ padding: '0.7rem 1.2rem', fontSize: '0.88rem' }}
+          >
+            {sending ? '...' : 'Gönder'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Conversation list
+  return (
+    <div>
+      <h2>💬 Mesajlarım</h2>
+      {conversations.length === 0 ? (
+        <p className="dashboard-empty">Henüz mesajınız yok.</p>
+      ) : (
+        <div className="dashboard-list">
+          {conversations.map((c) => (
+            <div
+              key={c.id}
+              className="dashboard-list-item"
+              style={{ cursor: 'pointer' }}
+              onClick={() => openConversation(c.id)}
+            >
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: 'rgba(56,189,248,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  {c.otherUser.photoUrl ? (
+                    <img
+                      src={c.otherUser.photoUrl}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <span style={{ color: '#38bdf8', fontWeight: 800 }}>
+                      {c.otherUser.firstName[0]}
+                    </span>
+                  )}
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <strong style={{ display: 'block' }}>
+                    {c.otherUser.firstName} {c.otherUser.lastName}
+                  </strong>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '0.82rem',
+                      color: '#94a3b8',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {c.lastMessage || c.lastMessagePreview || 'Henüz mesaj yok'}
+                  </p>
+                </div>
+              </div>
+              {c.unreadCount > 0 && (
+                <span className="topbar-badge" style={{ position: 'static' }}>
+                  {c.unreadCount}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
