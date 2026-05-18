@@ -92,6 +92,8 @@ export class DiscoveryService {
         reviewCount: t.reviewCount,
         phone: t.phone,
         email: t.email,
+        latitude: t.latitude,
+        longitude: t.longitude,
       }));
   }
 

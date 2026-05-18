@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
+
+const ClubMap = lazy(() => import('../components/ClubMap').then((m) => ({ default: m.ClubMap })));
 
 type Club = {
   id: string;
@@ -19,6 +21,8 @@ type Club = {
   reviewCount: number | null;
   priceRange: string | null;
   featured: boolean;
+  latitude: string | null;
+  longitude: string | null;
 };
 type Trainer = {
   id: string;
@@ -106,6 +110,7 @@ export function PublicDiscoverPage() {
 
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [now] = useState(() => Date.now());
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   const updateFilter = (key: string, value: string) => {
     const p = new URLSearchParams(searchParams);
@@ -373,6 +378,22 @@ export function PublicDiscoverPage() {
             ✕ Filtreleri Temizle
           </button>
         )}
+        <div className="vitrin-view-toggle">
+          <button
+            className={`vitrin-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+            onClick={() => setViewMode('grid')}
+            aria-label="Liste görünümü"
+          >
+            ▦
+          </button>
+          <button
+            className={`vitrin-view-btn ${viewMode === 'map' ? 'active' : ''}`}
+            onClick={() => setViewMode('map')}
+            aria-label="Harita görünümü"
+          >
+            🗺️
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -423,6 +444,16 @@ export function PublicDiscoverPage() {
                 <h3>Sonuç bulunamadı</h3>
                 <p>Farklı filtreler deneyerek tekrar arayın.</p>
               </div>
+            ) : viewMode === 'map' ? (
+              <Suspense
+                fallback={
+                  <div className="vitrin-loading">
+                    <div className="vitrin-spinner" />
+                  </div>
+                }
+              >
+                <ClubMap clubs={clubs} />
+              </Suspense>
             ) : (
               <div className="vitrin-clubs-grid">
                 {clubs.map((club) => (
