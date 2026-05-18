@@ -9,9 +9,13 @@ import { ClubEvent } from '../database/entities/club-event.entity';
 import { User } from '../database/entities/user.entity';
 import { HomeBanner } from '../database/entities/home-banner.entity';
 import { ClubReview } from '../database/entities/club-review.entity';
+import { Favorite } from '../database/entities/favorite.entity';
+import { Membership } from '../database/entities/membership.entity';
+import { PaymentTransaction } from '../database/entities/payment-transaction.entity';
 import { DiscoveryController } from './discovery.controller';
 import { HomeBannersController } from './home-banners.controller';
 import { ClubReviewsController } from './club-reviews.controller';
+import { MemberMarketplaceController } from './member-marketplace.controller';
 import { DiscoveryService } from './discovery.service';
 import { ClubReviewsService } from './club-reviews.service';
 
@@ -26,10 +30,18 @@ import { ClubReviewsService } from './club-reviews.service';
       User,
       HomeBanner,
       ClubReview,
+      Favorite,
+      Membership,
+      PaymentTransaction,
     ]),
     AuthModule,
   ],
-  controllers: [DiscoveryController, HomeBannersController, ClubReviewsController],
+  controllers: [
+    DiscoveryController,
+    HomeBannersController,
+    ClubReviewsController,
+    MemberMarketplaceController,
+  ],
   providers: [DiscoveryService, ClubReviewsService],
 })
 export class DiscoveryModule {}
