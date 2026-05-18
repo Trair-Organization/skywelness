@@ -5,6 +5,8 @@ import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
 
 const ClubMap = lazy(() => import('../components/ClubMap').then((m) => ({ default: m.ClubMap })));
 
+import { useFavorite } from '../hooks/useFavorite';
+
 type Club = {
   id: string;
   name: string;
@@ -625,69 +627,103 @@ function FeaturedClubCard({ club }: { club: Club }) {
 }
 
 function ClubCard({ club }: { club: Club }) {
+  const { isFavorite, toggle, isLoggedIn } = useFavorite('club', club.id);
+
   return (
-    <Link to={`/club/${club.subdomain}`} className="vitrin-club-card">
-      <div className="vitrin-club-cover">
-        {club.coverImageUrl || club.logoUrl ? (
-          <img src={club.coverImageUrl || club.logoUrl || ''} alt={club.name} />
-        ) : (
-          <div className="vitrin-club-ph">{club.name.slice(0, 2).toUpperCase()}</div>
-        )}
-        {club.featured && <span className="vitrin-club-featured-dot">⭐</span>}
-        {club.vertical && (
-          <span className="vitrin-club-vertical">
-            {VERTICALS.find((v) => v.key === club.vertical)?.icon || '🏢'}
-          </span>
-        )}
-      </div>
-      <div className="vitrin-club-body">
-        <h3>{club.name}</h3>
-        {club.location && <p className="vitrin-card-location">📍 {club.location}</p>}
-        <div className="vitrin-card-meta">
-          {club.avgRating && Number(club.avgRating) > 0 && (
-            <span className="vitrin-card-rating">★ {Number(club.avgRating).toFixed(1)}</span>
+    <div className="vitrin-club-card-wrapper">
+      {isLoggedIn && (
+        <button
+          className={`vitrin-fav-btn ${isFavorite ? 'active' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void toggle();
+          }}
+          aria-label={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+        >
+          {isFavorite ? '❤️' : '🤍'}
+        </button>
+      )}
+      <Link to={`/club/${club.subdomain}`} className="vitrin-club-card">
+        <div className="vitrin-club-cover">
+          {club.coverImageUrl || club.logoUrl ? (
+            <img src={club.coverImageUrl || club.logoUrl || ''} alt={club.name} />
+          ) : (
+            <div className="vitrin-club-ph">{club.name.slice(0, 2).toUpperCase()}</div>
           )}
-          {club.reviewCount ? (
-            <span className="vitrin-card-reviews">({club.reviewCount} değerlendirme)</span>
-          ) : null}
+          {club.featured && <span className="vitrin-club-featured-dot">⭐</span>}
+          {club.vertical && (
+            <span className="vitrin-club-vertical">
+              {VERTICALS.find((v) => v.key === club.vertical)?.icon || '🏢'}
+            </span>
+          )}
         </div>
-        {club.services.length > 0 && (
-          <div className="vitrin-card-tags">
-            {club.services.slice(0, 3).map((s) => (
-              <span key={s} className="vitrin-card-tag">
-                {s}
-              </span>
-            ))}
+        <div className="vitrin-club-body">
+          <h3>{club.name}</h3>
+          {club.location && <p className="vitrin-card-location">📍 {club.location}</p>}
+          <div className="vitrin-card-meta">
+            {club.avgRating && Number(club.avgRating) > 0 && (
+              <span className="vitrin-card-rating">★ {Number(club.avgRating).toFixed(1)}</span>
+            )}
+            {club.reviewCount ? (
+              <span className="vitrin-card-reviews">({club.reviewCount} değerlendirme)</span>
+            ) : null}
           </div>
-        )}
-        {club.priceRange && <p className="vitrin-card-price-range">{club.priceRange}</p>}
-      </div>
-    </Link>
+          {club.services.length > 0 && (
+            <div className="vitrin-card-tags">
+              {club.services.slice(0, 3).map((s) => (
+                <span key={s} className="vitrin-card-tag">
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+          {club.priceRange && <p className="vitrin-card-price-range">{club.priceRange}</p>}
+        </div>
+      </Link>
+    </div>
   );
 }
 
 function TrainerCard({ trainer }: { trainer: Trainer }) {
+  const { isFavorite, toggle, isLoggedIn } = useFavorite('trainer', trainer.id);
+
   return (
-    <Link to={`/trainer/${trainer.id}`} className="vitrin-trainer-card">
-      <div className="vitrin-trainer-photo">
-        {trainer.photoUrl ? (
-          <img src={trainer.photoUrl} alt={trainer.name} />
-        ) : (
-          <div className="vitrin-trainer-ph">{trainer.name.charAt(0).toUpperCase()}</div>
-        )}
-      </div>
-      <div className="vitrin-trainer-body">
-        <h3>{trainer.name}</h3>
-        <p className="vitrin-trainer-club">{trainer.clubName}</p>
-        <div className="vitrin-trainer-stats">
-          <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
-          <span className="vitrin-trainer-sessions">{trainer.totalSessions} seans</span>
+    <div className="vitrin-club-card-wrapper">
+      {isLoggedIn && (
+        <button
+          className={`vitrin-fav-btn ${isFavorite ? 'active' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void toggle();
+          }}
+          aria-label={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+        >
+          {isFavorite ? '❤️' : '🤍'}
+        </button>
+      )}
+      <Link to={`/trainer/${trainer.id}`} className="vitrin-trainer-card">
+        <div className="vitrin-trainer-photo">
+          {trainer.photoUrl ? (
+            <img src={trainer.photoUrl} alt={trainer.name} />
+          ) : (
+            <div className="vitrin-trainer-ph">{trainer.name.charAt(0).toUpperCase()}</div>
+          )}
         </div>
-        {trainer.specialties.length > 0 && (
-          <p className="vitrin-trainer-specs">{trainer.specialties.slice(0, 2).join(' · ')}</p>
-        )}
-      </div>
-    </Link>
+        <div className="vitrin-trainer-body">
+          <h3>{trainer.name}</h3>
+          <p className="vitrin-trainer-club">{trainer.clubName}</p>
+          <div className="vitrin-trainer-stats">
+            <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
+            <span className="vitrin-trainer-sessions">{trainer.totalSessions} seans</span>
+          </div>
+          {trainer.specialties.length > 0 && (
+            <p className="vitrin-trainer-specs">{trainer.specialties.slice(0, 2).join(' · ')}</p>
+          )}
+        </div>
+      </Link>
+    </div>
   );
 }
 

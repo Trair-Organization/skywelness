@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
+import { useFavorite } from '../hooks/useFavorite';
 
 // ═══ Unified Booking Component (v2 API) ═══
 type V2Service = {
@@ -391,6 +392,7 @@ export function ClubProfilePage() {
             {profile.avgRating !== '0.00' && (
               <span className="profile-rating">★ {Number(profile.avgRating).toFixed(1)}</span>
             )}
+            <FavoriteButton targetType="club" targetId={profile.id} />
           </div>
           <div className="profile-metrics">
             {profile.metrics.memberCount > 0 && (
@@ -949,5 +951,46 @@ function ClubReviewsSection({ subdomain }: { subdomain: string }) {
         ))}
       </div>
     </section>
+  );
+}
+
+// ─── Favorite Button ─────────────────────────────────────────────────────────
+
+function FavoriteButton({
+  targetType,
+  targetId,
+}: {
+  targetType: 'club' | 'trainer';
+  targetId: string;
+}) {
+  const { isFavorite, toggle, loading, isLoggedIn } = useFavorite(targetType, targetId);
+  if (!isLoggedIn) return null;
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void toggle();
+      }}
+      disabled={loading}
+      style={{
+        background: isFavorite ? 'rgba(239,68,68,0.12)' : 'rgba(148,163,184,0.1)',
+        border: `1px solid ${isFavorite ? 'rgba(239,68,68,0.3)' : 'rgba(148,163,184,0.2)'}`,
+        borderRadius: 10,
+        padding: '0.5rem 1rem',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: '0.85rem',
+        fontWeight: 700,
+        color: isFavorite ? '#ef4444' : '#94a3b8',
+        transition: 'all 0.2s',
+        marginLeft: 'auto',
+      }}
+      aria-label={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+    >
+      {isFavorite ? '❤️' : '🤍'} {isFavorite ? 'Favorilerde' : 'Favorilere Ekle'}
+    </button>
   );
 }
