@@ -55,6 +55,7 @@ type Conversation = {
   id: string;
   otherUser: { id: string; firstName: string; lastName: string; photoUrl: string | null };
   lastMessage: string | null;
+  lastMessagePreview: string | null;
   lastMessageAt: string | null;
   unreadCount: number;
 };
@@ -988,7 +989,7 @@ export function MemberDashboardPage() {
                         <strong>
                           {c.otherUser.firstName} {c.otherUser.lastName}
                         </strong>
-                        <p>{c.lastMessage || 'Henüz mesaj yok'}</p>
+                        <p>{c.lastMessage || c.lastMessagePreview || 'Henüz mesaj yok'}</p>
                       </div>
                     </div>
                     {c.unreadCount > 0 && (
