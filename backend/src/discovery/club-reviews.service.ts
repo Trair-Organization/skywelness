@@ -78,15 +78,15 @@ export class ClubReviewsService {
 
   /** Ortalama puanı yeniden hesapla */
   private async recalculateRating(tenantId: string) {
-    const result: { avg: string | null; count: string } = await this.reviewsRepo
+    const result = await this.reviewsRepo
       .createQueryBuilder('r')
       .select('AVG(r.rating)', 'avg')
       .addSelect('COUNT(r.id)', 'count')
       .where('r.tenantId = :tenantId', { tenantId })
-      .getRawOne();
+      .getRawOne<{ avg: string | null; count: string }>();
 
-    const avg = result.avg ? parseFloat(result.avg).toFixed(2) : '0.00';
-    const count = result.count ? parseInt(result.count, 10) : 0;
+    const avg = result?.avg ? parseFloat(result.avg).toFixed(2) : '0.00';
+    const count = result?.count ? parseInt(result.count, 10) : 0;
 
     await this.tenantsRepo.update(tenantId, {
       avgRating: avg,
