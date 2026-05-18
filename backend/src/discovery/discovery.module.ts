@@ -8,9 +8,12 @@ import { TrainerApplication } from '../database/entities/trainer-application.ent
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { User } from '../database/entities/user.entity';
 import { HomeBanner } from '../database/entities/home-banner.entity';
+import { ClubReview } from '../database/entities/club-review.entity';
 import { DiscoveryController } from './discovery.controller';
 import { HomeBannersController } from './home-banners.controller';
+import { ClubReviewsController } from './club-reviews.controller';
 import { DiscoveryService } from './discovery.service';
+import { ClubReviewsService } from './club-reviews.service';
 
 @Module({
   imports: [
@@ -22,10 +25,11 @@ import { DiscoveryService } from './discovery.service';
       ClubEvent,
       User,
       HomeBanner,
+      ClubReview,
     ]),
     AuthModule,
   ],
-  controllers: [DiscoveryController, HomeBannersController],
-  providers: [DiscoveryService],
+  controllers: [DiscoveryController, HomeBannersController, ClubReviewsController],
+  providers: [DiscoveryService, ClubReviewsService],
 })
 export class DiscoveryModule {}
