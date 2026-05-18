@@ -1073,8 +1073,8 @@ function MessagesView({
     setSelectedConv(convId);
     setLoadingMsgs(true);
     try {
-      const data = await apiJson<{ messages: MessageItem[] }>(`/messages/conversations/${convId}`);
-      setMessages(data.messages || []);
+      const data = await apiJson<MessageItem[]>(`/messages/conversations/${convId}`);
+      setMessages(Array.isArray(data) ? data : []);
       onConversationRead(convId);
     } catch {
       setMessages([]);
@@ -1093,10 +1093,8 @@ function MessagesView({
       });
       setNewMsg('');
       // Reload messages
-      const data = await apiJson<{ messages: MessageItem[] }>(
-        `/messages/conversations/${selectedConv}`,
-      );
-      setMessages(data.messages || []);
+      const data = await apiJson<MessageItem[]>(`/messages/conversations/${selectedConv}`);
+      setMessages(Array.isArray(data) ? data : []);
     } catch {
       /* ignore */
     } finally {
