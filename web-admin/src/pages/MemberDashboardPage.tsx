@@ -1234,7 +1234,7 @@ function MessagesView({
                   new Date(m.createdAt).toDateString() !==
                     new Date(messages[idx - 1].createdAt).toDateString();
                 return (
-                  <div key={m.id}>
+                  <div key={m.id} className={`chat-msg-row ${m.isOwn ? 'own' : 'other'}`}>
                     {showDate && (
                       <div className="chat-date-sep">
                         {new Date(m.createdAt).toLocaleDateString('tr-TR', {
