@@ -265,91 +265,61 @@ export function MemberDashboardPage() {
       <div className="dashboard-page">
         <div className="dashboard-header">
           <h1>Merhaba, {user.firstName}! 👋</h1>
-          <p>Marketplace hesabın — favorilerin, randevuların ve daha fazlası.</p>
         </div>
 
-        {/* Stats */}
-        <div className="dashboard-stats">
-          <div
-            className="stat-card"
-            onClick={() => setActiveTab('favorites')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="stat-icon">❤️</span>
-            <strong>{favorites.length}</strong>
-            <span>Favori</span>
+        {/* Compact Stat Bar */}
+        <div className="member-stat-bar">
+          <div className="member-stat-item" onClick={() => setActiveTab('favorites')}>
+            <span className="member-stat-num">{favorites.length}</span>
+            <span className="member-stat-label">Favori</span>
           </div>
-          <div
-            className="stat-card"
-            onClick={() => setActiveTab('appointments')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="stat-icon">📅</span>
-            <strong>{upcomingAppointments.length}</strong>
-            <span>Randevu</span>
+          <div className="member-stat-divider" />
+          <div className="member-stat-item" onClick={() => setActiveTab('appointments')}>
+            <span className="member-stat-num">{upcomingAppointments.length}</span>
+            <span className="member-stat-label">Randevu</span>
           </div>
-          <div
-            className="stat-card"
-            onClick={() => setActiveTab('packages')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="stat-icon">🏋️</span>
-            <strong>{ptCredits}</strong>
-            <span>PT Kredisi</span>
+          <div className="member-stat-divider" />
+          <div className="member-stat-item" onClick={() => setActiveTab('packages')}>
+            <span className="member-stat-num">{ptCredits + massageCredits}</span>
+            <span className="member-stat-label">Kredi</span>
           </div>
-          <div
-            className="stat-card"
-            onClick={() => setActiveTab('packages')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="stat-icon">💆</span>
-            <strong>{massageCredits}</strong>
-            <span>Masaj Kredisi</span>
-          </div>
-          <div
-            className="stat-card"
-            onClick={() => setActiveTab('memberships')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="stat-icon">🏢</span>
-            <strong>{activeMemberships.length}</strong>
-            <span>Üyelik</span>
-          </div>
-          <div
-            className="stat-card"
-            onClick={() => setActiveTab('events')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="stat-icon">🎉</span>
-            <strong>{joinedEvents.length}</strong>
-            <span>Etkinlik</span>
+          <div className="member-stat-divider" />
+          <div className="member-stat-item" onClick={() => setActiveTab('memberships')}>
+            <span className="member-stat-num">{activeMemberships.length}</span>
+            <span className="member-stat-label">Üyelik</span>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="dashboard-tabs">
+        {/* Menu Grid */}
+        <div className="member-menu-grid">
           {(
             [
-              ['overview', '📊 Genel'],
-              ['clubs', `🏠 Kulüplerim (${myClubs.length})`],
-              ['favorites', `❤️ Favorilerim (${favorites.length})`],
-              ['appointments', `📅 Randevular (${upcomingAppointments.length})`],
-              ['packages', `💎 Paketler (${activePackages.length})`],
-              ['memberships', `🏢 Üyeliklerim (${activeMemberships.length})`],
-              ['reviews', `⭐ Yorumlarım (${reviews.length})`],
-              ['payments', `💳 Ödemeler (${payments.length})`],
-              ['orders', `🛒 Siparişler (${orders.length})`],
-              ['events', `🎉 Etkinlikler (${joinedEvents.length})`],
-              ['messages', `💬 Mesajlar${unreadMessages > 0 ? ` (${unreadMessages})` : ''}`],
-              ['notifications', `🔔 Bildirimler${unreadNotifs > 0 ? ` (${unreadNotifs})` : ''}`],
-            ] as [TabKey, string][]
-          ).map(([key, label]) => (
+              ['clubs', '🏠', 'Kulüplerim'],
+              ['favorites', '❤️', 'Favorilerim'],
+              ['appointments', '📅', 'Randevular'],
+              ['packages', '💎', 'Paketlerim'],
+              ['memberships', '🏢', 'Üyeliklerim'],
+              ['reviews', '⭐', 'Yorumlarım'],
+              ['payments', '💳', 'Ödemeler'],
+              ['orders', '🛒', 'Siparişler'],
+              ['events', '🎉', 'Etkinlikler'],
+              ['messages', '💬', `Mesajlar${unreadMessages > 0 ? ` (${unreadMessages})` : ''}`],
+              ['notifications', '🔔', `Bildirimler${unreadNotifs > 0 ? ` (${unreadNotifs})` : ''}`],
+            ] as [TabKey, string, string][]
+          ).map(([key, icon, label]) => (
             <button
               key={key}
-              className={`dashboard-tab ${activeTab === key ? 'active' : ''}`}
+              className={`member-menu-item ${activeTab === key ? 'active' : ''}`}
               onClick={() => setActiveTab(key)}
             >
-              {label}
+              <span className="member-menu-icon">{icon}</span>
+              <span className="member-menu-label">{label}</span>
+              {key === 'messages' && unreadMessages > 0 && (
+                <span className="member-menu-badge">{unreadMessages}</span>
+              )}
+              {key === 'notifications' && unreadNotifs > 0 && (
+                <span className="member-menu-badge">{unreadNotifs}</span>
+              )}
             </button>
           ))}
         </div>
