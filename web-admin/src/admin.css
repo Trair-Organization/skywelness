@@ -903,7 +903,7 @@ a.secondary:hover {
   margin-bottom: 32px;
 }
 
-.stat-card {
+.admin-layout .stat-card {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -913,7 +913,7 @@ a.secondary:hover {
   position: relative;
 }
 
-.stat-card:hover {
+.admin-layout .stat-card:hover {
   border-color: var(--accent);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
   transform: translateY(-1px);
@@ -3784,7 +3784,9 @@ button.primary:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .spa-pkg-card:hover {
   border-color: var(--accent);
@@ -3795,7 +3797,6 @@ button.primary:disabled {
   color: var(--accent);
   font-size: 1.1rem;
 }
-
 
 /* ─── Spa Professional Styles ──────────────────────────────────────────────── */
 .spa-section {
@@ -3888,7 +3889,6 @@ button.primary:disabled {
   background: #fee2e2;
   color: #991b1b;
 }
-
 
 /* ─── Agenda Calendar Grid ─────────────────────────────────────────────────── */
 .agenda-toolbar {
@@ -4012,7 +4012,6 @@ button.primary:disabled {
   color: var(--muted);
 }
 
-
 /* ─── Agenda Action Modal ──────────────────────────────────────────────────── */
 .agenda-slot-clickable {
   cursor: pointer;
@@ -4041,8 +4040,14 @@ button.primary:disabled {
   animation: agendaModalIn 0.15s ease;
 }
 @keyframes agendaModalIn {
-  from { opacity: 0; transform: scale(0.95) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 .agenda-modal-header {
   display: flex;
@@ -4110,12 +4115,27 @@ button.primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.agenda-action-book { border-color: #bbf7d0; }
-.agenda-action-book:hover { background: #f0fdf4; border-color: #22c55e; }
-.agenda-action-complete { border-color: #bbf7d0; }
-.agenda-action-complete:hover { background: #f0fdf4; border-color: #22c55e; }
-.agenda-action-cancel { border-color: #fecaca; }
-.agenda-action-cancel:hover { background: #fef2f2; border-color: #ef4444; }
+.agenda-action-book {
+  border-color: #bbf7d0;
+}
+.agenda-action-book:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+.agenda-action-complete {
+  border-color: #bbf7d0;
+}
+.agenda-action-complete:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+.agenda-action-cancel {
+  border-color: #fecaca;
+}
+.agenda-action-cancel:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
 
 /* Modal form */
 .agenda-modal-form {
@@ -4138,9 +4158,16 @@ button.primary:disabled {
   gap: 2px;
   transition: background 0.1s;
 }
-.agenda-member-item:last-child { border-bottom: none; }
-.agenda-member-item:hover { background: var(--surface); }
-.agenda-member-item strong { font-size: 0.85rem; color: var(--text); }
+.agenda-member-item:last-child {
+  border-bottom: none;
+}
+.agenda-member-item:hover {
+  background: var(--surface);
+}
+.agenda-member-item strong {
+  font-size: 0.85rem;
+  color: var(--text);
+}
 .agenda-selected-member {
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
@@ -4153,7 +4180,6 @@ button.primary:disabled {
   align-items: center;
 }
 
-
 /* ─── Force readable text colors on Spa page ───────────────────────────────── */
 .dashboard-page h1,
 .dashboard-page h2,
@@ -4164,7 +4190,6 @@ button.primary:disabled {
 .dashboard-page .dashboard-subtitle {
   color: var(--muted);
 }
-
 
 /* ─── Agenda Table (Transposed: rows=hours, cols=therapists) ───────────────── */
 .agenda-table {
@@ -4258,7 +4283,6 @@ button.primary:disabled {
 .agenda-td-status {
   font-size: 0.7rem;
 }
-
 
 /* ─── Agenda Stats Bar & Legend ─────────────────────────────────────────────── */
 .agenda-stats-bar {
@@ -4358,7 +4382,6 @@ button.primary:disabled {
   background: #fef2f2;
 }
 
-
 /* ─── Agenda Drag & Drop ───────────────────────────────────────────────────── */
 .agenda-td-draggable {
   cursor: grab;
@@ -4373,10 +4396,14 @@ button.primary:disabled {
   animation: agendaPulse 0.8s ease infinite;
 }
 @keyframes agendaPulse {
-  0%, 100% { background: #dbeafe; }
-  50% { background: #bfdbfe; }
+  0%,
+  100% {
+    background: #dbeafe;
+  }
+  50% {
+    background: #bfdbfe;
+  }
 }
-
 
 /* ─── Agenda Past Hours ────────────────────────────────────────────────────── */
 .agenda-row-past .agenda-td-hour {
@@ -4394,7 +4421,6 @@ button.primary:disabled {
   color: #94a3b8 !important;
 }
 
-
 /* ─── Therapist Cards Professional ─────────────────────────────────────────── */
 .trainers-grid {
   display: grid;
@@ -4402,7 +4428,9 @@ button.primary:disabled {
   gap: 16px;
 }
 @media (max-width: 750px) {
-  .trainers-grid { grid-template-columns: 1fr; }
+  .trainers-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .trainer-card {
   background: #fff;
@@ -4527,10 +4555,9 @@ button.primary:disabled {
   font-size: 0.72rem;
 }
 
-
-/* ─── Force stat-card white background ─────────────────────────────────────── */
-.stat-card,
-.dashboard-page .stat-card {
+/* ─── Force stat-card white background (admin pages only) ──────────────────── */
+.admin-layout .stat-card,
+.admin-layout .dashboard-page .stat-card {
   background: #fff !important;
   color: var(--text);
 }
