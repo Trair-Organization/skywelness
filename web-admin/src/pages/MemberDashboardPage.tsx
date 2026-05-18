@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
+import { readStoredTenantSubdomain, writeStoredTenantSubdomain } from '../auth/storage';
 
 type TabKey =
   | 'overview'
+  | 'clubs'
   | 'favorites'
   | 'appointments'
   | 'packages'
@@ -127,6 +129,10 @@ export function MemberDashboardPage() {
   const [memberships, setMemberships] = useState<MembershipItem[]>([]);
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [myClubs, setMyClubs] = useState<
+    Array<{ id: string; name: string; subdomain: string; logoUrl: string | null; role: string }>
+  >([]);
+  const currentSubdomain = readStoredTenantSubdomain();
 
   const loadAll = useCallback(async () => {
     if (!token) return;
@@ -154,6 +160,29 @@ export function MemberDashboardPage() {
       if (results[7].status === 'fulfilled') setReviews(results[7].value);
       if (results[8].status === 'fulfilled') setMemberships(results[8].value);
       if (results[9].status === 'fulfilled') setPayments(results[9].value);
+      // Kulüplerim
+      try {
+        const clubs =
+          await apiJson<
+            Array<{
+              membershipId: string;
+              role: string;
+              isCurrent: boolean;
+              tenant: { id: string; name: string; subdomain: string; logoUrl: string | null };
+            }>
+          >('/auth/my-memberships');
+        setMyClubs(
+          clubs.map((m) => ({
+            id: m.tenant.id,
+            name: m.tenant.name,
+            subdomain: m.tenant.subdomain,
+            logoUrl: m.tenant.logoUrl,
+            role: m.role,
+          })),
+        );
+      } catch {
+        /* ignore */
+      }
     } finally {
       setLoading(false);
     }
@@ -189,6 +218,11 @@ export function MemberDashboardPage() {
     } catch {
       /* ignore */
     }
+  }
+
+  function switchClub(subdomain: string) {
+    writeStoredTenantSubdomain(subdomain);
+    window.location.reload();
   }
 
   return (
@@ -294,6 +328,7 @@ export function MemberDashboardPage() {
           {(
             [
               ['overview', '📊 Genel'],
+              ['clubs', `🏠 Kulüplerim (${myClubs.length})`],
               ['favorites', `❤️ Favorilerim (${favorites.length})`],
               ['appointments', `📅 Randevular (${upcomingAppointments.length})`],
               ['packages', `💎 Paketler (${activePackages.length})`],
@@ -317,6 +352,122 @@ export function MemberDashboardPage() {
         </div>
 
         {loading && <div className="dashboard-loading">Yükleniyor...</div>}
+
+        {/* ═══ KULÜPLERİM ═══ */}
+        {!loading && activeTab === 'clubs' && (
+          <div className="dashboard-content">
+            <h2>🏠 Kulüplerim — Kulüp Değiştir</h2>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              Aktif kulüp:{' '}
+              <strong style={{ color: '#38bdf8' }}>
+                {myClubs.find((c) => c.subdomain === currentSubdomain)?.name || currentSubdomain}
+              </strong>
+            </p>
+            {myClubs.length === 0 ? (
+              <p className="dashboard-empty">
+                Henüz bir kulübe üye değilsiniz. <Link to="/discover">Kulüpleri keşfet</Link>
+              </p>
+            ) : (
+              <div className="dashboard-grid">
+                {myClubs.map((club) => {
+                  const isActive = club.subdomain === currentSubdomain;
+                  return (
+                    <div
+                      key={club.id}
+                      className="dashboard-card"
+                      style={{
+                        borderColor: isActive ? 'rgba(56,189,248,0.5)' : undefined,
+                        position: 'relative',
+                      }}
+                    >
+                      {isActive && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 10,
+                            background: 'rgba(56,189,248,0.15)',
+                            color: '#38bdf8',
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            border: '1px solid rgba(56,189,248,0.3)',
+                          }}
+                        >
+                          ✓ Aktif
+                        </span>
+                      )}
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}
+                      >
+                        <div
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 12,
+                            background: 'rgba(56,189,248,0.08)',
+                            border: '1px solid rgba(56,189,248,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {club.logoUrl ? (
+                            <img
+                              src={club.logoUrl}
+                              alt=""
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38bdf8' }}>
+                              {club.name.slice(0, 2)}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '0.95rem' }}>{club.name}</h3>
+                          <p className="dashboard-card-meta" style={{ margin: '2px 0 0' }}>
+                            {club.role === 'administrator'
+                              ? '👑 Yönetici'
+                              : club.role === 'trainer'
+                                ? '🏋️ Eğitmen'
+                                : '👤 Üye'}
+                          </p>
+                        </div>
+                      </div>
+                      {!isActive ? (
+                        <button
+                          onClick={() => switchClub(club.subdomain)}
+                          className="btn-primary"
+                          style={{ width: '100%', padding: '0.6rem', fontSize: '0.85rem' }}
+                        >
+                          Bu Kulübe Geç →
+                        </button>
+                      ) : (
+                        <Link
+                          to={`/club/${club.subdomain}`}
+                          className="btn-outline"
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '0.6rem',
+                            fontSize: '0.85rem',
+                            textAlign: 'center',
+                          }}
+                        >
+                          Kulüp Profilini Gör
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ═══ OVERVIEW ═══ */}
         {!loading && activeTab === 'overview' && (

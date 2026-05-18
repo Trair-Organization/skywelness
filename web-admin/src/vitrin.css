@@ -1411,3 +1411,68 @@
   background: rgba(239, 68, 68, 0.15);
   box-shadow: 0 2px 12px rgba(239, 68, 68, 0.2);
 }
+
+/* ─── Member Dashboard Mobile Fixes ─── */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 1rem;
+  }
+  .dashboard-header h1 {
+    font-size: 1.3rem;
+  }
+  .dashboard-header p {
+    font-size: 0.82rem;
+  }
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.6rem !important;
+  }
+  .stat-card {
+    padding: 0.9rem 0.75rem !important;
+  }
+  .stat-card strong {
+    font-size: 1.4rem !important;
+  }
+  .stat-card span {
+    font-size: 0.7rem !important;
+  }
+  .stat-icon {
+    font-size: 1.2rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+  .dashboard-tabs {
+    gap: 0.4rem !important;
+    padding-bottom: 0.75rem !important;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dashboard-tab {
+    white-space: nowrap;
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.8rem !important;
+    flex-shrink: 0;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-card {
+    padding: 1rem !important;
+  }
+  .dashboard-list-item {
+    padding: 0.8rem !important;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .public-nav-links {
+    gap: 0.5rem !important;
+    font-size: 0.8rem;
+  }
+}
