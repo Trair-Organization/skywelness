@@ -8,6 +8,7 @@ import { ScheduleSlot } from './entities/schedule-slot.entity';
 import { Appointment } from './entities/appointment.entity';
 import { Membership } from './entities/membership.entity';
 import { ClubAuditLog } from './entities/club-audit-log.entity';
+import { ClubReview } from './entities/club-review.entity';
 import { Lead } from './entities/lead.entity';
 import { Message } from './entities/message.entity';
 import { SpaBooking } from './entities/spa-booking.entity';
@@ -111,4 +112,5 @@ export const typeOrmEntities = [
   Appointment,
   Membership,
   ClubAuditLog,
+  ClubReview,
 ];
