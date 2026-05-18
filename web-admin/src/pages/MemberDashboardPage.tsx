@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
@@ -1045,13 +1045,14 @@ function paymentStatusLabel(s: string): string {
   return map[s] || s;
 }
 
-// ─── Messages View (conversation list + detail) ──────────────────────────────
+// ─── Messages View (Professional Chat UI) ────────────────────────────────────
 
 type MessageItem = {
   id: string;
   content: string;
   isOwn: boolean;
   createdAt: string;
+  senderId: string;
 };
 
 function MessagesView({
@@ -1066,12 +1067,21 @@ function MessagesView({
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [newMsg, setNewMsg] = useState('');
   const [sending, setSending] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConv);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   async function openConversation(convId: string) {
     setSelectedConv(convId);
     setLoadingMsgs(true);
+    setShowActions(false);
     try {
       const data = await apiJson<MessageItem[]>(`/messages/conversations/${convId}`);
       setMessages(Array.isArray(data) ? data : []);
@@ -1092,7 +1102,6 @@ function MessagesView({
         body: JSON.stringify({ content: newMsg.trim() }),
       });
       setNewMsg('');
-      // Reload messages
       const data = await apiJson<MessageItem[]>(`/messages/conversations/${selectedConv}`);
       setMessages(Array.isArray(data) ? data : []);
     } catch {
@@ -1102,102 +1111,158 @@ function MessagesView({
     }
   }
 
-  // Conversation detail view
+  async function blockUser() {
+    if (!selectedConversation) return;
+    if (
+      !confirm(
+        `${selectedConversation.otherUser.firstName} ${selectedConversation.otherUser.lastName} kişisini engellemek istediğinize emin misiniz?`,
+      )
+    )
+      return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/messages/users/${selectedConversation.otherUser.id}/block`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      alert('Kullanıcı engellendi.');
+      setSelectedConv(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'İşlem başarısız');
+    } finally {
+      setActionLoading(false);
+      setShowActions(false);
+    }
+  }
+
+  async function deleteConversation() {
+    if (!selectedConv) return;
+    if (!confirm('Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
+    setActionLoading(true);
+    try {
+      await apiJson(`/messages/conversations/${selectedConv}`, { method: 'DELETE' });
+      setSelectedConv(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'İşlem başarısız');
+    } finally {
+      setActionLoading(false);
+      setShowActions(false);
+    }
+  }
+
+  async function reportUser() {
+    if (!selectedConversation) return;
+    const reason = prompt('Şikayet nedeninizi kısaca yazın:');
+    if (!reason) return;
+    setActionLoading(true);
+    try {
+      await apiJson('/messages/reports', {
+        method: 'POST',
+        body: JSON.stringify({
+          reportedUserId: selectedConversation.otherUser.id,
+          conversationId: selectedConv,
+          category: 'inappropriate',
+          description: reason,
+        }),
+      });
+      alert('Şikayetiniz iletildi. Teşekkürler.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'İşlem başarısız');
+    } finally {
+      setActionLoading(false);
+      setShowActions(false);
+    }
+  }
+
+  // ═══ CONVERSATION DETAIL ═══
   if (selectedConv && selectedConversation) {
     return (
-      <div>
-        <button
-          onClick={() => setSelectedConv(null)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#38bdf8',
-            cursor: 'pointer',
-            fontWeight: 600,
-            marginBottom: 12,
-            fontSize: '0.9rem',
-          }}
-        >
-          ← Geri
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'rgba(56,189,248,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            {selectedConversation.otherUser.photoUrl ? (
-              <img
-                src={selectedConversation.otherUser.photoUrl}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <span style={{ color: '#38bdf8', fontWeight: 800 }}>
-                {selectedConversation.otherUser.firstName[0]}
-              </span>
+      <div className="chat-detail">
+        {/* Chat Header */}
+        <div className="chat-header">
+          <button className="chat-back-btn" onClick={() => setSelectedConv(null)}>
+            ←
+          </button>
+          <div className="chat-header-user">
+            <div className="chat-avatar">
+              {selectedConversation.otherUser.photoUrl ? (
+                <img src={selectedConversation.otherUser.photoUrl} alt="" />
+              ) : (
+                <span>{selectedConversation.otherUser.firstName[0]}</span>
+              )}
+            </div>
+            <div>
+              <strong>
+                {selectedConversation.otherUser.firstName} {selectedConversation.otherUser.lastName}
+              </strong>
+            </div>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <button className="chat-actions-btn" onClick={() => setShowActions(!showActions)}>
+              ⋮
+            </button>
+            {showActions && (
+              <div className="chat-actions-menu">
+                <button onClick={blockUser} disabled={actionLoading}>
+                  🚫 Engelle
+                </button>
+                <button onClick={reportUser} disabled={actionLoading}>
+                  ⚠️ Şikayet Et
+                </button>
+                <button onClick={deleteConversation} disabled={actionLoading}>
+                  🗑️ Sohbeti Sil
+                </button>
+              </div>
             )}
           </div>
-          <h2 style={{ margin: 0, fontSize: '1rem' }}>
-            {selectedConversation.otherUser.firstName} {selectedConversation.otherUser.lastName}
-          </h2>
         </div>
 
-        {loadingMsgs ? (
-          <p style={{ color: '#64748b' }}>Yükleniyor...</p>
-        ) : messages.length === 0 ? (
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-            Henüz mesaj yok. İlk mesajı gönderin!
-          </p>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              maxHeight: 400,
-              overflowY: 'auto',
-              marginBottom: 16,
-              padding: '8px 0',
-            }}
-          >
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  alignSelf: m.isOwn ? 'flex-end' : 'flex-start',
-                  maxWidth: '75%',
-                  padding: '0.6rem 1rem',
-                  borderRadius: m.isOwn ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                  background: m.isOwn ? 'rgba(56,189,248,0.15)' : 'rgba(148,163,184,0.1)',
-                  border: `1px solid ${m.isOwn ? 'rgba(56,189,248,0.25)' : 'rgba(148,163,184,0.12)'}`,
-                }}
-              >
-                <p style={{ margin: 0, fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.5 }}>
-                  {m.content}
-                </p>
-                <span
-                  style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 4, display: 'block' }}
-                >
-                  {new Date(m.createdAt).toLocaleTimeString('tr-TR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Chat Messages */}
+        <div className="chat-messages">
+          {loadingMsgs ? (
+            <div className="chat-loading">Mesajlar yükleniyor...</div>
+          ) : messages.length === 0 ? (
+            <div className="chat-empty">
+              <span>💬</span>
+              <p>Henüz mesaj yok. İlk mesajı gönderin!</p>
+            </div>
+          ) : (
+            <>
+              {messages.map((m, idx) => {
+                const showDate =
+                  idx === 0 ||
+                  new Date(m.createdAt).toDateString() !==
+                    new Date(messages[idx - 1].createdAt).toDateString();
+                return (
+                  <div key={m.id}>
+                    {showDate && (
+                      <div className="chat-date-sep">
+                        {new Date(m.createdAt).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </div>
+                    )}
+                    <div className={`chat-bubble ${m.isOwn ? 'own' : 'other'}`}>
+                      <p>{m.content}</p>
+                      <span className="chat-time">
+                        {new Date(m.createdAt).toLocaleTimeString('tr-TR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
 
-        {/* Message input */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* Chat Input */}
+        <div className="chat-input-bar">
           <input
             type="text"
             value={newMsg}
@@ -1209,93 +1274,60 @@ function MessagesView({
               }
             }}
             placeholder="Mesajınızı yazın..."
-            style={{
-              flex: 1,
-              padding: '0.7rem 1rem',
-              borderRadius: 10,
-              border: '1px solid rgba(148,163,184,0.2)',
-              background: 'rgba(15,23,42,0.8)',
-              color: '#e2e8f0',
-              fontSize: '0.9rem',
-            }}
+            className="chat-input"
           />
           <button
             onClick={() => void sendMessage()}
             disabled={sending || !newMsg.trim()}
-            className="btn-primary"
-            style={{ padding: '0.7rem 1.2rem', fontSize: '0.88rem' }}
+            className="chat-send-btn"
           >
-            {sending ? '...' : 'Gönder'}
+            {sending ? '...' : '➤'}
           </button>
         </div>
       </div>
     );
   }
 
-  // Conversation list
+  // ═══ CONVERSATION LIST ═══
   return (
     <div>
       <h2>💬 Mesajlarım</h2>
       {conversations.length === 0 ? (
         <p className="dashboard-empty">Henüz mesajınız yok.</p>
       ) : (
-        <div className="dashboard-list">
+        <div className="chat-list">
           {conversations.map((c) => (
             <div
               key={c.id}
-              className="dashboard-list-item"
-              style={{ cursor: 'pointer' }}
+              className={`chat-list-item ${c.unreadCount > 0 ? 'unread' : ''}`}
               onClick={() => openConversation(c.id)}
             >
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    background: 'rgba(56,189,248,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                  }}
-                >
-                  {c.otherUser.photoUrl ? (
-                    <img
-                      src={c.otherUser.photoUrl}
-                      alt=""
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <span style={{ color: '#38bdf8', fontWeight: 800 }}>
-                      {c.otherUser.firstName[0]}
+              <div className="chat-avatar">
+                {c.otherUser.photoUrl ? (
+                  <img src={c.otherUser.photoUrl} alt="" />
+                ) : (
+                  <span>{c.otherUser.firstName[0]}</span>
+                )}
+              </div>
+              <div className="chat-list-info">
+                <div className="chat-list-top">
+                  <strong>
+                    {c.otherUser.firstName} {c.otherUser.lastName}
+                  </strong>
+                  {c.lastMessageAt && (
+                    <span className="chat-list-time">
+                      {new Date(c.lastMessageAt).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
                     </span>
                   )}
                 </div>
-                <div style={{ overflow: 'hidden' }}>
-                  <strong style={{ display: 'block' }}>
-                    {c.otherUser.firstName} {c.otherUser.lastName}
-                  </strong>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '0.82rem',
-                      color: '#94a3b8',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {c.lastMessage || c.lastMessagePreview || 'Henüz mesaj yok'}
-                  </p>
-                </div>
+                <p className="chat-list-preview">
+                  {c.lastMessage || c.lastMessagePreview || 'Henüz mesaj yok'}
+                </p>
               </div>
-              {c.unreadCount > 0 && (
-                <span className="topbar-badge" style={{ position: 'static' }}>
-                  {c.unreadCount}
-                </span>
-              )}
+              {c.unreadCount > 0 && <span className="chat-badge">{c.unreadCount}</span>}
             </div>
           ))}
         </div>
