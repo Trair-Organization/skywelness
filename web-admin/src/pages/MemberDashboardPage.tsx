@@ -162,15 +162,14 @@ export function MemberDashboardPage() {
       if (results[9].status === 'fulfilled') setPayments(results[9].value);
       // Kulüplerim
       try {
-        const clubs =
-          await apiJson<
-            Array<{
-              membershipId: string;
-              role: string;
-              isCurrent: boolean;
-              tenant: { id: string; name: string; subdomain: string; logoUrl: string | null };
-            }>
-          >('/auth/my-memberships');
+        const clubs = await apiJson<
+          Array<{
+            membershipId: string;
+            role: string;
+            isCurrent: boolean;
+            tenant: { id: string; name: string; subdomain: string; logoUrl: string | null };
+          }>
+        >('/auth/my-memberships');
         setMyClubs(
           clubs.map((m) => ({
             id: m.tenant.id,
@@ -228,9 +227,12 @@ export function MemberDashboardPage() {
   return (
     <div className="public-shell">
       <nav className="public-nav">
-        <Link to="/" className="public-nav-brand">
-          <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
-          <img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" />
+        <Link
+          to="/"
+          className="public-nav-brand"
+          style={{ color: '#38bdf8', fontWeight: 800, fontSize: '1.1rem', textDecoration: 'none' }}
+        >
+          WellnessClub
         </Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>
