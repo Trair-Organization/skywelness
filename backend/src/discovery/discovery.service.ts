@@ -18,14 +18,49 @@ export class DiscoveryService {
   ) {}
 
   /** Keşif: Tüm kulüpler (featured önce, sonra isim sırasına göre). */
-  async listClubs(limit = 20, city?: string, district?: string) {
-    const qb = this.tenantsRepo.createQueryBuilder('t')
-      .orderBy('t.featured', 'DESC')
-      .addOrderBy('t.name', 'ASC')
-      .take(Math.min(limit, 50));
+  async listClubs(
+    limit = 20,
+    city?: string,
+    district?: string,
+    search?: string,
+    vertical?: string,
+    sortBy?: string,
+  ) {
+    const qb = this.tenantsRepo.createQueryBuilder('t');
+
+    // Arama (isim, açıklama, hizmetler)
+    if (search && search.trim().length >= 2) {
+      const q = `%${search.trim().toLowerCase()}%`;
+      qb.andWhere(
+        '(LOWER(t.name) LIKE :q OR LOWER(t.description) LIKE :q OR EXISTS (SELECT 1 FROM unnest(t.services) s WHERE LOWER(s) LIKE :q))',
+        { q },
+      );
+    }
+
+    // Kategori (vertical) filtresi
+    if (vertical) qb.andWhere('t.vertical = :vertical', { vertical });
 
     if (city) qb.andWhere('t.city = :city', { city });
     if (district) qb.andWhere('t.district = :district', { district });
+
+    // Sıralama
+    switch (sortBy) {
+      case 'rating':
+        qb.orderBy('t.avgRating', 'DESC').addOrderBy('t.reviewCount', 'DESC');
+        break;
+      case 'newest':
+        qb.orderBy('t.createdAt', 'DESC');
+        break;
+      case 'name':
+        qb.orderBy('t.name', 'ASC');
+        break;
+      default:
+        qb.orderBy('t.featured', 'DESC')
+          .addOrderBy('t.avgRating', 'DESC')
+          .addOrderBy('t.name', 'ASC');
+    }
+
+    qb.take(Math.min(limit, 50));
 
     const rows = await qb.getMany();
     return rows
@@ -86,7 +121,8 @@ export class DiscoveryService {
 
   /** Keşif: Onaylı eğitmenler (profil bilgileriyle). */
   async listTrainers(limit = 20, city?: string) {
-    const qb = this.profilesRepo.createQueryBuilder('p')
+    const qb = this.profilesRepo
+      .createQueryBuilder('p')
       .leftJoinAndSelect('p.user', 'u')
       .leftJoinAndSelect('p.trainer', 'tr')
       .leftJoinAndSelect('p.tenant', 't')

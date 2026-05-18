@@ -11,14 +11,24 @@ import { DiscoveryService } from './discovery.service';
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 
-  /** Tüm kulüpler (marketplace listesi). Lokasyon filtresi opsiyonel. */
+  /** Tüm kulüpler (marketplace listesi). Arama, kategori ve lokasyon filtresi. */
   @Get('clubs')
   listClubs(
     @Query('limit') limit?: string,
     @Query('city') city?: string,
     @Query('district') district?: string,
+    @Query('search') search?: string,
+    @Query('vertical') vertical?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.discoveryService.listClubs(Number(limit) || 20, city, district);
+    return this.discoveryService.listClubs(
+      Number(limit) || 20,
+      city,
+      district,
+      search,
+      vertical,
+      sort,
+    );
   }
 
   /** Öne çıkan kulüpler (admin tarafından seçilmiş). */

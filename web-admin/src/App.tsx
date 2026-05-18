@@ -57,6 +57,7 @@ import { SuperAdminAuditPage } from './pages/SuperAdminAuditPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import './admin.css';
 import './public.css';
+import './vitrin.css';
 
 function AppRoutes() {
   return (
