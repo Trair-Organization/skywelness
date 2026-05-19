@@ -81,6 +81,9 @@ const VERTICALS = [
   { key: 'fitness', label: 'Fitness', icon: '🏋️' },
   { key: 'wellness', label: 'Wellness & Spa', icon: '🧖' },
   { key: 'padel', label: 'Padel & Tenis', icon: '🎾' },
+  { key: 'nutrition', label: 'Beslenme & Diyet', icon: '🥗' },
+  { key: 'yoga', label: 'Yoga & Pilates', icon: '🧘' },
+  { key: 'beauty', label: 'Güzellik', icon: '💅' },
   { key: 'yoga', label: 'Yoga & Pilates', icon: '🧘' },
   { key: 'beauty', label: 'Güzellik', icon: '💅' },
   { key: 'medical', label: 'Medikal', icon: '⚕️' },
@@ -593,6 +596,7 @@ export function PublicDiscoverPage() {
             <Link to="/discover?vertical=fitness">Fitness</Link>
             <Link to="/discover?vertical=wellness">Wellness & Spa</Link>
             <Link to="/discover?vertical=padel">Padel & Tenis</Link>
+            <Link to="/discover?vertical=nutrition">Beslenme & Diyet</Link>
             <Link to="/discover?vertical=yoga">Yoga & Pilates</Link>
           </div>
           <div className="vitrin-footer-col">
