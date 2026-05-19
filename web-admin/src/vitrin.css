@@ -3894,3 +3894,53 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* Participants selection */
+.bw-participants {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.bw-participant-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.bw-participant-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.05);
+  transform: translateY(-2px);
+}
+.bw-participant-card.active {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(56, 189, 248, 0.12);
+}
+.bw-participant-icon {
+  font-size: 1.4rem;
+}
+.bw-participant-num {
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-weight: 800;
+}
+.bw-participant-hint {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.bw-participant-card.active .bw-participant-num {
+  color: #38bdf8;
+}
+
+@media (max-width: 768px) {
+  .bw-participants {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
