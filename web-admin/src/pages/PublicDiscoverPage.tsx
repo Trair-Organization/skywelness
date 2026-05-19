@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { CITY_LIST, getDistricts } from '@rezidans-fitness/shared';
+import { useAuth } from '../auth/AuthContext';
 
 const ClubMap = lazy(() => import('../components/ClubMap').then((m) => ({ default: m.ClubMap })));
 
@@ -93,6 +94,8 @@ const SORT_OPTIONS = [
 ];
 
 export function PublicDiscoverPage() {
+  const { user, token, logout } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [clubs, setClubs] = useState<Club[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -199,15 +202,53 @@ export function PublicDiscoverPage() {
           <Link to="/discover" className="vitrin-nav-link active">
             Keşfet
           </Link>
-          <Link to="/partner-register" className="vitrin-nav-link">
-            Partner Ol
-          </Link>
-          <Link to="/register" className="vitrin-nav-link">
-            Üye Ol
-          </Link>
-          <Link to="/login" className="vitrin-nav-login">
-            Giriş Yap
-          </Link>
+          {!token && (
+            <>
+              <Link to="/partner-register" className="vitrin-nav-link">
+                Partner Ol
+              </Link>
+              <Link to="/register" className="vitrin-nav-link">
+                Üye Ol
+              </Link>
+              <Link to="/login" className="vitrin-nav-login">
+                Giriş Yap
+              </Link>
+            </>
+          )}
+          {token && user && (
+            <>
+              <Link
+                to={
+                  user.role === 'member'
+                    ? '/dashboard'
+                    : user.role === 'trainer'
+                      ? '/trainer/dashboard'
+                      : user.role === 'platform_admin'
+                        ? '/super-admin/dashboard'
+                        : '/club/dashboard'
+                }
+                className="vitrin-nav-login"
+              >
+                {user.role === 'member' ? '👤 Panelim' : '🏢 Panele Geç'}
+              </Link>
+              <button
+                type="button"
+                className="vitrin-nav-link"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  font: 'inherit',
+                }}
+              >
+                Çıkış
+              </button>
+            </>
+          )}
         </div>
       </nav>
 

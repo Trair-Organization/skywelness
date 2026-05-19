@@ -37,7 +37,8 @@ export function LoginPage() {
       return <Navigate to="/super-admin/dashboard" replace />;
     }
     if (user.role === 'member') {
-      return <Navigate to={from === '/login' || from === '/' ? '/dashboard' : from} replace />;
+      // Üye girince ana siteye git; panele "Panele Geç" linkinden ulaşılır
+      return <Navigate to={from === '/login' ? '/' : from} replace />;
     }
     return <Navigate to={from === '/login' || from === '/' ? '/club/dashboard' : from} replace />;
   }

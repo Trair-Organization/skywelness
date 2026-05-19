@@ -153,7 +153,7 @@ function getWeekDays(weekOffset: number) {
 
 export function ClubProfilePage() {
   const { subdomain } = useParams<{ subdomain: string }>();
-  const { token } = useAuth();
+  const { token, user, logout } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -289,9 +289,45 @@ export function ClubProfilePage() {
         </Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>
-          <Link to="/login" className="public-nav-login">
-            Giriş Yap
-          </Link>
+          {!token && (
+            <Link to="/login" className="public-nav-login">
+              Giriş Yap
+            </Link>
+          )}
+          {token && user && (
+            <>
+              <Link
+                to={
+                  user.role === 'member'
+                    ? '/dashboard'
+                    : user.role === 'trainer'
+                      ? '/trainer/dashboard'
+                      : user.role === 'platform_admin'
+                        ? '/super-admin/dashboard'
+                        : '/club/dashboard'
+                }
+                className="public-nav-login"
+              >
+                {user.role === 'member' ? '👤 Panelim' : '🏢 Panele Geç'}
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  font: 'inherit',
+                  padding: 0,
+                }}
+              >
+                Çıkış
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
