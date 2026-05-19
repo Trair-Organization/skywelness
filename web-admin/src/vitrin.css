@@ -4025,3 +4025,10 @@
   color: #64748b;
   font-size: 0.72rem;
 }
+
+.bw-option-label {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
