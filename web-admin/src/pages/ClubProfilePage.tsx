@@ -59,6 +59,11 @@ function ProviderBooking({
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [booking, setBooking] = useState(false);
   const [booked, setBooked] = useState<string | null>(null);
+  // Addon state
+  const [addons, setAddons] = useState<Array<{ id: string; name: string; price: string }>>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
+  const [showAddonStep, setShowAddonStep] = useState(false);
 
   // Hizmetleri yükle
   useEffect(() => {
@@ -84,16 +89,42 @@ function ProviderBooking({
       .catch(() => setSlots([]));
   }, [subdomain, selectedService, selectedDate]);
 
+  // Addon'ları yükle
+  useEffect(() => {
+    apiJson<Array<{ id: string; name: string; price: string }>>(
+      `/v2/addons?tenant=${encodeURIComponent(subdomain)}`,
+      { auth: false },
+    )
+      .then(setAddons)
+      .catch(() => setAddons([]));
+  }, [subdomain]);
+
   const days = getWeekDays(weekOffset);
 
-  async function handleBook(slotId: string) {
+  function handleSlotSelect(slotId: string) {
     if (!token) return;
+    setSelectedSlotId(slotId);
+    if (addons.length > 0) {
+      setShowAddonStep(true);
+      setAddonSelections({});
+    } else {
+      void proceedToCheckout(slotId, []);
+    }
+  }
+
+  async function proceedToCheckout(
+    slotId: string,
+    selectedAddons: Array<{ addonId: string; quantity: number }>,
+  ) {
     setBooking(true);
+    setShowAddonStep(false);
     try {
-      // Stripe Checkout'a yönlendir (kapora modeli)
       const res = await apiJson<{ checkoutUrl: string; sessionId: string }>('/v2/checkout', {
         method: 'POST',
-        body: JSON.stringify({ slotId }),
+        body: JSON.stringify({
+          slotId,
+          addons: selectedAddons.length > 0 ? selectedAddons : undefined,
+        }),
       });
       if (res.checkoutUrl) {
         window.location.assign(res.checkoutUrl);
@@ -105,6 +136,13 @@ function ProviderBooking({
     } finally {
       setBooking(false);
     }
+  }
+
+  function confirmAddons() {
+    const selected = Object.entries(addonSelections)
+      .filter(([, qty]) => qty > 0)
+      .map(([addonId, quantity]) => ({ addonId, quantity }));
+    void proceedToCheckout(selectedSlotId!, selected);
   }
 
   if (services.length === 0) return null;
@@ -197,7 +235,7 @@ function ProviderBooking({
             <button
               key={s.id}
               className="slot-btn"
-              onClick={() => handleBook(s.id)}
+              onClick={() => handleSlotSelect(s.id)}
               disabled={booking}
             >
               <span className="slot-time">
@@ -206,6 +244,67 @@ function ProviderBooking({
               <span className="slot-price">{s.price}₺</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Addon Seçim Adımı */}
+      {showAddonStep && (
+        <div className="addon-step">
+          <h3 style={{ color: '#fff', fontSize: '1rem', marginBottom: 12 }}>
+            🛒 Ek Hizmet Eklemek İster misiniz?
+          </h3>
+          <div className="addon-list">
+            {addons.map((addon) => (
+              <div key={addon.id} className="addon-item">
+                <div>
+                  <strong>{addon.name}</strong>
+                  <span className="addon-price">+{addon.price}₺</span>
+                </div>
+                <div className="addon-qty">
+                  <button
+                    onClick={() =>
+                      setAddonSelections((prev) => ({
+                        ...prev,
+                        [addon.id]: Math.max(0, (prev[addon.id] || 0) - 1),
+                      }))
+                    }
+                    disabled={(addonSelections[addon.id] || 0) === 0}
+                  >
+                    −
+                  </button>
+                  <span>{addonSelections[addon.id] || 0}</span>
+                  <button
+                    onClick={() =>
+                      setAddonSelections((prev) => ({
+                        ...prev,
+                        [addon.id]: (prev[addon.id] || 0) + 1,
+                      }))
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="addon-actions">
+            <button
+              className="btn-primary"
+              onClick={confirmAddons}
+              disabled={booking}
+              style={{ flex: 1 }}
+            >
+              {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
+            </button>
+            <button
+              className="btn-outline"
+              onClick={() => void proceedToCheckout(selectedSlotId!, [])}
+              disabled={booking}
+              style={{ flex: 1 }}
+            >
+              Ek Hizmet İstemiyorum
+            </button>
+          </div>
         </div>
       )}
     </section>

@@ -2327,3 +2327,81 @@
     justify-content: center;
   }
 }
+
+/* ═══ Addon Selection Step ═══════════════════════════════════════════════════ */
+.addon-step {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.05) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+.addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.addon-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+.addon-item strong {
+  color: #f1f5f9;
+  font-size: 0.9rem;
+}
+.addon-price {
+  color: #10b981;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+.addon-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.addon-qty button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.08);
+  color: #38bdf8;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.addon-qty button:hover {
+  background: rgba(56, 189, 248, 0.15);
+}
+.addon-qty button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.addon-qty span {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 1rem;
+  min-width: 20px;
+  text-align: center;
+}
+.addon-actions {
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .addon-actions {
+    flex-direction: column;
+  }
+}
