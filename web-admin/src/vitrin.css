@@ -2441,3 +2441,177 @@
     opacity: 1;
   }
 }
+
+/* ═══ Order Summary Panel ═════════════════════════════════════════════════════ */
+.order-summary-panel {
+  margin-top: 1.25rem;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(12, 16, 24, 0.98) 0%, rgba(20, 30, 48, 0.95) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.order-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: rgba(56, 189, 248, 0.04);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+}
+.order-summary-header h3 {
+  margin: 0;
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.order-summary-close {
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+.order-summary-close:hover {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+/* Details */
+.order-summary-details {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+}
+.order-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.order-detail-icon {
+  font-size: 1.3rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.order-detail-info {
+  flex: 1;
+}
+.order-detail-info strong {
+  display: block;
+  color: #f1f5f9;
+  font-size: 0.9rem;
+}
+.order-detail-info p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+.order-detail-price {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Addons Section */
+.order-addons-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+}
+.order-addons-section h4 {
+  margin: 0 0 10px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* Price Breakdown */
+.order-price-breakdown {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+}
+.order-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+.order-price-total {
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.order-price-kapora {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 8px 12px;
+  margin-top: 8px;
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.12);
+  border-radius: 10px;
+}
+.order-price-note {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Actions */
+.order-summary-panel .addon-actions {
+  padding: 16px 20px 12px;
+}
+.order-skip-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 20px 16px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.order-skip-btn:hover {
+  color: #38bdf8;
+}
+.order-skip-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .order-summary-panel {
+    margin-top: 1rem;
+    border-radius: 14px;
+  }
+  .order-summary-details,
+  .order-addons-section,
+  .order-price-breakdown,
+  .order-summary-panel .addon-actions {
+    padding: 12px 16px;
+  }
+}

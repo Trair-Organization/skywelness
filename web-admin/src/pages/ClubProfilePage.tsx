@@ -253,66 +253,147 @@ function ProviderBooking({
         </div>
       )}
 
-      {/* Addon Seçim Adımı */}
-      {showAddonStep && (
-        <div className="addon-step">
-          <h3 style={{ color: '#fff', fontSize: '1rem', marginBottom: 12 }}>
-            🛒 Ek Hizmet Eklemek İster misiniz?
-          </h3>
-          <div className="addon-list">
-            {addons.map((addon) => (
-              <div key={addon.id} className="addon-item">
-                <div>
-                  <strong>{addon.name}</strong>
-                  <span className="addon-price">+{addon.price}₺</span>
+      {/* Sipariş Özeti + Addon Seçim Adımı */}
+      {showAddonStep &&
+        (() => {
+          const selectedSlot = slots.find((s) => s.id === selectedSlotId);
+          const selectedSvc = services.find((s) => s.id === selectedService);
+          const addonTotal = Object.entries(addonSelections).reduce((sum, [id, qty]) => {
+            const a = addons.find((x) => x.id === id);
+            return sum + (a ? parseFloat(a.price) * qty : 0);
+          }, 0);
+          const basePrice = selectedSlot ? parseFloat(selectedSlot.price) : 0;
+          const totalPrice = basePrice + addonTotal;
+          const commissionRate = 0.07; // TODO: tenant'tan gelmeli
+          const kaporaPrice = Math.round(totalPrice * commissionRate);
+
+          return (
+            <div className="order-summary-panel">
+              {/* Başlık */}
+              <div className="order-summary-header">
+                <h3>📋 Rezervasyon Özeti</h3>
+                <button className="order-summary-close" onClick={() => setShowAddonStep(false)}>
+                  ✕
+                </button>
+              </div>
+
+              {/* Seçilen Hizmet Bilgileri */}
+              <div className="order-summary-details">
+                <div className="order-detail-row">
+                  <span className="order-detail-icon">🎾</span>
+                  <div className="order-detail-info">
+                    <strong>{selectedSvc?.providerName || selectedSvc?.name || 'Hizmet'}</strong>
+                    <p>{selectedSvc?.durationMinutes}dk</p>
+                  </div>
+                  <span className="order-detail-price">{basePrice.toLocaleString('tr-TR')}₺</span>
                 </div>
-                <div className="addon-qty">
-                  <button
-                    onClick={() =>
-                      setAddonSelections((prev) => ({
-                        ...prev,
-                        [addon.id]: Math.max(0, (prev[addon.id] || 0) - 1),
-                      }))
-                    }
-                    disabled={(addonSelections[addon.id] || 0) === 0}
-                  >
-                    −
-                  </button>
-                  <span>{addonSelections[addon.id] || 0}</span>
-                  <button
-                    onClick={() =>
-                      setAddonSelections((prev) => ({
-                        ...prev,
-                        [addon.id]: (prev[addon.id] || 0) + 1,
-                      }))
-                    }
-                  >
-                    +
-                  </button>
+                <div className="order-detail-row">
+                  <span className="order-detail-icon">📅</span>
+                  <div className="order-detail-info">
+                    <strong>
+                      {selectedDate &&
+                        new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                        })}
+                    </strong>
+                    <p>
+                      {selectedSlot?.startTime} - {selectedSlot?.endTime}
+                    </p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-          <div className="addon-actions">
-            <button
-              className="btn-primary"
-              onClick={confirmAddons}
-              disabled={booking}
-              style={{ flex: 1 }}
-            >
-              {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
-            </button>
-            <button
-              className="btn-outline"
-              onClick={() => void proceedToCheckout(selectedSlotId!, [])}
-              disabled={booking}
-              style={{ flex: 1 }}
-            >
-              Ek Hizmet İstemiyorum
-            </button>
-          </div>
-        </div>
-      )}
+
+              {/* Ek Hizmetler */}
+              {addons.length > 0 && (
+                <div className="order-addons-section">
+                  <h4>🛒 Ek Hizmetler</h4>
+                  <div className="addon-list">
+                    {addons.map((addon) => (
+                      <div key={addon.id} className="addon-item">
+                        <div>
+                          <strong>{addon.name}</strong>
+                          <span className="addon-price">
+                            +{parseFloat(addon.price).toLocaleString('tr-TR')}₺
+                          </span>
+                        </div>
+                        <div className="addon-qty">
+                          <button
+                            onClick={() =>
+                              setAddonSelections((prev) => ({
+                                ...prev,
+                                [addon.id]: Math.max(0, (prev[addon.id] || 0) - 1),
+                              }))
+                            }
+                            disabled={(addonSelections[addon.id] || 0) === 0}
+                          >
+                            −
+                          </button>
+                          <span>{addonSelections[addon.id] || 0}</span>
+                          <button
+                            onClick={() =>
+                              setAddonSelections((prev) => ({
+                                ...prev,
+                                [addon.id]: (prev[addon.id] || 0) + 1,
+                              }))
+                            }
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fiyat Breakdown */}
+              <div className="order-price-breakdown">
+                <div className="order-price-row">
+                  <span>Hizmet Bedeli</span>
+                  <span>{basePrice.toLocaleString('tr-TR')}₺</span>
+                </div>
+                {addonTotal > 0 && (
+                  <div className="order-price-row">
+                    <span>Ek Hizmetler</span>
+                    <span>+{addonTotal.toLocaleString('tr-TR')}₺</span>
+                  </div>
+                )}
+                <div className="order-price-row order-price-total">
+                  <span>Toplam</span>
+                  <span>{totalPrice.toLocaleString('tr-TR')}₺</span>
+                </div>
+                <div className="order-price-row order-price-kapora">
+                  <span>💳 Online Kapora (%{Math.round(commissionRate * 100)})</span>
+                  <span>{kaporaPrice.toLocaleString('tr-TR')}₺</span>
+                </div>
+                <p className="order-price-note">Kalan tutar kulüpte ödenecektir</p>
+              </div>
+
+              {/* Aksiyon Butonları */}
+              <div className="addon-actions">
+                <button
+                  className="btn-primary"
+                  onClick={confirmAddons}
+                  disabled={booking}
+                  style={{ flex: 1 }}
+                >
+                  {booking
+                    ? 'Yönlendiriliyor...'
+                    : `💳 ${kaporaPrice.toLocaleString('tr-TR')}₺ Öde & Rezerve Et`}
+                </button>
+              </div>
+              <button
+                className="order-skip-btn"
+                onClick={() => void proceedToCheckout(selectedSlotId!, [])}
+                disabled={booking}
+              >
+                Ek hizmet istemiyorum, devam et →
+              </button>
+            </div>
+          );
+        })()}
     </section>
   );
 }
