@@ -90,9 +90,16 @@ function ProviderBooking({
     if (!token) return;
     setBooking(true);
     try {
-      await apiJson('/v2/appointments', { method: 'POST', body: JSON.stringify({ slotId }) });
-      setBooked(slotId);
-      setSlots((prev) => prev.filter((s) => s.id !== slotId));
+      // Stripe Checkout'a yönlendir (kapora modeli)
+      const res = await apiJson<{ checkoutUrl: string; sessionId: string }>('/v2/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ slotId }),
+      });
+      if (res.checkoutUrl) {
+        window.location.assign(res.checkoutUrl);
+      } else {
+        alert('Ödeme başlatılamadı');
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Rezervasyon başarısız');
     } finally {
@@ -1016,7 +1023,7 @@ function PackageBuyButton({ packageId, price }: { packageId: string; price: stri
         }),
       });
       if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
+        window.location.assign(res.checkoutUrl);
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Ödeme başlatılamadı');
