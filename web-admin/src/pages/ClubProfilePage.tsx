@@ -1020,8 +1020,24 @@ function CategoryWizard({
   useEffect(() => {
     if (!selectedDate) return;
 
-    // Masaj kategorisinde spa-rooms endpoint'ini kullan (oda + masöz eşleşmeli slotlar)
+    // Masaj kategorisinde:
+    // - Belirli bir masaj hizmeti seçildiyse: o hizmetin slotlarını normal endpoint'ten çek
+    // - Seçilmediyse: spa-rooms endpoint'i ile oda bazlı tüm slotları getir
     if (isMassage) {
+      if (selectedType) {
+        // Belirli masaj hizmeti seçildi — normal schedule endpoint
+        apiJson<V2Slot[]>(
+          `/v2/schedule?tenant=${encodeURIComponent(subdomain)}&serviceId=${selectedType}&date=${selectedDate}`,
+          { auth: false },
+        )
+          .then((data) => {
+            setSlots(data);
+          })
+          .catch(() => setSlots([]));
+        return;
+      }
+
+      // Hizmet seçilmedi — tüm spa-rooms slotlarını göster
       const params = new URLSearchParams({
         tenant: subdomain,
         date: selectedDate,
@@ -1050,20 +1066,13 @@ function CategoryWizard({
         date: string;
       }>(`/v2/schedule/spa-rooms?${params}`, { auth: false })
         .then((data) => {
-          // Spa-rooms verisini V2Slot formatına dönüştür
           const allSlots: V2Slot[] = [];
           for (const room of data.rooms || []) {
-            // Filtre: belirli masöz seçildiyse sadece o masözün olduğu slotları göster
-            // Filtre: belirli oda seçildiyse sadece o odanın slotlarını göster
-            if (selectedType && room.roomId !== selectedType) continue;
-
             for (const ts of room.timeSlots) {
               if (!ts.isBookable) continue;
-              // Masöz filtresi
               if (selectedMasoz && !ts.availableTherapists.some((t) => t.id === selectedMasoz))
                 continue;
 
-              // Masöz seçiliyse masözün slotId'sini kullan, yoksa odanın slotId'sini
               const slotId = selectedMasoz
                 ? ts.availableTherapists.find((t) => t.id === selectedMasoz)?.slotId ||
                   ts.roomSlotId
@@ -1166,37 +1175,26 @@ function CategoryWizard({
           </div>
         )}
 
-        {/* Masaj Türü / Oda (sadece masaj kategorisinde) */}
-        {isMassage && rooms.filter((r) => r.capacity >= participants).length > 0 && (
+        {/* Masaj Türü (admin paneldeki masaj hizmetleri — dropdown) */}
+        {isMassage && services.length > 0 && (
           <div className="bw-filter-row">
             <span className="bw-filter-label">🏠 Masaj Türü:</span>
-            <div className="bw-filter-chips">
-              <button
-                className={`bw-chip ${!selectedType ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedType('');
-                  setSelectedSlotId(null);
-                  setShowConfirm(false);
-                }}
-              >
-                Fark Etmez
-              </button>
-              {rooms
-                .filter((r) => r.capacity >= participants)
-                .map((r) => (
-                  <button
-                    key={r.id}
-                    className={`bw-chip ${selectedType === r.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedType(r.id);
-                      setSelectedSlotId(null);
-                      setShowConfirm(false);
-                    }}
-                  >
-                    {r.name} · {r.price}₺
-                  </button>
-                ))}
-            </div>
+            <select
+              className="bw-select"
+              value={selectedType}
+              onChange={(e) => {
+                setSelectedType(e.target.value);
+                setSelectedSlotId(null);
+                setShowConfirm(false);
+              }}
+            >
+              <option value="">Tümü</option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} — {s.durationMinutes}dk · {s.price}₺
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
