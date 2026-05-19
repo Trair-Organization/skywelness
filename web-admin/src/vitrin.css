@@ -80,7 +80,9 @@
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  height: 420px;
+  aspect-ratio: 16 / 7;
+  min-height: 380px;
+  max-height: 620px;
   overflow: hidden;
   border-radius: 0 0 24px 24px;
 }
@@ -106,13 +108,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem 2rem 3rem;
   background: linear-gradient(
     to top,
-    rgba(10, 10, 15, 0.9) 0%,
-    rgba(10, 10, 15, 0.3) 60%,
+    rgba(10, 10, 15, 0.92) 0%,
+    rgba(10, 10, 15, 0.55) 45%,
+    rgba(10, 10, 15, 0.15) 75%,
     transparent 100%
   );
 }
@@ -1078,8 +1081,13 @@
     justify-content: center;
   }
   .vitrin-hero-slider {
-    height: 240px;
+    aspect-ratio: 4 / 3;
+    min-height: 280px;
+    max-height: 420px;
     border-radius: 0;
+  }
+  .vitrin-slide-content {
+    padding: 1.5rem 1rem 2rem;
   }
   .vitrin-slide-content h1 {
     font-size: 1.4rem;
