@@ -14,8 +14,8 @@ export function BookingSuccessPage() {
     <div className="public-shell">
       <nav className="public-nav">
         <Link to="/" className="public-nav-brand">
-          <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
-          <img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" />
+          <img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" />
+          <img src="/wellnesslogoyazi.png?v=2" alt="Wellness Club" className="nav-logo-text" />
         </Link>
       </nav>
       <div style={{ maxWidth: 500, margin: '0 auto', padding: '4rem 2rem', textAlign: 'center' }}>

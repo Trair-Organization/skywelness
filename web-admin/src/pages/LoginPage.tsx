@@ -183,7 +183,7 @@ export function LoginPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-logo">
-            <img src="/wellnesslogodaire.png" alt="WellnessClub" />
+            <img src="/wellnesslogodaire.png?v=2" alt="WellnessClub" />
           </div>
           <h1 className="auth-title">{t('login.title')}</h1>
           <p className="auth-subtitle">{t('login.subtitle')}</p>

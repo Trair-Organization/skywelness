@@ -70,7 +70,7 @@ export function ResetPasswordPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-logo">
-            <img src="/wellnesslogodaire.png" alt="WellnessClub" />
+            <img src="/wellnesslogodaire.png?v=2" alt="WellnessClub" />
           </div>
           <h1 className="auth-title">Yeni Şifre Belirle</h1>
           <p className="auth-subtitle">En az 8 karakter, 1 büyük harf, 1 küçük harf ve 1 rakam.</p>

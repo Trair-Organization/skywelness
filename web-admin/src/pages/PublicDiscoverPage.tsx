@@ -195,7 +195,7 @@ export function PublicDiscoverPage() {
       {/* Navigation */}
       <nav className="vitrin-nav">
         <Link to="/" className="vitrin-nav-brand">
-          <img src="/wellnesslogoyazi.png" alt="WellnessClub" className="nav-logo-text" />
+          <img src="/wellnesslogoyazi.png?v=2" alt="WellnessClub" className="nav-logo-text" />
         </Link>
         <div className="vitrin-nav-links">
           <Link to="/discover" className="vitrin-nav-link active">
@@ -581,7 +581,7 @@ export function PublicDiscoverPage() {
       <footer className="vitrin-footer">
         <div className="vitrin-footer-top">
           <div className="vitrin-footer-brand">
-            <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
+            <img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" />
             <p>Sağlıklı yaşamın dijital platformu</p>
           </div>
           <div className="vitrin-footer-col">

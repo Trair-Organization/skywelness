@@ -142,7 +142,7 @@ export function PartnerRegisterPage() {
     return (
       <div className="public-shell">
         <nav className="public-nav">
-          <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" /></Link>
+          <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png?v=2" alt="Wellness Club" className="nav-logo-text" /></Link>
         </nav>
         <div className="auth-container">
           <div className="auth-card">
@@ -163,7 +163,7 @@ export function PartnerRegisterPage() {
     return (
       <div className="public-shell">
         <nav className="public-nav">
-          <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" /></Link>
+          <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png?v=2" alt="Wellness Club" className="nav-logo-text" /></Link>
           <div className="public-nav-links">
             <Link to="/discover">Keşfet</Link>
             <Link to="/register">Üye Ol</Link>
@@ -210,7 +210,7 @@ export function PartnerRegisterPage() {
     return (
       <div className="public-shell">
         <nav className="public-nav">
-          <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" /></Link>
+          <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png?v=2" alt="Wellness Club" className="nav-logo-text" /></Link>
           <div className="public-nav-links">
             <Link to="/discover">Keşfet</Link>
             <Link to="/login" className="public-nav-login">Giriş Yap</Link>
@@ -286,7 +286,7 @@ export function PartnerRegisterPage() {
   return (
     <div className="public-shell">
       <nav className="public-nav">
-        <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" /></Link>
+        <Link to="/" className="public-nav-brand"><img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" /><img src="/wellnesslogoyazi.png?v=2" alt="Wellness Club" className="nav-logo-text" /></Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>
           <Link to="/login" className="public-nav-login">Giriş Yap</Link>

@@ -32,7 +32,7 @@ export function ForgotPasswordPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-logo">
-            <img src="/wellnesslogodaire.png" alt="WellnessClub" />
+            <img src="/wellnesslogodaire.png?v=2" alt="WellnessClub" />
           </div>
           <h1 className="auth-title">Şifremi Unuttum</h1>
           <p className="auth-subtitle">E-posta adresini gir, sıfırlama bağlantısı gönderelim.</p>
