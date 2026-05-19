@@ -988,30 +988,33 @@ function CategoryWizard({
   addons: Addon[];
   needsParticipants: boolean;
 }) {
-  type Step = 'participants' | 'date' | 'options' | 'time' | 'confirm';
-  const [step, setStep] = useState<Step>(needsParticipants ? 'participants' : 'date');
-  const [participants, setParticipants] = useState(1);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedMasoz, setSelectedMasoz] = useState('');
-  const [selectedService, setSelectedService] = useState('');
-  const [slots, setSlots] = useState<V2Slot[]>([]);
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
-  const [booking, setBooking] = useState(false);
-
-  // Masözler ve Odalar/Hizmetler ayır
+  const isMassage = category === 'massage';
   const therapists = services.filter((s) => s.providerType === 'trainer');
   const rooms = services.filter((s) => s.providerType !== 'trainer');
   const capacities = [...new Set(services.map((s) => s.capacity))].sort((a, b) => a - b);
 
-  // Seçili hizmet: masöz seçildiyse masöz, yoksa kapasiteye uygun ilk oda
+  // Filters
+  const [participants, setParticipants] = useState(capacities[0] || 1);
+  const [selectedMasoz, setSelectedMasoz] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [slots, setSlots] = useState<V2Slot[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
+  const [booking, setBooking] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Effective service — masöz seçildiyse masöz, oda seçildiyse oda, yoksa kapasiteye uygun ilk
   const effectiveServiceId =
     selectedMasoz ||
-    selectedService ||
+    selectedType ||
     (() => {
-      const suitable = rooms.filter((r) => r.capacity >= participants);
-      return suitable.length > 0 ? suitable[0].id : services[0]?.id || '';
+      if (isMassage) {
+        const suitable = rooms.filter((r) => r.capacity >= participants);
+        return suitable[0]?.id || therapists[0]?.id || '';
+      }
+      return services.filter((s) => s.capacity >= participants)[0]?.id || '';
     })();
 
   useEffect(() => {
@@ -1027,18 +1030,9 @@ function CategoryWizard({
   const days = getWeekDays(weekOffset);
   const selectedSvc = services.find((s) => s.id === effectiveServiceId);
   const selectedSlot = slots.find((s) => s.id === selectedSlotId);
-
-  // Progress
-  const isMassage = category === 'massage';
-  const allSteps = needsParticipants
-    ? isMassage
-      ? ['Kişi', 'Tarih', 'Tercihler', 'Saat', 'Onay']
-      : ['Kişi', 'Tarih', 'Seçim', 'Saat', 'Onay']
-    : ['Tarih', 'Seçim', 'Saat', 'Onay'];
-  const stepOrder: Step[] = needsParticipants
-    ? ['participants', 'date', 'options', 'time', 'confirm']
-    : ['date', 'options', 'time', 'confirm'];
-  const stepIndex = stepOrder.indexOf(step);
+  const futureSlots = slots.filter(
+    (s) => new Date(`${selectedDate}T${s.startTime}:00`) > new Date(),
+  );
 
   async function proceedToCheckout() {
     if (!selectedSlotId) return;
@@ -1069,387 +1063,286 @@ function CategoryWizard({
     }
   }
 
-  function goBack() {
-    const idx = stepOrder.indexOf(step);
-    if (idx > 0) setStep(stepOrder[idx - 1]);
-  }
-
   return (
-    <>
-      {/* Progress */}
-      <div className="bw-progress">
-        {allSteps.map((label, i) => (
-          <div
-            key={i}
-            className={`bw-step ${stepIndex > i ? 'done' : ''} ${stepIndex === i ? 'active' : ''}`}
-          >
-            <span className="bw-step-num">{stepIndex > i ? '✓' : i + 1}</span>
-            <span className="bw-step-label">{label}</span>
+    <div className="bw-filter-view">
+      {/* Filtreler */}
+      <div className="bw-filters">
+        {/* Kişi Sayısı */}
+        {needsParticipants && capacities.length > 1 && (
+          <div className="bw-filter-row">
+            <span className="bw-filter-label">👥 Kişi:</span>
+            <div className="bw-filter-chips">
+              {capacities.map((n) => (
+                <button
+                  key={n}
+                  className={`bw-chip ${participants === n ? 'active' : ''}`}
+                  onClick={() => {
+                    setParticipants(n);
+                    setSelectedType('');
+                    setSelectedSlotId(null);
+                    setShowConfirm(false);
+                  }}
+                >
+                  {n} Kişi
+                </button>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Kişi */}
-      {step === 'participants' && (
-        <div>
-          <p className="bw-step-title">👥 Kaç kişi geleceksiniz?</p>
-          <div className="bw-participants">
-            {capacities.map((n) => (
+        {/* Masaj Türü / Oda (sadece masaj kategorisinde) */}
+        {isMassage && rooms.filter((r) => r.capacity >= participants).length > 0 && (
+          <div className="bw-filter-row">
+            <span className="bw-filter-label">🏠 Masaj Türü:</span>
+            <div className="bw-filter-chips">
               <button
-                key={n}
-                className={`bw-participant-card ${participants === n ? 'active' : ''}`}
+                className={`bw-chip ${!selectedType ? 'active' : ''}`}
                 onClick={() => {
-                  setParticipants(n);
-                  setStep('date');
+                  setSelectedType('');
+                  setSelectedSlotId(null);
+                  setShowConfirm(false);
                 }}
               >
-                <span className="bw-participant-icon">
-                  {'👤'.repeat(Math.min(n, 3))}
-                  {n > 3 ? '+' : ''}
-                </span>
-                <span className="bw-participant-num">{n} Kişi</span>
+                Fark Etmez
               </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tarih */}
-      {step === 'date' && (
-        <div>
-          {stepIndex > 0 && (
-            <button className="bw-back" onClick={goBack}>
-              ← Geri
-            </button>
-          )}
-          <p className="bw-step-title">📅 Ne zaman gelmek istiyorsunuz?</p>
-          <div className="bw-selected-info">
-            <span>
-              {categoryMeta.icon} {categoryMeta.label}
-              {needsParticipants ? ` · 👥 ${participants}` : ''}
-            </span>
-          </div>
-          <div className="pp-week-nav">
-            <button
-              onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
-              disabled={weekOffset === 0}
-            >
-              ←
-            </button>
-            <span>{weekOffset === 0 ? 'Bu Hafta' : `${weekOffset + 1}. Hafta`}</span>
-            <button
-              onClick={() => setWeekOffset(Math.min(3, weekOffset + 1))}
-              disabled={weekOffset >= 3}
-            >
-              →
-            </button>
-          </div>
-          <div className="bw-date-grid">
-            {days.map((d) => (
-              <button
-                key={d.value}
-                className={`bw-date-card ${selectedDate === d.value ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedDate(d.value);
-                  setStep('options');
-                }}
-              >
-                <span className="bw-date-day">{d.dayName}</span>
-                <span className="bw-date-num">{d.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tercihler (masöz + hizmet türü — opsiyonel) veya Hizmet seçimi */}
-      {step === 'options' && (
-        <div>
-          <button className="bw-back" onClick={goBack}>
-            ← Tarih
-          </button>
-          <div className="bw-selected-info">
-            <span>
-              {categoryMeta.icon} {categoryMeta.label}
-              {needsParticipants ? ` · 👥 ${participants}` : ''}
-            </span>
-            <span>
-              📅{' '}
-              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-              })}
-            </span>
-          </div>
-
-          {isMassage ? (
-            <>
-              <p className="bw-step-title">
-                💆 Tercihlerinizi belirleyin{' '}
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 400 }}>
-                  (opsiyonel)
-                </span>
-              </p>
-
-              {/* Masöz seçimi */}
-              {therapists.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p className="bw-option-label">Masöz Tercihi:</p>
-                  <div className="bw-services">
-                    <button
-                      className={`bw-svc-card ${!selectedMasoz ? 'active' : ''}`}
-                      onClick={() => setSelectedMasoz('')}
-                    >
-                      <div className="bw-svc-avatar">🎲</div>
-                      <div className="bw-svc-info">
-                        <strong>Fark Etmez</strong>
-                        <span>Müsait masöz atanır</span>
-                      </div>
-                    </button>
-                    {therapists.map((t) => (
-                      <button
-                        key={t.id}
-                        className={`bw-svc-card ${selectedMasoz === t.id ? 'active' : ''}`}
-                        onClick={() => setSelectedMasoz(t.id)}
-                      >
-                        <div className="bw-svc-avatar">{t.providerName?.charAt(0) || '💆'}</div>
-                        <div className="bw-svc-info">
-                          <strong>{t.providerName || t.name}</strong>
-                          <span>
-                            {t.durationMinutes}dk · {t.price}₺
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Masaj türü (oda = masaj türü) */}
-              {rooms.filter((r) => r.capacity >= participants).length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p className="bw-option-label">Masaj Türü / Oda:</p>
-                  <div className="bw-services">
-                    {rooms
-                      .filter((r) => r.capacity >= participants)
-                      .map((r) => (
-                        <button
-                          key={r.id}
-                          className={`bw-svc-card ${selectedService === r.id ? 'active' : ''}`}
-                          onClick={() => setSelectedService(r.id)}
-                        >
-                          <div className="bw-svc-avatar">🏠</div>
-                          <div className="bw-svc-info">
-                            <strong>{r.name}</strong>
-                            <span>
-                              {r.durationMinutes}dk · {r.price}₺ · {r.capacity} kişilik
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              <button
-                className="btn-primary"
-                style={{ width: '100%' }}
-                onClick={() => setStep('time')}
-              >
-                Devam Et →
-              </button>
-            </>
-          ) : (
-            /* PT / Kort — direkt hizmet seçimi */
-            <>
-              <p className="bw-step-title">
-                {category === 'personal_training' ? '🏋️ Eğitmen seçin' : '🎯 Hizmet seçin'}
-              </p>
-              <div className="bw-services">
-                {services
-                  .filter((s) => !needsParticipants || s.capacity >= participants)
-                  .map((s) => (
-                    <button
-                      key={s.id}
-                      className="bw-svc-card"
-                      onClick={() => {
-                        setSelectedService(s.id);
-                        setSelectedMasoz('');
-                        setStep('time');
-                      }}
-                    >
-                      <div className="bw-svc-avatar">
-                        {s.providerType === 'trainer' ? '👤' : '🏠'}
-                      </div>
-                      <div className="bw-svc-info">
-                        <strong>{s.providerName || s.name}</strong>
-                        <span>
-                          {s.durationMinutes}dk · {s.price}₺
-                          {s.capacity > 1 ? ` · ${s.capacity} kişilik` : ''}
-                        </span>
-                      </div>
-                      <span className="bw-svc-arrow">→</span>
-                    </button>
-                  ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Saat */}
-      {step === 'time' && (
-        <div>
-          <button className="bw-back" onClick={goBack}>
-            ← Tercihler
-          </button>
-          <p className="bw-step-title">🕐 Müsait saatler</p>
-          <div className="bw-selected-info">
-            <span>{selectedSvc?.providerName || selectedSvc?.name || 'Otomatik'}</span>
-            <span>
-              📅{' '}
-              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-              })}
-            </span>
-          </div>
-          {slots.filter((s) => new Date(`${selectedDate}T${s.startTime}:00`) > new Date())
-            .length === 0 ? (
-            <p className="pp-empty">Bu tarihte müsait saat yok</p>
-          ) : (
-            <div className="bw-slots-grid">
-              {slots
-                .filter((s) => new Date(`${selectedDate}T${s.startTime}:00`) > new Date())
-                .map((s) => (
+              {rooms
+                .filter((r) => r.capacity >= participants)
+                .map((r) => (
                   <button
-                    key={s.id}
-                    className="bw-slot-card"
+                    key={r.id}
+                    className={`bw-chip ${selectedType === r.id ? 'active' : ''}`}
                     onClick={() => {
-                      setSelectedSlotId(s.id);
-                      setAddonSelections({});
-                      setStep('confirm');
+                      setSelectedType(r.id);
+                      setSelectedSlotId(null);
+                      setShowConfirm(false);
                     }}
                   >
-                    <span className="bw-slot-time">
-                      🕐 {s.startTime} - {s.endTime}
-                    </span>
-                    <span className="bw-slot-price">{s.price}₺</span>
-                    <span className="bw-slot-credit">veya 1 seans kredisi</span>
+                    {r.name} · {r.price}₺
                   </button>
                 ))}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Onay */}
-      {step === 'confirm' && selectedSlot && (
-        <div>
-          <button className="bw-back" onClick={goBack}>
-            ← Saat
+        {/* Masöz (sadece masaj kategorisinde) */}
+        {isMassage && therapists.length > 0 && (
+          <div className="bw-filter-row">
+            <span className="bw-filter-label">💆 Masöz:</span>
+            <div className="bw-filter-chips">
+              <button
+                className={`bw-chip ${!selectedMasoz ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedMasoz('');
+                  setSelectedSlotId(null);
+                  setShowConfirm(false);
+                }}
+              >
+                Fark Etmez
+              </button>
+              {therapists.map((t) => (
+                <button
+                  key={t.id}
+                  className={`bw-chip ${selectedMasoz === t.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedMasoz(t.id);
+                    setSelectedType('');
+                    setSelectedSlotId(null);
+                    setShowConfirm(false);
+                  }}
+                >
+                  {t.providerName || t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* PT/Kort: Eğitmen/Hizmet seçimi */}
+        {!isMassage && services.length > 1 && (
+          <div className="bw-filter-row">
+            <span className="bw-filter-label">
+              {category === 'personal_training' ? '🏋️ Eğitmen:' : '🎯 Hizmet:'}
+            </span>
+            <div className="bw-filter-chips">
+              {services
+                .filter((s) => !needsParticipants || s.capacity >= participants)
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    className={`bw-chip ${effectiveServiceId === s.id ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedType(s.id);
+                      setSelectedMasoz('');
+                      setSelectedSlotId(null);
+                      setShowConfirm(false);
+                    }}
+                  >
+                    {s.providerName || s.name} · {s.price}₺
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tarih */}
+      <div className="bw-date-section">
+        <div className="pp-week-nav">
+          <button
+            onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
+            disabled={weekOffset === 0}
+          >
+            ←
           </button>
-          <div className="order-summary-panel">
-            <div className="order-summary-header">
-              <h3>📋 Rezervasyon Özeti</h3>
-            </div>
-            <div className="order-summary-details">
-              <div className="order-detail-row">
-                <span className="order-detail-icon">{categoryMeta.icon}</span>
-                <div className="order-detail-info">
-                  <strong>
-                    {selectedSvc?.providerName || selectedSvc?.name || 'Otomatik Atama'}
-                  </strong>
-                  <p>{selectedSvc?.durationMinutes || 60}dk</p>
-                </div>
-                <span className="order-detail-price">{selectedSlot.price}₺</span>
+          <span>{weekOffset === 0 ? 'Bu Hafta' : `${weekOffset + 1}. Hafta`}</span>
+          <button
+            onClick={() => setWeekOffset(Math.min(3, weekOffset + 1))}
+            disabled={weekOffset >= 3}
+          >
+            →
+          </button>
+        </div>
+        <div className="bw-date-grid">
+          {days.map((d) => (
+            <button
+              key={d.value}
+              className={`bw-date-card ${selectedDate === d.value ? 'active' : ''}`}
+              onClick={() => {
+                setSelectedDate(d.value);
+                setSelectedSlotId(null);
+                setShowConfirm(false);
+              }}
+            >
+              <span className="bw-date-day">{d.dayName}</span>
+              <span className="bw-date-num">{d.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Müsait Saatler */}
+      <div className="bw-time-section">
+        <p className="bw-filter-label">🕐 Müsait Saatler:</p>
+        {futureSlots.length === 0 ? (
+          <p className="pp-empty">Bu tarihte müsait saat yok</p>
+        ) : (
+          <div className="bw-slots-grid">
+            {futureSlots.map((s) => (
+              <button
+                key={s.id}
+                className={`bw-slot-card ${selectedSlotId === s.id ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedSlotId(s.id);
+                  setShowConfirm(true);
+                }}
+              >
+                <span className="bw-slot-time">
+                  {s.startTime}-{s.endTime}
+                </span>
+                <span className="bw-slot-price">{s.price}₺</span>
+                <span className="bw-slot-credit">veya 1 kredi</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Onay paneli (saat seçildiğinde) */}
+      {showConfirm && selectedSlot && (
+        <div className="order-summary-panel" style={{ marginTop: 16 }}>
+          <div className="order-summary-header">
+            <h3>📋 Rezervasyon Özeti</h3>
+          </div>
+          <div className="order-summary-details">
+            <div className="order-detail-row">
+              <span className="order-detail-icon">{categoryMeta.icon}</span>
+              <div className="order-detail-info">
+                <strong>{selectedSvc?.providerName || selectedSvc?.name || 'Otomatik'}</strong>
+                <p>{selectedSvc?.durationMinutes || 60}dk</p>
               </div>
-              <div className="order-detail-row">
-                <span className="order-detail-icon">📅</span>
-                <div className="order-detail-info">
-                  <strong>
-                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long',
-                    })}
-                  </strong>
-                  <p>
-                    {selectedSlot.startTime} - {selectedSlot.endTime}
-                  </p>
-                </div>
-              </div>
-              {needsParticipants && (
-                <div className="order-detail-row">
-                  <span className="order-detail-icon">👥</span>
-                  <div className="order-detail-info">
-                    <strong>{participants} Kişi</strong>
-                  </div>
-                </div>
-              )}
-              {selectedMasoz && (
-                <div className="order-detail-row">
-                  <span className="order-detail-icon">💆</span>
-                  <div className="order-detail-info">
-                    <strong>
-                      Masöz: {therapists.find((t) => t.id === selectedMasoz)?.providerName}
-                    </strong>
-                  </div>
-                </div>
-              )}
+              <span className="order-detail-price">{selectedSlot.price}₺</span>
             </div>
-            {addons.length > 0 && (
-              <div className="order-addons-section">
-                <h4>🛒 Ek Hizmetler</h4>
-                <div className="addon-list">
-                  {addons.map((a) => (
-                    <div key={a.id} className="addon-item">
-                      <div>
-                        <strong>{a.name}</strong>
-                        <span className="addon-price">+{a.price}₺</span>
-                      </div>
-                      <div className="addon-qty">
-                        <button
-                          onClick={() =>
-                            setAddonSelections((p) => ({
-                              ...p,
-                              [a.id]: Math.max(0, (p[a.id] || 0) - 1),
-                            }))
-                          }
-                          disabled={!addonSelections[a.id]}
-                        >
-                          −
-                        </button>
-                        <span>{addonSelections[a.id] || 0}</span>
-                        <button
-                          onClick={() =>
-                            setAddonSelections((p) => ({ ...p, [a.id]: (p[a.id] || 0) + 1 }))
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            <div className="order-detail-row">
+              <span className="order-detail-icon">📅</span>
+              <div className="order-detail-info">
+                <strong>
+                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  })}
+                </strong>
+                <p>
+                  {selectedSlot.startTime} - {selectedSlot.endTime}
+                </p>
+              </div>
+            </div>
+            {needsParticipants && (
+              <div className="order-detail-row">
+                <span className="order-detail-icon">👥</span>
+                <div className="order-detail-info">
+                  <strong>{participants} Kişi</strong>
                 </div>
               </div>
             )}
-            <div className="addon-actions">
-              <button
-                className="btn-primary"
-                onClick={proceedToCheckout}
-                disabled={booking}
-                style={{ flex: 1 }}
-              >
-                {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
-              </button>
+            {selectedMasoz && (
+              <div className="order-detail-row">
+                <span className="order-detail-icon">💆</span>
+                <div className="order-detail-info">
+                  <strong>{therapists.find((t) => t.id === selectedMasoz)?.providerName}</strong>
+                </div>
+              </div>
+            )}
+          </div>
+          {addons.length > 0 && (
+            <div className="order-addons-section">
+              <h4>🛒 Ek Hizmetler</h4>
+              <div className="addon-list">
+                {addons.map((a) => (
+                  <div key={a.id} className="addon-item">
+                    <div>
+                      <strong>{a.name}</strong>
+                      <span className="addon-price">+{a.price}₺</span>
+                    </div>
+                    <div className="addon-qty">
+                      <button
+                        onClick={() =>
+                          setAddonSelections((p) => ({
+                            ...p,
+                            [a.id]: Math.max(0, (p[a.id] || 0) - 1),
+                          }))
+                        }
+                        disabled={!addonSelections[a.id]}
+                      >
+                        −
+                      </button>
+                      <span>{addonSelections[a.id] || 0}</span>
+                      <button
+                        onClick={() =>
+                          setAddonSelections((p) => ({ ...p, [a.id]: (p[a.id] || 0) + 1 }))
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+          <div className="addon-actions">
+            <button
+              className="btn-primary"
+              onClick={proceedToCheckout}
+              disabled={booking}
+              style={{ flex: 1 }}
+            >
+              {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
+            </button>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 // ─── Campaign Buy Button ─────────────────────────────────────────────────────

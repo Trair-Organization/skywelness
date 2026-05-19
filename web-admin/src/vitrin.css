@@ -4032,3 +4032,58 @@
   font-weight: 600;
   margin: 0 0 8px;
 }
+
+/* ═══ Filter-based Booking View ═══════════════════════════════════════════════ */
+.bw-filter-view {
+  margin-top: 8px;
+}
+.bw-filters {
+  margin-bottom: 16px;
+}
+.bw-filter-row {
+  margin-bottom: 12px;
+}
+.bw-filter-label {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 6px;
+}
+.bw-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bw-chip {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.bw-chip:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #e2e8f0;
+}
+.bw-chip.active {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+.bw-date-section {
+  margin-bottom: 16px;
+}
+.bw-time-section {
+  margin-bottom: 8px;
+}
+.bw-slot-card.active {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(56, 189, 248, 0.1);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.15);
+}
