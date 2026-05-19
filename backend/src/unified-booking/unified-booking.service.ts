@@ -206,7 +206,7 @@ export class UnifiedBookingService {
           currency: 'try',
           product_data: {
             name: `Kapora — ${slot.service?.name || 'Rezervasyon'}`,
-            description: `${slot.date} · ${slot.startTime}-${slot.endTime} | Toplam: ${totalTRY}₺ · Kapora (%15): ${kaporaTRY}₺${addonNames.length > 0 ? ` · Ek: ${addonNames.join(', ')}` : ''}`,
+            description: `${slot.date} · ${slot.startTime}-${slot.endTime} | Toplam: ${totalTRY}₺ · Kapora (%${Math.round(COMMISSION_RATE * 100)}): ${kaporaTRY}₺${addonNames.length > 0 ? ` · Ek: ${addonNames.join(', ')}` : ''}`,
           },
           unit_amount: kaporaCents,
         },
