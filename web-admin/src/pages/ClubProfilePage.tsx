@@ -988,6 +988,7 @@ function CategoryWizard({
   addons: Addon[];
   needsParticipants: boolean;
 }) {
+  const { token } = useAuth();
   const isMassage = category === 'massage';
   const therapists = services.filter((s) => s.providerType === 'trainer');
   const rooms = services.filter((s) => s.providerType !== 'trainer');
@@ -1022,6 +1023,18 @@ function CategoryWizard({
 
   // Açık masöz panelleri (default: tüm masözler açık)
   const [openTherapists, setOpenTherapists] = useState<Set<string>>(new Set());
+
+  // Üyenin masaj paket bakiyesi (kalan seans)
+  const [packageBalance, setPackageBalance] = useState<{
+    remainingSessions: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isMassage || !token) return;
+    apiJson<{ remainingSessions: number; packages: unknown[] }>('/spa/my-package-balance')
+      .then((data) => setPackageBalance({ remainingSessions: data.remainingSessions }))
+      .catch(() => setPackageBalance(null));
+  }, [isMassage, token]);
 
   // Spa Yönetimi → Hizmetler sekmesindeki masaj çeşitleri
   const [spaServices, setSpaServices] = useState<
@@ -1208,6 +1221,27 @@ function CategoryWizard({
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Hata');
+    } finally {
+      setBooking(false);
+    }
+  }
+
+  // Masaj rezervasyonunu paketten kredi düşerek yap
+  async function bookWithPackage() {
+    if (!selectedSlotId || !selectedType) return;
+    setBooking(true);
+    try {
+      await apiJson('/spa/book-slot', {
+        method: 'POST',
+        body: JSON.stringify({
+          availabilityId: selectedSlotId,
+          serviceId: selectedType,
+        }),
+      });
+      alert('✅ Rezervasyonunuz paketten oluşturuldu.');
+      window.location.reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Rezervasyon başarısız');
     } finally {
       setBooking(false);
     }
@@ -1428,45 +1462,86 @@ function CategoryWizard({
             <h3>📋 Rezervasyon Özeti</h3>
           </div>
           <div className="order-summary-details">
-            <div className="order-detail-row">
-              <span className="order-detail-icon">{categoryMeta.icon}</span>
-              <div className="order-detail-info">
-                <strong>{selectedSvc?.providerName || selectedSvc?.name || 'Otomatik'}</strong>
-                <p>{selectedSvc?.durationMinutes || 60}dk</p>
-              </div>
-              <span className="order-detail-price">{selectedSlot.price}₺</span>
-            </div>
-            <div className="order-detail-row">
-              <span className="order-detail-icon">📅</span>
-              <div className="order-detail-info">
-                <strong>
-                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </strong>
-                <p>
-                  {selectedSlot.startTime} - {selectedSlot.endTime}
-                </p>
-              </div>
-            </div>
-            {needsParticipants && (
-              <div className="order-detail-row">
-                <span className="order-detail-icon">👥</span>
-                <div className="order-detail-info">
-                  <strong>{participants} Kişi</strong>
-                </div>
-              </div>
-            )}
-            {selectedMasoz && (
-              <div className="order-detail-row">
-                <span className="order-detail-icon">💆</span>
-                <div className="order-detail-info">
-                  <strong>{therapists.find((t) => t.id === selectedMasoz)?.providerName}</strong>
-                </div>
-              </div>
-            )}
+            {(() => {
+              const selectedSpaSvc = spaServices.find((s) => s.id === selectedType);
+              const sessionCost = selectedSpaSvc?.sessionCost ?? 1;
+              const therapistName =
+                therapistSlots.find((t) => t.therapistId === selectedMasoz)?.therapistName ||
+                therapists.find((t) => t.id === selectedMasoz)?.providerName ||
+                null;
+
+              return (
+                <>
+                  <div className="order-detail-row">
+                    <span className="order-detail-icon">{categoryMeta.icon}</span>
+                    <div className="order-detail-info">
+                      <strong>
+                        {selectedSpaSvc?.name ||
+                          selectedSvc?.providerName ||
+                          selectedSvc?.name ||
+                          'Otomatik'}
+                      </strong>
+                      <p>
+                        {selectedSpaSvc?.durationMinutes || selectedSvc?.durationMinutes || 60}
+                        dk
+                      </p>
+                    </div>
+                    <span className="order-detail-price">
+                      {selectedSlot.price}₺
+                      {isMassage && (
+                        <span className="order-detail-credit"> · {sessionCost} kredi</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="order-detail-row">
+                    <span className="order-detail-icon">📅</span>
+                    <div className="order-detail-info">
+                      <strong>
+                        {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                        })}
+                      </strong>
+                      <p>
+                        {selectedSlot.startTime} - {selectedSlot.endTime}
+                      </p>
+                    </div>
+                  </div>
+                  {needsParticipants && (
+                    <div className="order-detail-row">
+                      <span className="order-detail-icon">👥</span>
+                      <div className="order-detail-info">
+                        <strong>{participants} Kişi</strong>
+                      </div>
+                    </div>
+                  )}
+                  {therapistName && (
+                    <div className="order-detail-row">
+                      <span className="order-detail-icon">💆</span>
+                      <div className="order-detail-info">
+                        <strong>{therapistName}</strong>
+                        <p>Masöz</p>
+                      </div>
+                    </div>
+                  )}
+                  {isMassage && packageBalance && (
+                    <div className="order-detail-row">
+                      <span className="order-detail-icon">🎟️</span>
+                      <div className="order-detail-info">
+                        <strong>Paket Bakiyesi</strong>
+                        <p>
+                          {packageBalance.remainingSessions} seans
+                          {packageBalance.remainingSessions >= sessionCost
+                            ? ' — paketten ödenebilir'
+                            : ' — yetersiz'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
           {addons.length > 0 && (
             <div className="order-addons-section">
@@ -1505,14 +1580,38 @@ function CategoryWizard({
             </div>
           )}
           <div className="addon-actions">
-            <button
-              className="btn-primary"
-              onClick={proceedToCheckout}
-              disabled={booking}
-              style={{ flex: 1 }}
-            >
-              {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
-            </button>
+            {(() => {
+              const selectedSpaSvc = spaServices.find((s) => s.id === selectedType);
+              const sessionCost = selectedSpaSvc?.sessionCost ?? 1;
+              const canPayWithPackage =
+                isMassage &&
+                packageBalance &&
+                packageBalance.remainingSessions >= sessionCost &&
+                selectedType;
+
+              return (
+                <>
+                  {canPayWithPackage && (
+                    <button
+                      className="btn-primary"
+                      onClick={() => void bookWithPackage()}
+                      disabled={booking}
+                      style={{ flex: 1, background: '#059669', borderColor: '#059669' }}
+                    >
+                      {booking ? '...' : `🎟️ Paketten Öde (${sessionCost} kredi)`}
+                    </button>
+                  )}
+                  <button
+                    className="btn-primary"
+                    onClick={proceedToCheckout}
+                    disabled={booking}
+                    style={{ flex: 1 }}
+                  >
+                    {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
+                  </button>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
