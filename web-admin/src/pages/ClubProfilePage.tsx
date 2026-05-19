@@ -1005,6 +1005,21 @@ function CategoryWizard({
   const [booking, setBooking] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Masöz bazlı slot grupları (masaj kategorisinde gösterim için)
+  const [therapistSlots, setTherapistSlots] = useState<
+    Array<{
+      therapistId: string;
+      therapistName: string;
+      slots: Array<{
+        slotId: string;
+        startTime: string;
+        endTime: string;
+        price: string;
+        roomSlotId: string;
+      }>;
+    }>
+  >([]);
+
   // Spa Yönetimi → Hizmetler sekmesindeki masaj çeşitleri
   const [spaServices, setSpaServices] = useState<
     Array<{
@@ -1089,30 +1104,77 @@ function CategoryWizard({
       }>(`/v2/schedule/spa-rooms?${params}`, { auth: false })
         .then((data) => {
           const allSlots: V2Slot[] = [];
+          // Masöz bazlı gruplama için: therapistId -> { name, slots[] }
+          const byTherapist = new Map<
+            string,
+            {
+              therapistId: string;
+              therapistName: string;
+              slots: Array<{
+                slotId: string;
+                startTime: string;
+                endTime: string;
+                price: string;
+                roomSlotId: string;
+              }>;
+              seen: Set<string>;
+            }
+          >();
+
           for (const room of data.rooms || []) {
             for (const ts of room.timeSlots) {
               if (!ts.isBookable) continue;
-              if (selectedMasoz && !ts.availableTherapists.some((t) => t.id === selectedMasoz))
-                continue;
 
-              const slotId = selectedMasoz
-                ? ts.availableTherapists.find((t) => t.id === selectedMasoz)?.slotId ||
-                  ts.roomSlotId
-                : ts.roomSlotId;
-
+              // Tüm slotlar için (üst grid için): odanın slotId'sini kullan
               allSlots.push({
-                id: slotId,
+                id: ts.roomSlotId,
                 serviceId: room.roomId,
                 startTime: ts.startTime,
                 endTime: ts.endTime,
                 price: ts.totalPrice,
                 remainingCapacity: ts.availableTherapists.length,
               });
+
+              // Her masöz için kendi satırını oluştur
+              for (const th of ts.availableTherapists) {
+                if (!byTherapist.has(th.id)) {
+                  byTherapist.set(th.id, {
+                    therapistId: th.id,
+                    therapistName: th.name,
+                    slots: [],
+                    seen: new Set(),
+                  });
+                }
+                const entry = byTherapist.get(th.id)!;
+                // Aynı saatte aynı masöz birden fazla odada görülmesin
+                if (entry.seen.has(ts.startTime)) continue;
+                entry.seen.add(ts.startTime);
+                entry.slots.push({
+                  slotId: th.slotId,
+                  startTime: ts.startTime,
+                  endTime: ts.endTime,
+                  price: ts.unitPrice,
+                  roomSlotId: ts.roomSlotId,
+                });
+              }
             }
           }
+
           setSlots(allSlots);
+          setTherapistSlots(
+            Array.from(byTherapist.values())
+              .map((t) => ({
+                therapistId: t.therapistId,
+                therapistName: t.therapistName,
+                slots: t.slots.sort((a, b) => a.startTime.localeCompare(b.startTime)),
+              }))
+              .sort((a, b) => a.therapistName.localeCompare(b.therapistName, 'tr')),
+          );
         })
-        .catch(() => setSlots([]));
+        .catch(() => {
+          setSlots([]);
+          setTherapistSlots([]);
+        });
       return;
     }
 
@@ -1136,7 +1198,25 @@ function CategoryWizard({
 
   const days = getWeekDays(weekOffset);
   const selectedSvc = services.find((s) => s.id === effectiveServiceId);
-  const selectedSlot = slots.find((s) => s.id === selectedSlotId);
+  // Slot, ana listede yoksa masöz listelerinden ara (masaj akışı için)
+  const selectedSlot =
+    slots.find((s) => s.id === selectedSlotId) ||
+    (() => {
+      for (const th of therapistSlots) {
+        const found = th.slots.find((x) => x.slotId === selectedSlotId);
+        if (found) {
+          return {
+            id: found.slotId,
+            serviceId: '',
+            startTime: found.startTime,
+            endTime: found.endTime,
+            price: found.price,
+            remainingCapacity: 1,
+          } as V2Slot;
+        }
+      }
+      return undefined;
+    })();
   const futureSlots = slots.filter(
     (s) => new Date(`${selectedDate}T${s.startTime}:00`) > new Date(),
   );
@@ -1220,39 +1300,6 @@ function CategoryWizard({
           </div>
         )}
 
-        {/* Masöz (sadece masaj kategorisinde) */}
-        {isMassage && therapists.length > 0 && (
-          <div className="bw-filter-row">
-            <span className="bw-filter-label">💆 Masöz:</span>
-            <div className="bw-filter-chips">
-              <button
-                className={`bw-chip ${!selectedMasoz ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedMasoz('');
-                  setSelectedSlotId(null);
-                  setShowConfirm(false);
-                }}
-              >
-                Fark Etmez
-              </button>
-              {therapists.map((t) => (
-                <button
-                  key={t.id}
-                  className={`bw-chip ${selectedMasoz === t.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedMasoz(t.id);
-                    setSelectedType('');
-                    setSelectedSlotId(null);
-                    setShowConfirm(false);
-                  }}
-                >
-                  {t.providerName || t.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* PT/Kort: Eğitmen/Hizmet seçimi */}
         {!isMassage && services.length > 1 && (
           <div className="bw-filter-row">
@@ -1319,7 +1366,51 @@ function CategoryWizard({
       {/* Müsait Saatler */}
       <div className="bw-time-section">
         <p className="bw-filter-label">🕐 Müsait Saatler:</p>
-        {futureSlots.length === 0 ? (
+        {isMassage ? (
+          // Masaj kategorisinde: masöz bazlı satır satır göster
+          (() => {
+            const now = new Date();
+            const therapistsWithFutureSlots = therapistSlots
+              .map((t) => ({
+                ...t,
+                slots: t.slots.filter((s) => new Date(`${selectedDate}T${s.startTime}:00`) > now),
+              }))
+              .filter((t) => t.slots.length > 0);
+
+            if (therapistsWithFutureSlots.length === 0) {
+              return <p className="pp-empty">Bu tarihte müsait saat yok</p>;
+            }
+
+            return (
+              <div className="bw-therapist-rows">
+                {therapistsWithFutureSlots.map((th) => (
+                  <div key={th.therapistId} className="bw-therapist-row">
+                    <div className="bw-therapist-name">💆 {th.therapistName}</div>
+                    <div className="bw-therapist-slots">
+                      {th.slots.map((s) => (
+                        <button
+                          key={s.slotId}
+                          className={`bw-slot-card ${selectedSlotId === s.slotId ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedSlotId(s.slotId);
+                            setSelectedMasoz(th.therapistId);
+                            setShowConfirm(true);
+                          }}
+                        >
+                          <span className="bw-slot-time">
+                            {s.startTime}-{s.endTime}
+                          </span>
+                          <span className="bw-slot-price">{s.price}₺</span>
+                          <span className="bw-slot-credit">veya 1 kredi</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()
+        ) : futureSlots.length === 0 ? (
           <p className="pp-empty">Bu tarihte müsait saat yok</p>
         ) : (
           <div className="bw-slots-grid">

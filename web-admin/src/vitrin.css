@@ -4043,6 +4043,33 @@
 .bw-filter-row {
   margin-bottom: 12px;
 }
+.bw-therapist-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bw-therapist-row {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.bw-therapist-name {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.bw-therapist-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+@media (max-width: 768px) {
+  .bw-therapist-slots {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 .bw-select {
   width: 100%;
   padding: 10px 12px;
