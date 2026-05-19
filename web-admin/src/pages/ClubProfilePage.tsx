@@ -1018,14 +1018,90 @@ function CategoryWizard({
     })();
 
   useEffect(() => {
-    if (!effectiveServiceId || !selectedDate) return;
+    if (!selectedDate) return;
+
+    // Masaj kategorisinde spa-rooms endpoint'ini kullan (oda + masöz eşleşmeli slotlar)
+    if (isMassage) {
+      const params = new URLSearchParams({
+        tenant: subdomain,
+        date: selectedDate,
+        participants: String(participants),
+      });
+      apiJson<{
+        rooms: Array<{
+          roomId: string;
+          roomName: string;
+          capacity: number;
+          roomType: string;
+          price: string;
+          currency: string;
+          timeSlots: Array<{
+            roomSlotId: string;
+            startTime: string;
+            endTime: string;
+            unitPrice: string;
+            totalPrice: string;
+            currency: string;
+            isBookable: boolean;
+            requiredTherapists: number;
+            availableTherapists: Array<{ id: string; slotId: string; name: string }>;
+          }>;
+        }>;
+        date: string;
+      }>(`/v2/schedule/spa-rooms?${params}`, { auth: false })
+        .then((data) => {
+          // Spa-rooms verisini V2Slot formatına dönüştür
+          const allSlots: V2Slot[] = [];
+          for (const room of data.rooms || []) {
+            // Filtre: belirli masöz seçildiyse sadece o masözün olduğu slotları göster
+            // Filtre: belirli oda seçildiyse sadece o odanın slotlarını göster
+            if (selectedType && room.roomId !== selectedType) continue;
+
+            for (const ts of room.timeSlots) {
+              if (!ts.isBookable) continue;
+              // Masöz filtresi
+              if (selectedMasoz && !ts.availableTherapists.some((t) => t.id === selectedMasoz))
+                continue;
+
+              // Masöz seçiliyse masözün slotId'sini kullan, yoksa odanın slotId'sini
+              const slotId = selectedMasoz
+                ? ts.availableTherapists.find((t) => t.id === selectedMasoz)?.slotId ||
+                  ts.roomSlotId
+                : ts.roomSlotId;
+
+              allSlots.push({
+                id: slotId,
+                serviceId: room.roomId,
+                startTime: ts.startTime,
+                endTime: ts.endTime,
+                price: ts.totalPrice,
+                remainingCapacity: ts.availableTherapists.length,
+              });
+            }
+          }
+          setSlots(allSlots);
+        })
+        .catch(() => setSlots([]));
+      return;
+    }
+
+    // Diğer kategoriler için mevcut endpoint
+    if (!effectiveServiceId) return;
     apiJson<V2Slot[]>(
       `/v2/schedule?tenant=${encodeURIComponent(subdomain)}&serviceId=${effectiveServiceId}&date=${selectedDate}`,
       { auth: false },
     )
       .then(setSlots)
       .catch(() => setSlots([]));
-  }, [subdomain, effectiveServiceId, selectedDate]);
+  }, [
+    subdomain,
+    effectiveServiceId,
+    selectedDate,
+    isMassage,
+    participants,
+    selectedMasoz,
+    selectedType,
+  ]);
 
   const days = getWeekDays(weekOffset);
   const selectedSvc = services.find((s) => s.id === effectiveServiceId);
