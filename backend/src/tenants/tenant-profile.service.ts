@@ -144,6 +144,8 @@ export class TenantProfileService {
         endsAt: e.endsAt,
         capacity: e.capacity,
         category: e.category ?? 'general',
+        price: e.price ?? '0',
+        currency: e.currency ?? 'TRY',
       })),
 
       // Paketler & Fiyatlar
@@ -171,12 +173,7 @@ export class TenantProfileService {
   /**
    * Profil sayfasındaki ajanda — belirli bir gün için müsait slotlar.
    */
-  async getAvailableSlots(
-    _user: User,
-    subdomain: string,
-    date?: string,
-    resourceId?: string,
-  ) {
+  async getAvailableSlots(_user: User, subdomain: string, date?: string, resourceId?: string) {
     const tenant = await this.tenantsRepo.findOne({ where: { subdomain } });
     if (!tenant) throw new NotFoundException('Partner bulunamadı');
 
