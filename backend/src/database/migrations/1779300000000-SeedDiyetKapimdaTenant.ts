@@ -246,19 +246,19 @@ export class SeedDiyetKapimdaTenant1779300000000 implements MigrationInterface {
         SELECT
           uuid_generate_v4(),
           t.id,
-          $1,
-          $2,
-          $3,
-          $4,
+          $1::varchar,
+          $2::varchar,
+          $3::text,
+          $4::numeric,
           'TRY',
-          $5,
+          $5::varchar,
           true,
-          $6
+          $6::int
         FROM tenant t
         WHERE t.subdomain = 'diyetkapimda'
           AND NOT EXISTS (
             SELECT 1 FROM cafe_product cp
-            WHERE cp.tenant_id = t.id AND cp.name = $1
+            WHERE cp.tenant_id = t.id AND cp.name = $1::varchar
           )
         `,
         [p.name, p.category, description, p.price, imageUrl, i],
