@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { apiJson, ApiError } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { setAdminLanguage } from '../i18n';
@@ -178,64 +178,95 @@ export function LoginPage() {
   }
 
   return (
-    <div className="shell narrow">
-      <div className="langBar">
-        <span className="muted">{t('lang.label')}</span>
-        <div className="langBtns">
+    <div className="auth-shell">
+      <div className="auth-bg-gradient" />
+      <div className="auth-card">
+        <div className="auth-brand">
+          <img src="/wellnesslogodaire.png" alt="WellnessClub" className="auth-logo" />
+          <h1 className="auth-title">{t('login.title')}</h1>
+          <p className="auth-subtitle">{t('login.subtitle')}</p>
+        </div>
+
+        <div className="auth-lang">
           <button
             type="button"
-            className={i18n.language === 'tr' ? 'langActive' : 'secondary'}
+            className={`auth-lang-btn ${i18n.language === 'tr' ? 'active' : ''}`}
             onClick={() => setAdminLanguage('tr')}
           >
-            {t('lang.tr')}
+            🇹🇷 TR
           </button>
           <button
             type="button"
-            className={i18n.language === 'en' ? 'langActive' : 'secondary'}
+            className={`auth-lang-btn ${i18n.language === 'en' ? 'active' : ''}`}
             onClick={() => setAdminLanguage('en')}
           >
-            {t('lang.en')}
+            🇬🇧 EN
           </button>
         </div>
-      </div>
-      <h1>{t('login.title')}</h1>
-      <p className="muted">{t('login.subtitle')}</p>
-      <form className="form" onSubmit={onSubmit}>
-        <label>
-          {t('login.email')}
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-            required
-          />
-        </label>
-        <label>
-          {t('login.password')}
-          <div className="password-field">
+
+        <form className="auth-form" onSubmit={onSubmit}>
+          <label className="auth-label">
+            <span>{t('login.email')}</span>
             <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              placeholder="ornek@mail.com"
               required
+              className="auth-input"
             />
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword((v) => !v)}
-              tabIndex={-1}
-            >
-              {showPassword ? '🙈' : '👁️'}
-            </button>
+          </label>
+          <label className="auth-label">
+            <span>{t('login.password')}</span>
+            <div className="auth-password-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                required
+                className="auth-input"
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label="Şifreyi göster"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+          </label>
+
+          <div className="auth-form-helpers">
+            <Link to="/forgot-password" className="auth-link">
+              Şifremi unuttum
+            </Link>
           </div>
-        </label>
-        {error ? <p className="error">{error}</p> : null}
-        <button type="submit" disabled={pending}>
-          {pending ? t('login.pending') : t('login.submit')}
-        </button>
-      </form>
+
+          {error && <p className="auth-error">{error}</p>}
+
+          <button type="submit" disabled={pending} className="auth-submit">
+            {pending ? t('login.pending') : t('login.submit')}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <span>Henüz üye değil misin?</span>
+          <Link to="/register" className="auth-link">
+            Hemen üye ol
+          </Link>
+        </div>
+        <div className="auth-footer-small">
+          Kulüp sahibi misin?{' '}
+          <Link to="/partner-register" className="auth-link">
+            Partner ol
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import i18n from './i18n';
 import { AuthProvider } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { PublicDiscoverPage } from './pages/PublicDiscoverPage';
 import { PublicRegisterPage } from './pages/PublicRegisterPage';
 import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
@@ -82,6 +84,8 @@ function AppRoutes() {
       <Route path="/booking-success" element={<BookingSuccessPage />} />
       <Route path="/booking-cancel" element={<BookingCancelPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
         <Route path="/club/profile" element={<ClubProfileEditPage />} />
