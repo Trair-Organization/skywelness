@@ -103,10 +103,16 @@ export class AuthService {
     for (let attempt = 0; attempt < 20; attempt++) {
       const candidate = generate();
       if (prefix === 'KLB') {
-        const exists = await this.tenantsRepo.findOne({ where: { publicId: candidate }, select: ['id'] });
+        const exists = await this.tenantsRepo.findOne({
+          where: { publicId: candidate },
+          select: ['id'],
+        });
         if (!exists) return candidate;
       } else {
-        const exists = await this.usersRepo.findOne({ where: { publicId: candidate }, select: ['id'] });
+        const exists = await this.usersRepo.findOne({
+          where: { publicId: candidate },
+          select: ['id'],
+        });
         if (!exists) return candidate;
       }
     }
@@ -528,21 +534,19 @@ export class AuthService {
         if (!passwordValid) {
           throw new UnauthorizedException('Invalid credentials');
         }
-        // Birden fazla kulüp — kulüp seçim ekranı için liste dön (token yok)
-        return {
-          multiTenant: true as const,
-          tenants: matches
-            .filter((m) => m.tenant)
-            .map((m) => ({
-              id: m.tenant.id,
-              name: m.tenant.name,
-              subdomain: m.tenant.subdomain,
-              logoUrl: m.tenant.logoUrl,
-              role: m.role,
-            })),
-        };
+        // Otomatik: en son giriş yapılan tenant'ı seç
+        // (lastLogin en yeni olan, yoksa ilk eşleşme)
+        const sortedByLastLogin = [...matches]
+          .filter((m) => m.tenant)
+          .sort((a, b) => {
+            const aTime = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+            const bTime = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+            return bTime - aTime;
+          });
+        user = sortedByLastLogin[0] ?? matches[0];
+      } else {
+        user = matches[0] ?? null;
       }
-      user = matches[0] ?? null;
     }
 
     if (!user) {
@@ -806,7 +810,11 @@ export class AuthService {
   /** Kulüp davetini kabul et */
   async acceptMembershipInvite(user: User, membershipUserId: string) {
     const membership = await this.usersRepo.findOne({
-      where: { id: membershipUserId, email: user.email.toLowerCase(), accountStatus: MemberAccountStatus.PENDING_APPROVAL },
+      where: {
+        id: membershipUserId,
+        email: user.email.toLowerCase(),
+        accountStatus: MemberAccountStatus.PENDING_APPROVAL,
+      },
     });
     if (!membership) throw new NotFoundException('Davet bulunamadı');
     membership.accountStatus = MemberAccountStatus.ACTIVE;
@@ -817,7 +825,11 @@ export class AuthService {
   /** Kulüp davetini reddet */
   async rejectMembershipInvite(user: User, membershipUserId: string) {
     const membership = await this.usersRepo.findOne({
-      where: { id: membershipUserId, email: user.email.toLowerCase(), accountStatus: MemberAccountStatus.PENDING_APPROVAL },
+      where: {
+        id: membershipUserId,
+        email: user.email.toLowerCase(),
+        accountStatus: MemberAccountStatus.PENDING_APPROVAL,
+      },
     });
     if (!membership) throw new NotFoundException('Davet bulunamadı');
     membership.accountStatus = MemberAccountStatus.REJECTED;
