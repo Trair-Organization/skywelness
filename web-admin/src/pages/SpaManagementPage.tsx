@@ -401,7 +401,8 @@ function AgendaTab() {
                 const nextH = `${String(parseInt(h) + 1).padStart(2, '0')}:00`;
                 const now = new Date();
                 const isToday = date === now.toISOString().slice(0, 10);
-                const isPastHour = isToday && parseInt(h) < now.getHours();
+                // Saat başı dahil — 16:00 slotu, saat 16:00 olunca kapansın
+                const isPastHour = isToday && parseInt(h) <= now.getHours();
                 return (
                   <tr key={h} className={isPastHour ? 'agenda-row-past' : ''}>
                     <td className="agenda-td-hour">{h}–{nextH}</td>
