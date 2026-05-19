@@ -163,6 +163,17 @@ export function ClubProfilePage() {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [avgRating, setAvgRating] = useState('0');
+  const [cafeProducts, setCafeProducts] = useState<
+    Array<{
+      id: string;
+      name: string;
+      category: string;
+      description: string | null;
+      price: string;
+      currency: string;
+      imageUrl: string | null;
+    }>
+  >([]);
   const isLoggedIn = !!token;
   const [activeSection, setActiveSection] = useState('about');
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -196,6 +207,22 @@ export function ClubProfilePage() {
         setReviews(r.reviews);
         setReviewCount(r.reviewCount);
         setAvgRating(r.avgRating);
+      } catch {
+        /* */
+      }
+      try {
+        const products = await apiJson<
+          Array<{
+            id: string;
+            name: string;
+            category: string;
+            description: string | null;
+            price: string;
+            currency: string;
+            imageUrl: string | null;
+          }>
+        >(`/cafe/products/public/${encodeURIComponent(subdomain)}`, { auth: false });
+        setCafeProducts(products);
       } catch {
         /* */
       }
@@ -261,7 +288,8 @@ export function ClubProfilePage() {
       return (
         profile.packages.length > 0 ||
         profile.resources.length > 0 ||
-        (profile.catalogServices?.length ?? 0) > 0
+        (profile.catalogServices?.length ?? 0) > 0 ||
+        cafeProducts.length > 0
       );
     if (s.id === 'reviews') return true;
     if (s.id === 'trainers') return profile.trainers.length > 0;
@@ -571,7 +599,8 @@ export function ClubProfilePage() {
         {/* ═══ ÜRÜN VE HİZMETLER ═══ */}
         {(profile.packages.length > 0 ||
           profile.resources.length > 0 ||
-          (profile.catalogServices?.length ?? 0) > 0) && (
+          (profile.catalogServices?.length ?? 0) > 0 ||
+          cafeProducts.length > 0) && (
           <section
             ref={(el) => {
               sectionRefs.current['products'] = el;
@@ -643,6 +672,38 @@ export function ClubProfilePage() {
                       >
                         🎯 Randevu Al
                       </button>
+                    </div>
+                  ))}
+                </div>
+              </Accordion>
+            )}
+            {cafeProducts.length > 0 && (
+              <Accordion title="🛒 Ürünler" defaultOpen={true}>
+                <div className="pp-resources-grid">
+                  {cafeProducts.map((p) => (
+                    <div key={p.id} className="pp-resource-card">
+                      {p.imageUrl && (
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name}
+                          style={{
+                            width: '100%',
+                            height: 180,
+                            objectFit: 'cover',
+                            borderRadius: 10,
+                            marginBottom: 8,
+                          }}
+                        />
+                      )}
+                      <strong>{p.name}</strong>
+                      {p.description && <p>{p.description}</p>}
+                      <div className="pp-resource-meta">
+                        <span>{p.category}</span>
+                        <span className="pp-resource-price">
+                          {p.price}
+                          {p.currency === 'TRY' ? '₺' : p.currency}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

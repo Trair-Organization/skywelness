@@ -22,10 +22,16 @@ import { CafeProductsService } from './cafe-products.service';
 export class CafeProductsController {
   constructor(private readonly service: CafeProductsService) {}
 
-  /** Public: ürün kataloğunu getir (tenant subdomain ile) */
+  /** Public: ürün kataloğunu getir (tenant subdomain ile) — auth gerekli */
   @Get()
   @UseGuards(JwtAuthGuard)
   listProducts(@Query('tenant') tenantSubdomain: string) {
+    return this.service.listProducts(tenantSubdomain);
+  }
+
+  /** Public: ürün kataloğunu getir (auth gerektirmez — profil sayfası için) */
+  @Get('public/:tenantSubdomain')
+  listPublicProducts(@Param('tenantSubdomain') tenantSubdomain: string) {
     return this.service.listProducts(tenantSubdomain);
   }
 
