@@ -945,26 +945,28 @@ export function MemberDashboardPage() {
               }}
             >
               <h2 style={{ margin: 0 }}>🔔 Bildirimler</h2>
-              {notifications.some((n) => !n.isRead) && (
-                <button
-                  onClick={() => {
-                    apiJson('/notifications/read-all', { method: 'POST' }).catch(() => {});
-                    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-                  }}
-                  style={{
-                    background: 'rgba(56,189,248,0.1)',
-                    border: '1px solid rgba(56,189,248,0.25)',
-                    color: '#38bdf8',
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✓ Tümünü Oku
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  apiJson('/notifications/read-all', { method: 'POST' }).catch(() => {});
+                  setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+                }}
+                disabled={!notifications.some((n) => !n.isRead)}
+                style={{
+                  background: notifications.some((n) => !n.isRead)
+                    ? 'rgba(56,189,248,0.1)'
+                    : 'rgba(148,163,184,0.05)',
+                  border: `1px solid ${notifications.some((n) => !n.isRead) ? 'rgba(56,189,248,0.25)' : 'rgba(148,163,184,0.12)'}`,
+                  color: notifications.some((n) => !n.isRead) ? '#38bdf8' : '#64748b',
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: notifications.some((n) => !n.isRead) ? 'pointer' : 'default',
+                  opacity: notifications.some((n) => !n.isRead) ? 1 : 0.5,
+                }}
+              >
+                ✓ Tümünü Oku
+              </button>
             </div>
             {notifications.length === 0 ? (
               <p className="dashboard-empty">Henüz bildiriminiz yok.</p>
