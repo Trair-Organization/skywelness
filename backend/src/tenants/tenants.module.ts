@@ -11,6 +11,7 @@ import { ResourceSlot } from '../database/entities/resource-slot.entity';
 import { Booking } from '../database/entities/booking.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { PackageType } from '../database/entities/package-type.entity';
+import { ServiceCatalog } from '../database/entities/service-catalog.entity';
 import { TenantsController } from './tenants.controller';
 import { TenantsService } from './tenants.service';
 import { TenantJoinRequestController } from './tenant-join-request.controller';
@@ -36,6 +37,7 @@ import { TenantVisibilityService } from './tenant-visibility.service';
       Booking,
       ClubEvent,
       PackageType,
+      ServiceCatalog,
     ]),
     AuthModule,
     NotificationsModule,
@@ -48,7 +50,12 @@ import { TenantVisibilityService } from './tenant-visibility.service';
     TenantVisibilityAdminController,
     PlatformAdminTenantVisibilityController,
   ],
-  providers: [TenantsService, TenantJoinRequestService, TenantProfileService, TenantVisibilityService],
+  providers: [
+    TenantsService,
+    TenantJoinRequestService,
+    TenantProfileService,
+    TenantVisibilityService,
+  ],
   exports: [TenantsService, TenantVisibilityService],
 })
 export class TenantsModule {}

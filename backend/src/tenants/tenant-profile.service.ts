@@ -9,6 +9,7 @@ import { Booking } from '../database/entities/booking.entity';
 import { User } from '../database/entities/user.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { PackageType } from '../database/entities/package-type.entity';
+import { ServiceCatalog } from '../database/entities/service-catalog.entity';
 import { MemberAccountStatus, UserRole } from '../database/enums';
 
 /**
@@ -27,6 +28,7 @@ export class TenantProfileService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
+    @InjectRepository(ServiceCatalog) private readonly servicesRepo: Repository<ServiceCatalog>,
   ) {}
 
   async getProfile(subdomain: string) {
@@ -42,6 +44,12 @@ export class TenantProfileService {
 
     // Kaynaklar (kortlar, odalar vs.)
     const resources = await this.resourcesRepo.find({
+      where: { tenantId: tenant.id, active: true },
+      order: { sortOrder: 'ASC' },
+    });
+
+    // Unified hizmetler (service_catalog)
+    const services = await this.servicesRepo.find({
       where: { tenantId: tenant.id, active: true },
       order: { sortOrder: 'ASC' },
     });
@@ -130,6 +138,20 @@ export class TenantProfileService {
         currency: r.currency,
         description: r.description,
         imageUrl: r.imageUrl,
+      })),
+
+      // Unified hizmetler (service_catalog)
+      catalogServices: services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        category: s.category,
+        providerType: s.providerType,
+        durationMinutes: s.durationMinutes,
+        price: s.price,
+        currency: s.currency,
+        capacity: s.capacity,
+        imageUrl: s.imageUrl,
       })),
 
       // Yaklaşan etkinlikler

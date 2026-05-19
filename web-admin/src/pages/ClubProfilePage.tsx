@@ -47,6 +47,15 @@ type ProfileData = {
     currency: string;
     capacity: number;
   }>;
+  catalogServices: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    category: string;
+    durationMinutes: number;
+    price: string;
+    currency: string;
+  }>;
   events: Array<{
     id: string;
     title: string;
@@ -247,7 +256,12 @@ export function ClubProfilePage() {
   );
   const visibleSections = SECTIONS.filter((s) => {
     if (s.id === 'about') return !!profile.description;
-    if (s.id === 'products') return profile.packages.length > 0 || profile.resources.length > 0;
+    if (s.id === 'products')
+      return (
+        profile.packages.length > 0 ||
+        profile.resources.length > 0 ||
+        (profile.catalogServices?.length ?? 0) > 0
+      );
     if (s.id === 'reviews') return true;
     if (s.id === 'trainers') return profile.trainers.length > 0;
     if (s.id === 'events') return profile.events.length > 0;
@@ -459,6 +473,33 @@ export function ClubProfilePage() {
                       <div className="pp-resource-meta">
                         <span>⏱️ {r.durationMinutes}dk</span>
                         <span className="pp-resource-price">{r.price}₺</span>
+                      </div>
+                      <button
+                        className="pp-buy-btn"
+                        style={{ marginTop: 8 }}
+                        onClick={() => scrollToSection('booking')}
+                      >
+                        🎯 Randevu Al
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Unified Services (service_catalog) */}
+            {(profile.catalogServices?.length ?? 0) > 0 && (
+              <>
+                <h3 className="pp-sub">📋 Hizmet Kataloğu</h3>
+                <div className="pp-resources-grid">
+                  {profile.catalogServices.map((s) => (
+                    <div key={s.id} className="pp-resource-card">
+                      <strong>{s.name}</strong>
+                      {s.description && <p>{s.description}</p>}
+                      <div className="pp-resource-meta">
+                        <span>
+                          ⏱️ {s.durationMinutes}dk · {s.category}
+                        </span>
+                        <span className="pp-resource-price">{s.price}₺</span>
                       </div>
                       <button
                         className="pp-buy-btn"
