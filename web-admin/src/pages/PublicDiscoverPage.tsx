@@ -333,6 +333,22 @@ export function PublicDiscoverPage() {
         </header>
       )}
 
+      {/* Category Tabs */}
+      <div className="vitrin-categories">
+        <div className="vitrin-categories-scroll">
+          {VERTICALS.map((v) => (
+            <button
+              key={v.key}
+              className={`vitrin-category-tab ${verticalFilter === v.key ? 'active' : ''}`}
+              onClick={() => updateFilter('vertical', v.key)}
+            >
+              <span className="vitrin-cat-icon">{v.icon}</span>
+              <span className="vitrin-cat-label">{v.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Search Bar */}
       <div className="vitrin-search-section">
         <form className="vitrin-search-bar" onSubmit={handleSearch}>
@@ -360,22 +376,6 @@ export function PublicDiscoverPage() {
             Ara
           </button>
         </form>
-      </div>
-
-      {/* Category Tabs */}
-      <div className="vitrin-categories">
-        <div className="vitrin-categories-scroll">
-          {VERTICALS.map((v) => (
-            <button
-              key={v.key}
-              className={`vitrin-category-tab ${verticalFilter === v.key ? 'active' : ''}`}
-              onClick={() => updateFilter('vertical', v.key)}
-            >
-              <span className="vitrin-cat-icon">{v.icon}</span>
-              <span className="vitrin-cat-label">{v.label}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Filters Row */}
