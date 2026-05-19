@@ -7,6 +7,7 @@ import { readStoredTenantSubdomain, writeStoredTenantSubdomain } from '../auth/s
 type TabKey =
   | 'overview'
   | 'clubs'
+  | 'trainers'
   | 'favorites'
   | 'appointments'
   | 'packages'
@@ -126,6 +127,13 @@ export function MemberDashboardPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [myTrainers, setMyTrainers] = useState<
+    Array<{
+      linkId: string;
+      trainerId: string;
+      trainer: { firstName: string; lastName: string; photoUrl?: string | null };
+    }>
+  >([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [memberships, setMemberships] = useState<MembershipItem[]>([]);
   const [payments, setPayments] = useState<PaymentItem[]>([]);
@@ -180,6 +188,19 @@ export function MemberDashboardPage() {
             role: m.role,
           })),
         );
+      } catch {
+        /* ignore */
+      }
+      // Eğitmenlerim
+      try {
+        const trainers = await apiJson<
+          Array<{
+            linkId: string;
+            trainerId: string;
+            trainer: { firstName: string; lastName: string; photoUrl?: string | null };
+          }>
+        >('/trainer-network/my-trainers');
+        setMyTrainers(trainers);
       } catch {
         /* ignore */
       }
@@ -289,6 +310,7 @@ export function MemberDashboardPage() {
           {(
             [
               ['clubs', '🏠', 'Kulüplerim'],
+              ['trainers', '🏋️', 'Eğitmenlerim'],
               ['favorites', '❤️', 'Favorilerim'],
               ['appointments', '📅', 'Randevular'],
               ['packages', '💎', 'Paketlerim'],
@@ -431,6 +453,73 @@ export function MemberDashboardPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ EĞİTMENLERİM ═══ */}
+        {!loading && activeTab === 'trainers' && (
+          <div className="dashboard-content">
+            <h2>🏋️ Eğitmenlerim</h2>
+            {myTrainers.length === 0 ? (
+              <p className="dashboard-empty">
+                Henüz bağlı eğitmeniniz yok. Kulüp profilinden veya eğitmen kodunu girerek
+                bağlanabilirsiniz.
+              </p>
+            ) : (
+              <div className="dashboard-grid">
+                {myTrainers.map((t) => (
+                  <Link
+                    key={t.linkId}
+                    to={`/trainer/${t.trainerId}`}
+                    className="dashboard-card"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}
+                    >
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                          background: 'rgba(56,189,248,0.1)',
+                          border: '1px solid rgba(56,189,248,0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {t.trainer.photoUrl ? (
+                          <img
+                            src={t.trainer.photoUrl}
+                            alt=""
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <span style={{ color: '#38bdf8', fontWeight: 800, fontSize: '1rem' }}>
+                            {t.trainer.firstName[0]}
+                            {t.trainer.lastName[0]}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#f1f5f9' }}>
+                          {t.trainer.firstName} {t.trainer.lastName}
+                        </h3>
+                        <p className="dashboard-card-meta" style={{ margin: '2px 0 0' }}>
+                          Bağlı Eğitmen
+                        </p>
+                      </div>
+                    </div>
+                    <span style={{ color: '#38bdf8', fontSize: '0.8rem', fontWeight: 600 }}>
+                      Profili Gör →
+                    </span>
+                  </Link>
+                ))}
               </div>
             )}
           </div>
