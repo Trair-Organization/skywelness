@@ -211,18 +211,34 @@ export function ClubProfilePage() {
         /* */
       }
       try {
-        const products = await apiJson<
-          Array<{
-            id: string;
-            name: string;
+        const data = await apiJson<{
+          tenantId: string;
+          tenantName: string;
+          categories: Array<{
             category: string;
-            description: string | null;
-            price: string;
-            currency: string;
-            imageUrl: string | null;
-          }>
-        >(`/cafe/products/public/${encodeURIComponent(subdomain)}`, { auth: false });
-        setCafeProducts(products);
+            items: Array<{
+              id: string;
+              name: string;
+              description: string | null;
+              price: string;
+              currency: string;
+              imageUrl: string | null;
+            }>;
+          }>;
+        }>(`/cafe/products/public/${encodeURIComponent(subdomain)}`, { auth: false });
+        // Flatten: kategorilerdeki tüm ürünleri tek listeye al
+        const flat = (data.categories || []).flatMap((c) =>
+          c.items.map((it) => ({
+            id: it.id,
+            name: it.name,
+            category: c.category,
+            description: it.description,
+            price: it.price,
+            currency: it.currency,
+            imageUrl: it.imageUrl,
+          })),
+        );
+        setCafeProducts(flat);
       } catch {
         /* */
       }
