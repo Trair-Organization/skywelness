@@ -28,7 +28,7 @@ export class SeedDiyetKapimdaTenant1779300000000 implements MigrationInterface {
         '{"primaryColor": "#16a34a", "accentColor": "#22c55e"}',
         '{"workspaceType": "nutrition_partner", "externalUrl": "https://diyetkapimda.com"}',
         'DIYETKAP',
-        'https://diyetkapimda.com/App/View/Assets/img/logo.png',
+        NULL,
         'https://diyetkapimda.com/Upload/paketler/resimler/DK%20Slider%20(1).jpg'
       )
       ON CONFLICT (subdomain) DO NOTHING
