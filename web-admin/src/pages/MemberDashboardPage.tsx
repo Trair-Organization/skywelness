@@ -251,14 +251,8 @@ export function MemberDashboardPage() {
           >
             🔔{unreadNotifs > 0 && <span className="topbar-badge">{unreadNotifs}</span>}
           </button>
-          <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>👤 {user.firstName}</span>
-          <button
-            onClick={logout}
-            className="btn-outline"
-            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
-          >
-            Çıkış
-          </button>
+          {/* Profile Avatar + Dropdown */}
+          <ProfileMenu user={user} logout={logout} setActiveTab={setActiveTab} />
         </div>
       </nav>
 
@@ -1343,6 +1337,93 @@ function MessagesView({
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Profile Menu Component ──────────────────────────────────────────────────
+
+function ProfileMenu({
+  user,
+  logout,
+  setActiveTab,
+}: {
+  user: { firstName: string; lastName: string; email: string };
+  logout: () => void;
+  setActiveTab: (tab: TabKey) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button className="pm-avatar-btn" onClick={() => setOpen(!open)}>
+        <span>
+          {user.firstName[0]}
+          {user.lastName[0]}
+        </span>
+      </button>
+      {open && (
+        <>
+          <div className="pm-overlay" onClick={() => setOpen(false)} />
+          <div className="pm-dropdown">
+            <div className="pm-header">
+              <div className="pm-header-avatar">
+                <span>
+                  {user.firstName[0]}
+                  {user.lastName[0]}
+                </span>
+              </div>
+              <div className="pm-header-info">
+                <strong>
+                  {user.firstName} {user.lastName}
+                </strong>
+                <p>{user.email}</p>
+              </div>
+            </div>
+            <div className="pm-divider" />
+            <button
+              className="pm-item"
+              onClick={() => {
+                setActiveTab('overview');
+                setOpen(false);
+              }}
+            >
+              <span className="pm-item-icon">👤</span> Profilim
+            </button>
+            <button
+              className="pm-item"
+              onClick={() => {
+                setActiveTab('clubs');
+                setOpen(false);
+              }}
+            >
+              <span className="pm-item-icon">🏠</span> Kulüplerim
+            </button>
+            <button
+              className="pm-item"
+              onClick={() => {
+                setActiveTab('payments');
+                setOpen(false);
+              }}
+            >
+              <span className="pm-item-icon">💳</span> Ödemelerim
+            </button>
+            <div className="pm-divider" />
+            <button className="pm-item pm-item-disabled" disabled>
+              <span className="pm-item-icon">🍎</span> Sağlık Verileri{' '}
+              <span className="pm-soon">Yakında</span>
+            </button>
+            <button className="pm-item pm-item-disabled" disabled>
+              <span className="pm-item-icon">⚙️</span> Hesap Ayarları{' '}
+              <span className="pm-soon">Yakında</span>
+            </button>
+            <div className="pm-divider" />
+            <button className="pm-item pm-item-danger" onClick={logout}>
+              <span className="pm-item-icon">🚪</span> Çıkış Yap
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
