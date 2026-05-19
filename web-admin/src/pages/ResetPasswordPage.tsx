@@ -70,17 +70,7 @@ export function ResetPasswordPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-logo">
-            <svg viewBox="0 0 64 64" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="32" cy="32" r="28" fill="none" stroke="#38bdf8" strokeWidth="3" />
-              <path
-                d="M20 28 Q32 16 44 28 Q32 40 20 28 Z"
-                fill="none"
-                stroke="#38bdf8"
-                strokeWidth="2.5"
-                strokeLinejoin="round"
-              />
-              <circle cx="32" cy="40" r="3" fill="#38bdf8" />
-            </svg>
+            <img src="/wellnesslogodaire.png" alt="WellnessClub" />
           </div>
           <h1 className="auth-title">Yeni Şifre Belirle</h1>
           <p className="auth-subtitle">En az 8 karakter, 1 büyük harf, 1 küçük harf ve 1 rakam.</p>
