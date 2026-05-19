@@ -36,6 +36,13 @@ export class CampaignsController {
     return this.campaignsService.listFeatured(l);
   }
 
+  /** Public: Tek kampanya detayı (ID ile) */
+  @Get(':id/detail')
+  @SkipThrottle()
+  getDetail(@Param('id') id: string) {
+    return this.campaignsService.getById(id);
+  }
+
   /**
    * Public: Global keşif sayfası — sadece Süper Admin tarafından öne çıkarılmış kampanyalar.
    * Trendyol modeli: öne çıkarma para karşılığı yapılır.

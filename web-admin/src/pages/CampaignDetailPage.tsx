@@ -28,18 +28,12 @@ export function CampaignDetailPage() {
   const load = useCallback(async () => {
     if (!campaignId) return;
     try {
-      const [featured, publicCamps] = await Promise.allSettled([
-        apiJson<CampaignDetail[]>('/campaigns/featured?limit=50', { auth: false }),
-        apiJson<CampaignDetail[]>('/campaigns/public?limit=50', { auth: false }),
-      ]);
-      const allCamps = [
-        ...(featured.status === 'fulfilled' ? featured.value : []),
-        ...(publicCamps.status === 'fulfilled' ? publicCamps.value : []),
-      ];
-      const found = allCamps.find((c) => c.id === campaignId);
-      setCampaign(found || null);
+      const data = await apiJson<CampaignDetail>(`/campaigns/${campaignId}/detail`, {
+        auth: false,
+      });
+      setCampaign(data);
     } catch {
-      /* */
+      setCampaign(null);
     } finally {
       setLoading(false);
     }

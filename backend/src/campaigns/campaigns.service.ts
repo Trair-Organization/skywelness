@@ -71,6 +71,14 @@ export class CampaignsService {
     });
   }
 
+  /** Public: Tek kampanya detayı (ID ile) */
+  async getById(id: string): Promise<Campaign | null> {
+    return this.campaignsRepo.findOne({
+      where: { id },
+      relations: ['tenant'],
+    });
+  }
+
   /** Tüm platformdaki aktif kampanyalar (onboarding/keşif ekranı için). */
   async listAllActive(limit = 10): Promise<Campaign[]> {
     const now = new Date();
@@ -144,7 +152,8 @@ export class CampaignsService {
     if (dto.maxRedemptions !== undefined) campaign.maxRedemptions = dto.maxRedemptions;
     if (dto.featured !== undefined) campaign.featured = dto.featured;
     if (dto.targetCity !== undefined) campaign.targetCity = dto.targetCity?.trim() || null;
-    if (dto.targetDistrict !== undefined) campaign.targetDistrict = dto.targetDistrict?.trim() || null;
+    if (dto.targetDistrict !== undefined)
+      campaign.targetDistrict = dto.targetDistrict?.trim() || null;
     return this.campaignsRepo.save(campaign);
   }
 
@@ -213,7 +222,7 @@ export class CampaignsService {
       });
       if (admins.length > 0) {
         void this.pushService.sendToMany(
-          admins.map(a => a.id),
+          admins.map((a) => a.id),
           '⌛ Kampanya Süresi Doldu',
           `"${campaign.title}" kampanyanızın süresi doldu.`,
           { type: 'campaign_expired', campaignId: campaign.id },
@@ -232,9 +241,10 @@ export class CampaignsService {
     if (members.length === 0) return { sent: 0, total: 0 };
 
     const userIds = members.map((m) => m.id);
-    const discountText = campaign.discountKind === 'percentage'
-      ? `%${campaign.discountValue} indirim`
-      : `₺${campaign.discountValue} indirim`;
+    const discountText =
+      campaign.discountKind === 'percentage'
+        ? `%${campaign.discountValue} indirim`
+        : `₺${campaign.discountValue} indirim`;
 
     return this.pushService.sendToMany(
       userIds,
