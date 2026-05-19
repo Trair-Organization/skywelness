@@ -326,7 +326,8 @@ export class SpaServiceService {
       const slots = availabilities
         .filter((a) => a.spaTherapistId === th.id)
         .filter((a) => {
-          const slotTime = new Date(`${date}T${a.startTime}`);
+          // Türkiye zonunda (+03:00) parse et — slot saatleri TR yerel saati
+          const slotTime = new Date(`${date}T${a.startTime}+03:00`);
           if (slotTime <= now) return false;
           const key = `${a.spaTherapistId}|${a.startTime.slice(0, 5)}`;
           return !bookedKeys.has(key);
