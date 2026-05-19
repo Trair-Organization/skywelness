@@ -1020,6 +1020,9 @@ function CategoryWizard({
     }>
   >([]);
 
+  // Açık masöz panelleri (default: tüm masözler açık)
+  const [openTherapists, setOpenTherapists] = useState<Set<string>>(new Set());
+
   // Spa Yönetimi → Hizmetler sekmesindeki masaj çeşitleri
   const [spaServices, setSpaServices] = useState<
     Array<{
@@ -1127,6 +1130,8 @@ function CategoryWizard({
           setTherapistSlots(
             grouped.sort((a, b) => a.therapistName.localeCompare(b.therapistName, 'tr')),
           );
+          // Default: tüm masöz panelleri açık
+          setOpenTherapists(new Set(grouped.map((g) => g.therapistId)));
         })
         .catch(() => {
           setSlots([]);
@@ -1341,30 +1346,54 @@ function CategoryWizard({
 
             return (
               <div className="bw-therapist-rows">
-                {therapistsWithFutureSlots.map((th) => (
-                  <div key={th.therapistId} className="bw-therapist-row">
-                    <div className="bw-therapist-name">💆 {th.therapistName}</div>
-                    <div className="bw-therapist-slots">
-                      {th.slots.map((s) => (
-                        <button
-                          key={s.slotId}
-                          className={`bw-slot-card ${selectedSlotId === s.slotId ? 'active' : ''}`}
-                          onClick={() => {
-                            setSelectedSlotId(s.slotId);
-                            setSelectedMasoz(th.therapistId);
-                            setShowConfirm(true);
-                          }}
-                        >
-                          <span className="bw-slot-time">
-                            {s.startTime}-{s.endTime}
-                          </span>
-                          <span className="bw-slot-price">{s.price}₺</span>
-                          <span className="bw-slot-credit">veya 1 kredi</span>
-                        </button>
-                      ))}
+                {therapistsWithFutureSlots.map((th) => {
+                  const isOpen = openTherapists.has(th.therapistId);
+                  return (
+                    <div key={th.therapistId} className="bw-therapist-row">
+                      <button
+                        type="button"
+                        className="bw-therapist-header"
+                        onClick={() => {
+                          setOpenTherapists((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(th.therapistId)) next.delete(th.therapistId);
+                            else next.add(th.therapistId);
+                            return next;
+                          });
+                        }}
+                      >
+                        <span className="bw-therapist-name">💆 {th.therapistName}</span>
+                        <span className="bw-therapist-meta">
+                          {th.slots.length} slot
+                          <span className={`bw-therapist-arrow ${isOpen ? 'open' : ''}`}>▾</span>
+                        </span>
+                      </button>
+                      {isOpen && (
+                        <div className="bw-therapist-slots">
+                          {th.slots.map((s) => (
+                            <button
+                              key={s.slotId}
+                              className={`bw-slot-card ${selectedSlotId === s.slotId ? 'active' : ''}`}
+                              onClick={() => {
+                                setSelectedSlotId(s.slotId);
+                                setSelectedMasoz(th.therapistId);
+                                setShowConfirm(true);
+                                // Slot seçilince tüm panelleri kapat (önizleme görünsün)
+                                setOpenTherapists(new Set());
+                              }}
+                            >
+                              <span className="bw-slot-time">
+                                {s.startTime}-{s.endTime}
+                              </span>
+                              <span className="bw-slot-price">{s.price}₺</span>
+                              <span className="bw-slot-credit">veya 1 kredi</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })()

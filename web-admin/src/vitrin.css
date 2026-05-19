@@ -4052,18 +4052,53 @@
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(148, 163, 184, 0.1);
   border-radius: 12px;
+  overflow: hidden;
+}
+.bw-therapist-header {
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #f1f5f9;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: background 0.15s;
+}
+.bw-therapist-header:hover {
+  background: rgba(56, 189, 248, 0.05);
 }
 .bw-therapist-name {
   color: #f1f5f9;
   font-size: 0.9rem;
   font-weight: 700;
-  margin-bottom: 10px;
+}
+.bw-therapist-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.bw-therapist-arrow {
+  display: inline-block;
+  color: #64748b;
+  transition: transform 0.2s;
+  font-size: 0.95rem;
+}
+.bw-therapist-arrow.open {
+  transform: rotate(180deg);
+  color: #38bdf8;
 }
 .bw-therapist-slots {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
+  padding: 0 14px 14px;
 }
 @media (max-width: 768px) {
   .bw-therapist-slots {
