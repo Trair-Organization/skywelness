@@ -932,11 +932,6 @@ function BookingSection({ subdomain }: { subdomain: string }) {
     group_class: { icon: '🧘', label: 'Grup Dersi' },
     general: { icon: '📋', label: 'Genel' },
   };
-  // Kapasiteye göre filtrele — kişi sayısına uygun odalar/kaynaklar (masözler hariç)
-  const filteredServices = services.filter(
-    (s) =>
-      s.category === selectedCategory && s.capacity >= participants && s.providerType !== 'trainer',
-  );
   const selectedSvc = services.find((s) => s.id === selectedService);
   const selectedSlot = slots.find((s) => s.id === selectedSlotId);
   const days = getWeekDays(weekOffset);
@@ -1105,15 +1100,12 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         </div>
       )}
 
-      {/* ④ Oda/Hizmet Seç (kapasiteye göre filtrelenmiş) */}
+      {/* ④ Oda veya Masöz Seç */}
       {step === 4 && (
         <div>
           <button className="bw-back" onClick={() => setStep(3)}>
             ← Tarih Seçimi
           </button>
-          <p className="bw-step-title">
-            🏠 {participants > 1 ? `${participants} kişilik` : 'Tek kişilik'} oda/hizmet seçin
-          </p>
           <div className="bw-selected-info">
             <span>
               {CATEGORY_META[selectedCategory]?.icon} {CATEGORY_META[selectedCategory]?.label} · 👥{' '}
@@ -1128,35 +1120,15 @@ function BookingSection({ subdomain }: { subdomain: string }) {
               })}
             </span>
           </div>
-          {filteredServices.length === 0 ? (
-            <p className="pp-empty">
-              Bu kişi sayısına uygun hizmet bulunamadı. Farklı kişi sayısı deneyin.
-            </p>
-          ) : (
-            <div className="bw-services">
-              {filteredServices.map((s) => (
-                <button
-                  key={s.id}
-                  className="bw-svc-card"
-                  onClick={() => {
-                    setSelectedService(s.id);
-                    setStep(5);
-                  }}
-                >
-                  <div className="bw-svc-avatar">
-                    {s.providerName ? s.providerName.charAt(0) : '🏠'}
-                  </div>
-                  <div className="bw-svc-info">
-                    <strong>{s.providerName || s.name}</strong>
-                    <span>
-                      {s.durationMinutes}dk · {s.price}₺ · {s.capacity} kişilik
-                    </span>
-                  </div>
-                  <span className="bw-svc-arrow">→</span>
-                </button>
-              ))}
-            </div>
-          )}
+          <Step4Choice
+            services={services}
+            selectedCategory={selectedCategory}
+            participants={participants}
+            onSelect={(svcId) => {
+              setSelectedService(svcId);
+              setStep(5);
+            }}
+          />
         </div>
       )}
 
@@ -1389,6 +1361,116 @@ function Accordion({
         <span className="pp-accordion-arrow">{open ? '▾' : '▸'}</span>
       </button>
       {open && <div className="pp-accordion-body">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Step 4: Oda veya Masöz Seçimi ──────────────────────────────────────────
+
+function Step4Choice({
+  services,
+  selectedCategory,
+  participants,
+  onSelect,
+}: {
+  services: V2Service[];
+  selectedCategory: string;
+  participants: number;
+  onSelect: (svcId: string) => void;
+}) {
+  const [mode, setMode] = useState<'choose' | 'room' | 'therapist'>('choose');
+
+  const rooms = services.filter(
+    (s) =>
+      s.category === selectedCategory && s.providerType !== 'trainer' && s.capacity >= participants,
+  );
+  const therapists = services.filter(
+    (s) => s.category === selectedCategory && s.providerType === 'trainer',
+  );
+
+  const hasRooms = rooms.length > 0;
+  const hasTherapists = therapists.length > 0;
+
+  // Eğer sadece biri varsa direkt göster
+  if (hasRooms && !hasTherapists) {
+    return (
+      <>
+        <p className="bw-step-title">🏠 Oda Seçin</p>
+        <ServiceList items={rooms} onSelect={onSelect} />
+      </>
+    );
+  }
+  if (!hasRooms && hasTherapists) {
+    return (
+      <>
+        <p className="bw-step-title">💆 Masöz Seçin</p>
+        <ServiceList items={therapists} onSelect={onSelect} />
+      </>
+    );
+  }
+  if (!hasRooms && !hasTherapists) {
+    return <p className="pp-empty">Bu kişi sayısına uygun hizmet bulunamadı.</p>;
+  }
+
+  // İkisi de varsa seçim göster
+  if (mode === 'choose') {
+    return (
+      <div className="bw-choice">
+        <p className="bw-step-title">Nasıl devam etmek istersiniz?</p>
+        <div className="bw-choice-cards">
+          <button className="bw-choice-card" onClick={() => setMode('room')}>
+            <span className="bw-choice-icon">🏠</span>
+            <strong>Oda Seçerek</strong>
+            <span className="bw-choice-hint">{rooms.length} oda müsait</span>
+          </button>
+          <button className="bw-choice-card" onClick={() => setMode('therapist')}>
+            <span className="bw-choice-icon">💆</span>
+            <strong>Masöz Seçerek</strong>
+            <span className="bw-choice-hint">{therapists.length} masöz müsait</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'room') {
+    return (
+      <>
+        <button className="bw-back" onClick={() => setMode('choose')}>
+          ← Geri
+        </button>
+        <p className="bw-step-title">🏠 Oda Seçin</p>
+        <ServiceList items={rooms} onSelect={onSelect} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button className="bw-back" onClick={() => setMode('choose')}>
+        ← Geri
+      </button>
+      <p className="bw-step-title">💆 Masöz Seçin</p>
+      <ServiceList items={therapists} onSelect={onSelect} />
+    </>
+  );
+}
+
+function ServiceList({ items, onSelect }: { items: V2Service[]; onSelect: (id: string) => void }) {
+  return (
+    <div className="bw-services">
+      {items.map((s) => (
+        <button key={s.id} className="bw-svc-card" onClick={() => onSelect(s.id)}>
+          <div className="bw-svc-avatar">{s.providerName ? s.providerName.charAt(0) : '🏠'}</div>
+          <div className="bw-svc-info">
+            <strong>{s.providerName || s.name}</strong>
+            <span>
+              {s.durationMinutes}dk · {s.price}₺{s.capacity > 1 ? ` · ${s.capacity} kişilik` : ''}
+            </span>
+          </div>
+          <span className="bw-svc-arrow">→</span>
+        </button>
+      ))}
     </div>
   );
 }

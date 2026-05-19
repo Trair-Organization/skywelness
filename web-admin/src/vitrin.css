@@ -3990,3 +3990,38 @@
   font-size: 0.68rem;
   font-style: italic;
 }
+
+/* Choice cards (oda vs masöz) */
+.bw-choice-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.bw-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.bw-choice-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.05);
+  transform: translateY(-2px);
+}
+.bw-choice-icon {
+  font-size: 2.2rem;
+}
+.bw-choice-card strong {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+}
+.bw-choice-hint {
+  color: #64748b;
+  font-size: 0.72rem;
+}
