@@ -893,11 +893,11 @@ function BookingSection({ subdomain }: { subdomain: string }) {
   const { token } = useAuth();
   const [services, setServices] = useState<V2Service[]>([]);
   const [addons, setAddons] = useState<Addon[]>([]);
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedService, setSelectedService] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedService, setSelectedService] = useState('');
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
@@ -912,6 +912,7 @@ function BookingSection({ subdomain }: { subdomain: string }) {
       .catch(() => {});
   }, [subdomain]);
 
+  // Slotları yükle (hizmet + tarih seçildiğinde)
   useEffect(() => {
     if (!selectedService || !selectedDate) return;
     apiJson<V2Slot[]>(
@@ -935,23 +936,7 @@ function BookingSection({ subdomain }: { subdomain: string }) {
   const selectedSlot = slots.find((s) => s.id === selectedSlotId);
   const days = getWeekDays(weekOffset);
 
-  function selectCategory(cat: string) {
-    setSelectedCategory(cat);
-    const first = services.find((s) => s.category === cat);
-    if (first) setSelectedService(first.id);
-    setStep(2);
-  }
-
-  function selectService(svcId: string) {
-    setSelectedService(svcId);
-    setStep(3);
-  }
-
-  function selectSlot(slotId: string) {
-    setSelectedSlotId(slotId);
-    setAddonSelections({});
-    setStep(4);
-  }
+  const STEPS = ['Kategori', 'Tarih', 'Oda/Hizmet', 'Saat', 'Onay'];
 
   async function proceedToCheckout() {
     if (!selectedSlotId) return;
@@ -997,7 +982,7 @@ function BookingSection({ subdomain }: { subdomain: string }) {
     <div className="bw-wizard">
       {/* Progress Bar */}
       <div className="bw-progress">
-        {['Kategori', 'Hizmet', 'Tarih & Saat', 'Onay'].map((label, i) => (
+        {STEPS.map((label, i) => (
           <div
             key={i}
             className={`bw-step ${step > i + 1 ? 'done' : ''} ${step === i + 1 ? 'active' : ''}`}
@@ -1008,13 +993,20 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         ))}
       </div>
 
-      {/* Step 1: Kategori */}
+      {/* ① Kategori */}
       {step === 1 && (
         <div className="bw-categories">
           {categories.map((cat) => {
             const meta = CATEGORY_META[cat] || { icon: '📋', label: cat };
             return (
-              <button key={cat} className="bw-cat-card" onClick={() => selectCategory(cat)}>
+              <button
+                key={cat}
+                className="bw-cat-card"
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setStep(2);
+                }}
+              >
                 <span className="bw-cat-icon">{meta.icon}</span>
                 <span className="bw-cat-label">{meta.label}</span>
                 <span className="bw-cat-count">
@@ -1026,47 +1018,13 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         </div>
       )}
 
-      {/* Step 2: Hizmet/Eğitmen seçimi (fotoğraflı kartlar) */}
+      {/* ② Tarih Seç */}
       {step === 2 && (
         <div>
           <button className="bw-back" onClick={() => setStep(1)}>
             ← Kategoriler
           </button>
-          <div className="bw-services">
-            {filteredServices.map((s) => (
-              <button
-                key={s.id}
-                className={`bw-svc-card ${selectedService === s.id ? 'active' : ''}`}
-                onClick={() => selectService(s.id)}
-              >
-                <div className="bw-svc-avatar">
-                  {s.providerName ? s.providerName.charAt(0) : '🎯'}
-                </div>
-                <div className="bw-svc-info">
-                  <strong>{s.providerName || s.name}</strong>
-                  <span>
-                    {s.durationMinutes}dk · {s.price}₺
-                  </span>
-                </div>
-                <span className="bw-svc-arrow">→</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Tarih & Saat */}
-      {step === 3 && (
-        <div>
-          <button className="bw-back" onClick={() => setStep(2)}>
-            ← Hizmet Seçimi
-          </button>
-          <div className="bw-selected-info">
-            <span>{selectedSvc?.providerName || selectedSvc?.name}</span>
-            <span>
-              {selectedSvc?.durationMinutes}dk · {selectedSvc?.price}₺
-            </span>
-          </div>
+          <p className="bw-step-title">📅 Ne zaman gelmek istiyorsunuz?</p>
           <div className="pp-week-nav">
             <button
               onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
@@ -1082,17 +1040,87 @@ function BookingSection({ subdomain }: { subdomain: string }) {
               →
             </button>
           </div>
-          <div className="pp-date-tabs">
+          <div className="bw-date-grid">
             {days.map((d) => (
               <button
                 key={d.value}
-                className={`pp-date-tab ${selectedDate === d.value ? 'active' : ''}`}
-                onClick={() => setSelectedDate(d.value)}
+                className={`bw-date-card ${selectedDate === d.value ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedDate(d.value);
+                  setStep(3);
+                }}
               >
-                <span>{d.dayName}</span>
-                <span>{d.label}</span>
+                <span className="bw-date-day">{d.dayName}</span>
+                <span className="bw-date-num">{d.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ③ Oda/Masöz/Eğitmen Seç */}
+      {step === 3 && (
+        <div>
+          <button className="bw-back" onClick={() => setStep(2)}>
+            ← Tarih Seçimi
+          </button>
+          <p className="bw-step-title">🏠 Oda veya hizmet sağlayıcı seçin</p>
+          <div className="bw-selected-info">
+            <span>
+              {CATEGORY_META[selectedCategory]?.icon} {CATEGORY_META[selectedCategory]?.label}
+            </span>
+            <span>
+              📅{' '}
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              })}
+            </span>
+          </div>
+          <div className="bw-services">
+            {filteredServices.map((s) => (
+              <button
+                key={s.id}
+                className="bw-svc-card"
+                onClick={() => {
+                  setSelectedService(s.id);
+                  setStep(4);
+                }}
+              >
+                <div className="bw-svc-avatar">
+                  {s.providerName ? s.providerName.charAt(0) : '🏠'}
+                </div>
+                <div className="bw-svc-info">
+                  <strong>{s.providerName || s.name}</strong>
+                  <span>
+                    {s.durationMinutes}dk · {s.price}₺
+                  </span>
+                </div>
+                <span className="bw-svc-arrow">→</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ④ Saat Seç */}
+      {step === 4 && (
+        <div>
+          <button className="bw-back" onClick={() => setStep(3)}>
+            ← Oda Seçimi
+          </button>
+          <p className="bw-step-title">🕐 Müsait saatleri seçin</p>
+          <div className="bw-selected-info">
+            <span>{selectedSvc?.providerName || selectedSvc?.name}</span>
+            <span>
+              📅{' '}
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              })}
+            </span>
           </div>
           {slots.length === 0 ? (
             <p className="pp-empty">Bu tarihte müsait saat yok</p>
@@ -1105,7 +1133,13 @@ function BookingSection({ subdomain }: { subdomain: string }) {
                   <button
                     key={s.id}
                     className={`bw-time-slot ${isPast ? 'past' : ''}`}
-                    onClick={() => !isPast && selectSlot(s.id)}
+                    onClick={() => {
+                      if (!isPast) {
+                        setSelectedSlotId(s.id);
+                        setAddonSelections({});
+                        setStep(5);
+                      }
+                    }}
                     disabled={isPast}
                   >
                     <span className="bw-time-dot" />
@@ -1121,11 +1155,11 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         </div>
       )}
 
-      {/* Step 4: Onay */}
-      {step === 4 && selectedSlot && selectedSvc && (
+      {/* ⑤ Onay */}
+      {step === 5 && selectedSlot && selectedSvc && (
         <div>
-          <button className="bw-back" onClick={() => setStep(3)}>
-            ← Tarih & Saat
+          <button className="bw-back" onClick={() => setStep(4)}>
+            ← Saat Seçimi
           </button>
           <div className="order-summary-panel">
             <div className="order-summary-header">
@@ -1133,13 +1167,12 @@ function BookingSection({ subdomain }: { subdomain: string }) {
             </div>
             <div className="order-summary-details">
               <div className="order-detail-row">
-                <span className="order-detail-icon">🎯</span>
+                <span className="order-detail-icon">
+                  {CATEGORY_META[selectedSvc.category]?.icon || '🎯'}
+                </span>
                 <div className="order-detail-info">
                   <strong>{selectedSvc.providerName || selectedSvc.name}</strong>
-                  <p>
-                    {selectedSvc.durationMinutes}dk ·{' '}
-                    {CATEGORY_META[selectedSvc.category]?.label || selectedSvc.category}
-                  </p>
+                  <p>{selectedSvc.durationMinutes}dk</p>
                 </div>
                 <span className="order-detail-price">{selectedSlot.price}₺</span>
               </div>
