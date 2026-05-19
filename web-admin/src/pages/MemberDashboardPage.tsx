@@ -945,7 +945,18 @@ export function MemberDashboardPage() {
                   <div
                     key={n.id}
                     className="dashboard-list-item"
-                    style={{ opacity: n.isRead ? 0.6 : 1 }}
+                    style={{
+                      opacity: n.isRead ? 0.6 : 1,
+                      cursor: !n.isRead ? 'pointer' : 'default',
+                    }}
+                    onClick={() => {
+                      if (!n.isRead) {
+                        apiJson(`/notifications/${n.id}/read`, { method: 'POST' }).catch(() => {});
+                        setNotifications((prev) =>
+                          prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)),
+                        );
+                      }
+                    }}
                   >
                     <div style={{ flex: 1 }}>
                       <strong>{n.title}</strong>
