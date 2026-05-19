@@ -460,6 +460,13 @@ export function ClubProfilePage() {
                         <span>⏱️ {r.durationMinutes}dk</span>
                         <span className="pp-resource-price">{r.price}₺</span>
                       </div>
+                      <button
+                        className="pp-buy-btn"
+                        style={{ marginTop: 8 }}
+                        onClick={() => scrollToSection('booking')}
+                      >
+                        🎯 Randevu Al
+                      </button>
                     </div>
                   ))}
                 </div>
