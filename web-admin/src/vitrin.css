@@ -2104,3 +2104,226 @@
     right: -8px;
   }
 }
+
+/* ═══ Overview — Rich Dashboard ═══════════════════════════════════════════════ */
+
+.overview-club-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.06) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  margin-bottom: 16px;
+}
+.overview-club-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.overview-club-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.overview-club-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.overview-club-logo span {
+  color: #38bdf8;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.overview-club-info strong {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  display: block;
+}
+.overview-club-info p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+.overview-club-link {
+  color: #38bdf8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.overview-club-link:hover {
+  color: #7dd3fc;
+}
+
+/* Next Appointment */
+.overview-next-appt {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  margin-bottom: 16px;
+}
+.overview-next-label {
+  font-size: 0.72rem;
+  color: #10b981;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.overview-next-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.overview-next-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.overview-next-date {
+  font-size: 0.72rem;
+  color: #10b981;
+  font-weight: 600;
+}
+.overview-next-hour {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+.overview-next-details {
+  flex: 1;
+}
+.overview-next-details strong {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  display: block;
+}
+.overview-next-details p {
+  margin: 3px 0 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+/* Credits */
+.overview-credits {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.overview-credit-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.6) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.08);
+}
+.overview-credit-icon {
+  font-size: 1.5rem;
+}
+.overview-credit-item strong {
+  display: block;
+  color: #38bdf8;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.overview-credit-item span {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Quick Actions */
+.overview-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.overview-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  background: rgba(56, 189, 248, 0.05);
+  color: #38bdf8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.overview-action-btn:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Section Title */
+.overview-section-title {
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+/* Empty State */
+.overview-empty {
+  text-align: center;
+  padding: 3rem 2rem;
+  border: 1px dashed rgba(56, 189, 248, 0.15);
+  border-radius: 16px;
+}
+.overview-empty span {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 12px;
+}
+.overview-empty h3 {
+  color: #f1f5f9;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+.overview-empty p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .overview-club-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .overview-next-body {
+    flex-wrap: wrap;
+  }
+  .overview-credits {
+    flex-direction: column;
+  }
+  .overview-actions {
+    flex-direction: column;
+  }
+  .overview-action-btn {
+    justify-content: center;
+  }
+}

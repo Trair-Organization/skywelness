@@ -439,51 +439,138 @@ export function MemberDashboardPage() {
         {/* ═══ OVERVIEW ═══ */}
         {!loading && activeTab === 'overview' && (
           <div className="dashboard-content">
-            <h2>Aktif Paketler</h2>
-            {activePackages.length === 0 ? (
-              <p className="dashboard-empty">
-                Henüz aktif paketiniz yok. <Link to="/discover">Kulüpleri keşfet</Link>
-              </p>
-            ) : (
-              <div className="dashboard-grid">
-                {activePackages.slice(0, 4).map((p) => (
-                  <div key={p.id} className="dashboard-card">
-                    <h3>{p.packageType.name}</h3>
-                    <p className="dashboard-card-meta">
-                      {p.packageType.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
-                    </p>
-                    <div className="dashboard-card-stat">
-                      <strong>{p.remainingSessions}</strong>
-                      <span>kalan seans</span>
-                    </div>
-                    <p className="dashboard-card-meta">
-                      Geçerlilik: {new Date(p.expiresAt).toLocaleDateString('tr-TR')}
-                    </p>
+            {/* Aktif Kulüp Kartı */}
+            {currentSubdomain && myClubs.length > 0 && (
+              <div className="overview-club-card">
+                <div className="overview-club-info">
+                  <div className="overview-club-logo">
+                    {myClubs.find((c) => c.subdomain === currentSubdomain)?.logoUrl ? (
+                      <img
+                        src={myClubs.find((c) => c.subdomain === currentSubdomain)!.logoUrl!}
+                        alt=""
+                      />
+                    ) : (
+                      <span>
+                        {(myClubs.find((c) => c.subdomain === currentSubdomain)?.name || 'K').slice(
+                          0,
+                          2,
+                        )}
+                      </span>
+                    )}
                   </div>
-                ))}
+                  <div>
+                    <strong>
+                      {myClubs.find((c) => c.subdomain === currentSubdomain)?.name ||
+                        currentSubdomain}
+                    </strong>
+                    <p>Aktif kulübün</p>
+                  </div>
+                </div>
+                <Link to={`/club/${currentSubdomain}`} className="overview-club-link">
+                  Kulüp Profili →
+                </Link>
               </div>
             )}
-            <h2 style={{ marginTop: '2rem' }}>Yaklaşan Randevular</h2>
-            {upcomingAppointments.length === 0 ? (
-              <p className="dashboard-empty">
-                Yaklaşan randevu yok. <Link to="/discover">Rezervasyon yap</Link>
-              </p>
-            ) : (
-              <div className="dashboard-list">
-                {upcomingAppointments.slice(0, 5).map((a) => (
-                  <div key={a.id} className="dashboard-list-item">
-                    <div>
-                      <strong>{a.service.name}</strong>
-                      <p>
-                        {new Date(a.slot.date).toLocaleDateString('tr-TR')} · {a.slot.startTime}-
-                        {a.slot.endTime}
-                      </p>
-                    </div>
-                    <span className={`status-badge status-${a.status}`}>
-                      {statusLabel(a.status)}
+
+            {/* Yaklaşan Randevu (büyük kart) */}
+            {upcomingAppointments.length > 0 && (
+              <div className="overview-next-appt">
+                <div className="overview-next-label">Sonraki Randevun</div>
+                <div className="overview-next-body">
+                  <div className="overview-next-time">
+                    <span className="overview-next-date">
+                      {new Date(upcomingAppointments[0].slot.date).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
+                    <span className="overview-next-hour">
+                      {upcomingAppointments[0].slot.startTime}
                     </span>
                   </div>
-                ))}
+                  <div className="overview-next-details">
+                    <strong>{upcomingAppointments[0].service.name}</strong>
+                    <p>
+                      {upcomingAppointments[0].slot.startTime} -{' '}
+                      {upcomingAppointments[0].slot.endTime}
+                    </p>
+                  </div>
+                  <span className={`status-badge status-${upcomingAppointments[0].status}`}>
+                    {statusLabel(upcomingAppointments[0].status)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Kalan Krediler */}
+            {(ptCredits > 0 || massageCredits > 0) && (
+              <div className="overview-credits">
+                {ptCredits > 0 && (
+                  <div className="overview-credit-item">
+                    <span className="overview-credit-icon">🏋️</span>
+                    <div>
+                      <strong>{ptCredits}</strong>
+                      <span>PT Kredisi</span>
+                    </div>
+                  </div>
+                )}
+                {massageCredits > 0 && (
+                  <div className="overview-credit-item">
+                    <span className="overview-credit-icon">💆</span>
+                    <div>
+                      <strong>{massageCredits}</strong>
+                      <span>Masaj Kredisi</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Hızlı Aksiyonlar */}
+            <div className="overview-actions">
+              <Link to="/discover" className="overview-action-btn">
+                🔍 Kulüp Keşfet
+              </Link>
+              <button className="overview-action-btn" onClick={() => setActiveTab('appointments')}>
+                📅 Randevularım
+              </button>
+              <button className="overview-action-btn" onClick={() => setActiveTab('messages')}>
+                💬 Mesajlar
+              </button>
+            </div>
+
+            {/* Yaklaşan Randevular Listesi */}
+            {upcomingAppointments.length > 1 && (
+              <>
+                <h3 className="overview-section-title">Diğer Randevular</h3>
+                <div className="dashboard-list">
+                  {upcomingAppointments.slice(1, 4).map((a) => (
+                    <div key={a.id} className="dashboard-list-item">
+                      <div>
+                        <strong>{a.service.name}</strong>
+                        <p>
+                          {new Date(a.slot.date).toLocaleDateString('tr-TR')} · {a.slot.startTime}-
+                          {a.slot.endTime}
+                        </p>
+                      </div>
+                      <span className={`status-badge status-${a.status}`}>
+                        {statusLabel(a.status)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Boş State */}
+            {upcomingAppointments.length === 0 && activePackages.length === 0 && (
+              <div className="overview-empty">
+                <span>🌟</span>
+                <h3>Wellness yolculuğuna başla!</h3>
+                <p>Kulüpleri keşfet, eğitmenlerle tanış ve ilk randevunu al.</p>
+                <Link to="/discover" className="btn-primary" style={{ marginTop: 12 }}>
+                  Keşfetmeye Başla
+                </Link>
               </div>
             )}
           </div>
