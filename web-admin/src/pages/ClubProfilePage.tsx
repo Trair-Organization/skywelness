@@ -120,9 +120,9 @@ type Addon = { id: string; name: string; price: string };
 
 const SECTIONS = [
   { id: 'about', icon: '🏢', label: 'Hakkımızda' },
-  { id: 'products', icon: '🛍️', label: 'Ürünler' },
   { id: 'campaigns', icon: '🔥', label: 'Kampanyalar' },
   { id: 'events', icon: '📅', label: 'Etkinlikler' },
+  { id: 'products', icon: '🛍️', label: 'Ürünler' },
   { id: 'booking', icon: '🎯', label: 'Rezervasyon' },
   { id: 'trainers', icon: '🏋️', label: 'Eğitmenler' },
   { id: 'reviews', icon: '⭐', label: 'Yorumlar' },
@@ -429,93 +429,6 @@ export function ClubProfilePage() {
           </section>
         )}
 
-        {/* ═══ ÜRÜN VE HİZMETLER ═══ */}
-        {(profile.packages.length > 0 || profile.resources.length > 0) && (
-          <section
-            ref={(el) => {
-              sectionRefs.current['products'] = el;
-            }}
-            className="pp-section"
-            id="pp-products"
-          >
-            <h2>🛍️ Ürün ve Hizmetler</h2>
-            {/* Paketler */}
-            {profile.packages.length > 0 && (
-              <>
-                <h3 className="pp-sub">💎 Paketler</h3>
-                <div className="pp-packages-grid">
-                  {profile.packages.map((pkg) => (
-                    <div key={pkg.id} className="pp-package-card">
-                      <h4>{pkg.name}</h4>
-                      <p>
-                        {pkg.sessionCount} seans · {pkg.validityDays} gün ·{' '}
-                        {pkg.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
-                      </p>
-                      <div className="pp-package-price">
-                        <strong>{pkg.price}₺</strong>
-                        <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
-                      </div>
-                      <PackageBuyBtn packageId={pkg.id} />
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {/* Kaynaklar/Hizmetler */}
-            {profile.resources.length > 0 && (
-              <>
-                <h3 className="pp-sub">🏷️ Hizmetler</h3>
-                <div className="pp-resources-grid">
-                  {profile.resources.map((r) => (
-                    <div key={r.id} className="pp-resource-card">
-                      <strong>{r.name}</strong>
-                      {r.description && <p>{r.description}</p>}
-                      <div className="pp-resource-meta">
-                        <span>⏱️ {r.durationMinutes}dk</span>
-                        <span className="pp-resource-price">{r.price}₺</span>
-                      </div>
-                      <button
-                        className="pp-buy-btn"
-                        style={{ marginTop: 8 }}
-                        onClick={() => scrollToSection('booking')}
-                      >
-                        🎯 Randevu Al
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {/* Unified Services (service_catalog) */}
-            {(profile.catalogServices?.length ?? 0) > 0 && (
-              <>
-                <h3 className="pp-sub">📋 Hizmet Kataloğu</h3>
-                <div className="pp-resources-grid">
-                  {profile.catalogServices.map((s) => (
-                    <div key={s.id} className="pp-resource-card">
-                      <strong>{s.name}</strong>
-                      {s.description && <p>{s.description}</p>}
-                      <div className="pp-resource-meta">
-                        <span>
-                          ⏱️ {s.durationMinutes}dk · {s.category}
-                        </span>
-                        <span className="pp-resource-price">{s.price}₺</span>
-                      </div>
-                      <button
-                        className="pp-buy-btn"
-                        style={{ marginTop: 8 }}
-                        onClick={() => scrollToSection('booking')}
-                      >
-                        🎯 Randevu Al
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-        )}
-
         {/* ═══ KAMPANYALAR ═══ */}
         {campaigns.length > 0 && (
           <section
@@ -603,6 +516,92 @@ export function ClubProfilePage() {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* ═══ ÜRÜN VE HİZMETLER ═══ */}
+        {(profile.packages.length > 0 ||
+          profile.resources.length > 0 ||
+          (profile.catalogServices?.length ?? 0) > 0) && (
+          <section
+            ref={(el) => {
+              sectionRefs.current['products'] = el;
+            }}
+            className="pp-section"
+            id="pp-products"
+          >
+            <h2>🛍️ Ürün ve Hizmetler</h2>
+            {profile.packages.length > 0 && (
+              <>
+                <h3 className="pp-sub">💎 Paketler</h3>
+                <div className="pp-packages-grid">
+                  {profile.packages.map((pkg) => (
+                    <div key={pkg.id} className="pp-package-card">
+                      <h4>{pkg.name}</h4>
+                      <p>
+                        {pkg.sessionCount} seans · {pkg.validityDays} gün ·{' '}
+                        {pkg.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
+                      </p>
+                      <div className="pp-package-price">
+                        <strong>{pkg.price}₺</strong>
+                        <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
+                      </div>
+                      <PackageBuyBtn packageId={pkg.id} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {profile.resources.length > 0 && (
+              <>
+                <h3 className="pp-sub">🏷️ Hizmetler</h3>
+                <div className="pp-resources-grid">
+                  {profile.resources.map((r) => (
+                    <div key={r.id} className="pp-resource-card">
+                      <strong>{r.name}</strong>
+                      {r.description && <p>{r.description}</p>}
+                      <div className="pp-resource-meta">
+                        <span>⏱️ {r.durationMinutes}dk</span>
+                        <span className="pp-resource-price">{r.price}₺</span>
+                      </div>
+                      <button
+                        className="pp-buy-btn"
+                        style={{ marginTop: 8 }}
+                        onClick={() => scrollToSection('booking')}
+                      >
+                        🎯 Randevu Al
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {(profile.catalogServices?.length ?? 0) > 0 && (
+              <>
+                <h3 className="pp-sub">📋 Hizmet Kataloğu</h3>
+                <div className="pp-resources-grid">
+                  {profile.catalogServices.map((s) => (
+                    <div key={s.id} className="pp-resource-card">
+                      <strong>{s.name}</strong>
+                      {s.description && <p>{s.description}</p>}
+                      <div className="pp-resource-meta">
+                        <span>
+                          ⏱️ {s.durationMinutes}dk · {s.category}
+                        </span>
+                        <span className="pp-resource-price">{s.price}₺</span>
+                      </div>
+                      <button
+                        className="pp-buy-btn"
+                        style={{ marginTop: 8 }}
+                        onClick={() => scrollToSection('booking')}
+                      >
+                        🎯 Randevu Al
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
         )}
 
