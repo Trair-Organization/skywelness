@@ -259,8 +259,12 @@ export function PublicDiscoverPage() {
               <div
                 key={banner.id}
                 className={`vitrin-slide ${idx === currentSlide ? 'vitrin-slide-active' : ''}`}
-                style={{ backgroundImage: `url(${banner.imageUrl})` }}
               >
+                <div
+                  className="vitrin-slide-bg"
+                  style={{ backgroundImage: `url(${banner.imageUrl})` }}
+                />
+                <img src={banner.imageUrl} alt={banner.title || ''} className="vitrin-slide-img" />
                 {(banner.title || banner.subtitle) && (
                   <div className="vitrin-slide-content">
                     {banner.title && <h1>{banner.title}</h1>}
