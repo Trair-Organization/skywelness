@@ -122,8 +122,8 @@ const SECTIONS = [
   { id: 'about', icon: '🏢', label: 'Hakkımızda' },
   { id: 'campaigns', icon: '🔥', label: 'Kampanyalar' },
   { id: 'events', icon: '📅', label: 'Etkinlikler' },
-  { id: 'products', icon: '🛍️', label: 'Ürünler' },
   { id: 'booking', icon: '🎯', label: 'Rezervasyon' },
+  { id: 'products', icon: '🛍️', label: 'Ürünler' },
   { id: 'trainers', icon: '🏋️', label: 'Eğitmenler' },
   { id: 'reviews', icon: '⭐', label: 'Yorumlar' },
   { id: 'message', icon: '💬', label: 'Mesaj' },
@@ -519,6 +519,18 @@ export function ClubProfilePage() {
           </section>
         )}
 
+        {/* ═══ REZERVASYON ═══ */}
+        <section
+          ref={(el) => {
+            sectionRefs.current['booking'] = el;
+          }}
+          className="pp-section"
+          id="pp-booking"
+        >
+          <h2>🎯 Rezervasyon</h2>
+          <BookingSection subdomain={subdomain!} />
+        </section>
+
         {/* ═══ ÜRÜN VE HİZMETLER ═══ */}
         {(profile.packages.length > 0 ||
           profile.resources.length > 0 ||
@@ -601,19 +613,6 @@ export function ClubProfilePage() {
             )}
           </section>
         )}
-
-        {/* ═══ HİZMETLER & REZERVASYON ═══ */}
-        <section
-          ref={(el) => {
-            sectionRefs.current['booking'] = el;
-          }}
-          className="pp-section"
-          id="pp-booking"
-        >
-          <h2>🎯 Rezervasyon</h2>
-          {/* Booking Flow */}
-          <BookingSection subdomain={subdomain!} />
-        </section>
 
         {/* ═══ EĞİTMENLER ═══ */}
         {profile.trainers.length > 0 && (
