@@ -54,6 +54,8 @@ type ProfileData = {
     imageUrl: string | null;
     coachName: string | null;
     location: string | null;
+    price: string;
+    currency: string;
   }>;
   metrics: {
     memberCount: number;
@@ -504,6 +506,10 @@ export function ClubProfilePage() {
                       <span className="pp-campaign-exp">
                         ⏰ {new Date(c.endsAt).toLocaleDateString('tr-TR')}'e kadar
                       </span>
+                      <CampaignBuyBtn
+                        campaignId={c.id}
+                        price={c.discountedPrice || c.originalPrice}
+                      />
                     </div>
                   </div>
                 );
@@ -524,21 +530,29 @@ export function ClubProfilePage() {
             <h2>📅 Etkinlikler</h2>
             <div className="pp-events-scroll">
               {profile.events.map((e) => (
-                <Link key={e.id} to={`/event/${e.id}`} className="pp-event-card">
-                  {e.imageUrl && <img src={e.imageUrl} alt="" className="pp-event-img" />}
-                  <div className="pp-event-body">
-                    <strong>{e.title}</strong>
-                    <span>
-                      {new Date(e.startsAt).toLocaleDateString('tr-TR', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                    {e.coachName && <span>🏋️ {e.coachName}</span>}
-                  </div>
-                </Link>
+                <div key={e.id} className="pp-event-card">
+                  <Link to={`/event/${e.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    {e.imageUrl && <img src={e.imageUrl} alt="" className="pp-event-img" />}
+                    <div className="pp-event-body">
+                      <strong>{e.title}</strong>
+                      <span>
+                        {new Date(e.startsAt).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                      {e.coachName && <span>🏋️ {e.coachName}</span>}
+                      {e.price && parseFloat(e.price) > 0 && (
+                        <span className="pp-event-price">💰 {e.price}₺</span>
+                      )}
+                    </div>
+                  </Link>
+                  {e.price && parseFloat(e.price) > 0 && (
+                    <EventBuyBtn eventId={e.id} price={e.price} />
+                  )}
+                </div>
               ))}
             </div>
           </section>
@@ -1072,5 +1086,99 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Campaign Buy Button ─────────────────────────────────────────────────────
+
+function CampaignBuyBtn({ campaignId, price }: { campaignId: string; price: string | null }) {
+  const { token, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  if (!price || parseFloat(price) <= 0) return null;
+
+  if (!token)
+    return (
+      <Link to="/login" className="pp-buy-btn" style={{ marginTop: 8 }}>
+        Giriş Yap & Satın Al
+      </Link>
+    );
+
+  return (
+    <button
+      className="pp-buy-btn"
+      style={{ marginTop: 8 }}
+      disabled={loading}
+      onClick={async () => {
+        setLoading(true);
+        try {
+          const res = await apiJson<{ checkoutUrl: string }>(
+            `/v2/campaigns/${campaignId}/checkout`,
+            { method: 'POST', body: JSON.stringify({ userId: user?.id, guestEmail: user?.email }) },
+          );
+          if (res.checkoutUrl) {
+            const overlay = document.createElement('div');
+            overlay.className = 'checkout-loading-overlay';
+            overlay.innerHTML =
+              '<div class="checkout-spinner"></div><p>Ödeme ekranına yönlendiriliyorsunuz...</p>';
+            document.body.appendChild(overlay);
+            setTimeout(() => window.location.assign(res.checkoutUrl), 800);
+          }
+        } catch (err) {
+          alert(err instanceof Error ? err.message : 'Ödeme başlatılamadı');
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      {loading ? '...' : '💳 Fırsatı Yakala'}
+    </button>
+  );
+}
+
+// ─── Event Buy Button ────────────────────────────────────────────────────────
+
+function EventBuyBtn({ eventId, price }: { eventId: string; price: string }) {
+  const { token, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  if (!token)
+    return (
+      <Link to="/login" className="pp-buy-btn" style={{ margin: '8px 12px 12px' }}>
+        Giriş Yap & Katıl
+      </Link>
+    );
+
+  return (
+    <button
+      className="pp-buy-btn"
+      style={{ margin: '0 12px 12px' }}
+      disabled={loading}
+      onClick={async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setLoading(true);
+        try {
+          const res = await apiJson<{ checkoutUrl: string }>(`/v2/events/${eventId}/checkout`, {
+            method: 'POST',
+            body: JSON.stringify({ userId: user?.id, guestEmail: user?.email }),
+          });
+          if (res.checkoutUrl) {
+            const overlay = document.createElement('div');
+            overlay.className = 'checkout-loading-overlay';
+            overlay.innerHTML =
+              '<div class="checkout-spinner"></div><p>Ödeme ekranına yönlendiriliyorsunuz...</p>';
+            document.body.appendChild(overlay);
+            setTimeout(() => window.location.assign(res.checkoutUrl), 800);
+          }
+        } catch (err) {
+          alert(err instanceof Error ? err.message : 'Ödeme başlatılamadı');
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      {loading ? '...' : `💳 Katıl (${price}₺)`}
+    </button>
   );
 }
