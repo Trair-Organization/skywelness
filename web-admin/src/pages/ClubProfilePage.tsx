@@ -993,6 +993,34 @@ function CategoryWizard({
   const rooms = services.filter((s) => s.providerType !== 'trainer');
   const capacities = [...new Set(services.map((s) => s.capacity))].sort((a, b) => a - b);
 
+  // Spa Yönetimi → Hizmetler sekmesindeki masaj çeşitleri
+  const [spaServices, setSpaServices] = useState<
+    Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      category: string;
+      durationMinutes: number;
+      price: string | number;
+    }>
+  >([]);
+
+  useEffect(() => {
+    if (!isMassage) return;
+    apiJson<
+      Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        category: string;
+        durationMinutes: number;
+        price: string | number;
+      }>
+    >(`/spa/services/public/${encodeURIComponent(subdomain)}`, { auth: false })
+      .then(setSpaServices)
+      .catch(() => setSpaServices([]));
+  }, [isMassage, subdomain]);
+
   // Filters
   const [participants, setParticipants] = useState(capacities[0] || 1);
   const [selectedMasoz, setSelectedMasoz] = useState('');
@@ -1020,24 +1048,9 @@ function CategoryWizard({
   useEffect(() => {
     if (!selectedDate) return;
 
-    // Masaj kategorisinde:
-    // - Belirli bir masaj hizmeti seçildiyse: o hizmetin slotlarını normal endpoint'ten çek
-    // - Seçilmediyse: spa-rooms endpoint'i ile oda bazlı tüm slotları getir
+    // Masaj kategorisinde her zaman spa-rooms endpoint'i kullan
+    // (selectedType artık spa_service ID — bilgi amaçlı, slot fetch'ini etkilemez)
     if (isMassage) {
-      if (selectedType) {
-        // Belirli masaj hizmeti seçildi — normal schedule endpoint
-        apiJson<V2Slot[]>(
-          `/v2/schedule?tenant=${encodeURIComponent(subdomain)}&serviceId=${selectedType}&date=${selectedDate}`,
-          { auth: false },
-        )
-          .then((data) => {
-            setSlots(data);
-          })
-          .catch(() => setSlots([]));
-        return;
-      }
-
-      // Hizmet seçilmedi — tüm spa-rooms slotlarını göster
       const params = new URLSearchParams({
         tenant: subdomain,
         date: selectedDate,
@@ -1175,8 +1188,8 @@ function CategoryWizard({
           </div>
         )}
 
-        {/* Masaj Türü (admin paneldeki masaj hizmetleri — dropdown) */}
-        {isMassage && services.length > 0 && (
+        {/* Masaj Türü (Spa Yönetimi → Hizmetler — dropdown) */}
+        {isMassage && spaServices.length > 0 && (
           <div className="bw-filter-row">
             <span className="bw-filter-label">🏠 Masaj Türü:</span>
             <select
@@ -1189,7 +1202,7 @@ function CategoryWizard({
               }}
             >
               <option value="">Tümü</option>
-              {services.map((s) => (
+              {spaServices.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} — {s.durationMinutes}dk · {s.price}₺
                 </option>
