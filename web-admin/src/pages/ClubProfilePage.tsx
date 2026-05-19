@@ -1179,34 +1179,29 @@ function BookingSection({ subdomain }: { subdomain: string }) {
               })}
             </span>
           </div>
-          {slots.length === 0 ? (
+          {slots.filter((s) => new Date(`${selectedDate}T${s.startTime}:00`) > new Date())
+            .length === 0 ? (
             <p className="pp-empty">Bu tarihte müsait saat yok</p>
           ) : (
-            <div className="bw-timeline">
-              {slots.map((s) => {
-                const slotTime = new Date(`${selectedDate}T${s.startTime}:00`);
-                const isPast = slotTime <= new Date();
-                return (
+            <div className="bw-slots-grid">
+              {slots
+                .filter((s) => new Date(`${selectedDate}T${s.startTime}:00`) > new Date())
+                .map((s) => (
                   <button
                     key={s.id}
-                    className={`bw-time-slot ${isPast ? 'past' : ''}`}
+                    className="bw-slot-card"
                     onClick={() => {
-                      if (!isPast) {
-                        setSelectedSlotId(s.id);
-                        setAddonSelections({});
-                        setStep(6);
-                      }
+                      setSelectedSlotId(s.id);
+                      setAddonSelections({});
+                      setStep(6);
                     }}
-                    disabled={isPast}
                   >
-                    <span className="bw-time-dot" />
-                    <span className="bw-time-label">
-                      {s.startTime} - {s.endTime}
+                    <span className="bw-slot-time">
+                      🕐 {s.startTime} - {s.endTime}
                     </span>
-                    <span className="bw-time-price">{s.price}₺</span>
+                    <span className="bw-slot-price">{s.price}₺</span>
                   </button>
-                );
-              })}
+                ))}
             </div>
           )}
         </div>
