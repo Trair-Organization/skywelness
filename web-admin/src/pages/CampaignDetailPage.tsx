@@ -14,7 +14,7 @@ type CampaignDetail = {
   imageUrl: string | null;
   endsAt: string;
   startsAt: string | null;
-  conditions: string | null;
+  terms: string | null;
   tenant?: { name: string; subdomain: string; logoUrl: string | null };
 };
 
@@ -28,10 +28,15 @@ export function CampaignDetailPage() {
   const load = useCallback(async () => {
     if (!campaignId) return;
     try {
-      const camps = await apiJson<CampaignDetail[]>('/campaigns/featured?limit=50', {
-        auth: false,
-      });
-      const found = camps.find((c) => c.id === campaignId);
+      const [featured, publicCamps] = await Promise.allSettled([
+        apiJson<CampaignDetail[]>('/campaigns/featured?limit=50', { auth: false }),
+        apiJson<CampaignDetail[]>('/campaigns/public?limit=50', { auth: false }),
+      ]);
+      const allCamps = [
+        ...(featured.status === 'fulfilled' ? featured.value : []),
+        ...(publicCamps.status === 'fulfilled' ? publicCamps.value : []),
+      ];
+      const found = allCamps.find((c) => c.id === campaignId);
       setCampaign(found || null);
     } catch {
       /* */
@@ -190,10 +195,10 @@ export function CampaignDetailPage() {
           )}
 
           {/* Conditions */}
-          {campaign.conditions && (
+          {campaign.terms && (
             <div className="event-detail-section">
               <h2>Şartlar ve Koşullar</h2>
-              <p>{campaign.conditions}</p>
+              <p>{campaign.terms}</p>
             </div>
           )}
 
