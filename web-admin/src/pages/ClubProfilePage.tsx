@@ -532,8 +532,7 @@ export function ClubProfilePage() {
           >
             <h2>🛍️ Ürün ve Hizmetler</h2>
             {profile.packages.length > 0 && (
-              <>
-                <h3 className="pp-sub">💎 Paketler</h3>
+              <Accordion title="💎 Paketler" defaultOpen={false}>
                 <div className="pp-packages-grid">
                   {profile.packages.map((pkg) => (
                     <div key={pkg.id} className="pp-package-card">
@@ -550,11 +549,10 @@ export function ClubProfilePage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </Accordion>
             )}
             {profile.resources.length > 0 && (
-              <>
-                <h3 className="pp-sub">🏷️ Hizmetler</h3>
+              <Accordion title="🏷️ Hizmetler" defaultOpen={false}>
                 <div className="pp-resources-grid">
                   {profile.resources.map((r) => (
                     <div key={r.id} className="pp-resource-card">
@@ -574,11 +572,10 @@ export function ClubProfilePage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </Accordion>
             )}
             {(profile.catalogServices?.length ?? 0) > 0 && (
-              <>
-                <h3 className="pp-sub">📋 Hizmet Kataloğu</h3>
+              <Accordion title="📋 Hizmet Kataloğu" defaultOpen={false}>
                 <div className="pp-resources-grid">
                   {profile.catalogServices.map((s) => (
                     <div key={s.id} className="pp-resource-card">
@@ -600,7 +597,7 @@ export function ClubProfilePage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </Accordion>
             )}
           </section>
         )}
@@ -1235,5 +1232,31 @@ function EventBuyBtn({ eventId, price }: { eventId: string; price: string }) {
     >
       {loading ? '...' : `💳 Katıl (${price}₺)`}
     </button>
+  );
+}
+
+// ─── Accordion Component ─────────────────────────────────────────────────────
+
+function Accordion({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="pp-accordion">
+      <button
+        className={`pp-accordion-header ${open ? 'open' : ''}`}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{title}</span>
+        <span className="pp-accordion-arrow">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div className="pp-accordion-body">{children}</div>}
+    </div>
   );
 }
