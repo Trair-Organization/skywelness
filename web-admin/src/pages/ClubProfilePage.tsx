@@ -127,7 +127,13 @@ function ProviderBooking({
         }),
       });
       if (res.checkoutUrl) {
-        window.location.assign(res.checkoutUrl);
+        // Ödeme ekranı animasyonu
+        const overlay = document.createElement('div');
+        overlay.className = 'checkout-loading-overlay';
+        overlay.innerHTML =
+          '<div class="checkout-spinner"></div><p>Ödeme ekranına yönlendiriliyorsunuz...</p>';
+        document.body.appendChild(overlay);
+        setTimeout(() => window.location.assign(res.checkoutUrl), 800);
       } else {
         alert('Ödeme başlatılamadı');
       }

@@ -196,7 +196,7 @@ export class UnifiedBookingService {
       }
     }
 
-    const kaporaCents = Math.ceil(totalCents * COMMISSION_RATE);
+    const kaporaCents = Math.round(totalCents * COMMISSION_RATE);
     const totalTRY = (totalCents / 100).toFixed(2);
     const kaporaTRY = (kaporaCents / 100).toFixed(2);
 
@@ -507,7 +507,7 @@ export class UnifiedBookingService {
     const tenant = packageType.tenant;
     const COMMISSION_RATE = parseFloat(tenant.commissionRate) || 0.15;
     const priceCents = Math.round(parseFloat(packageType.price) * 100);
-    const kaporaCents = Math.ceil(priceCents * COMMISSION_RATE);
+    const kaporaCents = Math.round(priceCents * COMMISSION_RATE);
     const kaporaTRY = (kaporaCents / 100).toFixed(2);
     const totalTRY = (priceCents / 100).toFixed(2);
 
@@ -581,7 +581,7 @@ export class UnifiedBookingService {
     const COMMISSION_RATE = tenant ? parseFloat(tenant.commissionRate) : 0.15;
 
     const totalCents = Math.round(price * 100);
-    const kaporaCents = Math.ceil(totalCents * COMMISSION_RATE);
+    const kaporaCents = Math.round(totalCents * COMMISSION_RATE);
     const kaporaTRY = (kaporaCents / 100).toFixed(2);
 
     const startDate = new Date(event.startsAt);
@@ -667,7 +667,7 @@ export class UnifiedBookingService {
     const COMMISSION_RATE = campaign.tenant ? parseFloat(campaign.tenant.commissionRate) : 0.15;
 
     const totalCents = Math.round(totalPrice * 100);
-    const kaporaCents = Math.ceil(totalCents * COMMISSION_RATE);
+    const kaporaCents = Math.round(totalCents * COMMISSION_RATE);
     const kaporaTRY = (kaporaCents / 100).toFixed(2);
 
     const session = await stripe.checkout.sessions.create({
