@@ -1138,48 +1138,15 @@ function BookingSection({ subdomain }: { subdomain: string }) {
 
 // ─── Campaign Buy Button ─────────────────────────────────────────────────────
 
-function CampaignBuyBtn({ campaignId, price }: { campaignId: string; price: string | null }) {
-  const { token, user } = useAuth();
-  const [loading, setLoading] = useState(false);
-
-  if (!price || parseFloat(price) <= 0) return null;
-
-  if (!token)
-    return (
-      <Link to="/login" className="pp-buy-btn" style={{ marginTop: 8 }}>
-        Giriş Yap & Satın Al
-      </Link>
-    );
-
+function CampaignBuyBtn({ campaignId }: { campaignId: string; price: string | null }) {
   return (
-    <button
+    <Link
+      to={`/campaign/${campaignId}`}
       className="pp-buy-btn"
-      style={{ marginTop: 8 }}
-      disabled={loading}
-      onClick={async () => {
-        setLoading(true);
-        try {
-          const res = await apiJson<{ checkoutUrl: string }>(
-            `/v2/campaigns/${campaignId}/checkout`,
-            { method: 'POST', body: JSON.stringify({ userId: user?.id, guestEmail: user?.email }) },
-          );
-          if (res.checkoutUrl) {
-            const overlay = document.createElement('div');
-            overlay.className = 'checkout-loading-overlay';
-            overlay.innerHTML =
-              '<div class="checkout-spinner"></div><p>Ödeme ekranına yönlendiriliyorsunuz...</p>';
-            document.body.appendChild(overlay);
-            setTimeout(() => window.location.assign(res.checkoutUrl), 800);
-          }
-        } catch (err) {
-          alert(err instanceof Error ? err.message : 'Ödeme başlatılamadı');
-        } finally {
-          setLoading(false);
-        }
-      }}
+      style={{ marginTop: 8, display: 'block', textAlign: 'center' }}
     >
-      {loading ? '...' : '💳 Fırsatı Yakala'}
-    </button>
+      🔍 Detayları Gör
+    </Link>
   );
 }
 

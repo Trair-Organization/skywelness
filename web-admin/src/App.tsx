@@ -9,6 +9,7 @@ import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
 import { ClubProfilePage } from './pages/ClubProfilePage';
 import { TrainerProfilePage } from './pages/TrainerProfilePage';
 import { EventDetailPage } from './pages/EventDetailPage';
+import { CampaignDetailPage } from './pages/CampaignDetailPage';
 import { MemberDashboardPage } from './pages/MemberDashboardPage';
 import { ServiceTermsPage } from './pages/ServiceTermsPage';
 import { BookingSuccessPage } from './pages/BookingSuccessPage';
@@ -70,6 +71,7 @@ function AppRoutes() {
       <Route path="/club/:subdomain" element={<ClubProfilePage />} />
       <Route path="/trainer/:trainerId" element={<TrainerProfilePage />} />
       <Route path="/event/:eventId" element={<EventDetailPage />} />
+      <Route path="/campaign/:campaignId" element={<CampaignDetailPage />} />
       <Route path="/dashboard" element={<MemberDashboardPage />} />
       <Route path="/marketing" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
