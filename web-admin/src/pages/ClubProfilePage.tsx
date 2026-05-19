@@ -1029,25 +1029,31 @@ function BookingSection({ subdomain }: { subdomain: string }) {
           </button>
           <p className="bw-step-title">👥 Kaç kişi geleceksiniz?</p>
           <div className="bw-participants">
-            {[1, 2, 3, 4].map((n) => (
-              <button
-                key={n}
-                className={`bw-participant-card ${participants === n ? 'active' : ''}`}
-                onClick={() => {
-                  setParticipants(n);
-                  setStep(3);
-                }}
-              >
-                <span className="bw-participant-icon">
-                  {'👤'.repeat(Math.min(n, 3))}
-                  {n > 3 ? '+' : ''}
-                </span>
-                <span className="bw-participant-num">{n} Kişi</span>
-                <span className="bw-participant-hint">
-                  {n === 1 ? 'Tek' : n === 2 ? 'Çift' : n === 3 ? 'Üçlü' : 'Dörtlü'}
-                </span>
-              </button>
-            ))}
+            {[
+              ...new Set(
+                services.filter((s) => s.category === selectedCategory).map((s) => s.capacity),
+              ),
+            ]
+              .sort((a, b) => a - b)
+              .map((n) => (
+                <button
+                  key={n}
+                  className={`bw-participant-card ${participants === n ? 'active' : ''}`}
+                  onClick={() => {
+                    setParticipants(n);
+                    setStep(3);
+                  }}
+                >
+                  <span className="bw-participant-icon">
+                    {'👤'.repeat(Math.min(n, 3))}
+                    {n > 3 ? '+' : ''}
+                  </span>
+                  <span className="bw-participant-num">{n} Kişi</span>
+                  <span className="bw-participant-hint">
+                    {n === 1 ? 'Tek' : n === 2 ? 'Çift' : n === 3 ? 'Üçlü' : 'Dörtlü'}
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
       )}
