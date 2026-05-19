@@ -411,47 +411,6 @@ export function ClubProfilePage() {
           </section>
         )}
 
-        {/* ═══ DEĞERLENDİRMELER ═══ */}
-        <section
-          ref={(el) => {
-            sectionRefs.current['reviews'] = el;
-          }}
-          className="pp-section"
-          id="pp-reviews"
-        >
-          <h2>⭐ Değerlendirmeler</h2>
-          {reviewCount > 0 && (
-            <div className="pp-review-summary">
-              <div className="pp-review-avg">{Number(avgRating).toFixed(1)}</div>
-              <div className="pp-review-count">{reviewCount} değerlendirme</div>
-            </div>
-          )}
-          {reviews.length > 0 ? (
-            <div className="pp-reviews-list">
-              {reviews.map((r) => (
-                <div key={r.id} className="pp-review-item">
-                  <div className="pp-review-head">
-                    <span className="pp-review-user">
-                      {r.user.firstName} {r.user.lastName}
-                    </span>
-                    <span className="pp-review-stars">
-                      {'★'.repeat(r.rating)}
-                      {'☆'.repeat(5 - r.rating)}
-                    </span>
-                  </div>
-                  {r.comment && <p className="pp-review-text">{r.comment}</p>}
-                  <span className="pp-review-date">
-                    {new Date(r.createdAt).toLocaleDateString('tr-TR')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="pp-empty">Henüz değerlendirme yok. İlk yorumu siz yapın!</p>
-          )}
-          {isLoggedIn && <ReviewForm subdomain={subdomain!} onSubmitted={loadProfile} />}
-        </section>
-
         {/* ═══ EĞİTMENLER ═══ */}
         {profile.trainers.length > 0 && (
           <section
@@ -617,6 +576,47 @@ export function ClubProfilePage() {
               </Link>
             </div>
           )}
+        </section>
+
+        {/* ═══ DEĞERLENDİRMELER (sayfa sonu) ═══ */}
+        <section
+          ref={(el) => {
+            sectionRefs.current['reviews'] = el;
+          }}
+          className="pp-section"
+          id="pp-reviews"
+        >
+          <h2>⭐ Değerlendirmeler</h2>
+          {reviewCount > 0 && (
+            <div className="pp-review-summary">
+              <div className="pp-review-avg">{Number(avgRating).toFixed(1)}</div>
+              <div className="pp-review-count">{reviewCount} değerlendirme</div>
+            </div>
+          )}
+          {reviews.length > 0 ? (
+            <div className="pp-reviews-list">
+              {reviews.map((r) => (
+                <div key={r.id} className="pp-review-item">
+                  <div className="pp-review-head">
+                    <span className="pp-review-user">
+                      {r.user.firstName} {r.user.lastName}
+                    </span>
+                    <span className="pp-review-stars">
+                      {'★'.repeat(r.rating)}
+                      {'☆'.repeat(5 - r.rating)}
+                    </span>
+                  </div>
+                  {r.comment && <p className="pp-review-text">{r.comment}</p>}
+                  <span className="pp-review-date">
+                    {new Date(r.createdAt).toLocaleDateString('tr-TR')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="pp-empty">Henüz değerlendirme yok. İlk yorumu siz yapın!</p>
+          )}
+          {isLoggedIn && <ReviewForm subdomain={subdomain!} onSubmitted={loadProfile} />}
         </section>
       </div>
 
@@ -937,14 +937,23 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         <p className="pp-empty">Bu tarihte müsait saat yok</p>
       ) : !showSummary ? (
         <div className="pp-slots-grid">
-          {slots.map((s) => (
-            <button key={s.id} className="pp-slot-btn" onClick={() => handleSlotSelect(s.id)}>
-              <span>
-                {s.startTime}-{s.endTime}
-              </span>
-              <span className="pp-slot-price">{s.price}₺</span>
-            </button>
-          ))}
+          {slots.map((s) => {
+            const slotTime = new Date(`${selectedDate}T${s.startTime}:00`);
+            const isPast = slotTime <= new Date();
+            return (
+              <button
+                key={s.id}
+                className={`pp-slot-btn ${isPast ? 'past' : ''}`}
+                onClick={() => !isPast && handleSlotSelect(s.id)}
+                disabled={isPast}
+              >
+                <span>
+                  {s.startTime}-{s.endTime}
+                </span>
+                <span className="pp-slot-price">{s.price}₺</span>
+              </button>
+            );
+          })}
         </div>
       ) : (
         /* Order Summary */

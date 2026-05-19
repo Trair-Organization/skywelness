@@ -3450,3 +3450,16 @@
   color: #64748b;
   font-weight: 600;
 }
+
+/* Past slots */
+.pp-slot-btn.past {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: rgba(148, 163, 184, 0.06);
+  background: rgba(30, 41, 59, 0.3);
+}
+.pp-slot-btn.past:hover {
+  border-color: rgba(148, 163, 184, 0.06);
+  background: rgba(30, 41, 59, 0.3);
+  transform: none;
+}
