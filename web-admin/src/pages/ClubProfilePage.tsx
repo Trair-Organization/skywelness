@@ -109,11 +109,11 @@ type Addon = { id: string; name: string; price: string };
 
 const SECTIONS = [
   { id: 'about', icon: '🏢', label: 'Hakkımızda' },
-  { id: 'reviews', icon: '⭐', label: 'Değerlendirmeler' },
   { id: 'trainers', icon: '🏋️', label: 'Eğitmenler' },
   { id: 'events', icon: '📅', label: 'Etkinlikler' },
   { id: 'campaigns', icon: '🔥', label: 'Kampanyalar' },
   { id: 'booking', icon: '🎯', label: 'Rezervasyon' },
+  { id: 'reviews', icon: '⭐', label: 'Yorumlar' },
   { id: 'message', icon: '💬', label: 'Mesaj' },
 ] as const;
 
@@ -351,22 +351,20 @@ export function ClubProfilePage() {
           <div className="pp-identity-actions">
             {isLoggedIn && <FavoriteBtn profileId={profile.id} />}
             {isLoggedIn && <MessageBtn subdomain={subdomain!} />}
-          </div>
-          <div className="pp-metrics">
             {profile.metrics.memberCount > 0 && (
-              <div className="pp-metric">
+              <div className="pp-metric-inline">
                 <strong>{profile.metrics.memberCount}</strong>
                 <span>Üye</span>
               </div>
             )}
             {profile.metrics.totalBookings > 0 && (
-              <div className="pp-metric">
+              <div className="pp-metric-inline">
                 <strong>{profile.metrics.totalBookings}</strong>
                 <span>Randevu</span>
               </div>
             )}
             {profile.metrics.trainerCount > 0 && (
-              <div className="pp-metric">
+              <div className="pp-metric-inline">
                 <strong>{profile.metrics.trainerCount}</strong>
                 <span>Eğitmen</span>
               </div>
