@@ -349,38 +349,34 @@ export function PublicDiscoverPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="vitrin-search-section">
-        <form className="vitrin-search-bar" onSubmit={handleSearch}>
-          <span className="vitrin-search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="Kulüp, hizmet veya lokasyon ara..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="vitrin-search-input"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              className="vitrin-search-clear"
-              onClick={() => {
-                setSearchInput('');
-                updateFilter('q', '');
-              }}
-            >
-              ✕
-            </button>
-          )}
-          <button type="submit" className="vitrin-search-btn">
-            Ara
-          </button>
-        </form>
-      </div>
-
-      {/* Filters Row */}
+      {/* Search + Filters Row (tek satır) */}
       <div className="vitrin-filters">
         <div className="vitrin-filters-left">
+          <form className="vitrin-search-bar" onSubmit={handleSearch}>
+            <span className="vitrin-search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Kulüp, hizmet veya lokasyon ara..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="vitrin-search-input"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                className="vitrin-search-clear"
+                onClick={() => {
+                  setSearchInput('');
+                  updateFilter('q', '');
+                }}
+              >
+                ✕
+              </button>
+            )}
+            <button type="submit" className="vitrin-search-btn">
+              Ara
+            </button>
+          </form>
           <select
             value={cityFilter}
             onChange={(e) => updateFilter('city', e.target.value)}
