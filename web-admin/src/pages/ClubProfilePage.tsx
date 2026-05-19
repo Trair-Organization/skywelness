@@ -892,27 +892,20 @@ function PackageBuyBtn({ packageId }: { packageId: string }) {
 function BookingSection({ subdomain }: { subdomain: string }) {
   const { token } = useAuth();
   const [services, setServices] = useState<V2Service[]>([]);
+  const [addons, setAddons] = useState<Addon[]>([]);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedService, setSelectedService] = useState('');
-  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [weekOffset, setWeekOffset] = useState(0);
   const [slots, setSlots] = useState<V2Slot[]>([]);
-  const [booking, setBooking] = useState(false);
-  const [addons, setAddons] = useState<Addon[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
-  const [showSummary, setShowSummary] = useState(false);
+  const [booking, setBooking] = useState(false);
 
   useEffect(() => {
     apiJson<V2Service[]>(`/v2/services?tenant=${encodeURIComponent(subdomain)}`, { auth: false })
-      .then((list) => {
-        setServices(list);
-        if (list.length > 0) {
-          const firstCat = list[0].category;
-          setSelectedCategory(firstCat);
-          setSelectedService(list[0].id);
-        }
-      })
+      .then(setServices)
       .catch(() => {});
     apiJson<Addon[]>(`/v2/addons?tenant=${encodeURIComponent(subdomain)}`, { auth: false })
       .then(setAddons)
@@ -929,31 +922,35 @@ function BookingSection({ subdomain }: { subdomain: string }) {
       .catch(() => setSlots([]));
   }, [subdomain, selectedService, selectedDate]);
 
-  const days = getWeekDays(weekOffset);
-
-  // Kategorileri çıkar
   const categories = [...new Set(services.map((s) => s.category))];
-  const CATEGORY_LABELS: Record<string, string> = {
-    personal_training: '🏋️ Personal Training',
-    massage: '💆 Masaj / Spa',
-    court_rental: '🎾 Kort Kiralama',
-    group_class: '🧘 Grup Dersi',
-    general: '📋 Genel',
+  const CATEGORY_META: Record<string, { icon: string; label: string }> = {
+    personal_training: { icon: '🏋️', label: 'Personal Training' },
+    massage: { icon: '💆', label: 'Masaj / Spa' },
+    court_rental: { icon: '🎾', label: 'Kort Kiralama' },
+    group_class: { icon: '🧘', label: 'Grup Dersi' },
+    general: { icon: '📋', label: 'Genel' },
   };
   const filteredServices = services.filter((s) => s.category === selectedCategory);
+  const selectedSvc = services.find((s) => s.id === selectedService);
+  const selectedSlot = slots.find((s) => s.id === selectedSlotId);
+  const days = getWeekDays(weekOffset);
 
-  function handleCategoryChange(cat: string) {
+  function selectCategory(cat: string) {
     setSelectedCategory(cat);
-    const firstInCat = services.find((s) => s.category === cat);
-    if (firstInCat) setSelectedService(firstInCat.id);
-    setShowSummary(false);
+    const first = services.find((s) => s.category === cat);
+    if (first) setSelectedService(first.id);
+    setStep(2);
   }
 
-  function handleSlotSelect(slotId: string) {
-    if (!token) return;
+  function selectService(svcId: string) {
+    setSelectedService(svcId);
+    setStep(3);
+  }
+
+  function selectSlot(slotId: string) {
     setSelectedSlotId(slotId);
     setAddonSelections({});
-    setShowSummary(true);
+    setStep(4);
   }
 
   async function proceedToCheckout() {
@@ -986,193 +983,234 @@ function BookingSection({ subdomain }: { subdomain: string }) {
   }
 
   if (services.length === 0) return <p className="pp-empty">Henüz hizmet tanımlanmamış.</p>;
-
-  const selectedSlot = slots.find((s) => s.id === selectedSlotId);
-  const selectedSvc = services.find((s) => s.id === selectedService);
+  if (!token)
+    return (
+      <div className="pp-login-prompt">
+        <p>Rezervasyon yapmak için giriş yapın</p>
+        <Link to="/login" className="btn-primary">
+          Giriş Yap
+        </Link>
+      </div>
+    );
 
   return (
-    <div className="pp-booking-flow">
-      {/* Kategori Tabları */}
-      {categories.length > 1 && (
-        <div className="pp-booking-cats">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              className={`pp-booking-cat ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => handleCategoryChange(cat)}
-            >
-              {CATEGORY_LABELS[cat] || cat}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Hizmet Seçimi */}
-      <select
-        className="pp-booking-select"
-        value={selectedService}
-        onChange={(e) => {
-          setSelectedService(e.target.value);
-          setShowSummary(false);
-        }}
-      >
-        {filteredServices.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.providerName || s.name} — {s.price}₺/{s.durationMinutes}dk
-          </option>
-        ))}
-      </select>
-
-      {/* Hafta Nav */}
-      <div className="pp-week-nav">
-        <button
-          onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
-          disabled={weekOffset === 0}
-        >
-          ←
-        </button>
-        <span>{weekOffset === 0 ? 'Bu Hafta' : `${weekOffset + 1}. Hafta`}</span>
-        <button
-          onClick={() => setWeekOffset(Math.min(3, weekOffset + 1))}
-          disabled={weekOffset >= 3}
-        >
-          →
-        </button>
-      </div>
-
-      {/* Gün Seçimi */}
-      <div className="pp-date-tabs">
-        {days.map((d) => (
-          <button
-            key={d.value}
-            className={`pp-date-tab ${selectedDate === d.value ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedDate(d.value);
-              setShowSummary(false);
-            }}
+    <div className="bw-wizard">
+      {/* Progress Bar */}
+      <div className="bw-progress">
+        {['Kategori', 'Hizmet', 'Tarih & Saat', 'Onay'].map((label, i) => (
+          <div
+            key={i}
+            className={`bw-step ${step > i + 1 ? 'done' : ''} ${step === i + 1 ? 'active' : ''}`}
           >
-            <span>{d.dayName}</span>
-            <span>{d.label}</span>
-          </button>
+            <span className="bw-step-num">{step > i + 1 ? '✓' : i + 1}</span>
+            <span className="bw-step-label">{label}</span>
+          </div>
         ))}
       </div>
 
-      {/* Slotlar veya Özet */}
-      {!token ? (
-        <div className="pp-login-prompt">
-          <p>Müsait saatleri görmek için giriş yapın</p>
-          <Link to="/login" className="btn-primary">
-            Giriş Yap
-          </Link>
-        </div>
-      ) : slots.length === 0 ? (
-        <p className="pp-empty">Bu tarihte müsait saat yok</p>
-      ) : !showSummary ? (
-        <div className="pp-slots-grid">
-          {slots.map((s) => {
-            const slotTime = new Date(`${selectedDate}T${s.startTime}:00`);
-            const isPast = slotTime <= new Date();
+      {/* Step 1: Kategori */}
+      {step === 1 && (
+        <div className="bw-categories">
+          {categories.map((cat) => {
+            const meta = CATEGORY_META[cat] || { icon: '📋', label: cat };
             return (
-              <button
-                key={s.id}
-                className={`pp-slot-btn ${isPast ? 'past' : ''}`}
-                onClick={() => !isPast && handleSlotSelect(s.id)}
-                disabled={isPast}
-              >
-                <span>
-                  {s.startTime}-{s.endTime}
+              <button key={cat} className="bw-cat-card" onClick={() => selectCategory(cat)}>
+                <span className="bw-cat-icon">{meta.icon}</span>
+                <span className="bw-cat-label">{meta.label}</span>
+                <span className="bw-cat-count">
+                  {services.filter((s) => s.category === cat).length} hizmet
                 </span>
-                <span className="pp-slot-price">{s.price}₺</span>
               </button>
             );
           })}
         </div>
-      ) : (
-        <div className="order-summary-panel">
-          <div className="order-summary-header">
-            <h3>📋 Rezervasyon Özeti</h3>
-            <button className="order-summary-close" onClick={() => setShowSummary(false)}>
-              ✕
+      )}
+
+      {/* Step 2: Hizmet/Eğitmen seçimi (fotoğraflı kartlar) */}
+      {step === 2 && (
+        <div>
+          <button className="bw-back" onClick={() => setStep(1)}>
+            ← Kategoriler
+          </button>
+          <div className="bw-services">
+            {filteredServices.map((s) => (
+              <button
+                key={s.id}
+                className={`bw-svc-card ${selectedService === s.id ? 'active' : ''}`}
+                onClick={() => selectService(s.id)}
+              >
+                <div className="bw-svc-avatar">
+                  {s.providerName ? s.providerName.charAt(0) : '🎯'}
+                </div>
+                <div className="bw-svc-info">
+                  <strong>{s.providerName || s.name}</strong>
+                  <span>
+                    {s.durationMinutes}dk · {s.price}₺
+                  </span>
+                </div>
+                <span className="bw-svc-arrow">→</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Tarih & Saat */}
+      {step === 3 && (
+        <div>
+          <button className="bw-back" onClick={() => setStep(2)}>
+            ← Hizmet Seçimi
+          </button>
+          <div className="bw-selected-info">
+            <span>{selectedSvc?.providerName || selectedSvc?.name}</span>
+            <span>
+              {selectedSvc?.durationMinutes}dk · {selectedSvc?.price}₺
+            </span>
+          </div>
+          <div className="pp-week-nav">
+            <button
+              onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
+              disabled={weekOffset === 0}
+            >
+              ←
+            </button>
+            <span>{weekOffset === 0 ? 'Bu Hafta' : `${weekOffset + 1}. Hafta`}</span>
+            <button
+              onClick={() => setWeekOffset(Math.min(3, weekOffset + 1))}
+              disabled={weekOffset >= 3}
+            >
+              →
             </button>
           </div>
-          <div className="order-summary-details">
-            <div className="order-detail-row">
-              <span className="order-detail-icon">🎯</span>
-              <div className="order-detail-info">
-                <strong>{selectedSvc?.providerName || selectedSvc?.name}</strong>
-                <p>{selectedSvc?.durationMinutes}dk</p>
-              </div>
-              <span className="order-detail-price">{selectedSlot?.price}₺</span>
+          <div className="pp-date-tabs">
+            {days.map((d) => (
+              <button
+                key={d.value}
+                className={`pp-date-tab ${selectedDate === d.value ? 'active' : ''}`}
+                onClick={() => setSelectedDate(d.value)}
+              >
+                <span>{d.dayName}</span>
+                <span>{d.label}</span>
+              </button>
+            ))}
+          </div>
+          {slots.length === 0 ? (
+            <p className="pp-empty">Bu tarihte müsait saat yok</p>
+          ) : (
+            <div className="bw-timeline">
+              {slots.map((s) => {
+                const slotTime = new Date(`${selectedDate}T${s.startTime}:00`);
+                const isPast = slotTime <= new Date();
+                return (
+                  <button
+                    key={s.id}
+                    className={`bw-time-slot ${isPast ? 'past' : ''}`}
+                    onClick={() => !isPast && selectSlot(s.id)}
+                    disabled={isPast}
+                  >
+                    <span className="bw-time-dot" />
+                    <span className="bw-time-label">
+                      {s.startTime} - {s.endTime}
+                    </span>
+                    <span className="bw-time-price">{s.price}₺</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="order-detail-row">
-              <span className="order-detail-icon">📅</span>
-              <div className="order-detail-info">
-                <strong>
-                  {selectedDate &&
-                    new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
+          )}
+        </div>
+      )}
+
+      {/* Step 4: Onay */}
+      {step === 4 && selectedSlot && selectedSvc && (
+        <div>
+          <button className="bw-back" onClick={() => setStep(3)}>
+            ← Tarih & Saat
+          </button>
+          <div className="order-summary-panel">
+            <div className="order-summary-header">
+              <h3>📋 Rezervasyon Özeti</h3>
+            </div>
+            <div className="order-summary-details">
+              <div className="order-detail-row">
+                <span className="order-detail-icon">🎯</span>
+                <div className="order-detail-info">
+                  <strong>{selectedSvc.providerName || selectedSvc.name}</strong>
+                  <p>
+                    {selectedSvc.durationMinutes}dk ·{' '}
+                    {CATEGORY_META[selectedSvc.category]?.label || selectedSvc.category}
+                  </p>
+                </div>
+                <span className="order-detail-price">{selectedSlot.price}₺</span>
+              </div>
+              <div className="order-detail-row">
+                <span className="order-detail-icon">📅</span>
+                <div className="order-detail-info">
+                  <strong>
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'long',
                     })}
-                </strong>
-                <p>
-                  {selectedSlot?.startTime} - {selectedSlot?.endTime}
-                </p>
+                  </strong>
+                  <p>
+                    {selectedSlot.startTime} - {selectedSlot.endTime}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          {addons.length > 0 && (
-            <div className="order-addons-section">
-              <h4>🛒 Ek Hizmetler</h4>
-              <div className="addon-list">
-                {addons.map((a) => (
-                  <div key={a.id} className="addon-item">
-                    <div>
-                      <strong>{a.name}</strong>
-                      <span className="addon-price">+{a.price}₺</span>
+            {addons.length > 0 && (
+              <div className="order-addons-section">
+                <h4>🛒 Ek Hizmetler</h4>
+                <div className="addon-list">
+                  {addons.map((a) => (
+                    <div key={a.id} className="addon-item">
+                      <div>
+                        <strong>{a.name}</strong>
+                        <span className="addon-price">+{a.price}₺</span>
+                      </div>
+                      <div className="addon-qty">
+                        <button
+                          onClick={() =>
+                            setAddonSelections((p) => ({
+                              ...p,
+                              [a.id]: Math.max(0, (p[a.id] || 0) - 1),
+                            }))
+                          }
+                          disabled={!addonSelections[a.id]}
+                        >
+                          −
+                        </button>
+                        <span>{addonSelections[a.id] || 0}</span>
+                        <button
+                          onClick={() =>
+                            setAddonSelections((p) => ({ ...p, [a.id]: (p[a.id] || 0) + 1 }))
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                    <div className="addon-qty">
-                      <button
-                        onClick={() =>
-                          setAddonSelections((p) => ({
-                            ...p,
-                            [a.id]: Math.max(0, (p[a.id] || 0) - 1),
-                          }))
-                        }
-                        disabled={!addonSelections[a.id]}
-                      >
-                        −
-                      </button>
-                      <span>{addonSelections[a.id] || 0}</span>
-                      <button
-                        onClick={() =>
-                          setAddonSelections((p) => ({ ...p, [a.id]: (p[a.id] || 0) + 1 }))
-                        }
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+            )}
+            <div className="addon-actions">
+              <button
+                className="btn-primary"
+                onClick={proceedToCheckout}
+                disabled={booking}
+                style={{ flex: 1 }}
+              >
+                {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
+              </button>
             </div>
-          )}
-          <div className="addon-actions">
-            <button
-              className="btn-primary"
-              onClick={proceedToCheckout}
-              disabled={booking}
-              style={{ flex: 1 }}
-            >
-              {booking ? 'Yönlendiriliyor...' : '💳 Ödemeye Geç'}
-            </button>
           </div>
         </div>
       )}
     </div>
   );
 }
-
 // ─── Campaign Buy Button ─────────────────────────────────────────────────────
 
 function CampaignBuyBtn({ campaignId }: { campaignId: string; price: string | null }) {
