@@ -404,11 +404,13 @@
 }
 .vitrin-filters-left {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 .vitrin-filter-select {
-  padding: 0.5rem 0.9rem;
+  height: 40px;
+  padding: 0 0.9rem;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.15);
   background: rgba(20, 20, 30, 0.8);
@@ -417,6 +419,8 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  line-height: 1;
+  vertical-align: middle;
 }
 .vitrin-filter-select:focus {
   outline: none;
