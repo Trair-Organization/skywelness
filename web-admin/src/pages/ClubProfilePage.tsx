@@ -1200,6 +1200,7 @@ function BookingSection({ subdomain }: { subdomain: string }) {
                       🕐 {s.startTime} - {s.endTime}
                     </span>
                     <span className="bw-slot-price">{s.price}₺</span>
+                    <span className="bw-slot-credit">veya 1 seans kredisi</span>
                   </button>
                 ))}
             </div>

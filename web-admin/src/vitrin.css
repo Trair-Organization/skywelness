@@ -3984,3 +3984,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.bw-slot-credit {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-style: italic;
+}
