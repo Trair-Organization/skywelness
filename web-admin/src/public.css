@@ -30,10 +30,9 @@
   object-fit: contain;
 }
 .nav-logo-text {
-  height: 28px;
+  height: 38px;
   width: auto;
   object-fit: contain;
-  margin-left: 8px;
 }
 .public-nav-links {
   display: flex;
@@ -1939,7 +1938,7 @@
     height: 34px;
   }
   .nav-logo-text {
-    height: 22px;
+    height: 30px;
   }
   .discover-hero h1 {
     font-size: 1.5rem;

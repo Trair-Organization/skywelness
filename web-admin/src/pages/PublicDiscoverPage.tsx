@@ -195,8 +195,7 @@ export function PublicDiscoverPage() {
       {/* Navigation */}
       <nav className="vitrin-nav">
         <Link to="/" className="vitrin-nav-brand">
-          <img src="/wellnesslogodaire.png" alt="Wellness Club" className="nav-logo" />
-          <img src="/wellnesslogoyazi.png" alt="Wellness Club" className="nav-logo-text" />
+          <img src="/wellnesslogoyazi.png" alt="WellnessClub" className="nav-logo-text" />
         </Link>
         <div className="vitrin-nav-links">
           <Link to="/discover" className="vitrin-nav-link active">
