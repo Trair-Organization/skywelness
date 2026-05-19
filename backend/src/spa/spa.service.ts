@@ -269,6 +269,7 @@ export class SpaServiceService {
         'category',
         'durationMinutes',
         'price',
+        'sessionCost',
         'imageUrl',
         'benefits',
       ],
@@ -423,7 +424,9 @@ export class SpaServiceService {
         p.expiresAt >= today,
     );
     if (!massagePackage) {
-      throw new BadRequestException(`Yeterli seans yok (bu hizmet ${sessionCost} kredi gerektirir)`);
+      throw new BadRequestException(
+        `Yeterli seans yok (bu hizmet ${sessionCost} kredi gerektirir)`,
+      );
     }
 
     // 5. Deduct sessionCost from package

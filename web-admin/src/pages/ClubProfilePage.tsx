@@ -993,6 +993,18 @@ function CategoryWizard({
   const rooms = services.filter((s) => s.providerType !== 'trainer');
   const capacities = [...new Set(services.map((s) => s.capacity))].sort((a, b) => a - b);
 
+  // Filters
+  const [participants, setParticipants] = useState(capacities[0] || 1);
+  const [selectedMasoz, setSelectedMasoz] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [slots, setSlots] = useState<V2Slot[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
+  const [booking, setBooking] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   // Spa Yönetimi → Hizmetler sekmesindeki masaj çeşitleri
   const [spaServices, setSpaServices] = useState<
     Array<{
@@ -1002,6 +1014,7 @@ function CategoryWizard({
       category: string;
       durationMinutes: number;
       price: string | number;
+      sessionCost: number;
     }>
   >([]);
 
@@ -1015,23 +1028,19 @@ function CategoryWizard({
         category: string;
         durationMinutes: number;
         price: string | number;
+        sessionCost: number;
       }>
     >(`/spa/services/public/${encodeURIComponent(subdomain)}`, { auth: false })
-      .then(setSpaServices)
+      .then((data) => {
+        setSpaServices(data);
+        // Varsayılan: "Classic Masaj"ı seç (yoksa ilk hizmet)
+        if (data.length > 0) {
+          const classic = data.find((s) => /classic/i.test(s.name));
+          setSelectedType((prev) => prev || (classic?.id ?? data[0].id));
+        }
+      })
       .catch(() => setSpaServices([]));
   }, [isMassage, subdomain]);
-
-  // Filters
-  const [participants, setParticipants] = useState(capacities[0] || 1);
-  const [selectedMasoz, setSelectedMasoz] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [slots, setSlots] = useState<V2Slot[]>([]);
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [addonSelections, setAddonSelections] = useState<Record<string, number>>({});
-  const [booking, setBooking] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   // Effective service — masöz seçildiyse masöz, oda seçildiyse oda, yoksa kapasiteye uygun ilk
   const effectiveServiceId =
@@ -1204,7 +1213,7 @@ function CategoryWizard({
               <option value="">Tümü</option>
               {spaServices.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} — {s.durationMinutes}dk · {s.price}₺
+                  {s.name} — {s.durationMinutes}dk · {s.price}₺ · {s.sessionCost} kredi
                 </option>
               ))}
             </select>
