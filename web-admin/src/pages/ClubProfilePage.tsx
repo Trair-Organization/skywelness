@@ -932,9 +932,10 @@ function BookingSection({ subdomain }: { subdomain: string }) {
     group_class: { icon: '🧘', label: 'Grup Dersi' },
     general: { icon: '📋', label: 'Genel' },
   };
-  // Kapasiteye göre filtrele — kişi sayısına uygun hizmetler
+  // Kapasiteye göre filtrele — kişi sayısına uygun odalar/kaynaklar (masözler hariç)
   const filteredServices = services.filter(
-    (s) => s.category === selectedCategory && s.capacity >= participants,
+    (s) =>
+      s.category === selectedCategory && s.capacity >= participants && s.providerType !== 'trainer',
   );
   const selectedSvc = services.find((s) => s.id === selectedService);
   const selectedSlot = slots.find((s) => s.id === selectedSlotId);
