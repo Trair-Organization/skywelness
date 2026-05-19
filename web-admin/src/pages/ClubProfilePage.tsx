@@ -109,10 +109,10 @@ type Addon = { id: string; name: string; price: string };
 
 const SECTIONS = [
   { id: 'about', icon: '🏢', label: 'Hakkımızda' },
-  { id: 'trainers', icon: '🏋️', label: 'Eğitmenler' },
-  { id: 'events', icon: '📅', label: 'Etkinlikler' },
   { id: 'campaigns', icon: '🔥', label: 'Kampanyalar' },
+  { id: 'events', icon: '📅', label: 'Etkinlikler' },
   { id: 'booking', icon: '🎯', label: 'Rezervasyon' },
+  { id: 'trainers', icon: '🏋️', label: 'Eğitmenler' },
   { id: 'reviews', icon: '⭐', label: 'Yorumlar' },
   { id: 'message', icon: '💬', label: 'Mesaj' },
 ] as const;
@@ -411,71 +411,6 @@ export function ClubProfilePage() {
           </section>
         )}
 
-        {/* ═══ EĞİTMENLER ═══ */}
-        {profile.trainers.length > 0 && (
-          <section
-            ref={(el) => {
-              sectionRefs.current['trainers'] = el;
-            }}
-            className="pp-section"
-            id="pp-trainers"
-          >
-            <h2>🏋️ Eğitmenler</h2>
-            {ptTrainers.length > 0 && (
-              <>
-                <h3 className="pp-sub">Personal Training</h3>
-                <div className="pp-trainers-grid">
-                  {ptTrainers.map((t) => (
-                    <TrainerCard key={t.id} trainer={t} />
-                  ))}
-                </div>
-              </>
-            )}
-            {massageTrainers.length > 0 && (
-              <>
-                <h3 className="pp-sub">Masözler</h3>
-                <div className="pp-trainers-grid">
-                  {massageTrainers.map((t) => (
-                    <TrainerCard key={t.id} trainer={t} />
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-        )}
-
-        {/* ═══ ETKİNLİKLER ═══ */}
-        {profile.events.length > 0 && (
-          <section
-            ref={(el) => {
-              sectionRefs.current['events'] = el;
-            }}
-            className="pp-section"
-            id="pp-events"
-          >
-            <h2>📅 Etkinlikler</h2>
-            <div className="pp-events-scroll">
-              {profile.events.map((e) => (
-                <Link key={e.id} to={`/event/${e.id}`} className="pp-event-card">
-                  {e.imageUrl && <img src={e.imageUrl} alt="" className="pp-event-img" />}
-                  <div className="pp-event-body">
-                    <strong>{e.title}</strong>
-                    <span>
-                      {new Date(e.startsAt).toLocaleDateString('tr-TR', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                    {e.coachName && <span>🏋️ {e.coachName}</span>}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* ═══ KAMPANYALAR ═══ */}
         {campaigns.length > 0 && (
           <section
@@ -522,6 +457,38 @@ export function ClubProfilePage() {
           </section>
         )}
 
+        {/* ═══ ETKİNLİKLER ═══ */}
+        {profile.events.length > 0 && (
+          <section
+            ref={(el) => {
+              sectionRefs.current['events'] = el;
+            }}
+            className="pp-section"
+            id="pp-events"
+          >
+            <h2>📅 Etkinlikler</h2>
+            <div className="pp-events-scroll">
+              {profile.events.map((e) => (
+                <Link key={e.id} to={`/event/${e.id}`} className="pp-event-card">
+                  {e.imageUrl && <img src={e.imageUrl} alt="" className="pp-event-img" />}
+                  <div className="pp-event-body">
+                    <strong>{e.title}</strong>
+                    <span>
+                      {new Date(e.startsAt).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    {e.coachName && <span>🏋️ {e.coachName}</span>}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ═══ HİZMETLER & REZERVASYON ═══ */}
         <section
           ref={(el) => {
@@ -556,6 +523,39 @@ export function ClubProfilePage() {
           {/* Booking Flow */}
           <BookingSection subdomain={subdomain!} />
         </section>
+
+        {/* ═══ EĞİTMENLER ═══ */}
+        {profile.trainers.length > 0 && (
+          <section
+            ref={(el) => {
+              sectionRefs.current['trainers'] = el;
+            }}
+            className="pp-section"
+            id="pp-trainers"
+          >
+            <h2>🏋️ Eğitmenler</h2>
+            {ptTrainers.length > 0 && (
+              <>
+                <h3 className="pp-sub">Personal Training</h3>
+                <div className="pp-trainers-grid">
+                  {ptTrainers.map((t) => (
+                    <TrainerCard key={t.id} trainer={t} />
+                  ))}
+                </div>
+              </>
+            )}
+            {massageTrainers.length > 0 && (
+              <>
+                <h3 className="pp-sub">Masözler</h3>
+                <div className="pp-trainers-grid">
+                  {massageTrainers.map((t) => (
+                    <TrainerCard key={t.id} trainer={t} />
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         {/* ═══ MESAJ ═══ */}
         <section
