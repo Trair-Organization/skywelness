@@ -84,8 +84,6 @@ const VERTICALS = [
   { key: 'nutrition', label: 'Beslenme & Diyet', icon: '🥗' },
   { key: 'yoga', label: 'Yoga & Pilates', icon: '🧘' },
   { key: 'beauty', label: 'Güzellik', icon: '💅' },
-  { key: 'yoga', label: 'Yoga & Pilates', icon: '🧘' },
-  { key: 'beauty', label: 'Güzellik', icon: '💅' },
   { key: 'medical', label: 'Medikal', icon: '⚕️' },
 ];
 
