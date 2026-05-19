@@ -109,6 +109,7 @@ type Addon = { id: string; name: string; price: string };
 
 const SECTIONS = [
   { id: 'about', icon: '🏢', label: 'Hakkımızda' },
+  { id: 'products', icon: '🛍️', label: 'Ürünler' },
   { id: 'campaigns', icon: '🔥', label: 'Kampanyalar' },
   { id: 'events', icon: '📅', label: 'Etkinlikler' },
   { id: 'booking', icon: '🎯', label: 'Rezervasyon' },
@@ -244,6 +245,7 @@ export function ClubProfilePage() {
   );
   const visibleSections = SECTIONS.filter((s) => {
     if (s.id === 'about') return !!profile.description;
+    if (s.id === 'products') return profile.packages.length > 0 || profile.resources.length > 0;
     if (s.id === 'reviews') return true;
     if (s.id === 'trainers') return profile.trainers.length > 0;
     if (s.id === 'events') return profile.events.length > 0;
@@ -411,6 +413,59 @@ export function ClubProfilePage() {
           </section>
         )}
 
+        {/* ═══ ÜRÜN VE HİZMETLER ═══ */}
+        {(profile.packages.length > 0 || profile.resources.length > 0) && (
+          <section
+            ref={(el) => {
+              sectionRefs.current['products'] = el;
+            }}
+            className="pp-section"
+            id="pp-products"
+          >
+            <h2>🛍️ Ürün ve Hizmetler</h2>
+            {/* Paketler */}
+            {profile.packages.length > 0 && (
+              <>
+                <h3 className="pp-sub">💎 Paketler</h3>
+                <div className="pp-packages-grid">
+                  {profile.packages.map((pkg) => (
+                    <div key={pkg.id} className="pp-package-card">
+                      <h4>{pkg.name}</h4>
+                      <p>
+                        {pkg.sessionCount} seans · {pkg.validityDays} gün ·{' '}
+                        {pkg.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
+                      </p>
+                      <div className="pp-package-price">
+                        <strong>{pkg.price}₺</strong>
+                        <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
+                      </div>
+                      <PackageBuyBtn packageId={pkg.id} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Kaynaklar/Hizmetler */}
+            {profile.resources.length > 0 && (
+              <>
+                <h3 className="pp-sub">🏷️ Hizmetler</h3>
+                <div className="pp-resources-grid">
+                  {profile.resources.map((r) => (
+                    <div key={r.id} className="pp-resource-card">
+                      <strong>{r.name}</strong>
+                      {r.description && <p>{r.description}</p>}
+                      <div className="pp-resource-meta">
+                        <span>⏱️ {r.durationMinutes}dk</span>
+                        <span className="pp-resource-price">{r.price}₺</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         {/* ═══ KAMPANYALAR ═══ */}
         {campaigns.length > 0 && (
           <section
@@ -497,29 +552,7 @@ export function ClubProfilePage() {
           className="pp-section"
           id="pp-booking"
         >
-          <h2>🎯 Hizmetler & Rezervasyon</h2>
-          {/* Paketler */}
-          {profile.packages.length > 0 && (
-            <div className="pp-packages">
-              <h3 className="pp-sub">💎 Paketler</h3>
-              <div className="pp-packages-grid">
-                {profile.packages.map((pkg) => (
-                  <div key={pkg.id} className="pp-package-card">
-                    <h4>{pkg.name}</h4>
-                    <p>
-                      {pkg.sessionCount} seans · {pkg.validityDays} gün ·{' '}
-                      {pkg.sessionType === 'personal_training' ? '🏋️ PT' : '💆 Masaj'}
-                    </p>
-                    <div className="pp-package-price">
-                      <strong>{pkg.price}₺</strong>
-                      <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
-                    </div>
-                    <PackageBuyBtn packageId={pkg.id} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <h2>🎯 Rezervasyon</h2>
           {/* Booking Flow */}
           <BookingSection subdomain={subdomain!} />
         </section>
