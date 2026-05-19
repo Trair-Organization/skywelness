@@ -190,6 +190,21 @@ export class UnifiedBookingController {
     return this.service.createEventCheckout({ eventId, ...body });
   }
 
+  /** Paket satın alma için Stripe Checkout session oluştur */
+  @Post('packages/:id/checkout')
+  createPackageCheckout(
+    @Param('id') packageTypeId: string,
+    @Body()
+    body: {
+      guestName?: string;
+      guestPhone?: string;
+      guestEmail?: string;
+      userId?: string;
+    },
+  ) {
+    return this.service.createPackageCheckout({ packageTypeId, ...body });
+  }
+
   /** Kampanya satın alma için Stripe Checkout session oluştur */
   @Post('campaigns/:id/checkout')
   createCampaignCheckout(

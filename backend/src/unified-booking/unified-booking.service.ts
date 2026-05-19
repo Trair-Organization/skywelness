@@ -310,6 +310,18 @@ export class UnifiedBookingService {
       );
     }
 
+    // Package checkout mu?
+    if (md.type === 'package') {
+      return this.handlePackagePaymentCompleted(
+        session as unknown as {
+          id: string;
+          metadata: Record<string, string>;
+          customer_details?: { email?: string };
+          payment_intent?: string;
+        },
+      );
+    }
+
     if (!slotId || !tenantId || !serviceId) {
       this.logger.error(`Stripe webhook missing required metadata: ${JSON.stringify(md)}`);
       return { ok: false, error: 'missing metadata' };
@@ -475,6 +487,74 @@ export class UnifiedBookingService {
   }
 
   // ═══════════════════════════════════════════════════════════
+  // PACKAGE CHECKOUT (Paket Satın Alma)
+  // ═══════════════════════════════════════════════════════════
+
+  /** Paket satın alma için Stripe Checkout session oluştur */
+  async createPackageCheckout(data: {
+    packageTypeId: string;
+    guestName?: string;
+    guestPhone?: string;
+    guestEmail?: string;
+    userId?: string;
+  }) {
+    const packageType = await this.packageTypesRepo.findOne({
+      where: { id: data.packageTypeId, active: true },
+      relations: ['tenant'],
+    });
+    if (!packageType) throw new NotFoundException('Paket bulunamadı');
+
+    const tenant = packageType.tenant;
+    const COMMISSION_RATE = parseFloat(tenant.commissionRate) || 0.15;
+    const priceCents = Math.round(parseFloat(packageType.price) * 100);
+    const kaporaCents = Math.ceil(priceCents * COMMISSION_RATE);
+    const kaporaTRY = (kaporaCents / 100).toFixed(2);
+    const totalTRY = (priceCents / 100).toFixed(2);
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        price_data: {
+          currency: (packageType.currency || 'TRY').toLowerCase(),
+          product_data: {
+            name: `${packageType.name} — ${tenant.name}`,
+            description: `${packageType.sessionCount} seans · ${packageType.validityDays} gün geçerli | Toplam: ${totalTRY}₺ · Kapora (%${Math.round(COMMISSION_RATE * 100)}): ${kaporaTRY}₺`,
+          },
+          unit_amount: kaporaCents,
+        },
+        quantity: 1,
+      },
+    ];
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `https://www.wellnessclub.tech/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.wellnessclub.tech/booking-cancel`,
+      metadata: {
+        type: 'package',
+        packageTypeId: packageType.id,
+        tenantId: tenant.id,
+        userId: data.userId || '',
+        guestName: data.guestName || '',
+        guestPhone: data.guestPhone || '',
+        guestEmail: data.guestEmail || '',
+        totalAmount: totalTRY,
+        kaporaAmount: kaporaTRY,
+        commissionRate: String(COMMISSION_RATE),
+      },
+      ...(data.guestEmail ? { customer_email: data.guestEmail } : {}),
+    });
+
+    return {
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      packageName: packageType.name,
+      totalAmount: totalTRY,
+      kaporaAmount: kaporaTRY,
+    };
+  }
+
   // EVENT CHECKOUT (Ücretli Etkinlikler)
   // ═══════════════════════════════════════════════════════════
 
@@ -1775,5 +1855,77 @@ export class UnifiedBookingService {
     }
 
     return this.appointmentsRepo.save(appointment);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // PACKAGE PAYMENT COMPLETED
+  // ═══════════════════════════════════════════════════════════
+
+  /** Stripe webhook'tan gelen paket ödeme onayını işle */
+  private async handlePackagePaymentCompleted(session: {
+    id: string;
+    metadata: Record<string, string>;
+    customer_details?: { email?: string };
+    payment_intent?: string;
+  }) {
+    const md = session.metadata;
+    const packageTypeId = md.packageTypeId;
+    const tenantId = md.tenantId;
+
+    if (!packageTypeId || !tenantId) {
+      this.logger.error(`Package webhook missing metadata: ${JSON.stringify(md)}`);
+      return { ok: false, error: 'missing metadata' };
+    }
+
+    // Idempotency check
+    const existingPkg = await this.packagesRepo.findOne({
+      where: { stripeSessionId: session.id },
+    });
+    if (existingPkg) {
+      return { ok: true, duplicate: true, packageId: existingPkg.id };
+    }
+
+    const packageType = await this.packageTypesRepo.findOne({ where: { id: packageTypeId } });
+    if (!packageType) {
+      this.logger.error(`PackageType not found: ${packageTypeId}`);
+      return { ok: false, error: 'package type not found' };
+    }
+
+    // Kullanıcı çözümle
+    const guestEmail = (session.customer_details?.email || md.guestEmail || '').toLowerCase();
+    const userId =
+      md.userId ||
+      (await this.resolveGuestUserId(
+        tenantId,
+        guestEmail,
+        md.guestName || 'Üye',
+        md.guestPhone || '',
+      ));
+
+    // Package oluştur
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + packageType.validityDays * 86400000);
+
+    const pkg = this.packagesRepo.create({
+      userId,
+      tenantId,
+      packageTypeId: packageType.id,
+      remainingSessions: packageType.sessionCount,
+      status: 'active' as PackageStatus,
+      activatedAt: now,
+      expiresAt: expiresAt.toISOString().slice(0, 10),
+      stripeSessionId: session.id,
+    });
+    await this.packagesRepo.save(pkg);
+
+    this.logger.log(`Package created: ${pkg.id} for user ${userId} (${packageType.name})`);
+
+    return {
+      ok: true,
+      packageId: pkg.id,
+      packageName: packageType.name,
+      sessionCount: packageType.sessionCount,
+      expiresAt,
+    };
   }
 }

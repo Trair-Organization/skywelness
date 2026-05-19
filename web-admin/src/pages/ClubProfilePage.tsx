@@ -456,6 +456,7 @@ export function ClubProfilePage() {
                     <strong>{pkg.price}₺</strong>
                     <span>{Math.round(parseFloat(pkg.price) / pkg.sessionCount)}₺/seans</span>
                   </div>
+                  <PackageBuyButton packageId={pkg.id} price={pkg.price} />
                 </div>
               ))}
             </div>
@@ -992,5 +993,65 @@ function FavoriteButton({
     >
       {isFavorite ? '❤️' : '🤍'} {isFavorite ? 'Favorilerde' : 'Favorilere Ekle'}
     </button>
+  );
+}
+
+// ─── Package Buy Button ──────────────────────────────────────────────────────
+
+function PackageBuyButton({ packageId, price }: { packageId: string; price: string }) {
+  const { token, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const commissionRate = 0.15;
+  const kapora = (parseFloat(price) * commissionRate).toFixed(0);
+
+  async function handleBuy() {
+    setLoading(true);
+    try {
+      const res = await apiJson<{ checkoutUrl: string }>(`/v2/packages/${packageId}/checkout`, {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: user?.id,
+          guestEmail: user?.email,
+        }),
+      });
+      if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Ödeme başlatılamadı');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!token) {
+    return (
+      <div style={{ marginTop: 10 }}>
+        <Link
+          to="/login"
+          className="btn-primary"
+          style={{ display: 'block', textAlign: 'center', padding: '0.6rem', fontSize: '0.82rem' }}
+        >
+          Satın Almak İçin Giriş Yap
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button
+        onClick={handleBuy}
+        disabled={loading}
+        className="btn-primary"
+        style={{ width: '100%', padding: '0.65rem', fontSize: '0.85rem' }}
+      >
+        {loading ? 'Yönlendiriliyor...' : `💳 Satın Al (Kapora: ${kapora}₺)`}
+      </button>
+      <p style={{ margin: '4px 0 0', fontSize: '0.68rem', color: '#64748b', textAlign: 'center' }}>
+        Kalan tutar kulüpte ödenecek
+      </p>
+    </div>
   );
 }
