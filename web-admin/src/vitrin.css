@@ -3509,3 +3509,34 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Booking Category Tabs */
+.pp-booking-cats {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.pp-booking-cat {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.pp-booking-cat:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #e2e8f0;
+}
+.pp-booking-cat.active {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+}

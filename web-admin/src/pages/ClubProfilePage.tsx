@@ -896,6 +896,7 @@ function PackageBuyBtn({ packageId }: { packageId: string }) {
 function BookingSection({ subdomain }: { subdomain: string }) {
   const { token } = useAuth();
   const [services, setServices] = useState<V2Service[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedService, setSelectedService] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -910,13 +911,17 @@ function BookingSection({ subdomain }: { subdomain: string }) {
     apiJson<V2Service[]>(`/v2/services?tenant=${encodeURIComponent(subdomain)}`, { auth: false })
       .then((list) => {
         setServices(list);
-        if (list.length > 0 && !selectedService) setSelectedService(list[0].id);
+        if (list.length > 0) {
+          const firstCat = list[0].category;
+          setSelectedCategory(firstCat);
+          setSelectedService(list[0].id);
+        }
       })
       .catch(() => {});
     apiJson<Addon[]>(`/v2/addons?tenant=${encodeURIComponent(subdomain)}`, { auth: false })
       .then(setAddons)
       .catch(() => {});
-  }, [subdomain, selectedService]);
+  }, [subdomain]);
 
   useEffect(() => {
     if (!selectedService || !selectedDate) return;
@@ -929,6 +934,24 @@ function BookingSection({ subdomain }: { subdomain: string }) {
   }, [subdomain, selectedService, selectedDate]);
 
   const days = getWeekDays(weekOffset);
+
+  // Kategorileri çıkar
+  const categories = [...new Set(services.map((s) => s.category))];
+  const CATEGORY_LABELS: Record<string, string> = {
+    personal_training: '🏋️ Personal Training',
+    massage: '💆 Masaj / Spa',
+    court_rental: '🎾 Kort Kiralama',
+    group_class: '🧘 Grup Dersi',
+    general: '📋 Genel',
+  };
+  const filteredServices = services.filter((s) => s.category === selectedCategory);
+
+  function handleCategoryChange(cat: string) {
+    setSelectedCategory(cat);
+    const firstInCat = services.find((s) => s.category === cat);
+    if (firstInCat) setSelectedService(firstInCat.id);
+    setShowSummary(false);
+  }
 
   function handleSlotSelect(slotId: string) {
     if (!token) return;
@@ -973,6 +996,22 @@ function BookingSection({ subdomain }: { subdomain: string }) {
 
   return (
     <div className="pp-booking-flow">
+      {/* Kategori Tabları */}
+      {categories.length > 1 && (
+        <div className="pp-booking-cats">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              className={`pp-booking-cat ${selectedCategory === cat ? 'active' : ''}`}
+              onClick={() => handleCategoryChange(cat)}
+            >
+              {CATEGORY_LABELS[cat] || cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Hizmet Seçimi */}
       <select
         className="pp-booking-select"
         value={selectedService}
@@ -981,13 +1020,14 @@ function BookingSection({ subdomain }: { subdomain: string }) {
           setShowSummary(false);
         }}
       >
-        {services.map((s) => (
+        {filteredServices.map((s) => (
           <option key={s.id} value={s.id}>
             {s.providerName || s.name} — {s.price}₺/{s.durationMinutes}dk
           </option>
         ))}
       </select>
 
+      {/* Hafta Nav */}
       <div className="pp-week-nav">
         <button
           onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
@@ -1004,6 +1044,7 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         </button>
       </div>
 
+      {/* Gün Seçimi */}
       <div className="pp-date-tabs">
         {days.map((d) => (
           <button
@@ -1020,6 +1061,7 @@ function BookingSection({ subdomain }: { subdomain: string }) {
         ))}
       </div>
 
+      {/* Slotlar veya Özet */}
       {!token ? (
         <div className="pp-login-prompt">
           <p>Müsait saatleri görmek için giriş yapın</p>
@@ -1050,7 +1092,6 @@ function BookingSection({ subdomain }: { subdomain: string }) {
           })}
         </div>
       ) : (
-        /* Order Summary */
         <div className="order-summary-panel">
           <div className="order-summary-header">
             <h3>📋 Rezervasyon Özeti</h3>
