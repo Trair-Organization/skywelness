@@ -1011,6 +1011,16 @@ export class BookingService {
     return { ok: true as const, id: row.id, isRead: row.isRead, readAt: row.readAt };
   }
 
+  async markAllNotificationsRead(user: User) {
+    await this.notificationsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ isRead: true, readAt: new Date() })
+      .where('user_id = :userId AND is_read = false', { userId: user.id })
+      .execute();
+    return { ok: true as const };
+  }
+
   async joinWaitingList(user: User, dto: JoinWaitingListDto) {
     if (user.role !== UserRole.MEMBER) {
       throw new ForbiddenException('Only members can join the waiting list');

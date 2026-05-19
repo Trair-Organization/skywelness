@@ -19,4 +19,9 @@ export class NotificationsController {
   markRead(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.bookingService.markNotificationRead(user, id);
   }
+
+  @Post('read-all')
+  markAllRead(@CurrentUser() user: User) {
+    return this.bookingService.markAllNotificationsRead(user);
+  }
 }
