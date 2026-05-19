@@ -16,6 +16,17 @@ export class SpaController {
     return this.spaService.listPublicServicesBySubdomain(subdomain);
   }
 
+  /** Public: Masöz bazlı boş slotlar (rezervasyon ekranı). */
+  @Get('availability/public/:tenantSubdomain')
+  @SkipThrottle()
+  async listPublicTherapistAvailability(
+    @Param('tenantSubdomain') subdomain: string,
+    @Query('date') date: string,
+  ) {
+    const targetDate = date || new Date().toISOString().slice(0, 10);
+    return this.spaService.listPublicTherapistAvailabilityBySubdomain(subdomain, targetDate);
+  }
+
   /** Üye: Hizmet kataloğu. */
   @Get('services')
   @UseGuards(JwtAuthGuard)

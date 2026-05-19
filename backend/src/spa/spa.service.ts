@@ -277,6 +277,75 @@ export class SpaServiceService {
     });
   }
 
+  /**
+   * Public: Subdomain için masöz bazlı boş slotlar (rezervasyon ekranı).
+   * Geçmiş saatler ve dolu (rezerve) slotlar filtrelenir.
+   */
+  async listPublicTherapistAvailabilityBySubdomain(subdomain: string, date: string) {
+    const tenant = await this.tenantsRepo.findOne({
+      where: { subdomain: subdomain.trim().toLowerCase() },
+    });
+    if (!tenant) return [];
+
+    const therapists = await this.therapistsRepo.find({
+      where: { tenantId: tenant.id, active: true },
+      order: { name: 'ASC' },
+    });
+    if (therapists.length === 0) return [];
+
+    const therapistIds = therapists.map((t) => t.id);
+
+    const availabilities = await this.availabilityRepo
+      .createQueryBuilder('a')
+      .where('a.spaTherapistId IN (:...ids)', { ids: therapistIds })
+      .andWhere('a.date = :date', { date })
+      .andWhere('a.available = true')
+      .orderBy('a.startTime', 'ASC')
+      .getMany();
+
+    const dayStart = new Date(`${date}T00:00:00`);
+    const dayEnd = new Date(`${date}T23:59:59`);
+    const reservations = await this.reservationsRepo
+      .createQueryBuilder('r')
+      .where('r.tenantId = :tid', { tid: tenant.id })
+      .andWhere('r.spaTherapistId IS NOT NULL')
+      .andWhere('r.spaTherapistId IN (:...ids)', { ids: therapistIds })
+      .andWhere('r.status IN (:...statuses)', { statuses: ['confirmed', 'pending'] })
+      .andWhere('r.startTime >= :from AND r.startTime < :to', { from: dayStart, to: dayEnd })
+      .getMany();
+
+    const bookedKeys = new Set(
+      reservations.map(
+        (r) => `${r.spaTherapistId}|${new Date(r.startTime).toISOString().slice(11, 16)}`,
+      ),
+    );
+
+    const now = new Date();
+
+    return therapists.map((th) => {
+      const slots = availabilities
+        .filter((a) => a.spaTherapistId === th.id)
+        .filter((a) => {
+          const slotTime = new Date(`${date}T${a.startTime}`);
+          if (slotTime <= now) return false;
+          const key = `${a.spaTherapistId}|${a.startTime.slice(0, 5)}`;
+          return !bookedKeys.has(key);
+        })
+        .map((a) => ({
+          availabilityId: a.id,
+          startTime: a.startTime.slice(0, 5),
+          endTime: a.endTime.slice(0, 5),
+        }));
+
+      return {
+        therapistId: th.id,
+        therapistName: th.name,
+        photoUrl: th.photoUrl,
+        slots,
+      };
+    });
+  }
+
   // ─── Member Slot Booking (Availability-based) ──────────────────────────────
 
   /** Üye: Satın alınabilir masaj paket tipleri (aktif olanlar). */

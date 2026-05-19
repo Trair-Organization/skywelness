@@ -1072,103 +1072,60 @@ function CategoryWizard({
   useEffect(() => {
     if (!selectedDate) return;
 
-    // Masaj kategorisinde her zaman spa-rooms endpoint'i kullan
-    // (selectedType artık spa_service ID — bilgi amaçlı, slot fetch'ini etkilemez)
+    // Masaj kategorisinde: masöz bazlı boş slotları çek (Spa Yönetimi → Ajanda kayıtları)
     if (isMassage) {
-      const params = new URLSearchParams({
-        tenant: subdomain,
-        date: selectedDate,
-        participants: String(participants),
-      });
-      apiJson<{
-        rooms: Array<{
-          roomId: string;
-          roomName: string;
-          capacity: number;
-          roomType: string;
-          price: string;
-          currency: string;
-          timeSlots: Array<{
-            roomSlotId: string;
+      apiJson<
+        Array<{
+          therapistId: string;
+          therapistName: string;
+          photoUrl: string | null;
+          slots: Array<{
+            availabilityId: string;
             startTime: string;
             endTime: string;
-            unitPrice: string;
-            totalPrice: string;
-            currency: string;
-            isBookable: boolean;
-            requiredTherapists: number;
-            availableTherapists: Array<{ id: string; slotId: string; name: string }>;
           }>;
-        }>;
-        date: string;
-      }>(`/v2/schedule/spa-rooms?${params}`, { auth: false })
+        }>
+      >(`/spa/availability/public/${encodeURIComponent(subdomain)}?date=${selectedDate}`, {
+        auth: false,
+      })
         .then((data) => {
-          const allSlots: V2Slot[] = [];
-          // Masöz bazlı gruplama için: therapistId -> { name, slots[] }
-          const byTherapist = new Map<
-            string,
-            {
-              therapistId: string;
-              therapistName: string;
-              slots: Array<{
-                slotId: string;
-                startTime: string;
-                endTime: string;
-                price: string;
-                roomSlotId: string;
-              }>;
-              seen: Set<string>;
-            }
-          >();
+          // Üst slot listesi (selectedSlot için boş bırakılabilir; therapistSlots ana kaynak)
+          const flat: V2Slot[] = [];
+          const grouped: typeof therapistSlots = [];
 
-          for (const room of data.rooms || []) {
-            for (const ts of room.timeSlots) {
-              if (!ts.isBookable) continue;
+          // Default fiyat: seçilen spa hizmetinin fiyatı (yoksa boş)
+          const selectedSpa = spaServices.find((s) => s.id === selectedType);
+          const defaultPrice = selectedSpa ? String(selectedSpa.price) : '0';
 
-              // Tüm slotlar için (üst grid için): odanın slotId'sini kullan
-              allSlots.push({
-                id: ts.roomSlotId,
-                serviceId: room.roomId,
-                startTime: ts.startTime,
-                endTime: ts.endTime,
-                price: ts.totalPrice,
-                remainingCapacity: ts.availableTherapists.length,
+          for (const th of data) {
+            if (th.slots.length === 0) continue;
+            const slotList = th.slots.map((s) => ({
+              slotId: s.availabilityId,
+              startTime: s.startTime,
+              endTime: s.endTime,
+              price: defaultPrice,
+              roomSlotId: s.availabilityId,
+            }));
+            grouped.push({
+              therapistId: th.therapistId,
+              therapistName: th.therapistName,
+              slots: slotList,
+            });
+            for (const s of slotList) {
+              flat.push({
+                id: s.slotId,
+                serviceId: th.therapistId,
+                startTime: s.startTime,
+                endTime: s.endTime,
+                price: s.price,
+                remainingCapacity: 1,
               });
-
-              // Her masöz için kendi satırını oluştur
-              for (const th of ts.availableTherapists) {
-                if (!byTherapist.has(th.id)) {
-                  byTherapist.set(th.id, {
-                    therapistId: th.id,
-                    therapistName: th.name,
-                    slots: [],
-                    seen: new Set(),
-                  });
-                }
-                const entry = byTherapist.get(th.id)!;
-                // Aynı saatte aynı masöz birden fazla odada görülmesin
-                if (entry.seen.has(ts.startTime)) continue;
-                entry.seen.add(ts.startTime);
-                entry.slots.push({
-                  slotId: th.slotId,
-                  startTime: ts.startTime,
-                  endTime: ts.endTime,
-                  price: ts.unitPrice,
-                  roomSlotId: ts.roomSlotId,
-                });
-              }
             }
           }
 
-          setSlots(allSlots);
+          setSlots(flat);
           setTherapistSlots(
-            Array.from(byTherapist.values())
-              .map((t) => ({
-                therapistId: t.therapistId,
-                therapistName: t.therapistName,
-                slots: t.slots.sort((a, b) => a.startTime.localeCompare(b.startTime)),
-              }))
-              .sort((a, b) => a.therapistName.localeCompare(b.therapistName, 'tr')),
+            grouped.sort((a, b) => a.therapistName.localeCompare(b.therapistName, 'tr')),
           );
         })
         .catch(() => {
@@ -1194,6 +1151,7 @@ function CategoryWizard({
     participants,
     selectedMasoz,
     selectedType,
+    spaServices,
   ]);
 
   const days = getWeekDays(weekOffset);
