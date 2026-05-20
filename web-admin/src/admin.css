@@ -5863,3 +5863,331 @@ a.trainer-stat-card:hover {
     font-size: 1rem;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Trainer Earnings — Gelir/Kazanç sayfası
+   ═══════════════════════════════════════════════════════════════════════════ */
+.trainer-earnings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.earnings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.earnings-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+.earnings-header .muted {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.earnings-price-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0.75rem 1.1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+.earnings-price-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.earnings-price-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.earnings-price-display strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.earnings-price-display span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.earnings-price-edit-icon {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+.earnings-price-display:hover .earnings-price-edit-icon {
+  opacity: 1;
+}
+.earnings-price-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Hero kart — bu ay net kazanç */
+.earnings-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-radius: 18px;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.18);
+}
+.earnings-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.earnings-hero-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.earnings-hero-amount {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.earnings-hero-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.earnings-trend.positive {
+  color: #d1fae5;
+  font-weight: 700;
+}
+.earnings-trend.negative {
+  color: #fecaca;
+  font-weight: 700;
+}
+.earnings-hero-breakdown {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.earnings-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+}
+.earnings-breakdown-row.platform-fee {
+  opacity: 0.85;
+}
+.earnings-breakdown-row.net {
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  padding-top: 0.5rem;
+  font-weight: 700;
+}
+.earnings-breakdown-row.net strong {
+  font-size: 1rem;
+}
+
+/* Stats row */
+.earnings-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.earnings-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+.earnings-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.earnings-stat-card strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.earnings-stat-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* Card */
+.earnings-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+.earnings-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Trend chart */
+.earnings-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  height: 180px;
+  padding-top: 1.5rem;
+}
+.earnings-chart-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  position: relative;
+}
+.earnings-chart-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--accent) 0%, #1d4ed8 100%);
+  border-radius: 8px 8px 0 0;
+  transition: height 0.3s ease;
+  min-height: 4px;
+  margin-top: auto;
+}
+.earnings-chart-value {
+  position: absolute;
+  top: -4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+.earnings-chart-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Table */
+.earnings-table-wrap {
+  overflow-x: auto;
+}
+.earnings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.earnings-table thead th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.earnings-table tbody td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #0f172a;
+}
+.earnings-table tbody tr:hover {
+  background: #f8fafc;
+}
+.earnings-table-time {
+  display: block;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+.earnings-table .text-fee {
+  color: #dc2626;
+  font-weight: 600;
+}
+.earnings-table .text-net {
+  color: #059669;
+}
+.earnings-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.earnings-tag-package {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.earnings-tag-direct {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+  .earnings-hero {
+    grid-template-columns: 1fr;
+    padding: 1.25rem 1.25rem;
+  }
+  .earnings-hero-amount {
+    font-size: 1.8rem;
+  }
+}
+@media (max-width: 640px) {
+  .trainer-earnings {
+    padding: 1rem;
+  }
+  .earnings-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .earnings-card {
+    padding: 1rem;
+  }
+  .earnings-chart {
+    height: 140px;
+    gap: 0.5rem;
+    padding-top: 1.2rem;
+  }
+  .earnings-chart-value {
+    font-size: 0.6rem;
+  }
+  .earnings-chart-label {
+    font-size: 0.65rem;
+  }
+}

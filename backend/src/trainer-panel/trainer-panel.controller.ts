@@ -315,6 +315,11 @@ export class TrainerPanelController {
     return this.service.getProfile(user);
   }
 
+  @Get('earnings')
+  getEarnings(@CurrentUser() user: User) {
+    return this.service.getEarnings(user);
+  }
+
   @Patch('profile')
   updateProfile(
     @CurrentUser() user: User,

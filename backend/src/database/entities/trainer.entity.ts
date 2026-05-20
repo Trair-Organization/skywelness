@@ -67,6 +67,19 @@ export class Trainer {
   })
   commissionRate!: string;
 
+  /**
+   * Eğitmenin varsayılan ders fiyatı (TRY).
+   * Gelir hesaplamasında ve paket bağlanmamış derslerde kullanılır.
+   */
+  @Column({
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    default: 1000,
+    name: 'default_lesson_price',
+  })
+  defaultLessonPrice!: string;
+
   /** Which bookable service types this staff member offers (member UI filters by this). */
   @Column('text', {
     array: true,

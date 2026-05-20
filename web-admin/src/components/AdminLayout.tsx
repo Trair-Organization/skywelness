@@ -54,6 +54,7 @@ const PLATFORM_NAV: NavItem[] = [
 const TRAINER_NAV: NavItem[] = [
   { path: '/trainer/dashboard', icon: '📊', label: 'Dashboard' },
   { path: '/trainer/agenda', icon: '📅', label: 'Ajandam' },
+  { path: '/trainer/earnings', icon: '💰', label: 'Kazançlarım' },
   { path: '/trainer/profile', icon: '🏋️', label: 'Profilim' },
   { path: '/trainer/services', icon: '📦', label: 'Hizmet & Paket' },
   { path: '/trainer/students', icon: '👥', label: 'Öğrencilerim' },

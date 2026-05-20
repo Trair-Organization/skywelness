@@ -98,6 +98,14 @@ export class Reservation {
   @Column({ type: 'int', nullable: true, name: 'sessions_after' })
   sessionsAfter!: number | null;
 
+  /** Ders fiyatı snapshot (oluşturulduğu andaki fiyat — gelir raporu için) */
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true, name: 'lesson_price' })
+  lessonPrice!: string | null;
+
+  /** Platform komisyonu snapshot (TRY cinsinden) */
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true, name: 'platform_fee' })
+  platformFee!: string | null;
+
   @VersionColumn({ default: 1 })
   version!: number;
 

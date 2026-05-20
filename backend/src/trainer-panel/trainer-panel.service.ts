@@ -1199,6 +1199,11 @@ export class TrainerPanelService {
         sessionsBefore,
         sessionsAfter,
         timeSlotId: null as never,
+        // Gelir raporu için snapshot fiyat + komisyon
+        lessonPrice: trainer.defaultLessonPrice,
+        platformFee: (
+          parseFloat(trainer.defaultLessonPrice) * parseFloat(trainer.commissionRate)
+        ).toFixed(2),
       });
       await this.resRepo.save(reservation);
       created.push({ id: reservation.id, startTime: reservation.startTime, endTime: reservation.endTime });
@@ -1545,6 +1550,115 @@ export class TrainerPanelService {
     };
   }
 
+  /**
+   * Eğitmenin gelir/kazanç raporu.
+   * - Bu ay, geçen ay, bu yıl gelirleri
+   * - Komisyon hesabı
+   * - Net kazanç
+   * - Aylık trend (son 6 ay)
+   * - Son 20 tamamlanmış ders detayı
+   */
+  async getEarnings(user: User) {
+    const trainer = await this.resolveTrainer(user);
+    const now = new Date();
+    const commission = parseFloat(trainer.commissionRate);
+    const defaultPrice = parseFloat(trainer.defaultLessonPrice);
+
+    // Tarih sınırları
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+
+    // Tüm tamamlanmış dersleri getir (gelir hesaplaması için)
+    const allCompleted = await this.resRepo.find({
+      where: {
+        trainerId: trainer.id,
+        status: ReservationStatus.COMPLETED,
+        startTime: Between(yearStart, yearEnd),
+      },
+      order: { startTime: 'DESC' },
+    });
+
+    const calcRevenue = (reservations: Reservation[]) => {
+      let gross = 0;
+      let fee = 0;
+      for (const r of reservations) {
+        const price = r.lessonPrice ? parseFloat(r.lessonPrice) : defaultPrice;
+        const platformFee = r.platformFee ? parseFloat(r.platformFee) : price * commission;
+        gross += price;
+        fee += platformFee;
+      }
+      return {
+        gross: gross.toFixed(2),
+        fee: fee.toFixed(2),
+        net: (gross - fee).toFixed(2),
+        count: reservations.length,
+      };
+    };
+
+    const thisMonth = allCompleted.filter(
+      (r) => r.startTime >= monthStart && r.startTime <= monthEnd,
+    );
+    const lastMonth = allCompleted.filter(
+      (r) => r.startTime >= lastMonthStart && r.startTime <= lastMonthEnd,
+    );
+    const thisYear = allCompleted;
+
+    // Aylık trend (son 6 ay)
+    const trend: Array<{ month: string; revenue: string; count: number }> = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = d;
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      const monthRes = allCompleted.filter(
+        (r) => r.startTime >= start && r.startTime <= end,
+      );
+      const monthCalc = calcRevenue(monthRes);
+      trend.push({
+        month: d.toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' }),
+        revenue: monthCalc.net,
+        count: monthCalc.count,
+      });
+    }
+
+    // Son 20 tamamlanmış ders detayı (öğrenci bilgisiyle)
+    const recentDetailed = await this.resRepo.find({
+      where: {
+        trainerId: trainer.id,
+        status: ReservationStatus.COMPLETED,
+      },
+      relations: ['user'],
+      order: { startTime: 'DESC' },
+      take: 20,
+    });
+
+    return {
+      commissionRate: trainer.commissionRate,
+      commissionPercent: `%${(commission * 100).toFixed(1)}`,
+      defaultLessonPrice: trainer.defaultLessonPrice,
+      thisMonth: calcRevenue(thisMonth),
+      lastMonth: calcRevenue(lastMonth),
+      thisYear: calcRevenue(thisYear),
+      monthlyTrend: trend,
+      recentLessons: recentDetailed.map((r) => {
+        const price = r.lessonPrice ? parseFloat(r.lessonPrice) : defaultPrice;
+        const fee = r.platformFee ? parseFloat(r.platformFee) : price * commission;
+        return {
+          id: r.id,
+          date: r.startTime.toISOString(),
+          studentName: `${r.user.firstName} ${r.user.lastName}`.trim(),
+          gross: price.toFixed(2),
+          platformFee: fee.toFixed(2),
+          net: (price - fee).toFixed(2),
+          packageId: r.packageId,
+        };
+      }),
+    };
+  }
+
   // ─── Profile ────────────────────────────────────────────────────────────────
 
   async getProfile(user: User) {
@@ -1571,6 +1685,7 @@ export class TrainerPanelService {
       avgRating: trainer.avgRating,
       totalSessions: trainer.totalSessions,
       commissionRate: trainer.commissionRate,
+      defaultLessonPrice: trainer.defaultLessonPrice,
       role: user.role,
     };
   }
@@ -1591,6 +1706,7 @@ export class TrainerPanelService {
       photoUrl?: string;
       pricingNote?: string;
       offersSessionTypes?: string[];
+      defaultLessonPrice?: number;
     },
   ) {
     const trainer = await this.resolveTrainer(user);
@@ -1624,6 +1740,8 @@ export class TrainerPanelService {
     if (data.photoUrl !== undefined) trainer.photoUrl = data.photoUrl;
     if (data.offersSessionTypes !== undefined)
       trainer.offersSessionTypes = data.offersSessionTypes;
+    if (data.defaultLessonPrice !== undefined && data.defaultLessonPrice >= 0)
+      trainer.defaultLessonPrice = String(data.defaultLessonPrice);
     await this.trainersRepo.save(trainer);
 
     // Update user-level fields
