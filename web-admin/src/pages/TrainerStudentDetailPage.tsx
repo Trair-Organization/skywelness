@@ -557,13 +557,20 @@ export function TrainerStudentDetailPage() {
     <div className="trainer-student-detail">
       {/* Header */}
       <div className="student-detail-header">
-        <button
-          className="trainer-back-btn"
-          onClick={() => navigate('/trainer/students')}
-          style={{ marginBottom: '0.75rem' }}
-        >
-          ← Öğrencilere Dön
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <button
+            className="trainer-back-btn"
+            onClick={() => navigate('/trainer/students')}
+          >
+            ← Öğrencilere Dön
+          </button>
+          <button
+            className="btn-outline btn-sm"
+            onClick={() => window.open(`/trainer/students/${userId}/report`, '_blank')}
+          >
+            📄 PDF Rapor
+          </button>
+        </div>
         <div className="student-detail-hero">
           <div className="student-detail-photo">
             {student.photoUrl ? (

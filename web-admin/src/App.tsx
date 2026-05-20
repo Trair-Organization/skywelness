@@ -40,6 +40,7 @@ import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
 import { TrainerAgendaPage } from './pages/TrainerAgendaPage';
 import { TrainerEarningsPage } from './pages/TrainerEarningsPage';
 import { TrainerStudentDetailPage } from './pages/TrainerStudentDetailPage';
+import { TrainerStudentReportPage } from './pages/TrainerStudentReportPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { TrainerServicesPage } from './pages/TrainerServicesPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
@@ -148,6 +149,7 @@ function AppRoutes() {
         <Route path="/trainer/push-notifications" element={<PushNotificationsPage />} />
         <Route path="/trainer/students" element={<TrainerStudentsPage />} />
         <Route path="/trainer/students/:userId" element={<TrainerStudentDetailPage />} />
+        <Route path="/trainer/students/:userId/report" element={<TrainerStudentReportPage />} />
         <Route path="/trainer/messages" element={<MessagesPage />} />
         <Route path="/trainer/events" element={<TrainerEventsPage />} />
       </Route>
