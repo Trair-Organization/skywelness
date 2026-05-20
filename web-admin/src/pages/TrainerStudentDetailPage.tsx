@@ -97,6 +97,10 @@ export function TrainerStudentDetailPage() {
   const [photoTakenAt, setPhotoTakenAt] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareLeft, setCompareLeft] = useState<string | null>(null);
+  const [compareRight, setCompareRight] = useState<string | null>(null);
+  const [sliderPosition, setSliderPosition] = useState(50);
 
   // Measurement form
   const [showMeasurementForm, setShowMeasurementForm] = useState(false);
@@ -615,25 +619,100 @@ export function TrainerStudentDetailPage() {
               </p>
             </div>
           ) : (
-            <div className="photos-grid">
-              {photos.map((p) => (
-                <div key={p.id} className="photo-card">
-                  <img src={p.photoUrl} alt={p.tag ?? formatDate(p.takenAt)} />
-                  <div className="photo-card-meta">
-                    <strong>{formatDate(p.takenAt)}</strong>
-                    {p.tag && <span className="photo-tag">{p.tag}</span>}
-                  </div>
+            <>
+              {/* Karşılaştırma kontrol */}
+              {photos.length >= 2 && (
+                <div className="photo-compare-bar">
                   <button
-                    className="photo-delete-btn"
-                    onClick={() => void handleDeletePhoto(p.id)}
-                    aria-label="Sil"
-                    title="Sil"
+                    type="button"
+                    className={`btn-sm ${compareMode ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => {
+                      setCompareMode(!compareMode);
+                      if (!compareMode) {
+                        // Auto-select: oldest as left, newest as right
+                        const sortedAsc = [...photos].sort(
+                          (a, b) =>
+                            new Date(a.takenAt).getTime() - new Date(b.takenAt).getTime(),
+                        );
+                        setCompareLeft(sortedAsc[0]?.id ?? null);
+                        setCompareRight(sortedAsc[sortedAsc.length - 1]?.id ?? null);
+                      }
+                    }}
                   >
-                    🗑️
+                    {compareMode ? '✕ Karşılaştırmayı Kapat' : '🔀 Önce/Sonra Karşılaştır'}
                   </button>
+                  {compareMode && (
+                    <span className="muted" style={{ fontSize: '0.82rem' }}>
+                      Karşılaştırılacak iki fotoğrafı aşağıdan seçin
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* Karşılaştırma görünümü */}
+              {compareMode && compareLeft && compareRight && (
+                <PhotoCompareSlider
+                  leftPhoto={photos.find((p) => p.id === compareLeft)!}
+                  rightPhoto={photos.find((p) => p.id === compareRight)!}
+                  position={sliderPosition}
+                  onPositionChange={setSliderPosition}
+                />
+              )}
+
+              {/* Photos grid */}
+              <div className="photos-grid">
+                {photos.map((p) => {
+                  const isLeftSelected = compareMode && compareLeft === p.id;
+                  const isRightSelected = compareMode && compareRight === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`photo-card ${
+                        isLeftSelected
+                          ? 'photo-card-selected-left'
+                          : isRightSelected
+                            ? 'photo-card-selected-right'
+                            : ''
+                      }`}
+                    >
+                      <img src={p.photoUrl} alt={p.tag ?? formatDate(p.takenAt)} />
+                      {compareMode && (
+                        <div className="photo-compare-actions">
+                          <button
+                            type="button"
+                            className={`photo-compare-btn ${isLeftSelected ? 'active' : ''}`}
+                            onClick={() => setCompareLeft(p.id)}
+                          >
+                            Önce
+                          </button>
+                          <button
+                            type="button"
+                            className={`photo-compare-btn ${isRightSelected ? 'active' : ''}`}
+                            onClick={() => setCompareRight(p.id)}
+                          >
+                            Sonra
+                          </button>
+                        </div>
+                      )}
+                      <div className="photo-card-meta">
+                        <strong>{formatDate(p.takenAt)}</strong>
+                        {p.tag && <span className="photo-tag">{p.tag}</span>}
+                      </div>
+                      {!compareMode && (
+                        <button
+                          className="photo-delete-btn"
+                          onClick={() => void handleDeletePhoto(p.id)}
+                          aria-label="Sil"
+                          title="Sil"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -655,6 +734,9 @@ export function TrainerStudentDetailPage() {
               + Yeni Ölçüm
             </button>
           </div>
+
+          {/* Trend grafikleri */}
+          {measurements.length >= 2 && <MeasurementTrendCharts measurements={measurements} />}
 
           {showMeasurementForm && (
             <section className="services-card services-form-card">
@@ -1061,6 +1143,231 @@ export function TrainerStudentDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Photo Compare Slider ─────────────
+function PhotoCompareSlider({
+  leftPhoto,
+  rightPhoto,
+  position,
+  onPositionChange,
+}: {
+  leftPhoto: MemberPhoto;
+  rightPhoto: MemberPhoto;
+  position: number;
+  onPositionChange: (v: number) => void;
+}) {
+  return (
+    <section className="services-card photo-compare-section">
+      <h3 className="services-card-title">🔀 Önce / Sonra Karşılaştırma</h3>
+      <div className="photo-compare-labels">
+        <div className="photo-compare-label-item">
+          <strong>Önce</strong>
+          <span>
+            {formatDate(leftPhoto.takenAt)}
+            {leftPhoto.tag && ` · ${leftPhoto.tag}`}
+          </span>
+        </div>
+        <div className="photo-compare-label-item right">
+          <strong>Sonra</strong>
+          <span>
+            {formatDate(rightPhoto.takenAt)}
+            {rightPhoto.tag && ` · ${rightPhoto.tag}`}
+          </span>
+        </div>
+      </div>
+      <div className="photo-compare-container">
+        <img src={leftPhoto.photoUrl} alt="Önce" className="photo-compare-base" />
+        <div
+          className="photo-compare-overlay"
+          style={{ clipPath: `inset(0 0 0 ${position}%)` }}
+        >
+          <img src={rightPhoto.photoUrl} alt="Sonra" />
+        </div>
+        <div
+          className="photo-compare-divider"
+          style={{ left: `${position}%` }}
+          aria-hidden="true"
+        >
+          <span className="photo-compare-handle">⇄</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={position}
+          onChange={(e) => onPositionChange(Number(e.target.value))}
+          className="photo-compare-range"
+          aria-label="Karşılaştırma kaydırıcısı"
+        />
+      </div>
+      <p className="muted" style={{ fontSize: '0.78rem', marginTop: '0.5rem', textAlign: 'center' }}>
+        Kaydırıcıyı sürükleyerek önce ve sonra fotoğraflarını karşılaştırın
+      </p>
+    </section>
+  );
+}
+
+// ─── Measurement Trend Charts ─────────
+function MeasurementTrendCharts({ measurements }: { measurements: Measurement[] }) {
+  // Tarihe göre artan sırada (eskiden yeniye)
+  const sorted = useMemo(
+    () =>
+      [...measurements].sort(
+        (a, b) => new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime(),
+      ),
+    [measurements],
+  );
+
+  type MetricConfig = {
+    key: keyof Measurement;
+    label: string;
+    color: string;
+    suffix: string;
+    decimals: number;
+  };
+
+  const metrics: MetricConfig[] = [
+    { key: 'weightKg', label: 'Kilo', color: '#2563eb', suffix: 'kg', decimals: 1 },
+    { key: 'bodyFatPct', label: 'Yağ Oranı', color: '#dc2626', suffix: '%', decimals: 1 },
+    { key: 'muscleMassKg', label: 'Kas Kütlesi', color: '#059669', suffix: 'kg', decimals: 1 },
+    { key: 'waistCm', label: 'Bel', color: '#d97706', suffix: 'cm', decimals: 1 },
+  ];
+
+  // Hangi metriklerin yeterli verisi var?
+  const availableMetrics = metrics.filter((m) => {
+    const valid = sorted.filter((row) => row[m.key] != null);
+    return valid.length >= 2;
+  });
+
+  if (availableMetrics.length === 0) return null;
+
+  return (
+    <section className="services-card" style={{ marginBottom: '1rem' }}>
+      <h3 className="services-card-title">📈 Trend Grafikleri</h3>
+      <div className="trend-charts-grid">
+        {availableMetrics.map((m) => {
+          const data = sorted
+            .map((row) => ({
+              date: row.measuredAt,
+              value: row[m.key] != null ? parseFloat(row[m.key] as string) : null,
+            }))
+            .filter((p): p is { date: string; value: number } => p.value !== null);
+
+          if (data.length < 2) return null;
+
+          const values = data.map((d) => d.value);
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          const range = max - min || 1;
+          const padding = range * 0.15;
+          const yMin = min - padding;
+          const yMax = max + padding;
+          const yRange = yMax - yMin;
+
+          const first = values[0];
+          const last = values[values.length - 1];
+          const delta = last - first;
+          const deltaPct = (delta / first) * 100;
+          const isImprovement =
+            (m.key === 'weightKg' && delta < 0) ||
+            (m.key === 'bodyFatPct' && delta < 0) ||
+            (m.key === 'muscleMassKg' && delta > 0) ||
+            (m.key === 'waistCm' && delta < 0);
+
+          const width = 100;
+          const height = 60;
+          const points = data.map((d, i) => {
+            const x = (i / (data.length - 1)) * width;
+            const y = height - ((d.value - yMin) / yRange) * height;
+            return `${x.toFixed(2)},${y.toFixed(2)}`;
+          });
+          const polyline = points.join(' ');
+          const lastPoint = points[points.length - 1].split(',');
+
+          return (
+            <div key={String(m.key)} className="trend-chart-card">
+              <div className="trend-chart-header">
+                <div>
+                  <span className="trend-chart-label">{m.label}</span>
+                  <strong className="trend-chart-current">
+                    {last.toFixed(m.decimals)} {m.suffix}
+                  </strong>
+                </div>
+                <div className={`trend-chart-delta ${isImprovement ? 'positive' : 'negative'}`}>
+                  {delta >= 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(m.decimals)} {m.suffix}
+                  <span className="trend-chart-delta-pct">
+                    {' '}
+                    ({deltaPct >= 0 ? '+' : ''}
+                    {deltaPct.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+              <svg
+                viewBox={`0 0 ${width} ${height}`}
+                preserveAspectRatio="none"
+                className="trend-chart-svg"
+              >
+                <defs>
+                  <linearGradient id={`grad-${String(m.key)}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={m.color} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={m.color} stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                {/* Area fill */}
+                <polygon
+                  points={`0,${height} ${polyline} ${width},${height}`}
+                  fill={`url(#grad-${String(m.key)})`}
+                />
+                {/* Line */}
+                <polyline
+                  points={polyline}
+                  fill="none"
+                  stroke={m.color}
+                  strokeWidth="0.8"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                {/* Data points */}
+                {data.map((d, i) => {
+                  const x = (i / (data.length - 1)) * width;
+                  const y = height - ((d.value - yMin) / yRange) * height;
+                  return (
+                    <circle
+                      key={i}
+                      cx={x}
+                      cy={y}
+                      r="0.8"
+                      fill="#fff"
+                      stroke={m.color}
+                      strokeWidth="0.6"
+                    >
+                      <title>
+                        {formatDate(d.date)}: {d.value.toFixed(m.decimals)} {m.suffix}
+                      </title>
+                    </circle>
+                  );
+                })}
+                {/* Last point bigger */}
+                <circle
+                  cx={lastPoint[0]}
+                  cy={lastPoint[1]}
+                  r="1.4"
+                  fill={m.color}
+                  stroke="#fff"
+                  strokeWidth="0.5"
+                />
+              </svg>
+              <div className="trend-chart-footer">
+                <span>{formatDate(data[0].date)}</span>
+                <span>{formatDate(data[data.length - 1].date)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
