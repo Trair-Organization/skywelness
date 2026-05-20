@@ -1678,9 +1678,6 @@ a.secondary:hover {
     min-width: unset;
     width: 100%;
   }
-  .admin-sidebar {
-    display: none;
-  }
   .admin-main {
     margin-left: 0;
   }
