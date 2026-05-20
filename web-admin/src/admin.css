@@ -5235,3 +5235,50 @@ a.trainer-stat-card:hover {
   background: var(--accent);
   color: #fff;
 }
+
+
+/* Weekday picker (Pzt Sal Çar...) for bulk slot template */
+.weekday-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.weekday-chip {
+  flex: 1;
+  min-width: 44px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.weekday-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.weekday-chip-active {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Lesson extras (package, recurring, notes) in book modal */
+.lesson-extras {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.lesson-extra-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}

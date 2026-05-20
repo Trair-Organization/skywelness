@@ -43,6 +43,14 @@ type ActionMode =
 
 type StudentTab = 'mine' | 'all';
 
+type MemberPackage = {
+  id: string;
+  name: string;
+  remainingSessions: number;
+  expiresAt: string | null;
+  status: string;
+};
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -82,10 +90,18 @@ export function TrainerAgendaPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [bulkStartHour, setBulkStartHour] = useState(9);
   const [bulkEndHour, setBulkEndHour] = useState(18);
+  const [bulkWeeks, setBulkWeeks] = useState(1);
+  const [bulkWeekdays, setBulkWeekdays] = useState<number[]>([1, 2, 3, 4, 5]); // Pzt-Cum
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleHour, setRescheduleHour] = useState('09');
   const [dragLesson, setDragLesson] = useState<Lesson | null>(null);
   const [dropTargetHour, setDropTargetHour] = useState<string | null>(null);
+
+  // Ders oluştururken paket + tekrar
+  const [memberPackages, setMemberPackages] = useState<MemberPackage[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [recurringWeeks, setRecurringWeeks] = useState<number>(1);
+  const [lessonNotes, setLessonNotes] = useState<string>('');
 
   const students = studentTab === 'mine' ? myStudents : allMembers;
 
@@ -115,6 +131,18 @@ export function TrainerAgendaPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Öğrenci seçilince paketlerini yükle
+  useEffect(() => {
+    if (!selectedStudent) {
+      setMemberPackages([]);
+      setSelectedPackageId('');
+      return;
+    }
+    apiJson<MemberPackage[]>(`/trainer-panel/members/${selectedStudent.userId}/active-packages`)
+      .then((pkgs) => setMemberPackages(pkgs))
+      .catch(() => setMemberPackages([]));
+  }, [selectedStudent]);
 
   function navigateDate(off: number) {
     const step = viewMode === 'weekly' ? off * 7 : off;
@@ -155,6 +183,9 @@ export function TrainerAgendaPage() {
     setAction(null);
     setSelectedStudent(null);
     setStudentSearch('');
+    setSelectedPackageId('');
+    setRecurringWeeks(1);
+    setLessonNotes('');
   }
 
   async function handleAddSlot() {
@@ -197,18 +228,25 @@ export function TrainerAgendaPage() {
     setActionLoading(true);
     try {
       const endHour = `${String(parseInt(action.hour) + 1).padStart(2, '0')}:00`;
-      await apiJson('/trainer-panel/lessons/direct', {
+      const res = await apiJson<{ created: number }>('/trainer-panel/lessons/direct', {
         method: 'POST',
         body: JSON.stringify({
           studentUserId: selectedStudent.userId,
           date,
           startTime: action.hour,
           endTime: endHour,
+          packageId: selectedPackageId || undefined,
+          recurringWeeks: recurringWeeks > 1 ? recurringWeeks : undefined,
+          notes: lessonNotes.trim() || undefined,
         }),
       });
       close();
       await load();
-      flash('✅ Ders oluşturuldu');
+      if (res.created > 1) {
+        flash(`✅ ${res.created} ders oluşturuldu`);
+      } else {
+        flash('✅ Ders oluşturuldu');
+      }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Hata');
     } finally {
@@ -291,23 +329,45 @@ export function TrainerAgendaPage() {
   async function handleBulkAddSlots() {
     setActionLoading(true);
     try {
-      const promises = [];
-      for (let h = bulkStartHour; h < bulkEndHour; h++) {
-        promises.push(
-          apiJson('/trainer-panel/availability', {
+      if (bulkWeeks > 1) {
+        // Çoklu hafta + günler şablonu
+        const res = await apiJson<{ created: number; skipped: number }>(
+          '/trainer-panel/availability/template',
+          {
             method: 'POST',
             body: JSON.stringify({
-              date,
-              startTime: `${String(h).padStart(2, '0')}:00`,
-              endTime: `${String(h + 1).padStart(2, '0')}:00`,
+              startDate: date,
+              weeks: bulkWeeks,
+              weekdays: bulkWeekdays,
+              startHour: bulkStartHour,
+              endHour: bulkEndHour,
+              slotMinutes: 60,
             }),
-          }).catch(() => null),
+          },
         );
+        close();
+        await load();
+        flash(`✅ ${res.created} slot oluşturuldu${res.skipped > 0 ? ` (${res.skipped} atlandı)` : ''}`);
+      } else {
+        // Tek gün, saat aralığı
+        const promises = [];
+        for (let h = bulkStartHour; h < bulkEndHour; h++) {
+          promises.push(
+            apiJson('/trainer-panel/availability', {
+              method: 'POST',
+              body: JSON.stringify({
+                date,
+                startTime: `${String(h).padStart(2, '0')}:00`,
+                endTime: `${String(h + 1).padStart(2, '0')}:00`,
+              }),
+            }).catch(() => null),
+          );
+        }
+        await Promise.all(promises);
+        close();
+        await load();
+        flash(`✅ ${bulkEndHour - bulkStartHour} slot oluşturuldu`);
       }
-      await Promise.all(promises);
-      close();
-      await load();
-      flash(`✅ ${bulkEndHour - bulkStartHour} slot oluşturuldu`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Hata');
     } finally {
@@ -826,8 +886,7 @@ export function TrainerAgendaPage() {
                         Değiştir
                       </button>
                     </div>
-                  ) : (
-                    <div className="agenda-member-list">
+                  ) : (                    <div className="agenda-member-list">
                       {filteredStudents.length === 0 && (
                         <p className="muted" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
                           {studentTab === 'mine'
@@ -900,13 +959,61 @@ export function TrainerAgendaPage() {
                       ))}
                     </div>
                   )}
+                  {selectedStudent && (
+                    <div className="lesson-extras">
+                      {memberPackages.length > 0 && (
+                        <label className="lesson-extra-field">
+                          <span className="form-label">📦 Paket (opsiyonel)</span>
+                          <select
+                            className="form-input"
+                            value={selectedPackageId}
+                            onChange={(e) => setSelectedPackageId(e.target.value)}
+                          >
+                            <option value="">Paket bağlama (manuel)</option>
+                            {memberPackages.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} — {p.remainingSessions} seans kaldı
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+
+                      <label className="lesson-extra-field">
+                        <span className="form-label">🔁 Tekrar Et</span>
+                        <select
+                          className="form-input"
+                          value={recurringWeeks}
+                          onChange={(e) => setRecurringWeeks(Number(e.target.value))}
+                        >
+                          <option value={1}>Tek seferlik</option>
+                          <option value={2}>2 hafta</option>
+                          <option value={4}>4 hafta</option>
+                          <option value={8}>8 hafta</option>
+                          <option value={12}>12 hafta</option>
+                        </select>
+                      </label>
+
+                      <label className="lesson-extra-field">
+                        <span className="form-label">📝 Not (opsiyonel)</span>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={lessonNotes}
+                          onChange={(e) => setLessonNotes(e.target.value)}
+                          placeholder="Ders notu, hedef, vb."
+                        />
+                      </label>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                     <button
                       className="btn-sm btn-primary"
                       disabled={!selectedStudent || actionLoading}
                       onClick={() => void handleBookSlot()}
                     >
-                      {actionLoading ? '⏳...' : '✓ Oluştur'}
+                      {actionLoading ? '⏳...' : recurringWeeks > 1 ? `✓ ${recurringWeeks} Hafta Oluştur` : '✓ Oluştur'}
                     </button>
                     <button
                       className="btn-sm btn-outline"
@@ -978,14 +1085,14 @@ export function TrainerAgendaPage() {
             {action.mode === 'bulkSlot' && (
               <>
                 <div className="agenda-modal-header">
-                  <h3>🕐 Çalışma Saatleri</h3>
+                  <h3>🕐 Çalışma Saatleri Şablonu</h3>
                   <button className="agenda-modal-close" onClick={close}>
                     ✕
                   </button>
                 </div>
                 <div className="agenda-modal-info">
                   <span>
-                    📅{' '}
+                    📅 Başlangıç:{' '}
                     {new Date(date).toLocaleDateString('tr-TR', {
                       weekday: 'long',
                       day: 'numeric',
@@ -996,7 +1103,7 @@ export function TrainerAgendaPage() {
                 <div className="agenda-modal-form">
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                      <span className="form-label">Başlangıç</span>
+                      <span className="form-label">Başlangıç Saati</span>
                       <select
                         value={bulkStartHour}
                         onChange={(e) => setBulkStartHour(Number(e.target.value))}
@@ -1010,7 +1117,7 @@ export function TrainerAgendaPage() {
                       </select>
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                      <span className="form-label">Bitiş</span>
+                      <span className="form-label">Bitiş Saati</span>
                       <select
                         value={bulkEndHour}
                         onChange={(e) => setBulkEndHour(Number(e.target.value))}
@@ -1024,18 +1131,71 @@ export function TrainerAgendaPage() {
                       </select>
                     </label>
                   </div>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 600, margin: '0.5rem 0 0' }}>
-                    {bulkEndHour - bulkStartHour} slot oluşturulacak
+
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.75rem' }}>
+                    <span className="form-label">Kaç Hafta Tekrar Etsin?</span>
+                    <select
+                      value={bulkWeeks}
+                      onChange={(e) => setBulkWeeks(Number(e.target.value))}
+                      className="form-input"
+                    >
+                      <option value={1}>Sadece bu gün</option>
+                      <option value={2}>2 hafta</option>
+                      <option value={4}>4 hafta</option>
+                      <option value={8}>8 hafta</option>
+                      <option value={12}>12 hafta</option>
+                    </select>
+                  </label>
+
+                  {bulkWeeks > 1 && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <span className="form-label">Hangi Günler?</span>
+                      <div className="weekday-picker">
+                        {[
+                          { v: 1, l: 'Pzt' },
+                          { v: 2, l: 'Sal' },
+                          { v: 3, l: 'Çar' },
+                          { v: 4, l: 'Per' },
+                          { v: 5, l: 'Cum' },
+                          { v: 6, l: 'Cmt' },
+                          { v: 7, l: 'Pzr' },
+                        ].map(({ v, l }) => (
+                          <button
+                            key={v}
+                            type="button"
+                            className={`weekday-chip ${bulkWeekdays.includes(v) ? 'weekday-chip-active' : ''}`}
+                            onClick={() =>
+                              setBulkWeekdays((prev) =>
+                                prev.includes(v)
+                                  ? prev.filter((x) => x !== v)
+                                  : [...prev, v].sort(),
+                              )
+                            }
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600, margin: '0.75rem 0 0', color: 'var(--accent)' }}>
+                    {bulkWeeks > 1
+                      ? `${bulkWeeks} hafta × ${bulkWeekdays.length} gün × ${bulkEndHour - bulkStartHour} saat = ~${bulkWeeks * bulkWeekdays.length * (bulkEndHour - bulkStartHour)} slot`
+                      : `${bulkEndHour - bulkStartHour} slot oluşturulacak`}
                   </p>
+
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                     <button
                       className="btn-sm btn-primary"
-                      disabled={actionLoading || bulkEndHour <= bulkStartHour}
+                      disabled={
+                        actionLoading ||
+                        bulkEndHour <= bulkStartHour ||
+                        (bulkWeeks > 1 && bulkWeekdays.length === 0)
+                      }
                       onClick={() => void handleBulkAddSlots()}
                     >
-                      {actionLoading
-                        ? '⏳...'
-                        : `✓ ${bulkEndHour - bulkStartHour} Slot Ekle`}
+                      {actionLoading ? '⏳...' : '✓ Şablonu Uygula'}
                     </button>
                     <button className="btn-sm btn-outline" onClick={close}>
                       İptal

@@ -63,6 +63,23 @@ export class TrainerPanelController {
     return this.service.createBulkAvailability(user, body);
   }
 
+  /** Çalışma şablonu uygula (haftalar × günler × saat aralığı) */
+  @Post('availability/template')
+  applyScheduleTemplate(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      startDate: string;
+      weeks: number;
+      weekdays: number[];
+      startHour: number;
+      endHour: number;
+      slotMinutes?: number;
+    },
+  ) {
+    return this.service.applyScheduleTemplate(user, body);
+  }
+
   @Patch('availability/:id')
   updateAvailability(
     @CurrentUser() user: User,
@@ -170,6 +187,15 @@ export class TrainerPanelController {
     return this.service.getStudentPackages(user, userId);
   }
 
+  /** Bir üyenin aktif PT paketlerini getir (ders oluştururken paket seçmek için, link şartı yok). */
+  @Get('members/:userId/active-packages')
+  getMemberActivePackages(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.service.getMemberActivePackagesForBooking(user, userId);
+  }
+
   // ─── Lessons ────────────────────────────────────────────────────────────────
 
   @Get('requests')
@@ -241,6 +267,8 @@ export class TrainerPanelController {
       endTime: string;
       type?: string;
       notes?: string;
+      packageId?: string;
+      recurringWeeks?: number;
     },
   ) {
     return this.service.createLessonDirect(user, body);

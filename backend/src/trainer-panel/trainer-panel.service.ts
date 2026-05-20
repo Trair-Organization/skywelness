@@ -249,6 +249,69 @@ export class TrainerPanelService {
     return { created: created.length, slots: created };
   }
 
+  /**
+   * Çalışma şablonu: belirli haftalar boyunca, belirli günlerde,
+   * verilen saat aralığında (startHour-endHour) saatlik slotlar oluştur.
+   * Örn: "Pzt-Cum 09-18, 4 hafta" → 5 gün × 9 saat × 4 hafta = 180 slot
+   */
+  async applyScheduleTemplate(
+    user: User,
+    data: {
+      startDate: string;
+      weeks: number;
+      weekdays: number[];
+      startHour: number;
+      endHour: number;
+      slotMinutes?: number;
+    },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const slotMinutes = data.slotMinutes ?? 60;
+    const start = new Date(data.startDate + 'T12:00:00');
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (let w = 0; w < data.weeks; w++) {
+      for (const wd of data.weekdays) {
+        const d = new Date(start);
+        // wd: 1=Pzt..7=Pzr (ISO weekday). JS getDay: 0=Pzr..6=Cmt → uyumluluk
+        const jsDay = wd === 7 ? 0 : wd; // Pzr için 0
+        d.setDate(d.getDate() + w * 7 + ((jsDay - start.getDay() + 7) % 7));
+        const dateStr = d.toISOString().slice(0, 10);
+
+        for (let h = data.startHour; h < data.endHour; h += slotMinutes / 60) {
+          const startTime = `${String(Math.floor(h)).padStart(2, '0')}:${String((h % 1) * 60).padStart(2, '0')}:00`;
+          const endH = h + slotMinutes / 60;
+          const endTime = `${String(Math.floor(endH)).padStart(2, '0')}:${String((endH % 1) * 60).padStart(2, '0')}:00`;
+
+          // Aynı saat varsa atla
+          const existing = await this.availRepo.findOne({
+            where: {
+              trainerId: trainer.id,
+              date: dateStr,
+              startTime,
+            },
+          });
+          if (existing) {
+            skippedCount++;
+            continue;
+          }
+          const avail = this.availRepo.create({
+            trainerId: trainer.id,
+            date: dateStr,
+            startTime,
+            endTime,
+            available: true,
+          });
+          await this.availRepo.save(avail);
+          createdCount++;
+        }
+      }
+    }
+
+    return { created: createdCount, skipped: skippedCount };
+  }
+
   async updateAvailability(
     user: User,
     availId: string,
@@ -1048,63 +1111,104 @@ export class TrainerPanelService {
       endTime: string;
       type?: string;
       notes?: string;
+      packageId?: string;
+      recurringWeeks?: number;
     },
   ) {
     const trainer = await this.resolveTrainer(user);
 
-    const dateStr = data.date.slice(0, 10);
-    const startTime = new Date(`${dateStr}T${data.startTime}Z`);
-    const endTime = new Date(`${dateStr}T${data.endTime}Z`);
+    const recurringWeeks = Math.max(1, Math.min(data.recurringWeeks ?? 1, 26));
+    const created: Array<{ id: string; startTime: Date; endTime: Date }> = [];
 
-    if (endTime <= startTime) {
-      throw new BadRequestException('Bitiş saati başlangıçtan sonra olmalı');
-    }
+    for (let w = 0; w < recurringWeeks; w++) {
+      const baseDate = new Date(data.date.slice(0, 10) + 'T12:00:00');
+      baseDate.setDate(baseDate.getDate() + w * 7);
+      const dateStr = baseDate.toISOString().slice(0, 10);
+      const startTime = new Date(`${dateStr}T${data.startTime}Z`);
+      const endTime = new Date(`${dateStr}T${data.endTime}Z`);
 
-    // Conflict check
-    const conflict = await this.resRepo.findOne({
-      where: {
-        trainerId: trainer.id,
-        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
-        startTime: Between(startTime, endTime),
-      },
-    });
-    if (conflict) throw new ConflictException('Bu saatte başka bir ders var');
+      if (endTime <= startTime) {
+        throw new BadRequestException('Bitiş saati başlangıçtan sonra olmalı');
+      }
 
-    // Eğer availability slotu yoksa otomatik oluştur
-    const existingAvail = await this.availRepo.findOne({
-      where: {
-        trainerId: trainer.id,
-        date: dateStr,
-        startTime: data.startTime,
-        endTime: data.endTime,
-      },
-    });
-    if (!existingAvail) {
-      const slot = this.availRepo.create({
-        trainerId: trainer.id,
-        date: dateStr,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        available: true,
+      // Conflict check
+      const conflict = await this.resRepo.findOne({
+        where: {
+          trainerId: trainer.id,
+          status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+          startTime: Between(startTime, endTime),
+        },
       });
-      await this.availRepo.save(slot);
+      if (conflict) {
+        if (recurringWeeks === 1) {
+          throw new ConflictException('Bu saatte başka bir ders var');
+        }
+        // Tekrarda çakışan haftaları atla
+        continue;
+      }
+
+      // Slot otomatik oluştur (yoksa)
+      const existingAvail = await this.availRepo.findOne({
+        where: {
+          trainerId: trainer.id,
+          date: dateStr,
+          startTime: data.startTime,
+          endTime: data.endTime,
+        },
+      });
+      if (!existingAvail) {
+        const slot = this.availRepo.create({
+          trainerId: trainer.id,
+          date: dateStr,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          available: true,
+        });
+        await this.availRepo.save(slot);
+      }
+
+      // Paket bağlama: seans düş
+      let packageId: string | null = null;
+      let sessionsBefore: number | null = null;
+      let sessionsAfter: number | null = null;
+      if (data.packageId && w === 0) {
+        // İlk derste paketi rezerve et — tekrarlayan derslerde her hafta için ayrı çekim yok
+        // (kullanıcı isterse manuel her seans için ayrı paket atayabilir)
+        const pkg = await this.packagesRepo.findOne({
+          where: { id: data.packageId, userId: data.studentUserId },
+        });
+        if (pkg && pkg.remainingSessions > 0) {
+          sessionsBefore = pkg.remainingSessions;
+          pkg.remainingSessions -= 1;
+          sessionsAfter = pkg.remainingSessions;
+          await this.packagesRepo.save(pkg);
+          packageId = pkg.id;
+        }
+      }
+
+      const reservation = this.resRepo.create({
+        userId: data.studentUserId,
+        trainerId: trainer.id,
+        tenantId: trainer.tenantId,
+        sessionType: (data.type as SessionType) || SessionType.PERSONAL_TRAINING,
+        startTime,
+        endTime,
+        status: ReservationStatus.CONFIRMED,
+        notes: data.notes?.trim() || null,
+        packageId: packageId as never,
+        sessionsBefore,
+        sessionsAfter,
+        timeSlotId: null as never,
+      });
+      await this.resRepo.save(reservation);
+      created.push({ id: reservation.id, startTime: reservation.startTime, endTime: reservation.endTime });
     }
 
-    const reservation = this.resRepo.create({
-      userId: data.studentUserId,
-      trainerId: trainer.id,
-      tenantId: trainer.tenantId,
-      sessionType: (data.type as SessionType) || SessionType.PERSONAL_TRAINING,
-      startTime,
-      endTime,
-      status: ReservationStatus.CONFIRMED,
-      notes: data.notes?.trim() || null,
-      packageId: null as never,
-      timeSlotId: null as never,
-    });
-    await this.resRepo.save(reservation);
+    if (created.length === 0) {
+      throw new ConflictException('Tüm haftalarda çakışma var, ders oluşturulamadı');
+    }
 
-    // Otomatik link: eğer üye eğitmenin portföyünde değilse ekle
+    // Otomatik link
     const existingLink = await this.linksRepo.findOne({
       where: { trainerId: trainer.id, memberUserId: data.studentUserId },
     });
@@ -1122,9 +1226,10 @@ export class TrainerPanelService {
       await this.linksRepo.save(existingLink);
     }
 
-    // Notify student
+    // Notify student (sadece ilk ders için)
     const student = await this.usersRepo.findOne({ where: { id: data.studentUserId } });
-    if (student) {
+    if (student && created.length > 0) {
+      const firstLesson = created[0];
       void this.notifier.studentLessonCreated({
         student: {
           id: student.id,
@@ -1133,12 +1238,19 @@ export class TrainerPanelService {
           phone: student.phone,
         },
         trainerName: `${user.firstName} ${user.lastName}`.trim(),
-        date: dateStr,
+        date: firstLesson.startTime.toISOString().slice(0, 10),
         time: data.startTime.slice(0, 5),
       });
     }
 
-    return { id: reservation.id, startTime: reservation.startTime, endTime: reservation.endTime };
+    return {
+      created: created.length,
+      lessons: created.map((c) => ({
+        id: c.id,
+        startTime: c.startTime,
+        endTime: c.endTime,
+      })),
+    };
   }
 
   /** Trainer kendi dersini doğrudan tarih+saat vererek taşır. */
@@ -1340,6 +1452,38 @@ export class TrainerPanelService {
       expiresAt: p.expiresAt,
       status: p.status,
     }));
+  }
+
+  /**
+   * Tenant'taki herhangi bir üyenin aktif PT paketlerini getir.
+   * Ders oluştururken paket seçmek için kullanılır (link şartı yok).
+   */
+  async getMemberActivePackagesForBooking(user: User, memberUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const member = await this.usersRepo.findOne({
+      where: { id: memberUserId, tenantId: trainer.tenantId },
+    });
+    if (!member) throw new NotFoundException('Üye bulunamadı');
+
+    const packages = await this.packagesRepo.find({
+      where: { userId: memberUserId },
+      relations: ['packageType'],
+      order: { createdAt: 'DESC' },
+    });
+    return packages
+      .filter(
+        (p) =>
+          p.remainingSessions > 0 &&
+          (p.packageType?.sessionType === 'personal_training' ||
+            !p.packageType?.sessionType),
+      )
+      .map((p) => ({
+        id: p.id,
+        name: p.packageType?.name ?? 'Paket',
+        remainingSessions: p.remainingSessions,
+        expiresAt: p.expiresAt,
+        status: p.status,
+      }));
   }
 
   // ─── Club Connection (Kulübe Bağlanma) ───────────────────────────────────────
