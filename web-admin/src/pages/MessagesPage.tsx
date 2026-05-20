@@ -96,6 +96,16 @@ export function MessagesPage() {
   const [selectedConvs, setSelectedConvs] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Textarea otomatik büyüt
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    const next = Math.min(ta.scrollHeight, 140);
+    ta.style.height = `${next}px`;
+  }, [text]);
 
   const showToast = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
     setToast({ message, type });
@@ -623,9 +633,47 @@ export function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
                 <form className="chat-input-bar" onSubmit={sendMessage}>
-                  <button type="button" onClick={() => setShowQuickReplies(!showQuickReplies)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: '4px 8px', color: '#64748b' }} title="Hazır Yanıtlar">⚡</button>
-                  <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Mesaj yaz..." disabled={sending} autoFocus />
-                  <button type="submit" className="primary" disabled={!text.trim() || sending}>{sending ? '...' : 'Gönder'}</button>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickReplies(!showQuickReplies)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: 18,
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      color: '#64748b',
+                    }}
+                    title="Hazır Yanıtlar"
+                  >
+                    ⚡
+                  </button>
+                  <textarea
+                    ref={textareaRef}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (text.trim() && !sending) {
+                          void sendMessage(e as unknown as React.FormEvent);
+                        }
+                      }
+                    }}
+                    placeholder="Mesaj yaz... (Enter: gönder, Shift+Enter: satır)"
+                    disabled={sending}
+                    autoFocus
+                    rows={1}
+                    maxLength={2000}
+                    className="chat-input-textarea"
+                  />
+                  <button
+                    type="submit"
+                    className="primary"
+                    disabled={!text.trim() || sending}
+                  >
+                    {sending ? '...' : 'Gönder'}
+                  </button>
                 </form>
                 {showQuickReplies && (
                   <div style={{ padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid #e2e8f0' }}>

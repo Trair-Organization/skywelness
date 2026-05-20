@@ -682,6 +682,7 @@ a.secondary:hover {
   padding: 12px 18px;
   border-top: 1px solid var(--border);
   background: var(--surface);
+  align-items: flex-end;
 }
 .chat-input-bar input {
   flex: 1;
@@ -695,6 +696,29 @@ a.secondary:hover {
 .chat-input-bar input:focus {
   border-color: var(--accent);
   outline: none;
+}
+.chat-input-textarea {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  resize: none;
+  line-height: 1.4;
+  min-height: 40px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.chat-input-textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.chat-input-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ─── Password Field ───────────────────────────────────────────────────────── */
