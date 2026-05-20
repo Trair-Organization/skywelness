@@ -30,21 +30,27 @@ export function TrainerDashboardPage() {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    apiJson<DashboardData>('/trainer-panel/dashboard')
-      .then((res) => {
-        if (!alive) return;
-        setData(res);
-      })
-      .catch((err) => {
-        if (!alive) return;
-        setError(err instanceof Error ? err.message : 'Veriler yüklenemedi');
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+    const fetchData = (showLoading: boolean) => {
+      if (showLoading) setLoading(true);
+      apiJson<DashboardData>('/trainer-panel/dashboard')
+        .then((res) => {
+          if (!alive) return;
+          setData(res);
+        })
+        .catch((err) => {
+          if (!alive) return;
+          setError(err instanceof Error ? err.message : 'Veriler yüklenemedi');
+        })
+        .finally(() => {
+          if (alive && showLoading) setLoading(false);
+        });
+    };
+    fetchData(true);
+    // Mesaj/talep sayacı için 30sn'de bir sessiz refresh
+    const id = setInterval(() => fetchData(false), 30000);
     return () => {
       alive = false;
+      clearInterval(id);
     };
   }, []);
 

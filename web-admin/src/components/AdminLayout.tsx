@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { readStoredTenantSubdomain } from '../auth/storage';
@@ -76,6 +76,16 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [badges, setBadges] = useState<Record<string, number>>({});
   const [clubLogo, setClubLogo] = useState<string | null>(null);
   const [clubName, setClubName] = useState<string | null>(null);
+  const previousUnreadRef = useRef<number | null>(null);
+
+  // Browser notification permission iste (kullanıcı login olduğunda 1 kez)
+  useEffect(() => {
+    if (!user) return;
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'default') {
+      void Notification.requestPermission();
+    }
+  }, [user]);
 
   // Poll for badge counts + load club info
   const loadBadges = useCallback(async () => {
@@ -83,7 +93,38 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     try {
       const counts: Record<string, number> = {};
       const unread = await apiJson<number>('/messages/unread-count');
-      if (unread > 0) counts['/messages'] = unread;
+      if (unread > 0) {
+        // Hem /messages hem de /trainer/messages path'i için rozet
+        counts['/messages'] = unread;
+        counts['/trainer/messages'] = unread;
+      }
+
+      // ─── Browser Notification: yeni mesaj geldiğinde uyarı göster ────────
+      const previousUnread = previousUnreadRef.current;
+      if (
+        previousUnread !== null &&
+        unread > previousUnread &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted' &&
+        document.visibilityState !== 'visible'
+      ) {
+        try {
+          const diff = unread - previousUnread;
+          const notif = new Notification('💬 Yeni mesaj', {
+            body: `${diff} yeni mesajınız var. Görüntülemek için tıklayın.`,
+            icon: '/wellnesslogodaire.png',
+            tag: 'wellness-message',
+          });
+          notif.onclick = () => {
+            window.focus();
+            const path = user.role === 'trainer' ? '/trainer/messages' : '/messages';
+            navigate(path);
+            notif.close();
+          };
+        } catch { /* */ }
+      }
+      previousUnreadRef.current = unread;
+
       if (user.role === 'administrator') {
         try {
           const pending = await apiJson<Array<unknown>>('/admin/members?status=pending_approval');
@@ -100,12 +141,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       }
       setBadges(counts);
     } catch { /* */ }
-  }, [user, clubLogo, clubName]);
+  }, [user, clubLogo, clubName, navigate]);
 
   useEffect(() => {
     if (!user) return;
     void loadBadges();
-    const id = setInterval(() => { void loadBadges(); }, 15000);
+    const id = setInterval(() => { void loadBadges(); }, 10000);
     return () => clearInterval(id);
   }, [user, loadBadges]);
 
