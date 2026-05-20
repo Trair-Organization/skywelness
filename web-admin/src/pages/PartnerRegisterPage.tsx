@@ -247,42 +247,46 @@ export function PartnerRegisterPage() {
             </Link>
           </div>
         </nav>
-        <div className="auth-container">
-          <div className="auth-card auth-card-wide">
-            <h1>Partner Ol</h1>
-            <p className="auth-subtitle">
-              Platformumuza katılın, dijital dönüşümünüzü başlatın.
-              <br />
-              Hangi tür partner olmak istiyorsunuz?
-            </p>
-            <div className="partner-type-grid">
-              <button className="partner-type-card" onClick={() => setPartnerType('corporate')}>
+        <div className="partner-hero">
+          <div className="partner-hero-content">
+            <h1>Platformumuza Katılın</h1>
+            <p>Dijital dönüşümünüzü başlatın. Binlerce wellness tutkununa ulaşın.</p>
+          </div>
+          <div className="partner-type-grid">
+            <button className="partner-type-card" onClick={() => setPartnerType('corporate')}>
+              <div className="partner-type-header">
                 <span className="partner-type-icon">🏢</span>
                 <h3>Kurumsal Partner</h3>
-                <p>Spor salonu, wellness merkezi, stüdyo veya fitness kulübü</p>
-                <ul>
-                  <li>Admin paneli ile tam yönetim</li>
-                  <li>Slider, hizmetler, fiyatlar</li>
-                  <li>Personel & eğitmen yönetimi</li>
-                  <li>Rezervasyon & üye takibi</li>
-                </ul>
-              </button>
-              <button className="partner-type-card" onClick={() => setPartnerType('trainer')}>
+              </div>
+              <p>Spor salonu, wellness merkezi, stüdyo veya fitness kulübü</p>
+              <ul>
+                <li>Admin paneli ile tam yönetim</li>
+                <li>Hizmet, fiyat & kampanya yönetimi</li>
+                <li>Personel & eğitmen ekleme</li>
+                <li>Rezervasyon & üye takibi</li>
+                <li>Analitik & raporlama</li>
+              </ul>
+              <span className="partner-type-cta">Başvur →</span>
+            </button>
+            <button className="partner-type-card" onClick={() => setPartnerType('trainer')}>
+              <div className="partner-type-header">
                 <span className="partner-type-icon">🏋️</span>
                 <h3>Bireysel Eğitmen</h3>
-                <p>Freelance personal trainer, masör veya wellness uzmanı</p>
-                <ul>
-                  <li>Kişisel profil sayfası</li>
-                  <li>Ajanda & randevu yönetimi</li>
-                  <li>Öğrenci takibi</li>
-                  <li>Mesajlaşma & iletişim</li>
-                </ul>
-              </button>
-            </div>
-            <p className="auth-footer-text">
-              Kullanıcı olarak mı katılmak istiyorsunuz? <Link to="/register">Üye Ol</Link>
-            </p>
+              </div>
+              <p>Freelance personal trainer, masör veya wellness uzmanı</p>
+              <ul>
+                <li>Kişisel profil sayfası & vitrin</li>
+                <li>Ajanda & randevu yönetimi</li>
+                <li>Öğrenci takibi & iletişim</li>
+                <li>Keşif sayfasında görünürlük</li>
+                <li>Puan & yorum sistemi</li>
+              </ul>
+              <span className="partner-type-cta">Başvur →</span>
+            </button>
           </div>
+          <p className="partner-footer-note">
+            Kullanıcı olarak mı katılmak istiyorsunuz? <Link to="/register">Üye Ol</Link>
+          </p>
         </div>
       </div>
     );
