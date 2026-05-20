@@ -2415,4 +2415,80 @@ export class TrainerPanelService {
     await this.goalsRepo.remove(g);
     return { ok: true };
   }
+
+  // ─── Paket Satışı (Eğitmen → Öğrenci) ──────────────────────────────────────
+
+  /**
+   * Eğitmenin kendi paketini öğrencisine atar.
+   * - Üyeye yeni Package kaydı oluşturulur
+   * - assignedTrainerId = eğitmenin id'si
+   * - PaymentTransaction kaydı oluşturulabilir (gelir takibi için)
+   * - Üyeye bildirim gönderilir
+   */
+  async sellPackageToStudent(
+    user: User,
+    data: { studentUserId: string; packageTypeId: string; notes?: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.studentUserId || !data.packageTypeId) {
+      throw new BadRequestException('Öğrenci ve paket zorunlu');
+    }
+
+    // Üye doğrula (tenant'ta olmalı)
+    const member = await this.usersRepo.findOne({
+      where: { id: data.studentUserId, tenantId: trainer.tenantId },
+    });
+    if (!member) throw new NotFoundException('Üye bulunamadı');
+
+    // Paket tipi (eğitmenin kendi paketi olabilir veya kulüp paketi)
+    const pt = await this.packageTypesRepo.findOne({
+      where: { id: data.packageTypeId, tenantId: trainer.tenantId, active: true },
+    });
+    if (!pt) throw new NotFoundException('Paket bulunamadı');
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + pt.validityDays);
+
+    const pkg = this.packagesRepo.create({
+      userId: data.studentUserId,
+      packageTypeId: pt.id,
+      remainingSessions: pt.sessionCount,
+      expiresAt: expiresAt.toISOString().slice(0, 10),
+      assignedTrainerId: trainer.id,
+      status: 'active' as never,
+    });
+    await this.packagesRepo.save(pkg);
+
+    // Otomatik link
+    const existingLink = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: data.studentUserId },
+    });
+    if (!existingLink) {
+      const link = this.linksRepo.create({
+        tenantId: trainer.tenantId,
+        trainerId: trainer.id,
+        memberUserId: data.studentUserId,
+        status: 'active',
+        source: 'trainer_added',
+      });
+      await this.linksRepo.save(link);
+    } else if (existingLink.status === 'archived') {
+      existingLink.status = 'active';
+      await this.linksRepo.save(existingLink);
+    }
+
+    // Üyeye bildirim
+    if (this.notifier && typeof this.notifier.packageAssignedToMember === 'function') {
+      void this.notifier.packageAssignedToMember(member, pt.name).catch(() => {});
+    }
+
+    return {
+      ok: true,
+      packageId: pkg.id,
+      packageName: pt.name,
+      sessionCount: pt.sessionCount,
+      price: pt.price,
+      expiresAt: expiresAt.toISOString().slice(0, 10),
+    };
+  }
 }

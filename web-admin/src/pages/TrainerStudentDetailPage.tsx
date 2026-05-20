@@ -174,6 +174,22 @@ export function TrainerStudentDetailPage() {
   });
   const [savingGoal, setSavingGoal] = useState(false);
 
+  // Sell Package state
+  const [showSellPackage, setShowSellPackage] = useState(false);
+  const [availablePackages, setAvailablePackages] = useState<
+    Array<{
+      id: string;
+      name: string;
+      sessionCount: number;
+      price: string;
+      validityDays: number;
+      sessionType: string;
+      active?: boolean;
+    }>
+  >([]);
+  const [selectedPkgId, setSelectedPkgId] = useState('');
+  const [sellingPackage, setSellingPackage] = useState(false);
+
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
@@ -530,6 +546,41 @@ export function TrainerStudentDetailPage() {
     }
   }
 
+  // ─── Sell Package ────────────────────
+  async function loadAvailablePackages() {
+    try {
+      const list = await apiJson<typeof availablePackages>('/trainer-panel/packages');
+      setAvailablePackages((list || []).filter((p) => p.active !== false));
+    } catch (e) {
+      flashErr(e instanceof ApiError ? e.message : 'Paketler yüklenemedi');
+    }
+  }
+
+  function openSellPackageModal() {
+    setSelectedPkgId('');
+    setShowSellPackage(true);
+    void loadAvailablePackages();
+  }
+
+  async function handleSellPackage() {
+    if (!userId || !selectedPkgId) return flashErr('Paket seçmelisiniz');
+    setSellingPackage(true);
+    try {
+      await apiJson(`/trainer-panel/students/${userId}/sell-package`, {
+        method: 'POST',
+        body: JSON.stringify({ packageTypeId: selectedPkgId }),
+      });
+      setShowSellPackage(false);
+      setSelectedPkgId('');
+      await load();
+      flash('✅ Paket öğrenciye atandı');
+    } catch (e) {
+      flashErr(e instanceof ApiError ? e.message : 'Atanamadı');
+    } finally {
+      setSellingPackage(false);
+    }
+  }
+
   // ─── Calculations ───────────────────
   const latestMeasurement = measurements[0];
   const oldestMeasurement = measurements[measurements.length - 1];
@@ -669,88 +720,128 @@ export function TrainerStudentDetailPage() {
 
       {/* OVERVIEW TAB */}
       {tab === 'overview' && (
-        <div className="services-grid-cards" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <section className="services-card">
-            <h3 className="services-card-title">📈 Hızlı Özet</h3>
-            <div className="quick-summary">
-              {latestMeasurement?.weightKg && (
-                <div className="quick-summary-row">
-                  <span>Son kilo</span>
-                  <strong>
-                    {parseFloat(latestMeasurement.weightKg).toFixed(1)} kg
-                    {weightChange !== null && weightChange !== 0 && (
-                      <span
-                        className={
-                          weightChange < 0 ? 'student-trend-down' : 'student-trend-up'
-                        }
-                        style={{ marginLeft: 6, fontSize: '0.78rem' }}
-                      >
-                        {weightChange < 0 ? '▼' : '▲'} {Math.abs(weightChange).toFixed(1)} kg
-                      </span>
-                    )}
-                  </strong>
-                </div>
-              )}
-              {latestMeasurement?.bodyFatPct && (
-                <div className="quick-summary-row">
-                  <span>Yağ oranı</span>
-                  <strong>%{latestMeasurement.bodyFatPct}</strong>
-                </div>
-              )}
-              {latestMeasurement?.muscleMassKg && (
-                <div className="quick-summary-row">
-                  <span>Kas kütlesi</span>
-                  <strong>{latestMeasurement.muscleMassKg} kg</strong>
-                </div>
-              )}
-              {!latestMeasurement && (
+        <>
+          <div className="services-grid-cards" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <section className="services-card">
+              <h3 className="services-card-title">📈 Hızlı Özet</h3>
+              <div className="quick-summary">
+                {latestMeasurement?.weightKg && (
+                  <div className="quick-summary-row">
+                    <span>Son kilo</span>
+                    <strong>
+                      {parseFloat(latestMeasurement.weightKg).toFixed(1)} kg
+                      {weightChange !== null && weightChange !== 0 && (
+                        <span
+                          className={
+                            weightChange < 0 ? 'student-trend-down' : 'student-trend-up'
+                          }
+                          style={{ marginLeft: 6, fontSize: '0.78rem' }}
+                        >
+                          {weightChange < 0 ? '▼' : '▲'} {Math.abs(weightChange).toFixed(1)} kg
+                        </span>
+                      )}
+                    </strong>
+                  </div>
+                )}
+                {latestMeasurement?.bodyFatPct && (
+                  <div className="quick-summary-row">
+                    <span>Yağ oranı</span>
+                    <strong>%{latestMeasurement.bodyFatPct}</strong>
+                  </div>
+                )}
+                {latestMeasurement?.muscleMassKg && (
+                  <div className="quick-summary-row">
+                    <span>Kas kütlesi</span>
+                    <strong>{latestMeasurement.muscleMassKg} kg</strong>
+                  </div>
+                )}
+                {!latestMeasurement && (
+                  <p className="muted" style={{ fontSize: '0.85rem' }}>
+                    Henüz ölçüm yok.{' '}
+                    <button
+                      className="btn-link"
+                      onClick={() => setTab('measurements')}
+                      style={{ textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--accent)', padding: 0 }}
+                    >
+                      Ölçüm ekle
+                    </button>
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="services-card">
+              <h3 className="services-card-title">🎯 Son Değerlendirmeler</h3>
+              {assessments.length === 0 ? (
                 <p className="muted" style={{ fontSize: '0.85rem' }}>
-                  Henüz ölçüm yok.{' '}
+                  Henüz değerlendirme yok.{' '}
                   <button
                     className="btn-link"
-                    onClick={() => setTab('measurements')}
+                    onClick={() => setTab('assessments')}
                     style={{ textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--accent)', padding: 0 }}
                   >
-                    Ölçüm ekle
+                    FMS Testi yap
                   </button>
                 </p>
+              ) : (
+                <div className="quick-summary">
+                  {assessments.slice(0, 3).map((a) => (
+                    <div key={a.id} className="quick-summary-row">
+                      <span>
+                        {a.type === 'fms'
+                          ? 'FMS Testi'
+                          : a.type === 'posture'
+                            ? 'Postür'
+                            : a.type === 'vo2_max'
+                              ? 'VO2 Max'
+                              : a.type}
+                      </span>
+                      <strong>{formatDate(a.assessedAt)}</strong>
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-          </section>
+            </section>
+          </div>
 
-          <section className="services-card">
-            <h3 className="services-card-title">🎯 Son Değerlendirmeler</h3>
-            {assessments.length === 0 ? (
+          {/* Paketler */}
+          <section className="services-card" style={{ marginTop: '1rem' }}>
+            <div className="services-tab-header" style={{ marginBottom: '0.75rem' }}>
+              <h3 className="services-card-title" style={{ margin: 0 }}>
+                📦 Aktif Paketler
+              </h3>
+              <button
+                type="button"
+                className="btn-primary btn-sm"
+                onClick={openSellPackageModal}
+              >
+                + Paket Sat
+              </button>
+            </div>
+            {!student.packages || student.packages.length === 0 ? (
               <p className="muted" style={{ fontSize: '0.85rem' }}>
-                Henüz değerlendirme yok.{' '}
-                <button
-                  className="btn-link"
-                  onClick={() => setTab('assessments')}
-                  style={{ textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--accent)', padding: 0 }}
-                >
-                  FMS Testi yap
-                </button>
+                Henüz paket yok. Yukarıdaki butondan öğrenciye paket atayın.
               </p>
             ) : (
-              <div className="quick-summary">
-                {assessments.slice(0, 3).map((a) => (
-                  <div key={a.id} className="quick-summary-row">
-                    <span>
-                      {a.type === 'fms'
-                        ? 'FMS Testi'
-                        : a.type === 'posture'
-                          ? 'Postür'
-                          : a.type === 'vo2_max'
-                            ? 'VO2 Max'
-                            : a.type}
-                    </span>
-                    <strong>{formatDate(a.assessedAt)}</strong>
+              <div className="student-packages-list">
+                {student.packages.map((p) => (
+                  <div key={p.id} className="student-package-row">
+                    <div>
+                      <strong>{p.name}</strong>
+                      <span className="muted">
+                        {' '}
+                        · Geçerlilik: {new Date(p.expiresAt).toLocaleDateString('tr-TR')}
+                      </span>
+                    </div>
+                    <strong className="student-package-remaining">
+                      {p.remainingSessions} seans
+                    </strong>
                   </div>
                 ))}
               </div>
             )}
           </section>
-        </div>
+        </>
       )}
 
       {/* PHOTOS TAB */}
@@ -1514,10 +1605,94 @@ export function TrainerStudentDetailPage() {
           )}
         </div>
       )}
+
+      {/* Sell Package Modal */}
+      {showSellPackage && (
+        <div
+          className="modal-overlay"
+          onClick={() => !sellingPackage && setShowSellPackage(false)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📦 Öğrenciye Paket Sat</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowSellPackage(false)}
+                disabled={sellingPackage}
+                aria-label="Kapat"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="sell-package-body">
+              {availablePackages.length === 0 ? (
+                <div className="services-empty">
+                  <p>
+                    Henüz aktif paketiniz yok. Önce <strong>Hizmet & Paket</strong> sayfasından
+                    paket oluşturun.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="muted" style={{ marginTop: 0 }}>
+                    Atamak istediğiniz paketi seçin. Paket öğrenciye tanımlanır ve aktif paketler
+                    listesinde görünür.
+                  </p>
+                  <div className="sell-package-list">
+                    {availablePackages.map((p) => (
+                      <label
+                        key={p.id}
+                        className={`sell-package-option ${
+                          selectedPkgId === p.id ? 'selected' : ''
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="pkg"
+                          value={p.id}
+                          checked={selectedPkgId === p.id}
+                          onChange={() => setSelectedPkgId(p.id)}
+                        />
+                        <div className="sell-package-info">
+                          <strong>{p.name}</strong>
+                          <span className="muted">
+                            {p.sessionCount} seans · {p.validityDays} gün geçerli
+                          </span>
+                        </div>
+                        <strong className="sell-package-price">
+                          ₺{Number(p.price).toLocaleString('tr-TR')}
+                        </strong>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="sell-package-footer">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowSellPackage(false)}
+                disabled={sellingPackage}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void handleSellPackage()}
+                disabled={!selectedPkgId || sellingPackage || availablePackages.length === 0}
+              >
+                {sellingPackage ? '⏳ Atanıyor...' : '✓ Paket Ata'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
 // ─── Goal Card ────────────────────────
 function GoalCard({
   goal: g,

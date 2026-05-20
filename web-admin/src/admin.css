@@ -7847,3 +7847,116 @@ a.trainer-stat-card:hover {
 .assessment-btn:active {
   transform: translateY(0);
 }
+
+
+/* ─── Öğrenci Aktif Paketler Listesi ───────────────────────────────────────── */
+.student-packages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.student-package-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.student-package-row strong {
+  color: #0f172a;
+}
+
+.student-package-row .muted {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.student-package-remaining {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* ─── Sell Package Modal ───────────────────────────────────────────────────── */
+.sell-package-body {
+  margin: 0.5rem 0 1rem 0;
+}
+
+.sell-package-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.sell-package-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.sell-package-option:hover {
+  border-color: #2563eb;
+  background: #f8fafc;
+}
+
+.sell-package-option.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.sell-package-option input[type='radio'] {
+  margin: 0;
+  accent-color: #2563eb;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sell-package-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sell-package-info strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.sell-package-info .muted {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.sell-package-price {
+  color: #059669;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.sell-package-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}

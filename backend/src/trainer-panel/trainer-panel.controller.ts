@@ -348,14 +348,6 @@ export class TrainerPanelController {
     return this.service.joinClubByCode(user, body.clubCode);
   }
 
-  // ─── Profil Düzenleme ───────────────────────────────────────────────────────
-
-  /** Eğitmen kendi profil bilgilerini getirir */
-  @Get('profile')
-  getMyProfile(@CurrentUser() user: User) {
-    return this.service.getMyProfile(user);
-  }
-
   // ─── Push Bildirim ──────────────────────────────────────────────────────────
 
   /** PT: öğrencilerine push bildirim gönder */
@@ -614,5 +606,21 @@ export class TrainerPanelController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {
     return this.service.deleteGoal(user, id);
+  }
+
+  // ─── Paket Satışı (Eğitmen → Öğrenci) ──────────────────────────────────────
+
+  /** Eğitmen kendi öğrencisine paket atar/satar */
+  @Post('students/:userId/sell-package')
+  sellPackageToStudent(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { packageTypeId: string; notes?: string },
+  ) {
+    return this.service.sellPackageToStudent(user, {
+      studentUserId: userId,
+      packageTypeId: body.packageTypeId,
+      notes: body.notes,
+    });
   }
 }
