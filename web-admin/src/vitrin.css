@@ -546,12 +546,12 @@
 /* ─── Grids ─── */
 .vitrin-featured-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
 }
 .vitrin-clubs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
 }
 .vitrin-trainers-grid {
@@ -4861,12 +4861,12 @@
 
 /* ─── Grids — sütun sayısı sabitlenmiş, boyut tutarlı ─── */
 .vitrin-featured-grid {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
 }
 .vitrin-clubs-grid {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
 }
 .vitrin-events-grid {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -5072,7 +5072,8 @@
 
 /* ─── Tablet (≤1024px) ─── */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .vitrin-featured-grid {
+  .vitrin-featured-grid,
+  .vitrin-clubs-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .vitrin-clubs-grid,
@@ -5087,9 +5088,7 @@
 
 /* ─── Mobil (≤768px) ─── */
 @media (max-width: 768px) {
-  .vitrin-featured-grid {
-    grid-template-columns: 1fr;
-  }
+  .vitrin-featured-grid,
   .vitrin-clubs-grid,
   .vitrin-events-grid,
   .vitrin-campaigns-grid {
