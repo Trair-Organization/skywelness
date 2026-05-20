@@ -1,31 +1,52 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 export function PublicNav({ active }: { active?: 'discover' }) {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function close() {
+    setMenuOpen(false);
+  }
 
   return (
     <nav className="vitrin-nav">
-      <Link to="/" className="vitrin-nav-brand">
+      <Link to="/" className="vitrin-nav-brand" onClick={close}>
         <img src="/wellnesslogoyazi.png?v=2" alt="WellnessClub" className="nav-logo-text" />
       </Link>
-      <div className="vitrin-nav-links">
+
+      {/* Hamburger toggle (mobil) */}
+      <button
+        type="button"
+        className={`vitrin-nav-toggle ${menuOpen ? 'open' : ''}`}
+        aria-label="Menü"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((v) => !v)}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <div className={`vitrin-nav-links ${menuOpen ? 'open' : ''}`}>
         <Link
           to="/discover"
           className={`vitrin-nav-link ${active === 'discover' ? 'active' : ''}`}
+          onClick={close}
         >
           Keşfet
         </Link>
         {!token && (
           <>
-            <Link to="/partner-register" className="vitrin-nav-link">
+            <Link to="/partner-register" className="vitrin-nav-link" onClick={close}>
               Partner Ol
             </Link>
-            <Link to="/register" className="vitrin-nav-link">
+            <Link to="/register" className="vitrin-nav-link" onClick={close}>
               Üye Ol
             </Link>
-            <Link to="/login" className="vitrin-nav-login">
+            <Link to="/login" className="vitrin-nav-login" onClick={close}>
               Giriş Yap
             </Link>
           </>
@@ -43,6 +64,7 @@ export function PublicNav({ active }: { active?: 'discover' }) {
                       : '/club/dashboard'
               }
               className="vitrin-nav-login"
+              onClick={close}
             >
               {user.role === 'member' ? '👤 Panelim' : '🏢 Panele Geç'}
             </Link>
@@ -50,6 +72,7 @@ export function PublicNav({ active }: { active?: 'discover' }) {
               type="button"
               className="vitrin-nav-link"
               onClick={() => {
+                close();
                 logout();
                 navigate('/');
               }}
