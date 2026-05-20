@@ -5574,6 +5574,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.vitrin-trainer-body .vitrin-card-tags {
+  overflow: hidden;
+  flex-shrink: 1;
+  min-height: 0;
+}
+.vitrin-trainer-body .partner-badges {
+  flex-shrink: 0;
+}
+.vitrin-trainer-body .vitrin-card-cta {
+  flex-shrink: 0;
+}
 
 /* Etkinlik kartları — sabit yükseklik */
 .vitrin-event-card {
@@ -5815,6 +5826,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .vitrin-trainer-body h3 {
   font-size: 0.85rem;
