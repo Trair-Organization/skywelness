@@ -5258,33 +5258,49 @@
   /* Stats strip — 3 satır 2 sütun, daha kompakt */
   .vitrin-stats-strip {
     margin: 1rem auto 0;
-    padding: 1rem;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    padding: 0.85rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
     border-radius: 12px;
   }
   .vitrin-stat-item {
-    gap: 0.5rem;
-    justify-content: flex-start;
+    flex-direction: column;
+    text-align: center;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
   }
   .vitrin-stat-icon {
-    font-size: 1.3rem;
+    font-size: 1.1rem;
   }
   .vitrin-stat-item strong {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
+    line-height: 1;
   }
   .vitrin-stat-item span {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 
-  /* Categories — kaydırılabilir */
+  /* Categories — kaydırılabilir + sağ kenarda fade ipucu */
   .vitrin-categories {
     margin-top: 1rem;
     padding: 0 1rem;
+    position: relative;
+  }
+  .vitrin-categories::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 32px;
+    background: linear-gradient(to left, #05080e 0%, transparent 100%);
+    pointer-events: none;
   }
   .vitrin-categories-scroll {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    padding-right: 1rem;
   }
   .vitrin-categories-scroll::-webkit-scrollbar {
     display: none;
@@ -5426,7 +5442,14 @@
 /* ─── Küçük mobil (≤480px) ─── */
 @media (max-width: 480px) {
   .vitrin-stats-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 0.65rem;
+  }
+  .vitrin-stat-item strong {
+    font-size: 0.85rem;
+  }
+  .vitrin-stat-item span {
+    font-size: 0.6rem;
   }
   .vitrin-section-header {
     flex-direction: column;
