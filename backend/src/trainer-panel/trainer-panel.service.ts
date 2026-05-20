@@ -410,11 +410,23 @@ export class TrainerPanelService {
 
   async getStudentDetail(user: User, studentUserId: string) {
     const trainer = await this.resolveTrainer(user);
+
+    // Önce link'i ara (tercihen)
     const link = await this.linksRepo.findOne({
-      where: { trainerId: trainer.id, memberUserId: studentUserId, status: 'active' },
+      where: { trainerId: trainer.id, memberUserId: studentUserId },
       relations: ['memberUser'],
     });
-    if (!link) throw new NotFoundException('Öğrenci bulunamadı');
+
+    let memberUser = link?.memberUser ?? null;
+
+    if (!memberUser) {
+      // Link yok — tenant'taki kullanıcıyı doğrudan getir
+      const u = await this.usersRepo.findOne({
+        where: { id: studentUserId, tenantId: trainer.tenantId },
+      });
+      if (!u) throw new NotFoundException('Öğrenci bulunamadı');
+      memberUser = u;
+    }
 
     const now = new Date();
 
@@ -471,14 +483,15 @@ export class TrainerPanelService {
     );
 
     return {
-      userId: link.memberUserId,
-      firstName: link.memberUser.firstName,
-      lastName: link.memberUser.lastName,
-      email: link.memberUser.email,
-      phone: link.memberUser.phone,
-      photoUrl: link.memberUser.photoUrl,
-      source: link.source,
-      connectedAt: link.createdAt,
+      userId: studentUserId,
+      firstName: memberUser.firstName,
+      lastName: memberUser.lastName,
+      email: memberUser.email,
+      phone: memberUser.phone,
+      photoUrl: memberUser.photoUrl,
+      source: link?.source ?? 'lesson_history',
+      connectedAt: link?.createdAt ?? memberUser.createdAt,
+      linkStatus: link?.status ?? 'none',
       // Stats
       totalLessons,
       completedLessons,
