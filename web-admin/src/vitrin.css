@@ -5580,7 +5580,7 @@
 
 /* Etkinlik kartları — sabit yükseklik */
 .vitrin-event-card {
-  height: 320px;
+  height: 380px;
   display: flex;
   flex-direction: column;
 }
@@ -5604,9 +5604,37 @@
 
 /* Kampanya kartları — sabit yükseklik */
 .vitrin-campaign-card {
-  height: 340px;
+  height: 380px;
   display: flex;
   flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+.vitrin-campaign-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.vitrin-campaign-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vitrin-campaign-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(56, 189, 248, 0.08);
+  font-size: 2.5rem;
+}
+.vitrin-campaign-cover .vitrin-campaign-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 .vitrin-campaign-body {
   flex: 1;
@@ -5614,8 +5642,31 @@
   flex-direction: column;
   overflow: hidden;
 }
-.vitrin-campaign-footer {
+.vitrin-campaign-body h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--card-title-size);
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+  color: #f1f5f9;
+}
+.vitrin-campaign-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   margin-top: auto;
+  padding-top: 0.3rem;
+}
+.vitrin-campaign-club {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+.vitrin-campaign-time {
+  color: #f87171;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 /* Mobil — biraz kısalt */
@@ -5627,9 +5678,9 @@
     height: 270px;
   }
   .vitrin-event-card {
-    height: 290px;
+    height: 340px;
   }
   .vitrin-campaign-card {
-    height: 310px;
+    height: 340px;
   }
 }

@@ -887,17 +887,26 @@ function CampaignCard({ campaign, now }: { campaign: Campaign; now: number }) {
   const daysLeft = Math.max(0, Math.ceil((new Date(campaign.endsAt).getTime() - now) / 86400000));
 
   return (
-    <div className="vitrin-campaign-card">
-      {campaign.imageUrl && <img src={campaign.imageUrl} alt="" className="vitrin-campaign-img" />}
+    <Link to={`/campaign/${campaign.id}`} className="vitrin-campaign-card">
+      <div className="vitrin-campaign-cover">
+        {campaign.imageUrl ? (
+          <img src={campaign.imageUrl} alt={campaign.title} />
+        ) : (
+          <div className="vitrin-campaign-ph">🔥</div>
+        )}
+        <span className="vitrin-campaign-badge">{discountText}</span>
+        {daysLeft <= 3 && (
+          <span className="vitrin-badge" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(220,38,38,0.92)', color: '#fff', border: '1px solid rgba(220,38,38,0.3)' }}>
+            🔥 Son {daysLeft} gün
+          </span>
+        )}
+      </div>
       <div className="vitrin-campaign-body">
-        <div className="vitrin-campaign-header">
-          <h3>{campaign.title}</h3>
-          <span className="vitrin-campaign-badge">{discountText}</span>
-        </div>
+        <h3>{campaign.title}</h3>
         {campaign.description && (
           <p className="vitrin-campaign-desc">{campaign.description.slice(0, 80)}</p>
         )}
-        <div className="vitrin-campaign-footer">
+        <div className="vitrin-campaign-meta">
           {campaign.tenant && (
             <span className="vitrin-campaign-club">🏢 {campaign.tenant.name}</span>
           )}
@@ -915,7 +924,10 @@ function CampaignCard({ campaign, now }: { campaign: Campaign; now: number }) {
             </span>
           </div>
         )}
+        <div className="vitrin-card-cta">
+          <span className="vitrin-card-cta-btn">Detayları Gör →</span>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
