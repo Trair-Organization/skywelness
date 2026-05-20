@@ -174,7 +174,7 @@ export function TrainerProfileEditPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await apiJson<{ url: string }>('/auth/upload-image', {
+      const res = await apiJson<{ url: string }>('/auth/upload-avatar', {
         method: 'POST',
         body: formData,
         headers: undefined,
@@ -183,7 +183,7 @@ export function TrainerProfileEditPage() {
         ? res.url
         : `https://www.wellnessclub.tech${res.url}`;
       setPhotoUrl(fullUrl);
-      flash('✅ Fotoğraf yüklendi');
+      flash('✅ Fotoğraf yüklendi (otomatik kare kırpıldı)');
     } catch (e) {
       flashError(e instanceof ApiError ? e.message : 'Yükleme başarısız');
     } finally {
@@ -286,7 +286,7 @@ export function TrainerProfileEditPage() {
                   </button>
                 )}
                 <p className="profile-hint">
-                  Kare formatlı, en az 400x400 px önerilir.
+                  Otomatik kare kırpılır (800x800). Herhangi bir boyut yükleyebilirsiniz.
                 </p>
               </div>
             </div>

@@ -67,6 +67,47 @@ export class AuthController {
     return { url: `/uploads/${file.filename}` };
   }
 
+  /**
+   * Profil fotoğrafı yükleme — otomatik kare crop + 800x800 resize.
+   * Yüklenen görsel merkezden kare şekilde kırpılır ve max 800px boyuta indirilir.
+   */
+  @Post('upload-avatar')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @HttpCode(201)
+  @UseInterceptors(FileInterceptor('file', imageUploadOptions))
+  async uploadAvatar(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      return { message: 'No file uploaded' };
+    }
+    try {
+      const sharp = (await import('sharp')).default;
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      const inputPath = file.path;
+      const outName = `avatar-${file.filename.replace(/\.[^.]+$/, '.jpg')}`;
+      const outPath = path.join(path.dirname(inputPath), outName);
+
+      // Otomatik kare crop (merkezden) + 800x800 resize + jpeg kalite 85
+      await sharp(inputPath)
+        .rotate() // EXIF orientation düzelt
+        .resize(800, 800, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .jpeg({ quality: 85, mozjpeg: true })
+        .toFile(outPath);
+
+      // Orjinal dosyayı sil
+      await fs.unlink(inputPath).catch(() => {});
+
+      return { url: `/uploads/${outName}` };
+    } catch (err) {
+      // Sharp başarısızsa orijinal dosyayı dön (best-effort)
+      return { url: `/uploads/${file.filename}` };
+    }
+  }
+
   @Post('login')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   login(@Body() dto: LoginDto, @Req() req: Request) {
