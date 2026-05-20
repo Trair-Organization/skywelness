@@ -4582,3 +4582,423 @@ button.primary:disabled {
   color: var(--muted, #64748b);
   margin-top: 2px;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Trainer Panel — Profesyonel Dashboard
+   ═══════════════════════════════════════════════════════════════════════════ */
+.trainer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ─── Hero Header ─── */
+.trainer-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-radius: 18px;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+}
+.trainer-hero-content {
+  flex: 1;
+  min-width: 280px;
+}
+.trainer-hero-greeting {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.trainer-hero-emoji {
+  font-size: 2rem;
+}
+.trainer-hero-label {
+  font-size: 0.85rem;
+  margin: 0;
+  opacity: 0.85;
+  font-weight: 500;
+}
+.trainer-hero-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.trainer-hero-sub {
+  margin: 0.5rem 0 0 2.85rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+.trainer-hero-next {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  min-width: 240px;
+  backdrop-filter: blur(10px);
+}
+.trainer-hero-next-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.trainer-hero-next strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.trainer-hero-next-time {
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+/* ─── Error Banner ─── */
+.trainer-error-banner {
+  padding: 0.85rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* ─── Stats Grid ─── */
+.trainer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.trainer-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.1rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.trainer-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent);
+}
+.trainer-stat-card.accent-blue::before { background: #3b82f6; }
+.trainer-stat-card.accent-purple::before { background: #8b5cf6; }
+.trainer-stat-card.accent-green::before { background: #10b981; }
+.trainer-stat-card.accent-red::before { background: #ef4444; }
+.trainer-stat-card.accent-teal::before { background: #14b8a6; }
+.trainer-stat-card.accent-orange::before { background: #f59e0b; }
+.trainer-stat-card.accent-pink::before { background: #ec4899; }
+a.trainer-stat-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+.trainer-stat-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.trainer-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.trainer-stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.trainer-stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.trainer-stat-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* ─── 2 Column Grid ─── */
+.trainer-grid-2col {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.5rem;
+}
+
+/* ─── Card ─── */
+.trainer-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+}
+.trainer-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.trainer-card-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+}
+.trainer-card-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+.trainer-card-link:hover {
+  text-decoration: underline;
+}
+.trainer-card-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8;
+}
+.trainer-card-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #64748b;
+}
+.trainer-empty-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Today Schedule List ─── */
+.trainer-schedule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.trainer-schedule-item {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  border-left: 3px solid var(--accent);
+  transition: all 0.15s;
+}
+.trainer-schedule-item:hover {
+  background: #f1f5f9;
+}
+.trainer-schedule-item.status-pending {
+  border-left-color: #f59e0b;
+}
+.trainer-schedule-item.status-confirmed {
+  border-left-color: #10b981;
+}
+.trainer-schedule-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+}
+.trainer-schedule-time strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.trainer-schedule-time span {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+.trainer-schedule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.trainer-schedule-info strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trainer-schedule-type {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+.trainer-status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.trainer-status-badge.status-confirmed {
+  background: #d1fae5;
+  color: #047857;
+}
+.trainer-status-badge.status-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* ─── Quick Actions ─── */
+.trainer-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.trainer-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s;
+  position: relative;
+}
+.trainer-quick-action:hover {
+  background: #ffffff;
+  border-color: var(--accent);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+}
+.qa-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.trainer-quick-action > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  position: relative;
+}
+.trainer-quick-action strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.trainer-quick-action p {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0;
+}
+.qa-arrow {
+  color: #94a3b8;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.trainer-quick-action:hover .qa-arrow {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+.qa-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 900px) {
+  .trainer-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .trainer-panel {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .trainer-hero {
+    padding: 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .trainer-hero-name {
+    font-size: 1.3rem;
+  }
+  .trainer-hero-sub {
+    margin-left: 0;
+  }
+  .trainer-hero-next {
+    width: 100%;
+    min-width: unset;
+  }
+  .trainer-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+  .trainer-stat-card {
+    padding: 0.85rem;
+    gap: 0.6rem;
+  }
+  .trainer-stat-icon {
+    font-size: 1.3rem;
+  }
+  .trainer-stat-value {
+    font-size: 1.3rem;
+  }
+  .trainer-card {
+    padding: 1rem;
+  }
+  .trainer-schedule-item {
+    grid-template-columns: 70px 1fr;
+    gap: 0.6rem;
+  }
+  .trainer-status-badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
