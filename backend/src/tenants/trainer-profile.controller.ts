@@ -69,11 +69,15 @@ export class TrainerPublicProfileController {
       order: { sortOrder: 'ASC' },
     });
 
-    // Eğitmenin paketleri
-    const packages = await this.packageTypesRepo.find({
+    // Eğitmenin paketleri — sadece bu eğitmenin sunduğu session type'larına uygun olanlar
+    const offers = trainer.offersSessionTypes ?? [];
+    const allPackages = await this.packageTypesRepo.find({
       where: { tenantId: trainer.tenantId, active: true },
       order: { createdAt: 'ASC' },
     });
+    const packages = offers.length
+      ? allPackages.filter((p) => offers.includes(p.sessionType))
+      : allPackages;
 
     return {
       id: trainer.id,

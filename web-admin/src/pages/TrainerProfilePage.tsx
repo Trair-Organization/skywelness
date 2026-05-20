@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
@@ -122,6 +122,7 @@ type TrainerProfile = {
 export function TrainerProfilePage() {
   const { trainerId } = useParams<{ trainerId: string }>();
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<TrainerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
@@ -155,6 +156,20 @@ export function TrainerProfilePage() {
       </nav>
 
       <div className="profile-page">
+        {/* Geri butonu */}
+        <button
+          type="button"
+          className="trainer-back-btn"
+          onClick={() => {
+            // Eğer önceki sayfa varsa oraya, yoksa Tüm Eğitmenler'e
+            if (window.history.length > 1) navigate(-1);
+            else navigate('/all-trainers');
+          }}
+          aria-label="Geri"
+        >
+          ← Geri
+        </button>
+
         {/* Hero */}
         <div className="trainer-hero">
           <div className="trainer-hero-photo">
@@ -214,25 +229,6 @@ export function TrainerProfilePage() {
             <h2>📜 Sertifikalar</h2>
             <div className="profile-chips">
               {profile.certifications.map((c, i) => <span key={i} className="profile-chip cert-chip">{c}</span>)}
-            </div>
-          </section>
-        )}
-
-        {/* Hizmetler - sadece PT eğitmenleri için */}
-        {profile.offersSessionTypes.includes('personal_training') && profile.services.length > 0 && (
-          <section className="profile-section">
-            <h2>🛍️ Hizmetler</h2>
-            <div className="services-list">
-              {profile.services.map((s) => (
-                <div key={s.id} className="service-item">
-                  <div>
-                    <h3>{s.name}</h3>
-                    {s.description && <p>{s.description}</p>}
-                    <span className="service-duration">⏱ {s.durationMinutes} dk</span>
-                  </div>
-                  <span className="service-price">{s.price}₺</span>
-                </div>
-              ))}
             </div>
           </section>
         )}
