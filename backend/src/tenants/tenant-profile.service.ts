@@ -118,6 +118,7 @@ export class TenantProfileService {
       trainers: trainers.map((t) => ({
         id: t.id,
         userId: t.userId,
+        publicId: t.user.publicId,
         name: `${t.user.firstName} ${t.user.lastName}`.trim(),
         photoUrl: t.photoUrl ?? t.user.photoUrl,
         specializations: t.specializations ?? [],

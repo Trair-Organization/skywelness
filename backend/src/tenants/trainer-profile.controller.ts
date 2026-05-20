@@ -1,14 +1,19 @@
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Trainer } from '../database/entities/trainer.entity';
 import { Tenant } from '../database/entities/tenant.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { PackageType } from '../database/entities/package-type.entity';
+import { User } from '../database/entities/user.entity';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Public eğitmen profil endpoint'i.
  * Keşif'ten veya kulüp sayfasından eğitmen kartına tıklanınca çağrılır.
+ *
+ * URL parametresi UUID veya publicId (örn. EGT-4R8N) kabul eder.
  */
 @Controller('trainers')
 export class TrainerPublicProfileController {
@@ -17,16 +22,31 @@ export class TrainerPublicProfileController {
     @InjectRepository(Tenant) private readonly tenantsRepo: Repository<Tenant>,
     @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
-  @Get(':trainerId/profile')
-  async getTrainerProfile(
-    @Param('trainerId', new ParseUUIDPipe({ version: '4' })) trainerId: string,
-  ) {
-    const trainer = await this.trainersRepo.findOne({
-      where: { id: trainerId },
-      relations: ['user'],
-    });
+  @Get(':slug/profile')
+  async getTrainerProfile(@Param('slug') slug: string) {
+    let trainer: Trainer | null = null;
+
+    if (UUID_RE.test(slug)) {
+      // UUID — eski URL'ler için geriye uyumluluk
+      trainer = await this.trainersRepo.findOne({
+        where: { id: slug },
+        relations: ['user'],
+      });
+    } else {
+      // publicId (örn. EGT-4R8N) — case-insensitive
+      const upper = slug.toUpperCase();
+      const user = await this.usersRepo.findOne({ where: { publicId: upper } });
+      if (user) {
+        trainer = await this.trainersRepo.findOne({
+          where: { userId: user.id },
+          relations: ['user'],
+        });
+      }
+    }
+
     if (!trainer) {
       return { error: 'Trainer not found' };
     }

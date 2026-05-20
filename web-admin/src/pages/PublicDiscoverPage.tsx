@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 const ClubMap = lazy(() => import('../components/ClubMap').then((m) => ({ default: m.ClubMap })));
 
 import { useFavorite } from '../hooks/useFavorite';
+import { trainerProfilePath } from '../lib/trainerUrl';
 
 type Club = {
   id: string;
@@ -30,6 +31,7 @@ type Club = {
 type Trainer = {
   id: string;
   userId: string;
+  publicId: string | null;
   name: string;
   photoUrl: string | null;
   specialties: string[];
@@ -193,6 +195,16 @@ export function PublicDiscoverPage() {
 
   return (
     <div className="vitrin-shell">
+      {/* Announcement Bar */}
+      <div className="vitrin-announcement-bar">
+        <span>
+          🎉 <strong>Skyland Wellness</strong> artık platformumuzda!
+        </span>
+        <Link to="/club/skyland-wellness" className="vitrin-announcement-link">
+          Keşfet →
+        </Link>
+      </div>
+
       {/* Navigation */}
       <nav className="vitrin-nav">
         <Link to="/" className="vitrin-nav-brand">
@@ -331,6 +343,45 @@ export function PublicDiscoverPage() {
         </header>
       )}
 
+      {/* Stats Strip — sosyal kanıt */}
+      <div className="vitrin-stats-strip">
+        <div className="vitrin-stat-item">
+          <span className="vitrin-stat-icon">🏢</span>
+          <div>
+            <strong>{clubs.length}+</strong>
+            <span>Kulüp</span>
+          </div>
+        </div>
+        <div className="vitrin-stat-item">
+          <span className="vitrin-stat-icon">💪</span>
+          <div>
+            <strong>{trainers.length}+</strong>
+            <span>Eğitmen</span>
+          </div>
+        </div>
+        <div className="vitrin-stat-item">
+          <span className="vitrin-stat-icon">📅</span>
+          <div>
+            <strong>{events.length}+</strong>
+            <span>Etkinlik</span>
+          </div>
+        </div>
+        <div className="vitrin-stat-item">
+          <span className="vitrin-stat-icon">⭐</span>
+          <div>
+            <strong>4.8</strong>
+            <span>Ortalama Puan</span>
+          </div>
+        </div>
+        <div className="vitrin-stat-item">
+          <span className="vitrin-stat-icon">📍</span>
+          <div>
+            <strong>{new Set(clubs.map((c) => c.city).filter(Boolean)).size || 12}+</strong>
+            <span>Şehir</span>
+          </div>
+        </div>
+      </div>
+
       {/* Category Tabs */}
       <div className="vitrin-categories">
         <div className="vitrin-categories-scroll">
@@ -440,14 +491,52 @@ export function PublicDiscoverPage() {
       </div>
 
       {loading && (
-        <div className="vitrin-loading">
-          <div className="vitrin-spinner" />
-          <p>Keşfediliyor...</p>
-        </div>
+        <main className="vitrin-main">
+          <section className="vitrin-section">
+            <div className="vitrin-section-header">
+              <div>
+                <h2>🏢 Kulüpler</h2>
+                <p>Yükleniyor...</p>
+              </div>
+            </div>
+            <div className="vitrin-clubs-grid">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="vitrin-skeleton-card">
+                  <div className="vitrin-skeleton-cover" />
+                  <div className="vitrin-skeleton-body">
+                    <div className="vitrin-skeleton-line w-70" />
+                    <div className="vitrin-skeleton-line w-50" />
+                    <div className="vitrin-skeleton-line w-40" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
       )}
 
       {!loading && (
         <main className="vitrin-main">
+          {/* Campaigns - en üstte */}
+          {campaigns.length > 0 && !searchQuery && (
+            <section className="vitrin-section">
+              <div className="vitrin-section-header">
+                <div>
+                  <h2>🔥 Aktif Kampanyalar</h2>
+                  <p>Kaçırmayın — özel fırsatlar sınırlı süreyle geçerli</p>
+                </div>
+                <Link to="/all-campaigns" className="vitrin-see-all">
+                  Tümünü Gör →
+                </Link>
+              </div>
+              <div className="vitrin-campaigns-grid">
+                {campaigns.map((camp) => (
+                  <CampaignCard key={camp.id} campaign={camp} now={now} />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Featured Clubs */}
           {clubs.filter((c) => c.featured).length > 0 && !hasActiveFilters && (
             <section className="vitrin-section">
@@ -456,6 +545,9 @@ export function PublicDiscoverPage() {
                   <h2>⭐ Öne Çıkan Kulüpler</h2>
                   <p>Platform tarafından doğrulanmış premium partnerler</p>
                 </div>
+                <Link to="/featured-clubs" className="vitrin-see-all">
+                  Tümünü Gör →
+                </Link>
               </div>
               <div className="vitrin-featured-grid">
                 {clubs
@@ -464,6 +556,26 @@ export function PublicDiscoverPage() {
                   .map((club) => (
                     <FeaturedClubCard key={club.id} club={club} />
                   ))}
+              </div>
+            </section>
+          )}
+
+          {/* Events */}
+          {events.length > 0 && !searchQuery && (
+            <section className="vitrin-section">
+              <div className="vitrin-section-header">
+                <div>
+                  <h2>📅 Yaklaşan Etkinlikler</h2>
+                  <p>Tüm kulüplerden açık etkinlikler ve dersler</p>
+                </div>
+                <Link to="/all-events" className="vitrin-see-all">
+                  Tümünü Gör →
+                </Link>
+              </div>
+              <div className="vitrin-events-grid">
+                {events.map((ev) => (
+                  <EventCard key={ev.id} event={ev} />
+                ))}
               </div>
             </section>
           )}
@@ -480,6 +592,9 @@ export function PublicDiscoverPage() {
                 </h2>
                 <p>{clubs.length} sonuç bulundu</p>
               </div>
+              <Link to="/all-clubs" className="vitrin-see-all">
+                Tümünü Gör →
+              </Link>
             </div>
             {clubs.length === 0 ? (
               <div className="vitrin-empty">
@@ -514,47 +629,13 @@ export function PublicDiscoverPage() {
                   <h2>💪 Popüler Eğitmenler</h2>
                   <p>Sertifikalı ve kullanıcılar tarafından derecelendirilmiş</p>
                 </div>
-                <Link to="/discover?vertical=" className="vitrin-see-all">
+                <Link to="/all-trainers" className="vitrin-see-all">
                   Tümünü Gör →
                 </Link>
               </div>
               <div className="vitrin-trainers-grid">
                 {trainers.map((tr) => (
                   <TrainerCard key={tr.id} trainer={tr} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Events */}
-          {events.length > 0 && !searchQuery && (
-            <section className="vitrin-section">
-              <div className="vitrin-section-header">
-                <div>
-                  <h2>📅 Yaklaşan Etkinlikler</h2>
-                  <p>Tüm kulüplerden açık etkinlikler ve dersler</p>
-                </div>
-              </div>
-              <div className="vitrin-events-grid">
-                {events.map((ev) => (
-                  <EventCard key={ev.id} event={ev} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Campaigns */}
-          {campaigns.length > 0 && !searchQuery && (
-            <section className="vitrin-section">
-              <div className="vitrin-section-header">
-                <div>
-                  <h2>🔥 Aktif Kampanyalar</h2>
-                  <p>Kaçırmayın — özel fırsatlar sınırlı süreyle geçerli</p>
-                </div>
-              </div>
-              <div className="vitrin-campaigns-grid">
-                {campaigns.map((camp) => (
-                  <CampaignCard key={camp.id} campaign={camp} now={now} />
                 ))}
               </div>
             </section>
@@ -580,10 +661,61 @@ export function PublicDiscoverPage() {
 
       {/* Footer */}
       <footer className="vitrin-footer">
+        {/* App Download Banner */}
+        <div className="vitrin-app-banner">
+          <div className="vitrin-app-banner-content">
+            <h3>📱 Mobil uygulamamız çok yakında</h3>
+            <p>İlk haberi alanlara özel kampanyalar — şimdi e-posta bırakın</p>
+            <form
+              className="vitrin-app-banner-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget as HTMLFormElement);
+                const email = fd.get('email');
+                if (email) {
+                  alert('Teşekkürler! Lansmanda haberdar olacaksınız.');
+                  (e.currentTarget as HTMLFormElement).reset();
+                }
+              }}
+            >
+              <input
+                type="email"
+                name="email"
+                placeholder="ornek@mail.com"
+                required
+                className="vitrin-app-banner-input"
+              />
+              <button type="submit" className="vitrin-app-banner-btn">
+                Haberdar Et
+              </button>
+            </form>
+          </div>
+          <div className="vitrin-app-banner-badges">
+            <span className="vitrin-store-badge">
+              <span className="vitrin-store-icon">🍎</span>
+              <div>
+                <small>Çok Yakında</small>
+                <strong>App Store</strong>
+              </div>
+            </span>
+            <span className="vitrin-store-badge">
+              <span className="vitrin-store-icon">▶</span>
+              <div>
+                <small>Çok Yakında</small>
+                <strong>Google Play</strong>
+              </div>
+            </span>
+          </div>
+        </div>
+
         <div className="vitrin-footer-top">
           <div className="vitrin-footer-brand">
             <img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" />
             <p>Sağlıklı yaşamın dijital platformu</p>
+            <div className="vitrin-footer-trust">
+              <span className="vitrin-trust-item">🔒 SSL Güvenli</span>
+              <span className="vitrin-trust-item">🛡️ KVKK Uyumlu</span>
+            </div>
           </div>
           <div className="vitrin-footer-col">
             <h4>Keşfet</h4>
@@ -605,19 +737,52 @@ export function PublicDiscoverPage() {
             <Link to="/privacy">Gizlilik Sözleşmesi</Link>
             <Link to="/terms">Kullanım Şartları</Link>
             <Link to="/service-terms">Hizmet Şartları</Link>
+            <Link to="/privacy">KVKK Aydınlatma Metni</Link>
           </div>
         </div>
+
+        {/* Payment Methods */}
+        <div className="vitrin-footer-payments">
+          <span className="vitrin-payment-label">Güvenli Ödeme:</span>
+          <div className="vitrin-payment-icons">
+            <span className="vitrin-payment-badge">VISA</span>
+            <span className="vitrin-payment-badge">Mastercard</span>
+            <span className="vitrin-payment-badge">Troy</span>
+            <span className="vitrin-payment-badge">🔒 3D Secure</span>
+            <span className="vitrin-payment-badge">Stripe</span>
+          </div>
+        </div>
+
         <div className="vitrin-footer-bottom">
-          <p>© 2025 WellnessClub.tech — Tüm hakları saklıdır.</p>
+          <p>© 2026 WellnessClub.tech — Tüm hakları saklıdır.</p>
           <div className="vitrin-footer-social">
             <a
               href="https://instagram.com/wellnessclub.tr"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Instagram"
             >
-              📸 Instagram
+              📸
             </a>
-            <a href="mailto:info@wellnessclub.com">✉️ E-posta</a>
+            <a
+              href="https://twitter.com/wellnessclub_tr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Twitter"
+            >
+              𝕏
+            </a>
+            <a
+              href="https://linkedin.com/company/wellnessclub-tr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+            >
+              💼
+            </a>
+            <a href="mailto:info@wellnessclub.tech" aria-label="E-posta">
+              ✉️
+            </a>
           </div>
         </div>
       </footer>
@@ -693,7 +858,10 @@ function ClubCard({ club }: { club: Club }) {
           ) : (
             <div className="vitrin-club-ph">{club.name.slice(0, 2).toUpperCase()}</div>
           )}
-          {club.featured && <span className="vitrin-club-featured-dot">⭐</span>}
+          <div className="vitrin-club-badges">
+            {club.featured && <span className="vitrin-badge premium">⭐ Premium</span>}
+            <span className="vitrin-badge verified">✓ Doğrulanmış</span>
+          </div>
           {club.vertical && (
             <span className="vitrin-club-vertical">
               {VERTICALS.find((v) => v.key === club.vertical)?.icon || '🏢'}
@@ -745,7 +913,10 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
           {isFavorite ? '❤️' : '🤍'}
         </button>
       )}
-      <Link to={`/trainer/${trainer.id}`} className="vitrin-trainer-card">
+      <Link
+        to={trainerProfilePath({ publicId: trainer.publicId, fallbackId: trainer.id })}
+        className="vitrin-trainer-card"
+      >
         <div className="vitrin-trainer-photo">
           {trainer.photoUrl ? (
             <img src={trainer.photoUrl} alt={trainer.name} />

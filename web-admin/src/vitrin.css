@@ -4482,3 +4482,627 @@
     font-size: 1.3rem;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Faz 1 — Profesyonel Marketplace iyileştirmeleri
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Announcement Bar (üst duyuru şeridi) ─── */
+.vitrin-announcement-bar {
+  background: linear-gradient(90deg, #38bdf8 0%, #818cf8 50%, #a855f7 100%);
+  color: #ffffff;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 50;
+}
+.vitrin-announcement-bar strong {
+  color: #ffffff;
+  font-weight: 800;
+}
+.vitrin-announcement-link {
+  color: #ffffff;
+  text-decoration: underline;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.vitrin-announcement-link:hover {
+  color: #fef3c7;
+}
+
+/* ─── Stats Strip (sosyal kanıt) ─── */
+.vitrin-stats-strip {
+  max-width: 1400px;
+  margin: 1.5rem auto 0;
+  padding: 1.25rem 2rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(124, 58, 237, 0.06) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+.vitrin-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+}
+.vitrin-stat-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.vitrin-stat-item > div {
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-stat-item strong {
+  color: #f1f5f9;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.vitrin-stat-item span {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .vitrin-stats-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+}
+
+/* ─── Card Badges ─── */
+.vitrin-club-badges {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  z-index: 3;
+}
+.vitrin-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.vitrin-badge.premium {
+  background: rgba(251, 191, 36, 0.92);
+  color: #422006;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.vitrin-badge.verified {
+  background: rgba(16, 185, 129, 0.92);
+  color: #022c22;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.vitrin-badge.new {
+  background: rgba(56, 189, 248, 0.92);
+  color: #082f49;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* ─── Skeleton Loader ─── */
+.vitrin-skeleton-card {
+  background: rgba(20, 20, 30, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.vitrin-skeleton-cover {
+  width: 100%;
+  height: 150px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.05) 0%,
+    rgba(148, 163, 184, 0.15) 50%,
+    rgba(148, 163, 184, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+.vitrin-skeleton-body {
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vitrin-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.05) 0%,
+    rgba(148, 163, 184, 0.15) 50%,
+    rgba(148, 163, 184, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+.vitrin-skeleton-line.w-70 {
+  width: 70%;
+}
+.vitrin-skeleton-line.w-50 {
+  width: 50%;
+}
+.vitrin-skeleton-line.w-40 {
+  width: 40%;
+}
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ─── App Download Banner ─── */
+.vitrin-app-banner {
+  max-width: 1400px;
+  margin: 3rem auto 0;
+  padding: 2.5rem 2rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(124, 58, 237, 0.08) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.vitrin-app-banner-content {
+  flex: 1;
+  min-width: 280px;
+}
+.vitrin-app-banner-content h3 {
+  color: #f1f5f9;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0 0 0.4rem;
+}
+.vitrin-app-banner-content p {
+  color: #94a3b8;
+  font-size: 0.92rem;
+  margin: 0 0 1rem;
+}
+.vitrin-app-banner-form {
+  display: flex;
+  gap: 8px;
+  max-width: 420px;
+}
+.vitrin-app-banner-input {
+  flex: 1;
+  height: 42px;
+  padding: 0 14px;
+  background: rgba(10, 14, 26, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  color: #f1f5f9;
+  font-size: 0.9rem;
+  outline: none;
+}
+.vitrin-app-banner-input:focus {
+  border-color: rgba(56, 189, 248, 0.6);
+}
+.vitrin-app-banner-btn {
+  height: 42px;
+  padding: 0 1.25rem;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  color: #0a0a0f;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.vitrin-app-banner-btn:hover {
+  transform: translateY(-1px);
+}
+.vitrin-app-banner-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vitrin-store-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 12px;
+  color: #e2e8f0;
+}
+.vitrin-store-icon {
+  font-size: 1.6rem;
+}
+.vitrin-store-badge small {
+  display: block;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.vitrin-store-badge strong {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* ─── Footer Trust & Payments ─── */
+.vitrin-footer-trust {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.vitrin-trust-item {
+  font-size: 0.72rem;
+  color: #64748b;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.vitrin-footer-payments {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.25rem 2rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.vitrin-payment-label {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.vitrin-payment-icons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vitrin-payment-badge {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Footer social - icon stilini güncelle ─── */
+.vitrin-footer-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 50%;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: all 0.15s;
+}
+.vitrin-footer-social a:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .vitrin-app-banner {
+    padding: 1.75rem 1.25rem;
+    flex-direction: column;
+    text-align: center;
+  }
+  .vitrin-app-banner-content {
+    text-align: center;
+  }
+  .vitrin-app-banner-form {
+    margin: 0 auto;
+  }
+  .vitrin-footer-payments {
+    padding: 1rem 1.25rem;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STANDARDIZE KART SİSTEMİ (Marketplace Pro)
+   Tüm kartlar için tutarlı boyut, oran, padding, hover davranışı.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Tutarlı kart taban değişkenleri ─── */
+:root {
+  --card-radius: 16px;
+  --card-border: 1px solid rgba(148, 163, 184, 0.1);
+  --card-border-hover: rgba(56, 189, 248, 0.4);
+  --card-bg: rgba(20, 20, 30, 0.7);
+  --card-bg-hover: rgba(20, 20, 30, 0.9);
+  --card-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --card-padding-body: 1rem 1.15rem 1.15rem;
+  --card-title-size: 0.95rem;
+  --card-meta-size: 0.78rem;
+}
+
+/* ─── Grids — sütun sayısı sabitlenmiş, boyut tutarlı ─── */
+.vitrin-featured-grid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+.vitrin-clubs-grid {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.vitrin-events-grid {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.vitrin-campaigns-grid {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.vitrin-trainers-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+/* ─── Featured Card (HERO tier — büyük) ─── */
+.vitrin-featured-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-featured-card:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+.vitrin-featured-cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+.vitrin-featured-card .vitrin-featured-body {
+  padding: var(--card-padding-body);
+}
+.vitrin-featured-card .vitrin-featured-body h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+}
+
+/* ─── Club Card (STANDARD tier) ─── */
+.vitrin-club-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-club-card:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+.vitrin-club-cover {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+.vitrin-club-body {
+  padding: var(--card-padding-body);
+}
+.vitrin-club-body h3 {
+  font-size: var(--card-title-size);
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+}
+
+/* ─── Event Card (STANDARD tier) ─── */
+.vitrin-event-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-event-card:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+.vitrin-event-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+.vitrin-event-img img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+.vitrin-event-body {
+  padding: var(--card-padding-body);
+}
+.vitrin-event-body h3 {
+  font-size: var(--card-title-size);
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+}
+
+/* ─── Campaign Card (STANDARD tier) ─── */
+.vitrin-campaign-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-campaign-card:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+.vitrin-campaign-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  object-fit: cover;
+}
+.vitrin-campaign-body {
+  padding: var(--card-padding-body);
+}
+.vitrin-campaign-header h3 {
+  font-size: var(--card-title-size);
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ─── Trainer Card (COMPACT tier — küçük insan kartı) ─── */
+.vitrin-trainer-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-trainer-card:hover {
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+.vitrin-trainer-photo {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+.vitrin-trainer-photo img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+.vitrin-trainer-body {
+  padding: 0.85rem 1rem;
+}
+.vitrin-trainer-body h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+}
+
+/* ─── Tablet (≤1024px) ─── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .vitrin-featured-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vitrin-clubs-grid,
+  .vitrin-events-grid,
+  .vitrin-campaigns-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .vitrin-trainers-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ─── Mobil (≤768px) ─── */
+@media (max-width: 768px) {
+  .vitrin-featured-grid {
+    grid-template-columns: 1fr;
+  }
+  .vitrin-clubs-grid,
+  .vitrin-events-grid,
+  .vitrin-campaigns-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .vitrin-trainers-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+  .vitrin-featured-card .vitrin-featured-body h3 {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .vitrin-trainers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

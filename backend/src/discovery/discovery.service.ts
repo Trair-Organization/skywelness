@@ -141,6 +141,7 @@ export class DiscoveryService {
     return profiles.map((p) => ({
       id: p.trainerId,
       userId: p.userId,
+      publicId: p.user.publicId,
       name: `${p.user.firstName} ${p.user.lastName}`.trim(),
       photoUrl: p.photoUrl ?? p.user.photoUrl,
       city: p.city,

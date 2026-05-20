@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { useFavorite } from '../hooks/useFavorite';
+import { trainerProfilePath } from '../lib/trainerUrl';
 
 // ═══ Types ═══════════════════════════════════════════════════════════════════
 
@@ -23,6 +24,7 @@ type ProfileData = {
   trainers: Array<{
     id: string;
     name: string;
+    publicId?: string | null;
     photoUrl: string | null;
     specializations: string[];
     offersSessionTypes: string[];
@@ -741,9 +743,9 @@ export function ClubProfilePage() {
             {ptTrainers.length > 0 && (
               <>
                 <h3 className="pp-sub">Personal Training</h3>
-                <div className="pp-trainers-grid">
+                <div className="vitrin-trainers-grid">
                   {ptTrainers.map((t) => (
-                    <TrainerCard key={t.id} trainer={t} />
+                    <TrainerCard key={t.id} trainer={t} clubName={profile.name} />
                   ))}
                 </div>
               </>
@@ -751,9 +753,9 @@ export function ClubProfilePage() {
             {massageTrainers.length > 0 && (
               <>
                 <h3 className="pp-sub">Masözler</h3>
-                <div className="pp-trainers-grid">
+                <div className="vitrin-trainers-grid">
                   {massageTrainers.map((t) => (
-                    <TrainerCard key={t.id} trainer={t} />
+                    <TrainerCard key={t.id} trainer={t} clubName={profile.name} />
                   ))}
                 </div>
               </>
@@ -861,24 +863,60 @@ export function ClubProfilePage() {
 
 // ═══ Sub-Components ══════════════════════════════════════════════════════════
 
-function TrainerCard({ trainer }: { trainer: ProfileData['trainers'][0] }) {
+function TrainerCard({
+  trainer,
+  clubName,
+}: {
+  trainer: ProfileData['trainers'][0];
+  clubName?: string;
+}) {
+  const { isFavorite, toggle, isLoggedIn } = useFavorite('trainer', trainer.id);
+
   return (
-    <Link to={`/trainer/${trainer.id}`} className="pp-trainer-card">
-      <div className="pp-trainer-photo">
-        {trainer.photoUrl ? (
-          <img src={trainer.photoUrl} alt={trainer.name} />
-        ) : (
-          <span>{trainer.name.charAt(0)}</span>
-        )}
-      </div>
-      <strong>{trainer.name}</strong>
-      {Number(trainer.avgRating) > 0 && (
-        <span className="pp-trainer-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
+    <div className="vitrin-club-card-wrapper">
+      {isLoggedIn && (
+        <button
+          className={`vitrin-fav-btn ${isFavorite ? 'active' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void toggle();
+          }}
+          aria-label={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+        >
+          {isFavorite ? '❤️' : '🤍'}
+        </button>
       )}
-      {trainer.specializations.length > 0 && (
-        <span className="pp-trainer-spec">{trainer.specializations.slice(0, 2).join(', ')}</span>
-      )}
-    </Link>
+      <Link
+        to={trainerProfilePath({ publicId: trainer.publicId, fallbackId: trainer.id })}
+        className="vitrin-trainer-card"
+      >
+        <div className="vitrin-trainer-photo">
+          {trainer.photoUrl ? (
+            <img src={trainer.photoUrl} alt={trainer.name} />
+          ) : (
+            <div className="vitrin-trainer-ph">{trainer.name.charAt(0).toUpperCase()}</div>
+          )}
+        </div>
+        <div className="vitrin-trainer-body">
+          <h3>{trainer.name}</h3>
+          {clubName && <p className="vitrin-trainer-club">{clubName}</p>}
+          <div className="vitrin-trainer-stats">
+            {Number(trainer.avgRating) > 0 && (
+              <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
+            )}
+            {trainer.totalSessions > 0 && (
+              <span className="vitrin-trainer-sessions">{trainer.totalSessions} seans</span>
+            )}
+          </div>
+          {trainer.specializations.length > 0 && (
+            <p className="vitrin-trainer-specs">
+              {trainer.specializations.slice(0, 2).join(' · ')}
+            </p>
+          )}
+        </div>
+      </Link>
+    </div>
   );
 }
 

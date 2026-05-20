@@ -5,6 +5,11 @@ import { AuthProvider } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { AllCampaignsPage } from './pages/AllCampaignsPage';
+import { AllEventsPage } from './pages/AllEventsPage';
+import { AllTrainersPage } from './pages/AllTrainersPage';
+import { AllClubsPage } from './pages/AllClubsPage';
+import { FeaturedClubsPage } from './pages/FeaturedClubsPage';
 import { PublicDiscoverPage } from './pages/PublicDiscoverPage';
 import { PublicRegisterPage } from './pages/PublicRegisterPage';
 import { PartnerRegisterPage } from './pages/PartnerRegisterPage';
@@ -86,6 +91,11 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/all-campaigns" element={<AllCampaignsPage />} />
+      <Route path="/all-events" element={<AllEventsPage />} />
+      <Route path="/all-trainers" element={<AllTrainersPage />} />
+      <Route path="/all-clubs" element={<AllClubsPage />} />
+      <Route path="/featured-clubs" element={<FeaturedClubsPage />} />
       <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
         <Route path="/club/dashboard" element={<ClubDashboardPage />} />
         <Route path="/club/profile" element={<ClubProfileEditPage />} />
