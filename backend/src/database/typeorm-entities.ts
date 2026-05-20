@@ -51,6 +51,11 @@ import { Booking } from './entities/booking.entity';
 import { Addon } from './entities/addon.entity';
 import { BookingAddon } from './entities/booking-addon.entity';
 import { TrainerMemberNote } from './entities/trainer-member-note.entity';
+import { TrainerMemberMeasurement } from './entities/trainer-member-measurement.entity';
+import { TrainerMemberAssessment } from './entities/trainer-member-assessment.entity';
+import { TrainerMemberPhoto } from './entities/trainer-member-photo.entity';
+import { TrainerMemberGoal } from './entities/trainer-member-goal.entity';
+import { TrainerWorkoutProgram } from './entities/trainer-workout-program.entity';
 import { TrainerProfile } from './entities/trainer-profile.entity';
 import { Trainer } from './entities/trainer.entity';
 import { User } from './entities/user.entity';
@@ -91,6 +96,11 @@ export const typeOrmEntities = [
   Addon,
   BookingAddon,
   TrainerMemberNote,
+  TrainerMemberMeasurement,
+  TrainerMemberAssessment,
+  TrainerMemberPhoto,
+  TrainerMemberGoal,
+  TrainerWorkoutProgram,
   PackageType,
   PackageRequest,
   Package,
