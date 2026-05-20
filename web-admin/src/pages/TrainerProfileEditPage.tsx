@@ -487,7 +487,18 @@ export function TrainerProfileEditPage() {
           <section className="profile-card">
             <h2 className="profile-card-title">🏋️ Sunduğum Hizmetler</h2>
             <div className="profile-chips-toggle">
-              {SESSION_TYPE_OPTIONS.map((opt) => {
+              {SESSION_TYPE_OPTIONS.filter((opt) => {
+                // Eğitmen sadece zaten verdiği veya yeni eklemek istediği türleri görür
+                // Masöz ise PT'yi göstermez, PT ise masajı göstermez (ayrı disiplin)
+                if (offersSessionTypes.length === 0) return true;
+                // PT eğitmeni — sadece PT göster
+                if (offersSessionTypes.includes('personal_training') && opt.value === 'massage')
+                  return false;
+                // Masöz — sadece masaj göster
+                if (offersSessionTypes.includes('massage') && opt.value === 'personal_training')
+                  return false;
+                return true;
+              }).map((opt) => {
                 const active = offersSessionTypes.includes(opt.value);
                 return (
                   <button
@@ -503,7 +514,7 @@ export function TrainerProfileEditPage() {
               })}
             </div>
             <small className="profile-hint">
-              Hangi hizmetleri verebildiğinizi seçin — üyeler keşif sayfasında bu hizmetlere göre filtreliyor.
+              Verdiğiniz hizmetleri seçin — üyeler keşif sayfasında bu hizmetlere göre filtreliyor.
             </small>
           </section>
 
