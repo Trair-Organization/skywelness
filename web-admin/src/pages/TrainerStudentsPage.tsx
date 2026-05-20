@@ -71,7 +71,23 @@ export function TrainerStudentsPage() {
   const [systemSearching, setSystemSearching] = useState(false);
 
   // Tab 3: External
-  const [extForm, setExtForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+  const [extForm, setExtForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    gender: '' as '' | 'male' | 'female' | 'other',
+    healthNotes: '',
+    heightCm: '',
+    weightKg: '',
+    goalCategory: '' as '' | 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'fat_loss' | 'strength' | 'endurance' | 'flexibility' | 'rehab' | 'general',
+    goalTitle: '',
+    goalTargetValue: '',
+    goalTargetUnit: '',
+    sendInvite: true,
+  });
+  const [extStep, setExtStep] = useState<1 | 2>(1);
   const [extSaving, setExtSaving] = useState(false);
 
   // Tab 4: Invite
@@ -195,17 +211,64 @@ export function TrainerStudentsPage() {
   async function addExternalStudent() {
     const { firstName, lastName, email, phone } = extForm;
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
-      flashErr('Tüm alanlar zorunludur');
+      flashErr('Ad, soyad, e-posta ve telefon zorunludur');
+      setExtStep(1);
       return;
     }
     setExtSaving(true);
     try {
-      await apiJson('/trainer-panel/students/add-external', {
+      const payload: Record<string, unknown> = {
+        firstName: extForm.firstName.trim(),
+        lastName: extForm.lastName.trim(),
+        email: extForm.email.trim(),
+        phone: extForm.phone.trim(),
+        sendInvite: extForm.sendInvite,
+      };
+      if (extForm.birthDate) payload.birthDate = extForm.birthDate;
+      if (extForm.gender) payload.gender = extForm.gender;
+      if (extForm.healthNotes.trim()) payload.healthNotes = extForm.healthNotes.trim();
+      if (extForm.heightCm) payload.heightCm = parseFloat(extForm.heightCm);
+      if (extForm.weightKg) payload.weightKg = parseFloat(extForm.weightKg);
+      if (extForm.goalCategory) payload.goalCategory = extForm.goalCategory;
+      if (extForm.goalTitle.trim()) payload.goalTitle = extForm.goalTitle.trim();
+      if (extForm.goalTargetValue) payload.goalTargetValue = parseFloat(extForm.goalTargetValue);
+      if (extForm.goalTargetUnit.trim()) payload.goalTargetUnit = extForm.goalTargetUnit.trim();
+
+      const res = await apiJson<{
+        ok: boolean;
+        userId: string;
+        isNewUser: boolean;
+        inviteSent: boolean;
+      }>('/trainer-panel/students/add-external', {
         method: 'POST',
-        body: JSON.stringify(extForm),
+        body: JSON.stringify(payload),
       });
-      flash(`✅ ${firstName} ${lastName} bireysel öğrenci olarak eklendi`);
-      setExtForm({ firstName: '', lastName: '', email: '', phone: '' });
+
+      if (res.inviteSent) {
+        flash(`✅ ${firstName} ${lastName} eklendi. Hesap aktivasyon e-postası gönderildi.`);
+      } else if (res.isNewUser) {
+        flash(`✅ ${firstName} ${lastName} öğrenci olarak kaydedildi.`);
+      } else {
+        flash(`✅ ${firstName} ${lastName} mevcut hesabıyla bağlandı.`);
+      }
+      // Form sıfırla
+      setExtForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        birthDate: '',
+        gender: '',
+        healthNotes: '',
+        heightCm: '',
+        weightKg: '',
+        goalCategory: '',
+        goalTitle: '',
+        goalTargetValue: '',
+        goalTargetUnit: '',
+        sendInvite: true,
+      });
+      setExtStep(1);
       await load();
     } catch (e) {
       flashErr(e instanceof ApiError ? e.message : 'Eklenemedi');
@@ -508,74 +571,326 @@ export function TrainerStudentsPage() {
                 </div>
               )}
 
-              {/* Tab 3: External */}
+              {/* Tab 3: External — 2 adımlı sihirbaz */}
               {addTab === 'external' && (
                 <div>
                   <p className="muted" style={{ marginTop: 0 }}>
-                    Sistemde olmayan kişisel öğrencinizi manuel ekleyin. Kayıt oluşturulur ve size
-                    bağlanır. Öğrenci daha sonra mailini kullanarak hesabını aktive edebilir.
+                    Sistemde olmayan öğrencinizi manuel ekleyin. İsterseniz davet maili gönderelim,
+                    öğrencinin kendi şifresini belirleyip platforma giriş yapmasına yardımcı olun.
                   </p>
-                  <div className="services-form-grid">
-                    <label className="profile-field">
-                      <span>Ad *</span>
-                      <input
-                        type="text"
-                        className="profile-input"
-                        value={extForm.firstName}
-                        onChange={(e) =>
-                          setExtForm({ ...extForm, firstName: e.target.value })
+
+                  {/* Adım göstergesi */}
+                  <div className="ext-stepper">
+                    <button
+                      type="button"
+                      className={`ext-step ${extStep === 1 ? 'active' : ''}`}
+                      onClick={() => setExtStep(1)}
+                    >
+                      <span className="ext-step-num">1</span>
+                      <span>Kişisel Bilgiler</span>
+                    </button>
+                    <span className="ext-step-line" />
+                    <button
+                      type="button"
+                      className={`ext-step ${extStep === 2 ? 'active' : ''}`}
+                      onClick={() => {
+                        if (extForm.firstName.trim() && extForm.lastName.trim() && extForm.email.trim() && extForm.phone.trim()) {
+                          setExtStep(2);
+                        } else {
+                          flashErr('Önce 1. adımdaki zorunlu alanları doldurun');
                         }
-                        placeholder="Ahmet"
-                      />
-                    </label>
-                    <label className="profile-field">
-                      <span>Soyad *</span>
-                      <input
-                        type="text"
-                        className="profile-input"
-                        value={extForm.lastName}
-                        onChange={(e) => setExtForm({ ...extForm, lastName: e.target.value })}
-                        placeholder="Yılmaz"
-                      />
-                    </label>
-                    <label className="profile-field" style={{ gridColumn: '1 / -1' }}>
-                      <span>E-posta *</span>
-                      <input
-                        type="email"
-                        className="profile-input"
-                        value={extForm.email}
-                        onChange={(e) => setExtForm({ ...extForm, email: e.target.value })}
-                        placeholder="ahmet@ornek.com"
-                      />
-                    </label>
-                    <label className="profile-field" style={{ gridColumn: '1 / -1' }}>
-                      <span>Telefon *</span>
-                      <input
-                        type="tel"
-                        className="profile-input"
-                        value={extForm.phone}
-                        onChange={(e) => setExtForm({ ...extForm, phone: e.target.value })}
-                        placeholder="+90 555 123 4567"
-                      />
-                    </label>
+                      }}
+                    >
+                      <span className="ext-step-num">2</span>
+                      <span>Başlangıç & Hedef (opsiyonel)</span>
+                    </button>
                   </div>
-                  <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      className="btn-outline"
-                      onClick={() => setShowAddModal(false)}
-                      disabled={extSaving}
-                    >
-                      Kapat
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => void addExternalStudent()}
-                      disabled={extSaving}
-                    >
-                      {extSaving ? '⏳ Ekleniyor...' : '✓ Öğrenci Olarak Kaydet'}
-                    </button>
+
+                  {extStep === 1 && (
+                    <div className="services-form-grid" style={{ marginTop: '1rem' }}>
+                      <label className="profile-field">
+                        <span>Ad *</span>
+                        <input
+                          type="text"
+                          className="profile-input"
+                          value={extForm.firstName}
+                          onChange={(e) => setExtForm({ ...extForm, firstName: e.target.value })}
+                          placeholder="Ahmet"
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Soyad *</span>
+                        <input
+                          type="text"
+                          className="profile-input"
+                          value={extForm.lastName}
+                          onChange={(e) => setExtForm({ ...extForm, lastName: e.target.value })}
+                          placeholder="Yılmaz"
+                        />
+                      </label>
+                      <label className="profile-field" style={{ gridColumn: '1 / -1' }}>
+                        <span>E-posta *</span>
+                        <input
+                          type="email"
+                          className="profile-input"
+                          value={extForm.email}
+                          onChange={(e) => setExtForm({ ...extForm, email: e.target.value })}
+                          placeholder="ahmet@ornek.com"
+                        />
+                      </label>
+                      <label className="profile-field" style={{ gridColumn: '1 / -1' }}>
+                        <span>Telefon *</span>
+                        <input
+                          type="tel"
+                          className="profile-input"
+                          value={extForm.phone}
+                          onChange={(e) => setExtForm({ ...extForm, phone: e.target.value })}
+                          placeholder="+90 555 123 4567"
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Doğum Tarihi</span>
+                        <input
+                          type="date"
+                          className="profile-input"
+                          value={extForm.birthDate}
+                          onChange={(e) => setExtForm({ ...extForm, birthDate: e.target.value })}
+                          max={new Date().toISOString().slice(0, 10)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Cinsiyet</span>
+                        <select
+                          className="profile-input"
+                          value={extForm.gender}
+                          onChange={(e) =>
+                            setExtForm({
+                              ...extForm,
+                              gender: e.target.value as typeof extForm.gender,
+                            })
+                          }
+                        >
+                          <option value="">Seçilmedi</option>
+                          <option value="female">Kadın</option>
+                          <option value="male">Erkek</option>
+                          <option value="other">Belirtmek istemiyorum</option>
+                        </select>
+                      </label>
+                      <label className="profile-field" style={{ gridColumn: '1 / -1' }}>
+                        <span>Sağlık Notu / Yaralanma Geçmişi</span>
+                        <textarea
+                          className="profile-input profile-textarea"
+                          value={extForm.healthNotes}
+                          onChange={(e) =>
+                            setExtForm({ ...extForm, healthNotes: e.target.value })
+                          }
+                          rows={2}
+                          maxLength={1000}
+                          placeholder="Diz ameliyatı geçmişi, kalp rahatsızlığı, alerji vb. (sadece siz görürsünüz)"
+                        />
+                      </label>
+
+                      <div className="ext-invite-toggle" style={{ gridColumn: '1 / -1' }}>
+                        <label
+                          style={{
+                            display: 'flex',
+                            gap: '0.5rem',
+                            alignItems: 'flex-start',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={extForm.sendInvite}
+                            onChange={(e) =>
+                              setExtForm({ ...extForm, sendInvite: e.target.checked })
+                            }
+                            style={{ marginTop: 3 }}
+                          />
+                          <span>
+                            <strong>📧 Davet maili gönder</strong>
+                            <br />
+                            <span className="muted" style={{ fontSize: '0.82rem' }}>
+                              Öğrenci kendi şifresini belirleyip platforma giriş yapabilir, ders
+                              programını görebilir.
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {extStep === 2 && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <h4 style={{ margin: '0 0 0.5rem', color: '#0f172a' }}>
+                        📏 Başlangıç Ölçümleri
+                      </h4>
+                      <p className="muted" style={{ fontSize: '0.82rem', margin: '0 0 0.75rem' }}>
+                        Şimdi girilirse otomatik ilk ölçüm kaydı oluşur. Atlayabilirsiniz, sonradan
+                        öğrenci kartından girebilirsiniz.
+                      </p>
+                      <div className="services-form-grid">
+                        <label className="profile-field">
+                          <span>Boy (cm)</span>
+                          <input
+                            type="number"
+                            min={50}
+                            max={250}
+                            step="0.1"
+                            className="profile-input"
+                            value={extForm.heightCm}
+                            onChange={(e) => setExtForm({ ...extForm, heightCm: e.target.value })}
+                            placeholder="175"
+                          />
+                        </label>
+                        <label className="profile-field">
+                          <span>Mevcut Kilo (kg)</span>
+                          <input
+                            type="number"
+                            min={20}
+                            max={300}
+                            step="0.1"
+                            className="profile-input"
+                            value={extForm.weightKg}
+                            onChange={(e) => setExtForm({ ...extForm, weightKg: e.target.value })}
+                            placeholder="72.5"
+                          />
+                        </label>
+                      </div>
+
+                      <h4 style={{ margin: '1.25rem 0 0.5rem', color: '#0f172a' }}>
+                        🎯 Birincil Hedef
+                      </h4>
+                      <p className="muted" style={{ fontSize: '0.82rem', margin: '0 0 0.75rem' }}>
+                        Öğrencinin asıl hedefi. Sonradan ekleyebilirsiniz.
+                      </p>
+                      <div className="services-form-grid">
+                        <label className="profile-field">
+                          <span>Hedef Kategorisi</span>
+                          <select
+                            className="profile-input"
+                            value={extForm.goalCategory}
+                            onChange={(e) =>
+                              setExtForm({
+                                ...extForm,
+                                goalCategory: e.target.value as typeof extForm.goalCategory,
+                              })
+                            }
+                          >
+                            <option value="">Seçilmedi</option>
+                            <option value="weight_loss">⚖️ Kilo Verme</option>
+                            <option value="weight_gain">📈 Kilo Alma</option>
+                            <option value="muscle_gain">💪 Kas Kazanımı</option>
+                            <option value="fat_loss">🔥 Yağ Yakma</option>
+                            <option value="strength">🏋️ Kuvvet</option>
+                            <option value="endurance">🏃 Dayanıklılık</option>
+                            <option value="flexibility">🤸 Esneklik</option>
+                            <option value="rehab">🩹 Rehabilitasyon</option>
+                            <option value="general">🎯 Genel</option>
+                          </select>
+                        </label>
+                        <label className="profile-field">
+                          <span>Hedef Başlığı</span>
+                          <input
+                            type="text"
+                            className="profile-input"
+                            value={extForm.goalTitle}
+                            onChange={(e) => setExtForm({ ...extForm, goalTitle: e.target.value })}
+                            placeholder="3 ayda 10 kg vermek"
+                          />
+                        </label>
+                        <label className="profile-field">
+                          <span>Hedef Değer</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="profile-input"
+                            value={extForm.goalTargetValue}
+                            onChange={(e) =>
+                              setExtForm({ ...extForm, goalTargetValue: e.target.value })
+                            }
+                            placeholder="62"
+                          />
+                        </label>
+                        <label className="profile-field">
+                          <span>Birim</span>
+                          <input
+                            type="text"
+                            className="profile-input"
+                            value={extForm.goalTargetUnit}
+                            onChange={(e) =>
+                              setExtForm({ ...extForm, goalTargetUnit: e.target.value })
+                            }
+                            placeholder="kg, cm, %, dk..."
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      marginTop: '1.25rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {extStep === 2 ? (
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        onClick={() => setExtStep(1)}
+                        disabled={extSaving}
+                      >
+                        ← Geri
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        onClick={() => setShowAddModal(false)}
+                        disabled={extSaving}
+                      >
+                        Kapat
+                      </button>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {extStep === 1 && (
+                        <button
+                          type="button"
+                          className="btn-outline"
+                          onClick={() => {
+                            if (
+                              extForm.firstName.trim() &&
+                              extForm.lastName.trim() &&
+                              extForm.email.trim() &&
+                              extForm.phone.trim()
+                            ) {
+                              setExtStep(2);
+                            } else {
+                              flashErr('Önce zorunlu alanları doldurun');
+                            }
+                          }}
+                          disabled={extSaving}
+                        >
+                          Devam →
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => void addExternalStudent()}
+                        disabled={extSaving}
+                      >
+                        {extSaving
+                          ? '⏳ Ekleniyor...'
+                          : extStep === 1
+                            ? '✓ Sadece Kontak ile Kaydet'
+                            : '✓ Tüm Bilgilerle Kaydet'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

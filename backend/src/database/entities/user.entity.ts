@@ -84,6 +84,18 @@ export class User {
   @Column({ type: 'jsonb', nullable: true, name: 'emergency_contact' })
   emergencyContact!: Record<string, unknown> | null;
 
+  /** Doğum tarihi (YYYY-MM-DD). Yaş hesaplaması için kullanılır. */
+  @Column({ type: 'date', nullable: true, name: 'birth_date' })
+  birthDate!: string | null;
+
+  /** Cinsiyet — antrenman planlamasında bilgi amaçlı. */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  gender!: 'male' | 'female' | 'other' | null;
+
+  /** Sağlık notları, yaralanma geçmişi, kronik rahatsızlık (sadece eğitmen görür). */
+  @Column({ type: 'text', nullable: true, name: 'health_notes' })
+  healthNotes!: string | null;
+
   @Column({ type: 'jsonb', nullable: true, name: 'notification_preferences' })
   notificationPreferences!: Record<string, unknown> | null;
 

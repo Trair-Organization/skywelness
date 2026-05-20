@@ -35,6 +35,8 @@ import { ReservationStatus, SessionType, MemberAccountStatus, UserRole } from '.
 import { PushService } from '../notifications/push.service';
 import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
 import { MessagingService } from '../messaging/messaging.service';
+import { MailService } from '../mail/mail.service';
+import { randomBytes, createHash } from 'crypto';
 
 @Injectable()
 export class TrainerPanelService {
@@ -65,6 +67,7 @@ export class TrainerPanelService {
     private readonly pushService: PushService,
     private readonly notifier: NotificationDispatcher,
     private readonly messagingService: MessagingService,
+    private readonly mailService: MailService,
   ) {}
 
   private async resolveTrainer(user: User): Promise<Trainer> {
@@ -496,6 +499,9 @@ export class TrainerPanelService {
       email: memberUser.email,
       phone: memberUser.phone,
       photoUrl: memberUser.photoUrl,
+      birthDate: memberUser.birthDate,
+      gender: memberUser.gender,
+      healthNotes: memberUser.healthNotes,
       source: link?.source ?? 'lesson_history',
       connectedAt: link?.createdAt ?? memberUser.createdAt,
       linkStatus: link?.status ?? 'none',
@@ -521,63 +527,177 @@ export class TrainerPanelService {
 
   async addExternalStudent(
     user: User,
-    data: { firstName: string; lastName: string; email: string; phone: string },
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      // Kişisel
+      birthDate?: string | null;
+      gender?: 'male' | 'female' | 'other' | null;
+      healthNotes?: string | null;
+      // Başlangıç ölçümleri
+      heightCm?: number | null;
+      weightKg?: number | null;
+      // İlk hedef
+      goalCategory?: string | null;
+      goalTitle?: string | null;
+      goalTargetValue?: number | null;
+      goalTargetUnit?: string | null;
+      // Davet
+      sendInvite?: boolean;
+    },
   ) {
     const trainer = await this.resolveTrainer(user);
 
-    // Check if user already exists
+    const emailLower = data.email.toLowerCase().trim();
+    const phoneTrim = data.phone.trim();
+
+    // Mevcut kullanıcıyı email/telefon ile bul
     let student = await this.usersRepo.findOne({
-      where: [{ email: data.email.toLowerCase() }, { phone: data.phone }],
+      where: [{ email: emailLower }, { phone: phoneTrim }],
     });
 
+    let isNewUser = false;
+    let inviteToken: string | null = null;
+
     if (!student) {
-      // Create new user
+      // Yeni kullanıcı oluştur — şifresi placeholder, davet linki ile aktive olur
+      const username = emailLower.split('@')[0] + Math.floor(Math.random() * 10000);
+
+      // Davet token: gerçek reset token akışı (kullanıcı şifre belirler)
+      if (data.sendInvite !== false) {
+        inviteToken = randomBytes(32).toString('hex');
+      }
+      const tokenHash = inviteToken ? createHash('sha256').update(inviteToken).digest('hex') : null;
+      const expiresAt = inviteToken ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null; // 14 gün
+
       student = this.usersRepo.create({
         tenantId: trainer.tenantId,
-        email: data.email.toLowerCase(),
-        username: data.email.split('@')[0] + Math.floor(Math.random() * 1000),
+        email: emailLower,
+        username,
         passwordHash: '$2b$12$placeholder_external_student_no_login',
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
-        phone: data.phone.trim(),
+        phone: phoneTrim,
         role: UserRole.MEMBER,
         accountStatus: MemberAccountStatus.ACTIVE,
+        birthDate: data.birthDate || null,
+        gender: data.gender || null,
+        healthNotes: data.healthNotes?.trim() || null,
+        resetPasswordTokenHash: tokenHash,
+        resetPasswordExpiresAt: expiresAt,
       });
       await this.usersRepo.save(student);
+      isNewUser = true;
+    } else {
+      // Mevcut kullanıcıda boş alanları güncelle (üzerine yazma!)
+      let dirty = false;
+      if (!student.birthDate && data.birthDate) {
+        student.birthDate = data.birthDate;
+        dirty = true;
+      }
+      if (!student.gender && data.gender) {
+        student.gender = data.gender;
+        dirty = true;
+      }
+      if (!student.healthNotes && data.healthNotes?.trim()) {
+        student.healthNotes = data.healthNotes.trim();
+        dirty = true;
+      }
+      if (dirty) await this.usersRepo.save(student);
     }
 
-    // Check existing link
+    // Trainer-Member link
     const existing = await this.linksRepo.findOne({
       where: { trainerId: trainer.id, memberUserId: student.id },
     });
+    let reactivated = false;
     if (existing) {
       if (existing.status === 'archived') {
         existing.status = 'active';
         existing.source = 'trainer_added';
         await this.linksRepo.save(existing);
-        return { ok: true, userId: student.id, reactivated: true };
+        reactivated = true;
+      } else {
+        throw new ConflictException('Bu öğrenci zaten bağlı');
       }
-      throw new ConflictException('Bu öğrenci zaten bağlı');
+    } else {
+      const link = this.linksRepo.create({
+        tenantId: trainer.tenantId,
+        trainerId: trainer.id,
+        memberUserId: student.id,
+        status: 'active',
+        source: 'trainer_added',
+      });
+      await this.linksRepo.save(link);
     }
 
-    const link = this.linksRepo.create({
-      tenantId: trainer.tenantId,
-      trainerId: trainer.id,
-      memberUserId: student.id,
-      status: 'active',
-      source: 'trainer_added',
-    });
-    await this.linksRepo.save(link);
+    // İlk başlangıç ölçümü oluştur (boy veya kilo verilmişse)
+    if (data.heightCm || data.weightKg) {
+      const measurement = this.measurementsRepo.create({
+        tenantId: trainer.tenantId,
+        trainerId: trainer.id,
+        memberUserId: student.id,
+        measuredAt: new Date().toISOString().slice(0, 10),
+        heightCm: data.heightCm ? String(data.heightCm) : null,
+        weightKg: data.weightKg ? String(data.weightKg) : null,
+        notes: 'Başlangıç ölçümleri',
+      });
+      await this.measurementsRepo.save(measurement);
+    }
 
-    // Notify student
-    void this.pushService.sendToUser(
-      student.id,
-      '🏋️ Eğitmen Bağlantısı',
-      `${user.firstName} ${user.lastName} sizi öğrenci olarak ekledi.`,
-      { type: 'trainer_link' },
-    );
+    // İlk hedef oluştur (kategori belirtilmişse)
+    if (data.goalCategory && data.goalTitle?.trim()) {
+      const goal = this.goalsRepo.create({
+        tenantId: trainer.tenantId,
+        trainerId: trainer.id,
+        memberUserId: student.id,
+        title: data.goalTitle.trim(),
+        category: data.goalCategory as never,
+        targetValue: data.goalTargetValue ? String(data.goalTargetValue) : null,
+        targetUnit: data.goalTargetUnit?.trim() || null,
+        startValue: data.weightKg && data.goalCategory === 'weight_loss' ? String(data.weightKg) : null,
+        currentValue: data.weightKg && data.goalCategory === 'weight_loss' ? String(data.weightKg) : null,
+        startDate: new Date().toISOString().slice(0, 10),
+        status: 'active' as never,
+      });
+      await this.goalsRepo.save(goal);
+    }
 
-    return { ok: true, userId: student.id, reactivated: false };
+    // Davet email'i (yeni kullanıcı + sendInvite=true)
+    if (isNewUser && inviteToken && data.sendInvite !== false) {
+      const trainerName = `${user.firstName} ${user.lastName}`.trim();
+      const tenant = await this.usersRepo.manager
+        .getRepository('Tenant')
+        .findOne({ where: { id: trainer.tenantId } }) as { name?: string } | null;
+      void this.mailService
+        .sendPasswordReset({
+          to: student.email,
+          firstName: student.firstName,
+          clubName: tenant?.name || trainerName,
+          resetToken: inviteToken,
+        })
+        .catch(() => {});
+    }
+
+    // Push (mevcut kullanıcıysa)
+    if (!isNewUser) {
+      void this.pushService.sendToUser(
+        student.id,
+        '🏋️ Eğitmen Bağlantısı',
+        `${user.firstName} ${user.lastName} sizi öğrenci olarak ekledi.`,
+        { type: 'trainer_link' },
+      );
+    }
+
+    return {
+      ok: true,
+      userId: student.id,
+      reactivated,
+      isNewUser,
+      inviteSent: isNewUser && data.sendInvite !== false,
+    };
   }
 
   async archiveStudent(user: User, studentUserId: string) {

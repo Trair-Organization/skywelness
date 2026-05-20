@@ -126,7 +126,23 @@ export class TrainerPanelController {
   @Post('students/add-external')
   addExternalStudent(
     @CurrentUser() user: User,
-    @Body() body: { firstName: string; lastName: string; email: string; phone: string },
+    @Body()
+    body: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      birthDate?: string | null;
+      gender?: 'male' | 'female' | 'other' | null;
+      healthNotes?: string | null;
+      heightCm?: number | null;
+      weightKg?: number | null;
+      goalCategory?: string | null;
+      goalTitle?: string | null;
+      goalTargetValue?: number | null;
+      goalTargetUnit?: string | null;
+      sendInvite?: boolean;
+    },
   ) {
     return this.service.addExternalStudent(user, body);
   }
