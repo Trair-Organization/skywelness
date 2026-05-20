@@ -998,6 +998,255 @@ export class TrainerPanelService {
     return { ok: true, newStartTime: newStart, newEndTime: newEnd };
   }
 
+  // ─── Lesson — Direct create / reschedule / complete / remind / clear day ───
+  // Admin paritesi için: availabilityId olmadan tarih+saat ile çalışan versiyonlar.
+
+  /** Trainer kendi tarih+saat vererek doğrudan ders oluşturur (slot otomatik oluşturulur). */
+  async createLessonDirect(
+    user: User,
+    data: {
+      studentUserId: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      type?: string;
+      notes?: string;
+    },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+
+    const dateStr = data.date.slice(0, 10);
+    const startTime = new Date(`${dateStr}T${data.startTime}Z`);
+    const endTime = new Date(`${dateStr}T${data.endTime}Z`);
+
+    if (endTime <= startTime) {
+      throw new BadRequestException('Bitiş saati başlangıçtan sonra olmalı');
+    }
+
+    // Conflict check
+    const conflict = await this.resRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(startTime, endTime),
+      },
+    });
+    if (conflict) throw new ConflictException('Bu saatte başka bir ders var');
+
+    // Eğer availability slotu yoksa otomatik oluştur
+    const existingAvail = await this.availRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        date: dateStr,
+        startTime: data.startTime,
+        endTime: data.endTime,
+      },
+    });
+    if (!existingAvail) {
+      const slot = this.availRepo.create({
+        trainerId: trainer.id,
+        date: dateStr,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        available: true,
+      });
+      await this.availRepo.save(slot);
+    }
+
+    const reservation = this.resRepo.create({
+      userId: data.studentUserId,
+      trainerId: trainer.id,
+      tenantId: trainer.tenantId,
+      sessionType: (data.type as SessionType) || SessionType.PERSONAL_TRAINING,
+      startTime,
+      endTime,
+      status: ReservationStatus.CONFIRMED,
+      notes: data.notes?.trim() || null,
+      packageId: null as never,
+      timeSlotId: null as never,
+    });
+    await this.resRepo.save(reservation);
+
+    // Notify student
+    const student = await this.usersRepo.findOne({ where: { id: data.studentUserId } });
+    if (student) {
+      void this.notifier.studentLessonCreated({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        date: dateStr,
+        time: data.startTime.slice(0, 5),
+      });
+    }
+
+    return { id: reservation.id, startTime: reservation.startTime, endTime: reservation.endTime };
+  }
+
+  /** Trainer kendi dersini doğrudan tarih+saat vererek taşır. */
+  async rescheduleLessonDirect(
+    user: User,
+    lessonId: string,
+    data: { newDate: string; newStartTime: string; newEndTime: string; note?: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const lesson = await this.resRepo.findOne({
+      where: {
+        id: lessonId,
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+      },
+      relations: ['user'],
+    });
+    if (!lesson) throw new NotFoundException('Ders bulunamadı');
+
+    const newDateStr = data.newDate.slice(0, 10);
+    const newStart = new Date(`${newDateStr}T${data.newStartTime}Z`);
+    const newEnd = new Date(`${newDateStr}T${data.newEndTime}Z`);
+
+    if (newEnd <= newStart) {
+      throw new BadRequestException('Bitiş saati başlangıçtan sonra olmalı');
+    }
+
+    // Conflict (kendisi hariç)
+    const conflict = await this.resRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(newStart, newEnd),
+      },
+    });
+    if (conflict && conflict.id !== lesson.id) throw new ConflictException('Yeni saat dolu');
+
+    // Slot otomatik oluştur (yoksa)
+    const existingAvail = await this.availRepo.findOne({
+      where: {
+        trainerId: trainer.id,
+        date: newDateStr,
+        startTime: data.newStartTime,
+        endTime: data.newEndTime,
+      },
+    });
+    if (!existingAvail) {
+      const slot = this.availRepo.create({
+        trainerId: trainer.id,
+        date: newDateStr,
+        startTime: data.newStartTime,
+        endTime: data.newEndTime,
+        available: true,
+      });
+      await this.availRepo.save(slot);
+    }
+
+    const oldTime = lesson.startTime.toISOString();
+    lesson.startTime = newStart;
+    lesson.endTime = newEnd;
+    lesson.rescheduleNote = data.note?.trim() || `Eski: ${oldTime}`;
+    await this.resRepo.save(lesson);
+
+    // Notify
+    const student = await this.usersRepo.findOne({ where: { id: lesson.userId } });
+    if (student) {
+      const oldDate = new Date(oldTime).toLocaleDateString('tr-TR');
+      const oldTimeStr = new Date(oldTime).toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      void this.notifier.studentLessonRescheduled({
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          email: student.email,
+          phone: student.phone,
+        },
+        trainerName: `${user.firstName} ${user.lastName}`.trim(),
+        oldDate,
+        oldTime: oldTimeStr,
+        newDate: newDateStr,
+        newTime: data.newStartTime.slice(0, 5),
+      });
+    }
+
+    return { ok: true, newStartTime: newStart, newEndTime: newEnd };
+  }
+
+  /** Dersi tamamlandı olarak işaretle. */
+  async completeLesson(user: User, lessonId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const lesson = await this.resRepo.findOne({
+      where: {
+        id: lessonId,
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+      },
+    });
+    if (!lesson) throw new NotFoundException('Ders bulunamadı');
+    lesson.status = ReservationStatus.COMPLETED;
+    await this.resRepo.save(lesson);
+    return { ok: true, completed: true };
+  }
+
+  /** Üyeye manuel hatırlatma (push + sms). */
+  async remindLesson(user: User, lessonId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const lesson = await this.resRepo.findOne({
+      where: { id: lessonId, trainerId: trainer.id },
+      relations: ['user'],
+    });
+    if (!lesson) throw new NotFoundException('Ders bulunamadı');
+
+    const date = lesson.startTime.toLocaleDateString('tr-TR');
+    const time = lesson.startTime.toLocaleTimeString('tr-TR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    void this.notifier.studentLessonReminder({
+      student: {
+        id: lesson.user.id,
+        firstName: lesson.user.firstName,
+        email: lesson.user.email,
+        phone: lesson.user.phone,
+      },
+      trainerName: `${user.firstName} ${user.lastName}`.trim(),
+      date,
+      time,
+    });
+    return { ok: true, sent: true };
+  }
+
+  /** Belirli bir günün tüm slotlarını (rezervasyonsuz) sil. */
+  async clearDay(user: User, date: string) {
+    const trainer = await this.resolveTrainer(user);
+    const dateStr = date.slice(0, 10);
+
+    // Aktif rezervasyonları kontrol et
+    const dayStart = new Date(`${dateStr}T00:00:00Z`);
+    const dayEnd = new Date(`${dateStr}T23:59:59Z`);
+    const activeLessons = await this.resRepo.count({
+      where: {
+        trainerId: trainer.id,
+        status: In([ReservationStatus.CONFIRMED, ReservationStatus.PENDING]),
+        startTime: Between(dayStart, dayEnd),
+      },
+    });
+    if (activeLessons > 0) {
+      throw new BadRequestException(
+        `Bu günde ${activeLessons} aktif ders var. Önce dersleri iptal edin veya taşıyın.`,
+      );
+    }
+
+    const slots = await this.availRepo.find({
+      where: { trainerId: trainer.id, date: dateStr },
+    });
+    if (slots.length > 0) {
+      await this.availRepo.remove(slots);
+    }
+    return { ok: true, deleted: slots.length };
+  }
+
   // ─── Student History & Packages ─────────────────────────────────────────────
 
   async getStudentHistory(user: User, studentUserId: string) {

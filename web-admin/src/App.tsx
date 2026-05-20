@@ -37,6 +37,7 @@ import { PushNotificationsPage } from './pages/PushNotificationsPage';
 import { CafeProductsPage } from './pages/CafeProductsPage';
 import { TrainerEventsPage } from './pages/TrainerEventsPage';
 import { TrainerDashboardPage } from './pages/TrainerDashboardPage';
+import { TrainerAgendaPage } from './pages/TrainerAgendaPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { TrainerServicesPage } from './pages/TrainerServicesPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
@@ -138,6 +139,7 @@ function AppRoutes() {
       </Route>
       <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
+        <Route path="/trainer/agenda" element={<TrainerAgendaPage />} />
         <Route path="/trainer/profile" element={<TrainerProfileEditPage />} />
         <Route path="/trainer/services" element={<TrainerServicesPage />} />
         <Route path="/trainer/push-notifications" element={<PushNotificationsPage />} />

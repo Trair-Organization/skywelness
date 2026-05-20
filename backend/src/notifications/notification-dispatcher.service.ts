@@ -550,6 +550,28 @@ ${ticketBtn}
     this.logger.log(`[NOTIFY] studentLessonCancelled → ${params.student.id}`);
   }
 
+  // ─── ÖĞRENCİYE: DERS HATIRLATMA (manuel) ──────────────────────────────────
+
+  async studentLessonReminder(params: {
+    student: { id: string; firstName: string; email: string; phone?: string | null };
+    trainerName: string;
+    date: string;
+    time: string;
+  }) {
+    const title = '🔔 Ders Hatırlatması';
+    const body = `${params.trainerName} ile ${params.date} ${params.time} dersiniz var.`;
+    await this.push.sendToUser(params.student.id, title, body, { type: 'lesson_reminder' });
+    if (params.student.phone) {
+      await this.sms
+        .send(
+          params.student.phone,
+          `Ders hatırlatma: ${params.date} ${params.time} ${params.trainerName} dersiniz var. Wellness Club`,
+        )
+        .catch(() => {});
+    }
+    this.logger.log(`[NOTIFY] studentLessonReminder → ${params.student.id}`);
+  }
+
   // ─── ÖĞRENCİYE: DERS ERTELENDİ (eğitmen tarafından) ───────────────────────
 
   async studentLessonRescheduled(params: {

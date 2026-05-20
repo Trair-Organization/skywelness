@@ -5002,3 +5002,143 @@ a.trainer-stat-card:hover {
     justify-self: start;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Trainer Agenda — Daily schedule view (single trainer)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.trainer-agenda-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.trainer-agenda-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+.trainer-agenda-sub {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-success-banner {
+  padding: 0.75rem 1rem;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  color: #047857;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.agenda-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Daily slot cards (vertical list) ─── */
+.trainer-agenda-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+}
+.trainer-agenda-cell {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+.agenda-cell-empty {
+  background: #f8fafc;
+  border-style: dashed;
+  border-color: #e2e8f0;
+}
+.agenda-cell-empty:hover {
+  background: #eff6ff;
+  border-color: var(--accent);
+}
+.agenda-cell-free {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+.agenda-cell-free:hover {
+  background: #d1fae5;
+}
+.agenda-cell-booked {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.agenda-cell-booked:hover {
+  background: #dbeafe;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+.agenda-cell-past {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.agenda-cell-drop {
+  background: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  border-style: solid !important;
+}
+
+.agenda-cell-time {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.agenda-cell-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agenda-cell-info strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agenda-cell-status {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+}
+.agenda-cell-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+.agenda-cell-icon {
+  font-size: 1.1rem;
+  color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+  .trainer-agenda-cell {
+    grid-template-columns: 60px 1fr auto;
+    gap: 0.6rem;
+    padding: 0.65rem 0.85rem;
+  }
+  .trainer-agenda-grid {
+    padding: 0.6rem;
+  }
+}

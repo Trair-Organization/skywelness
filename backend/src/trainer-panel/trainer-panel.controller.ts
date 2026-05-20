@@ -223,6 +223,57 @@ export class TrainerPanelController {
     return this.service.rescheduleLesson(user, id, body.newAvailabilityId, body.note);
   }
 
+  /** Doğrudan tarih+saat vererek ders oluştur (slot otomatik oluşturulur). */
+  @Post('lessons/direct')
+  createLessonDirect(
+    @CurrentUser() user: User,
+    @Body()
+    body: {
+      studentUserId: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      type?: string;
+      notes?: string;
+    },
+  ) {
+    return this.service.createLessonDirect(user, body);
+  }
+
+  /** Doğrudan tarih+saat ile dersi taşı. */
+  @Post('lessons/:id/reschedule-direct')
+  rescheduleLessonDirect(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { newDate: string; newStartTime: string; newEndTime: string; note?: string },
+  ) {
+    return this.service.rescheduleLessonDirect(user, id, body);
+  }
+
+  /** Dersi tamamlandı olarak işaretle. */
+  @Post('lessons/:id/complete')
+  completeLesson(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.completeLesson(user, id);
+  }
+
+  /** Üyeye manuel hatırlatma gönder. */
+  @Post('lessons/:id/remind')
+  remindLesson(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.remindLesson(user, id);
+  }
+
+  /** Belirli günün tüm slotlarını sil (rezervasyonsuzsa). */
+  @Delete('schedule-day')
+  clearDay(@CurrentUser() user: User, @Query('date') date: string) {
+    return this.service.clearDay(user, date);
+  }
+
   // ─── Profile ────────────────────────────────────────────────────────────────
 
   @Get('profile')
