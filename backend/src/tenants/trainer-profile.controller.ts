@@ -167,8 +167,16 @@ export class TrainerPublicProfileController {
       lessons.map((l) => new Date(l.startTime).toISOString().slice(11, 16)),
     );
 
+    // Bugün ise geçmiş saatleri filtrele (TR saati ile karşılaştır)
+    const now = new Date();
+    const trNow = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    const todayStr = trNow.toISOString().slice(0, 10);
+    const isToday = dateStr === todayStr;
+    const currentHourMin = isToday ? trNow.toISOString().slice(11, 16) : null;
+
     return slots
       .filter((s) => !bookedHours.has(s.startTime.slice(0, 5)))
+      .filter((s) => !isToday || (currentHourMin !== null && s.startTime.slice(0, 5) > currentHourMin))
       .map((s) => ({
         id: s.id,
         date: typeof s.date === 'string' ? s.date : new Date(s.date).toISOString().slice(0, 10),
