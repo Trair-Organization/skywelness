@@ -15,11 +15,16 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path mapping — shared paketini source'tan oku (vite.config alias ile uyumlu) */
+    "paths": {
+      "@rezidans-fitness/shared": ["../shared/src/index.ts"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../shared/src/**/*.ts"]
 }
