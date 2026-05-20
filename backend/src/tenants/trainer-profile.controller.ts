@@ -177,11 +177,17 @@ export class TrainerPublicProfileController {
     return slots
       .filter((s) => !bookedHours.has(s.startTime.slice(0, 5)))
       .filter((s) => !isToday || (currentHourMin !== null && s.startTime.slice(0, 5) > currentHourMin))
-      .map((s) => ({
-        id: s.id,
-        date: typeof s.date === 'string' ? s.date : new Date(s.date).toISOString().slice(0, 10),
-        startTime: s.startTime.slice(0, 5),
-        endTime: s.endTime.slice(0, 5),
-      }));
+      .reduce<Array<{ id: string; date: string; startTime: string; endTime: string }>>((acc, s) => {
+        const startHM = s.startTime.slice(0, 5);
+        // Aynı saat için sadece ilk slotu al (duplicate temizliği)
+        if (acc.some((existing) => existing.startTime === startHM)) return acc;
+        acc.push({
+          id: s.id,
+          date: typeof s.date === 'string' ? s.date : new Date(s.date).toISOString().slice(0, 10),
+          startTime: startHM,
+          endTime: s.endTime.slice(0, 5),
+        });
+        return acc;
+      }, []);
   }
 }

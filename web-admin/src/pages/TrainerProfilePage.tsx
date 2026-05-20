@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
-type V2Slot = { id: string; serviceId: string; serviceName: string; startTime: string; endTime: string; price: string; remainingCapacity: number };
 type LegacySlot = { id: string; date: string; startTime: string; endTime: string };
 
 function getWeekDays(weekOffset: number) {
@@ -34,22 +33,13 @@ function ProviderSchedule({
 }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const [slots, setSlots] = useState<V2Slot[]>([]);
   const [legacySlots, setLegacySlots] = useState<LegacySlot[]>([]);
   const [booking, setBooking] = useState(false);
   const [booked, setBooked] = useState<string | null>(null);
   const days = getWeekDays(weekOffset);
 
   useEffect(() => {
-    // Önce v2 schedule slot'larını dene
-    apiJson<V2Slot[]>(
-      `/v2/schedule/provider?tenant=${encodeURIComponent(subdomain)}&providerId=${providerId}&date=${selectedDate}`,
-      { auth: false },
-    )
-      .then(setSlots)
-      .catch(() => setSlots([]));
-
-    // Eğitmen panelinde oluşturulan availability slot'ları (legacy)
+    // Eğitmen panelinde / kulüp PT yönetiminde oluşturulan availability slot'ları
     apiJson<LegacySlot[]>(
       `/trainers/${encodeURIComponent(trainerSlug)}/slots?date=${selectedDate}`,
       { auth: false },
@@ -57,16 +47,6 @@ function ProviderSchedule({
       .then(setLegacySlots)
       .catch(() => setLegacySlots([]));
   }, [subdomain, providerId, trainerSlug, selectedDate]);
-
-  async function handleBook(slotId: string) {
-    setBooking(true);
-    try {
-      await apiJson('/v2/appointments', { method: 'POST', body: JSON.stringify({ slotId }) });
-      setBooked(slotId);
-      setSlots(prev => prev.filter(s => s.id !== slotId));
-    } catch (err) { alert(err instanceof Error ? err.message : 'Rezervasyon başarısız'); }
-    finally { setBooking(false); }
-  }
 
   async function handleBookLegacy(slot: LegacySlot) {
     setBooking(true);
@@ -84,8 +64,6 @@ function ProviderSchedule({
       setBooking(false);
     }
   }
-
-  const hasAnySlots = slots.length > 0 || legacySlots.length > 0;
 
   return (
     <div>
@@ -106,16 +84,10 @@ function ProviderSchedule({
       </div>
       {booked ? (
         <div className="event-joined-box"><span>✅</span><p>Rezervasyon talebiniz oluşturuldu!</p></div>
-      ) : !hasAnySlots ? (
+      ) : legacySlots.length === 0 ? (
         <p className="no-slots">Bu tarihte müsait saat yok</p>
       ) : (
         <div className="slots-grid">
-          {slots.map(s => (
-            <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
-              <span className="slot-time">{s.startTime} - {s.endTime}</span>
-              <span className="slot-price">{s.price}₺</span>
-            </button>
-          ))}
           {legacySlots.map((s) => (
             <button
               key={s.id}
