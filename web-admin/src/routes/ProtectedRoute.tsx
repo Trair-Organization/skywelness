@@ -46,6 +46,18 @@ export function ProtectedRoute({
     );
   }
 
+  // Bağımsız eğitmen / eğitmen ise account status pending/rejected → status sayfasına yönlendir
+  const isTrainer = user.role === 'trainer' || user.role === 'independent_trainer';
+  const blockedStatuses = ['pending_approval', 'rejected'];
+  if (
+    isTrainer &&
+    user.accountStatus &&
+    blockedStatuses.includes(user.accountStatus) &&
+    location.pathname !== '/trainer/application-status'
+  ) {
+    return <Navigate to="/trainer/application-status" replace />;
+  }
+
   return (
     <AdminLayout>
       <Outlet />

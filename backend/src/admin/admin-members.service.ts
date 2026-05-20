@@ -2671,6 +2671,17 @@ export class AdminMembersService {
       { accountStatus: MemberAccountStatus.REJECTED },
     );
 
+    // Eğitmene bildirim
+    const reasonText = note?.trim()
+      ? `Sebep: ${note.trim()}`
+      : 'Detaylar için iletişime geçin.';
+    void this.pushService.sendToUser(
+      app.userId,
+      'Eğitmen Başvurun Reddedildi',
+      reasonText,
+      { type: 'trainer_application_rejected' },
+    );
+
     return { ok: true };
   }
 

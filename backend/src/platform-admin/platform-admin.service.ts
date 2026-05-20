@@ -371,6 +371,15 @@ export class PlatformAdminService {
       },
     );
     await this.usersRepo.update({ id: app.userId }, { accountStatus: MemberAccountStatus.ACTIVE });
+
+    // Eğitmene başvuru onaylandı bildirimi
+    void this.pushService.sendToUser(
+      app.userId,
+      '🎉 Eğitmen Başvurun Onaylandı',
+      'Tebrikler! Profilini tamamla ve panelinden öğrencilerinle buluşmaya başla.',
+      { type: 'trainer_application_approved' },
+    );
+
     await this.logAction({
       action: 'trainerApplication.approve',
       targetType: 'trainer_application',
@@ -402,6 +411,18 @@ export class PlatformAdminService {
       { id: app.userId },
       { accountStatus: MemberAccountStatus.REJECTED },
     );
+
+    // Eğitmene başvuru reddedildi bildirimi
+    const reasonText = note?.trim()
+      ? `Sebep: ${note.trim()}`
+      : 'Detaylar için iletişime geçin.';
+    void this.pushService.sendToUser(
+      app.userId,
+      'Eğitmen Başvurun Reddedildi',
+      reasonText,
+      { type: 'trainer_application_rejected', note: note?.trim() || null },
+    );
+
     await this.logAction({
       action: 'trainerApplication.reject',
       targetType: 'trainer_application',

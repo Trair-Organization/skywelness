@@ -41,6 +41,7 @@ import { TrainerAgendaPage } from './pages/TrainerAgendaPage';
 import { TrainerEarningsPage } from './pages/TrainerEarningsPage';
 import { TrainerStudentDetailPage } from './pages/TrainerStudentDetailPage';
 import { TrainerStudentReportPage } from './pages/TrainerStudentReportPage';
+import { TrainerApplicationStatusPage } from './pages/TrainerApplicationStatusPage';
 import { MemberProgressPage } from './pages/MemberProgressPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { TrainerServicesPage } from './pages/TrainerServicesPage';
@@ -142,7 +143,8 @@ function AppRoutes() {
         <Route path="/platform/trainers/pending" element={<PendingTrainerApplicationsPage />} />
         <Route path="/super-admin/events" element={<SuperAdminEventsPage />} />
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={['trainer']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['trainer', 'independent_trainer']} />}>
+        <Route path="/trainer/application-status" element={<TrainerApplicationStatusPage />} />
         <Route path="/trainer/dashboard" element={<TrainerDashboardPage />} />
         <Route path="/trainer/agenda" element={<TrainerAgendaPage />} />
         <Route path="/trainer/earnings" element={<TrainerEarningsPage />} />

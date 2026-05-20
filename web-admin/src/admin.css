@@ -7960,3 +7960,109 @@ a.trainer-stat-card:hover {
   padding-top: 0.75rem;
   border-top: 1px solid #e2e8f0;
 }
+
+
+/* ─── Trainer Application Status Page ────────────────────────────────────── */
+.trainer-app-status {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.trainer-app-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 580px;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+  text-align: center;
+}
+
+.trainer-app-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.trainer-app-icon-reject {
+  filter: hue-rotate(20deg);
+}
+
+.trainer-app-card h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.75rem;
+}
+
+.trainer-app-card p {
+  color: #374151;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 0.85rem;
+}
+
+.trainer-app-card p.muted {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.trainer-app-tips {
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0 1.5rem;
+}
+
+.trainer-app-tips h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.5rem;
+}
+
+.trainer-app-tips ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #374151;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.trainer-app-tips li {
+  margin-bottom: 0.3rem;
+}
+
+.trainer-app-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.trainer-app-actions .btn-outline,
+.trainer-app-actions .btn-secondary {
+  flex: 1 1 140px;
+  text-align: center;
+  text-decoration: none;
+}
+
+@media (max-width: 480px) {
+  .trainer-app-card {
+    padding: 1.75rem 1.25rem;
+  }
+  .trainer-app-card h1 {
+    font-size: 1.25rem;
+  }
+  .trainer-app-icon {
+    font-size: 3rem;
+  }
+}
