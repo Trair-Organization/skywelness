@@ -67,7 +67,6 @@ export function TrainerProfileEditPage() {
   const [bio, setBio] = useState('');
   const [experienceYears, setExperienceYears] = useState<string>('');
   const [pricingNote, setPricingNote] = useState('');
-  const [defaultLessonPrice, setDefaultLessonPrice] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpecialty, setNewSpecialty] = useState('');
@@ -87,7 +86,6 @@ export function TrainerProfileEditPage() {
       setBio(data.bio ?? '');
       setExperienceYears(data.experienceYears !== null ? String(data.experienceYears) : '');
       setPricingNote(data.pricingNote ?? '');
-      setDefaultLessonPrice(data.defaultLessonPrice ?? '');
       setPhotoUrl(data.photoUrl ?? '');
       setSpecialties(data.specialties ?? []);
       setCertifications(data.certifications ?? []);
@@ -159,9 +157,6 @@ export function TrainerProfileEditPage() {
           experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
           pricingNote: pricingNote.trim() || undefined,
           photoUrl: photoUrl.trim() || undefined,
-          defaultLessonPrice: defaultLessonPrice
-            ? parseFloat(defaultLessonPrice)
-            : undefined,
           specialties,
           certifications,
           offersSessionTypes,
@@ -526,36 +521,17 @@ export function TrainerProfileEditPage() {
           </section>
 
           <section className="profile-card">
-            <h2 className="profile-card-title">💰 Ücretlendirme</h2>
-            <label className="profile-field">
-              <span>Ders Ücretim (TRY)</span>
-              <input
-                type="number"
-                className="profile-input"
-                value={defaultLessonPrice}
-                onChange={(e) => setDefaultLessonPrice(e.target.value)}
-                min={0}
-                step={50}
-                placeholder="Örn: 1000"
-              />
-              <small className="profile-hint">
-                Bu fiyat tamamlanan derslerinizden gelir hesaplanmasında kullanılır.
-                Platform komisyonu %{profile?.commissionRate ? (parseFloat(profile.commissionRate) * 100).toFixed(1) : '7'} otomatik düşülür.
-              </small>
-            </label>
-            <label className="profile-field">
-              <span>Fiyat Notu (üyelere gösterilen)</span>
-              <input
-                type="text"
-                className="profile-input"
-                value={pricingNote}
-                onChange={(e) => setPricingNote(e.target.value)}
-                placeholder="Örn: Seans başı ücret — paket seçenekleri mevcuttur"
-              />
-              <small className="profile-hint">
-                Detaylı paketleri "Hizmet & Paket" sayfasından yönetin.
-              </small>
-            </label>
+            <h2 className="profile-card-title">💰 Üyelere Gösterilecek Fiyat Notu</h2>
+            <input
+              type="text"
+              className="profile-input"
+              value={pricingNote}
+              onChange={(e) => setPricingNote(e.target.value)}
+              placeholder="Örn: Seans başı ücret — paket seçenekleri mevcuttur"
+            />
+            <small className="profile-hint">
+              Bu metin keşif sayfasında profilinizin altında görünür. Detaylı paket ve ders ücretlerini "Hizmet & Paket" sayfasından yönetin.
+            </small>
           </section>
         </div>
       </div>

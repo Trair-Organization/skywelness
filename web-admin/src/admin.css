@@ -6191,3 +6191,318 @@ a.trainer-stat-card:hover {
     font-size: 0.65rem;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Trainer Services & Packages — Hizmet & Paket sayfası
+   ═══════════════════════════════════════════════════════════════════════════ */
+.trainer-services {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.services-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+.services-header .muted {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* Tabs */
+.services-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px 12px 0 0;
+  padding: 0 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.services-tabs::-webkit-scrollbar {
+  display: none;
+}
+.services-tab {
+  background: none;
+  border: none;
+  padding: 0.85rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.services-tab:hover {
+  color: var(--accent);
+}
+.services-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.services-tab-count {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.services-tab.active .services-tab-count {
+  background: var(--accent);
+  color: #fff;
+}
+
+.services-tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.services-tab-info {
+  font-size: 0.85rem;
+  margin: -0.5rem 0 0;
+}
+
+/* Card */
+.services-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.services-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+}
+
+/* Form */
+.services-form-card {
+  border: 2px solid var(--accent);
+  background: #f8fafc;
+}
+.services-form-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+}
+.services-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.services-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+.services-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.services-preview-text {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+.services-preview-text strong {
+  color: #0f172a;
+}
+
+/* Pricing tab */
+.pricing-input-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+.pricing-preview {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.pricing-preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: #166534;
+}
+.pricing-preview-row.platform-fee {
+  color: #b45309;
+}
+.pricing-preview-row.net {
+  border-top: 1px solid rgba(22, 101, 52, 0.2);
+  padding-top: 0.5rem;
+  font-weight: 700;
+  color: #14532d;
+}
+.pricing-preview-row.net strong {
+  font-size: 1.05rem;
+}
+
+/* Card grid (packages, services list) */
+.services-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.services-item-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: all 0.15s;
+}
+.services-item-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
+}
+.services-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.services-item-header strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+  display: block;
+  margin-bottom: 2px;
+}
+.services-item-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.services-item-desc {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+.services-item-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed #e2e8f0;
+}
+.services-item-price strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.services-item-price span {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.services-item-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.services-item-actions .btn-sm {
+  flex: 1;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+}
+.services-btn-danger {
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+.services-btn-danger:hover {
+  background: #fef2f2 !important;
+  border-color: #dc2626 !important;
+}
+
+/* Status badge */
+.services-status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.services-status-badge.active {
+  background: #d1fae5;
+  color: #047857;
+}
+.services-status-badge.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Empty state */
+.services-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  background: #ffffff;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  text-align: center;
+}
+.services-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+.services-empty p {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .trainer-services {
+    padding: 1rem;
+  }
+  .services-card {
+    padding: 1.1rem;
+  }
+  .services-grid-2,
+  .services-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .pricing-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pricing-input-row .btn-primary {
+    width: 100%;
+  }
+  .services-tab {
+    font-size: 0.82rem;
+    padding: 0.75rem 0.85rem;
+  }
+}
