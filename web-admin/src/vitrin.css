@@ -5518,3 +5518,118 @@
   background: rgba(56, 189, 248, 0.2);
   border-color: rgba(56, 189, 248, 0.5);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SABIT BOYUT KART SİSTEMİ — Tüm partner kartları eşit yükseklik
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Kulüp kartları — sabit yükseklik */
+.vitrin-club-card {
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-club-cover {
+  flex-shrink: 0;
+}
+.vitrin-club-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.vitrin-club-body h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vitrin-card-location {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vitrin-card-tags {
+  overflow: hidden;
+  max-height: 28px;
+}
+.vitrin-card-cta {
+  margin-top: auto;
+}
+
+/* Eğitmen kartları — sabit yükseklik */
+.vitrin-trainer-card {
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-trainer-photo {
+  flex-shrink: 0;
+}
+.vitrin-trainer-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.vitrin-trainer-body h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Etkinlik kartları — sabit yükseklik */
+.vitrin-event-card {
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-event-img {
+  flex-shrink: 0;
+}
+.vitrin-event-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.vitrin-event-body h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vitrin-event-footer {
+  margin-top: auto;
+}
+
+/* Kampanya kartları — sabit yükseklik */
+.vitrin-campaign-card {
+  height: 340px;
+  display: flex;
+  flex-direction: column;
+}
+.vitrin-campaign-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.vitrin-campaign-footer {
+  margin-top: auto;
+}
+
+/* Mobil — biraz kısalt */
+@media (max-width: 768px) {
+  .vitrin-club-card {
+    height: 340px;
+  }
+  .vitrin-trainer-card {
+    height: 270px;
+  }
+  .vitrin-event-card {
+    height: 290px;
+  }
+  .vitrin-campaign-card {
+    height: 310px;
+  }
+}
