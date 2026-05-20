@@ -845,6 +845,14 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
           <h3>{trainer.name}</h3>
           <p className="vitrin-trainer-club">🏢 {trainer.clubName}</p>
           <PartnerBadges badges={trainer.badges ?? []} max={3} />
+          {Number(trainer.avgRating) > 0 && (
+            <div className="vitrin-trainer-rating">
+              <span>★ {Number(trainer.avgRating).toFixed(1)}</span>
+              {trainer.totalSessions > 0 && (
+                <span className="vitrin-trainer-sessions">· {trainer.totalSessions} seans</span>
+              )}
+            </div>
+          )}
           {trainer.specialties.length > 0 && (
             <div className="vitrin-card-tags">
               {trainer.specialties.slice(0, 2).map((s) => (

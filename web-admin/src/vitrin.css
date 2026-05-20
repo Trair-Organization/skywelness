@@ -5966,3 +5966,21 @@
   font-size: 0.6rem;
   padding: 1px 5px;
 }
+
+
+/* ─── Trainer Card Rating ────────────────────────────────────────────────── */
+.vitrin-trainer-rating {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fbbf24;
+  margin: 0.2rem 0 0.4rem;
+}
+
+.vitrin-trainer-rating .vitrin-trainer-sessions {
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}

@@ -53,6 +53,9 @@ export class Trainer {
   @Column({ type: 'int', default: 0, name: 'total_sessions' })
   totalSessions!: number;
 
+  @Column({ type: 'int', default: 0, name: 'review_count' })
+  reviewCount!: number;
+
   /**
    * Platform komisyon oranı (0.00–1.00 arası).
    * Eğitmenin öğrenci ders gelirlerinden platforma ödediği yüzde.

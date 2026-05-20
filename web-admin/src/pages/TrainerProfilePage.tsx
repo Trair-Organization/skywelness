@@ -117,6 +117,7 @@ type TrainerProfile = {
   certifications: string[];
   avgRating: string;
   totalSessions: number;
+  reviewCount?: number;
   offersSessionTypes: string[];
   verified: boolean;
   awayUntil: string | null;
@@ -147,6 +148,27 @@ type TrainerProfile = {
   }>;
 };
 
+type TrainerReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  user: { firstName: string; lastName: string; photoUrl: string | null };
+};
+
+type ReviewListResponse = {
+  reviews: TrainerReview[];
+  total: number;
+  avgRating: string;
+  reviewCount: number;
+};
+
+type CanReviewResponse = {
+  canReview: boolean;
+  reason?: 'self' | 'already' | 'no_completed_lesson';
+  myReview?: { id: string; rating: number; comment: string | null };
+};
+
 export function TrainerProfilePage() {
   const { trainerId } = useParams<{ trainerId: string }>();
   const { token } = useAuth();
@@ -155,6 +177,19 @@ export function TrainerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
+
+  // Reviews state
+  const [reviews, setReviews] = useState<TrainerReview[]>([]);
+  const [reviewMeta, setReviewMeta] = useState<{ avgRating: string; reviewCount: number }>({
+    avgRating: '0',
+    reviewCount: 0,
+  });
+  const [canReview, setCanReview] = useState<CanReviewResponse | null>(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!trainerId) return;
@@ -165,7 +200,71 @@ export function TrainerProfilePage() {
     finally { setLoading(false); }
   }, [trainerId]);
 
+  const loadReviews = useCallback(async () => {
+    if (!trainerId) return;
+    try {
+      const data = await apiJson<ReviewListResponse>(
+        `/trainers/${encodeURIComponent(trainerId)}/reviews?limit=20`,
+        { auth: false },
+      );
+      setReviews(data.reviews);
+      setReviewMeta({ avgRating: data.avgRating, reviewCount: data.reviewCount });
+    } catch { /* */ }
+  }, [trainerId]);
+
+  const loadCanReview = useCallback(async () => {
+    if (!trainerId || !token) {
+      setCanReview(null);
+      return;
+    }
+    try {
+      const data = await apiJson<CanReviewResponse>(
+        `/trainers/${encodeURIComponent(trainerId)}/reviews/can-review`,
+      );
+      setCanReview(data);
+    } catch {
+      setCanReview(null);
+    }
+  }, [trainerId, token]);
+
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void loadReviews(); }, [loadReviews]);
+  useEffect(() => { void loadCanReview(); }, [loadCanReview]);
+
+  async function handleSubmitReview() {
+    if (!trainerId) return;
+    if (reviewRating < 1 || reviewRating > 5) {
+      setReviewError('Lütfen bir puan seçin');
+      return;
+    }
+    setSubmittingReview(true);
+    setReviewError(null);
+    try {
+      await apiJson(`/trainers/${encodeURIComponent(trainerId)}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ rating: reviewRating, comment: reviewComment.trim() || undefined }),
+      });
+      setShowReviewForm(false);
+      setReviewComment('');
+      setReviewRating(5);
+      await Promise.all([loadReviews(), loadCanReview(), load()]);
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Yorum gönderilemedi');
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
+  async function handleDeleteMyReview() {
+    if (!canReview?.myReview) return;
+    if (!confirm('Yorumunuzu silmek istediğinize emin misiniz?')) return;
+    try {
+      await apiJson(`/trainers/reviews/${canReview.myReview.id}`, { method: 'DELETE' });
+      await Promise.all([loadReviews(), loadCanReview(), load()]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Silinemedi');
+    }
+  }
 
   if (loading) return <div className="public-shell"><div className="profile-loading">Yükleniyor...</div></div>;
   if (!profile) return <div className="public-shell"><div className="profile-loading">Eğitmen bulunamadı</div></div>;
@@ -217,7 +316,12 @@ export function TrainerProfilePage() {
               )}
             </h1>
             <div className="trainer-hero-stats">
-              <span className="trainer-hero-rating">★ {Number(profile.avgRating).toFixed(1)}</span>
+              <span className="trainer-hero-rating">
+                ★ {Number(reviewMeta.avgRating || profile.avgRating).toFixed(1)}
+                {reviewMeta.reviewCount > 0 && (
+                  <span className="trainer-hero-rating-count"> ({reviewMeta.reviewCount})</span>
+                )}
+              </span>
               <span className="trainer-hero-sessions">{profile.totalSessions} seans</span>
             </div>
             {profile.offersSessionTypes.length > 0 && (
@@ -366,6 +470,158 @@ export function TrainerProfilePage() {
           )}
         </section>
         )}
+
+        {/* Yorumlar & Puanlar */}
+        <section className="profile-section trainer-reviews-section">
+          <div className="trainer-reviews-head">
+            <h2>⭐ Yorumlar ve Puanlar</h2>
+            {reviewMeta.reviewCount > 0 && (
+              <div className="trainer-reviews-summary">
+                <strong>{Number(reviewMeta.avgRating).toFixed(1)}</strong>
+                <span className="muted">/ 5 · {reviewMeta.reviewCount} yorum</span>
+              </div>
+            )}
+          </div>
+
+          {/* Yorum bırakma kutusu */}
+          {token && canReview && (
+            <>
+              {canReview.canReview && !showReviewForm && (
+                <button
+                  type="button"
+                  className="btn-primary trainer-review-add-btn"
+                  onClick={() => setShowReviewForm(true)}
+                >
+                  ✍️ Yorum Yaz
+                </button>
+              )}
+              {canReview.canReview && showReviewForm && (
+                <div className="trainer-review-form">
+                  <div className="trainer-review-stars">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        type="button"
+                        key={n}
+                        className={`trainer-review-star ${n <= reviewRating ? 'filled' : ''}`}
+                        onClick={() => setReviewRating(n)}
+                        aria-label={`${n} yıldız`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                    <span className="muted">({reviewRating}/5)</span>
+                  </div>
+                  <textarea
+                    className="trainer-review-input"
+                    rows={3}
+                    maxLength={500}
+                    placeholder="Eğitmen hakkında deneyiminizi paylaşın (opsiyonel)..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                  />
+                  {reviewError && <p className="trainer-review-error">{reviewError}</p>}
+                  <div className="trainer-review-actions">
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => {
+                        setShowReviewForm(false);
+                        setReviewError(null);
+                      }}
+                      disabled={submittingReview}
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => void handleSubmitReview()}
+                      disabled={submittingReview}
+                    >
+                      {submittingReview ? 'Gönderiliyor...' : '✓ Yorumu Gönder'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!canReview.canReview && canReview.reason === 'no_completed_lesson' && (
+                <p className="trainer-review-hint">
+                  💡 Yorum bırakmak için bu eğitmenle en az bir tamamlanmış dersiniz olmalı.
+                </p>
+              )}
+              {!canReview.canReview && canReview.reason === 'already' && canReview.myReview && (
+                <div className="trainer-review-mine">
+                  <div className="trainer-review-mine-head">
+                    <span className="trainer-review-mine-stars">
+                      {'★'.repeat(canReview.myReview.rating)}
+                      <span className="trainer-review-mine-empty">
+                        {'★'.repeat(5 - canReview.myReview.rating)}
+                      </span>
+                    </span>
+                    <span className="muted">Sizin yorumunuz</span>
+                    <button
+                      type="button"
+                      className="trainer-review-delete"
+                      onClick={() => void handleDeleteMyReview()}
+                      aria-label="Yorumumu sil"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                  {canReview.myReview.comment && <p>{canReview.myReview.comment}</p>}
+                </div>
+              )}
+            </>
+          )}
+          {!token && (
+            <p className="trainer-review-hint">
+              💡 Yorum bırakmak için <Link to="/login">giriş yapın</Link>.
+            </p>
+          )}
+
+          {/* Yorum listesi */}
+          {reviews.length === 0 ? (
+            <p className="trainer-reviews-empty">
+              Henüz yorum yapılmamış. İlk yorumu siz yapın!
+            </p>
+          ) : (
+            <div className="trainer-reviews-list">
+              {reviews
+                .filter((r) => !canReview?.myReview || r.id !== canReview.myReview.id)
+                .map((r) => (
+                  <div key={r.id} className="trainer-review-card">
+                    <div className="trainer-review-card-head">
+                      <div className="trainer-review-avatar">
+                        {r.user.photoUrl ? (
+                          <img src={r.user.photoUrl} alt="" />
+                        ) : (
+                          <span>{r.user.firstName.charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div className="trainer-review-user">
+                        <strong>
+                          {r.user.firstName} {r.user.lastName}
+                        </strong>
+                        <span className="trainer-review-stars-small">
+                          {'★'.repeat(r.rating)}
+                          <span className="trainer-review-mine-empty">
+                            {'★'.repeat(5 - r.rating)}
+                          </span>
+                        </span>
+                      </div>
+                      <span className="muted trainer-review-date">
+                        {new Date(r.createdAt).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    {r.comment && <p className="trainer-review-comment">{r.comment}</p>}
+                  </div>
+                ))}
+            </div>
+          )}
+        </section>
 
         {/* CTA - sadece PT eğitmenleri için kulüp linki */}
         {profile.offersSessionTypes.includes('personal_training') && (

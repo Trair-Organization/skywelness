@@ -2169,3 +2169,271 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ─── Trainer Reviews Section ────────────────────────────────────────────── */
+.trainer-reviews-section {
+  margin-top: 1.5rem;
+}
+
+.trainer-hero-rating-count {
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-left: 4px;
+}
+
+.trainer-reviews-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.trainer-reviews-head h2 {
+  margin: 0;
+}
+
+.trainer-reviews-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.trainer-reviews-summary strong {
+  font-size: 1.5rem;
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.trainer-reviews-summary .muted {
+  font-size: 0.85rem;
+}
+
+.trainer-review-add-btn {
+  margin-bottom: 1rem;
+}
+
+.trainer-review-form {
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.trainer-review-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.trainer-review-star {
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  color: #475569;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color 0.12s, transform 0.1s;
+}
+
+.trainer-review-star:hover,
+.trainer-review-star.filled {
+  color: #fbbf24;
+}
+
+.trainer-review-star:active {
+  transform: scale(0.92);
+}
+
+.trainer-review-stars .muted {
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+}
+
+.trainer-review-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  color: #f1f5f9;
+  font-size: 0.92rem;
+  resize: vertical;
+  min-height: 70px;
+  font-family: inherit;
+}
+
+.trainer-review-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.trainer-review-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.trainer-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.trainer-review-hint {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.88rem;
+  color: #fde68a;
+  margin: 0 0 1rem;
+}
+
+.trainer-review-hint a {
+  color: #fbbf24;
+  text-decoration: underline;
+}
+
+.trainer-review-mine {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.trainer-review-mine-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.trainer-review-mine-stars {
+  color: #fbbf24;
+  font-size: 1rem;
+}
+
+.trainer-review-mine-empty {
+  color: #475569;
+}
+
+.trainer-review-delete {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.trainer-review-mine p {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.trainer-reviews-empty {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  padding: 2rem 1rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+}
+
+.trainer-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trainer-review-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.trainer-review-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.trainer-review-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.12);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trainer-review-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trainer-review-avatar span {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.trainer-review-user {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trainer-review-user strong {
+  color: #f1f5f9;
+  font-size: 0.92rem;
+}
+
+.trainer-review-stars-small {
+  color: #fbbf24;
+  font-size: 0.8rem;
+}
+
+.trainer-review-date {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.trainer-review-comment {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .trainer-reviews-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .trainer-review-card-head {
+    flex-wrap: wrap;
+  }
+  .trainer-review-date {
+    width: 100%;
+    margin-left: 46px;
+  }
+}

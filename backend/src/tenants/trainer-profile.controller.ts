@@ -94,6 +94,7 @@ export class TrainerPublicProfileController {
       certifications: trainer.certifications ?? [],
       avgRating: trainer.avgRating,
       totalSessions: trainer.totalSessions,
+      reviewCount: trainer.reviewCount ?? 0,
       offersSessionTypes: trainer.offersSessionTypes ?? [],
       verified: trainer.verified,
       awayUntil: trainer.awayUntil,
