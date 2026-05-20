@@ -65,7 +65,13 @@ const TRAINER_NAV: NavItem[] = [
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Mobilde başlangıçta kapalı, masaüstünde açık
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
   const [badges, setBadges] = useState<Record<string, number>>({});
   const [clubLogo, setClubLogo] = useState<string | null>(null);
   const [clubName, setClubName] = useState<string | null>(null);
@@ -125,16 +131,16 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`admin-layout ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
-      {/* Hamburger Button (only when sidebar closed) */}
-      {!sidebarOpen && (
-        <button
-          className="hamburger-btn"
-          onClick={() => setSidebarOpen(true)}
-          title="Menüyü Aç"
-        >
-          ☰
-        </button>
-      )}
+      {/* Hamburger Button — desktop'ta sidebar kapalıyken, mobilde her zaman */}
+      <button
+        type="button"
+        className={`hamburger-btn ${sidebarOpen ? 'hamburger-mobile-only' : ''}`}
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Menüyü aç/kapat"
+        title={sidebarOpen ? 'Menüyü Kapat' : 'Menüyü Aç'}
+      >
+        {sidebarOpen ? '✕' : '☰'}
+      </button>
 
       {/* Overlay for mobile */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}

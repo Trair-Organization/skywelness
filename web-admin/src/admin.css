@@ -3316,21 +3316,21 @@ button.primary:disabled {
 /* ─── Hamburger Menu & Sidebar Toggle ──────────────────────────────────────── */
 .hamburger-btn {
   position: fixed;
-  top: 18px;
-  left: 270px;
-  z-index: 200;
-  width: 36px;
-  height: 36px;
+  top: 14px;
+  left: 16px;
+  z-index: 1000;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: #fff;
   color: #0f172a;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transition: all 0.2s;
 }
 
@@ -3339,16 +3339,28 @@ button.primary:disabled {
   color: var(--accent);
 }
 
+/* Desktop: sidebar açıkken hamburger gizli */
+@media (min-width: 769px) {
+  .hamburger-mobile-only {
+    display: none;
+  }
+  .hamburger-btn {
+    top: 18px;
+    left: 270px;
+    width: 36px;
+    height: 36px;
+  }
+  .sidebar-collapsed .hamburger-btn {
+    left: 16px;
+  }
+}
+
 .sidebar-collapsed .admin-sidebar {
   transform: translateX(-100%);
 }
 
 .sidebar-collapsed .admin-main {
   margin-left: 0;
-}
-
-.sidebar-collapsed .hamburger-btn {
-  left: 16px;
 }
 
 .admin-sidebar {
@@ -3368,13 +3380,9 @@ button.primary:disabled {
 }
 
 @media (max-width: 768px) {
-  .hamburger-btn {
-    left: 16px;
-    top: 14px;
-  }
-
   .admin-sidebar {
     transform: translateX(-100%);
+    z-index: 999;
   }
 
   .admin-sidebar.sidebar-open {
@@ -3383,15 +3391,15 @@ button.primary:disabled {
 
   .admin-main {
     margin-left: 0;
-    padding-top: 56px;
+    padding-top: 60px;
   }
 
   .sidebar-overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 140;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 998;
   }
 
   .sidebar-collapsed .sidebar-overlay {
