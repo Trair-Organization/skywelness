@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
+import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -56,6 +57,8 @@ export class TrainerPanelService {
     @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
+    @InjectRepository(ClubEventRegistration)
+    private readonly eventRegRepo: Repository<ClubEventRegistration>,
     private readonly pushService: PushService,
     private readonly notifier: NotificationDispatcher,
   ) {}
@@ -2046,18 +2049,96 @@ export class TrainerPanelService {
   // ─── Etkinlik Yönetimi ──────────────────────────────────────────────────────
 
   async listTrainerEvents(user: User) {
-    return this.eventsRepo.find({
+    const events = await this.eventsRepo.find({
       where: { createdByUserId: user.id },
       order: { startsAt: 'DESC' },
-      take: 50,
+      take: 100,
     });
+    if (events.length === 0) return [];
+
+    // Her etkinlik için katılımcı sayısı
+    const eventIds = events.map((e) => e.id);
+    const regCounts = await this.eventRegRepo
+      .createQueryBuilder('r')
+      .select('r.club_event_id', 'eventId')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.club_event_id IN (:...eventIds)', { eventIds })
+      .groupBy('r.club_event_id')
+      .getRawMany<{ eventId: string; count: string }>();
+
+    const countMap = new Map<string, number>();
+    for (const row of regCounts) {
+      countMap.set(row.eventId, parseInt(row.count, 10));
+    }
+
+    return events.map((e) => ({
+      ...e,
+      registrationCount: countMap.get(e.id) ?? 0,
+    }));
   }
 
   async deleteTrainerEvent(user: User, eventId: string) {
     const event = await this.eventsRepo.findOne({ where: { id: eventId, createdByUserId: user.id } });
     if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+
+    // Katılımcı varsa silme — önce iptal edilmeli
+    const regCount = await this.eventRegRepo.count({ where: { clubEventId: eventId } });
+    if (regCount > 0) {
+      throw new BadRequestException(
+        `Bu etkinliğe ${regCount} katılımcı kayıtlı. Önce katılımcılara haber vererek etkinliği iptal etmelisiniz.`,
+      );
+    }
+
     await this.eventsRepo.remove(event);
     return { ok: true };
+  }
+
+  /** Eğitmen kendi etkinliğini günceller (sadece taslak veya beklemedeyken) */
+  async updateTrainerEvent(
+    user: User,
+    eventId: string,
+    data: {
+      title?: string;
+      description?: string;
+      location?: string;
+      startsAt?: string;
+      endsAt?: string | null;
+      capacity?: number;
+      category?: string;
+      price?: number;
+      requirements?: string;
+      imageUrl?: string;
+    },
+  ) {
+    const event = await this.eventsRepo.findOne({
+      where: { id: eventId, createdByUserId: user.id },
+    });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+    if (event.status === 'approved' && event.startsAt < new Date()) {
+      throw new BadRequestException('Geçmiş onaylanmış etkinlik düzenlenemez');
+    }
+
+    if (data.title !== undefined) event.title = data.title.trim();
+    if (data.description !== undefined) event.description = data.description?.trim() || null;
+    if (data.location !== undefined) event.location = data.location.trim();
+    if (data.startsAt !== undefined) event.startsAt = new Date(data.startsAt);
+    if (data.endsAt !== undefined)
+      event.endsAt = data.endsAt ? new Date(data.endsAt) : null;
+    if (data.capacity !== undefined) event.capacity = data.capacity;
+    if (data.category !== undefined) event.category = data.category.trim() || 'general';
+    if (data.price !== undefined) event.price = String(data.price);
+    if (data.requirements !== undefined)
+      event.requirements = data.requirements?.trim() || null;
+    if (data.imageUrl !== undefined) event.imageUrl = data.imageUrl?.trim() || null;
+
+    // Onaylanmış etkinlik düzenlenirse tekrar onay sürecine gitmeli
+    if (event.status === 'approved' || event.status === 'rejected') {
+      event.status = 'pending_approval';
+      event.published = false;
+    }
+
+    await this.eventsRepo.save(event);
+    return event;
   }
 
   async createTrainerEvent(user: User, data: {

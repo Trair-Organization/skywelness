@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
+import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { Reservation } from '../database/entities/reservation.entity';
 import { Resource } from '../database/entities/resource.entity';
 import { Trainer } from '../database/entities/trainer.entity';
@@ -26,6 +27,7 @@ import { TrainerPanelService } from './trainer-panel.service';
     TypeOrmModule.forFeature([
       Availability,
       ClubEvent,
+      ClubEventRegistration,
       Reservation,
       Resource,
       Trainer,

@@ -8066,3 +8066,400 @@ a.trainer-stat-card:hover {
     font-size: 3rem;
   }
 }
+
+
+/* ─── Trainer Events Page ─────────────────────────────────────────────────── */
+.trainer-events-page {
+  padding: 1rem 1.25rem 2rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.trainer-events-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.trainer-events-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.trainer-events-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.trainer-events-stat-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.trainer-events-stat strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.trainer-events-stat span {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.trainer-events-tabs {
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.services-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 4px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.services-tab.active .services-tab-count {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* Form içinde alt başlık */
+.services-form-head {
+  margin-bottom: 1rem;
+}
+
+.services-form-hint {
+  margin: 0.25rem 0 0;
+  color: #d97706;
+  font-size: 0.85rem;
+}
+
+.services-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem 1rem;
+}
+
+@media (max-width: 600px) {
+  .services-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.services-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Görsel yükleme */
+.event-image-upload {
+  margin-top: 0.25rem;
+}
+
+.event-image-preview {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.event-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.event-image-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-image-remove:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.event-image-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.88rem;
+  transition: all 0.15s;
+}
+
+.event-image-dropzone:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.event-image-dropzone-icon {
+  font-size: 2rem;
+}
+
+/* Tekrarlayan etkinlik kutusu */
+.event-recurring-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.event-recurring-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.92rem;
+}
+
+.event-recurring-toggle input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.event-recurring-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .event-recurring-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Etkinlik kart grid */
+.trainer-events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.trainer-event-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.15s;
+}
+
+.trainer-event-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  transform: translateY(-2px);
+}
+
+.trainer-event-card.is-past {
+  opacity: 0.7;
+}
+
+.trainer-event-image {
+  width: 100%;
+  height: 140px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.trainer-event-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trainer-event-body {
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex: 1;
+}
+
+.trainer-event-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trainer-event-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.trainer-event-cat {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.trainer-event-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.trainer-event-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.trainer-event-meta span {
+  display: inline-block;
+}
+
+/* Katılımcı barı */
+.trainer-event-attendance {
+  margin-top: 0.25rem;
+}
+
+.trainer-event-attendance-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.trainer-event-attendance-label strong {
+  color: #0f172a;
+}
+
+.trainer-event-attendance-bar {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.trainer-event-attendance-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease-out;
+}
+
+.trainer-event-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.trainer-event-price {
+  font-weight: 800;
+  color: #059669;
+  font-size: 1rem;
+}
+
+.trainer-event-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.btn-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn-danger:hover {
+  background: #fecaca;
+}
+
+@media (max-width: 480px) {
+  .trainer-events-grid {
+    grid-template-columns: 1fr;
+  }
+  .trainer-event-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .trainer-event-actions {
+    width: 100%;
+  }
+  .trainer-event-actions button {
+    flex: 1;
+  }
+}

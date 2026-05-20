@@ -471,6 +471,28 @@ export class TrainerPanelController {
     return this.service.deleteTrainerEvent(user, id);
   }
 
+  /** Eğitmen: kendi etkinliğini güncelle */
+  @Patch('events/:id')
+  updateEvent(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body()
+    body: {
+      title?: string;
+      description?: string;
+      location?: string;
+      startsAt?: string;
+      endsAt?: string | null;
+      capacity?: number;
+      category?: string;
+      price?: number;
+      requirements?: string;
+      imageUrl?: string;
+    },
+  ) {
+    return this.service.updateTrainerEvent(user, id, body);
+  }
+
   // ─── Öğrenci Detay: Ölçümler ────────────────────────────────────────────────
 
   @Get('students/:userId/measurements')
