@@ -221,11 +221,66 @@ export function MessagesPage() {
   // New conversation
   const searchNewConv = async (q: string, tab: 'members' | 'staff') => {
     try {
-      const endpoint = tab === 'staff' ? '/admin/trainers' : `/admin/members?search=${encodeURIComponent(q)}`;
-      const res = await apiJson<Array<{ id: string; userId?: string; firstName: string; lastName: string; email: string; publicId?: string | null; role?: string }>>(endpoint);
-      const mapped = (tab === 'staff' ? res.map(t => ({ ...t, id: t.userId || t.id, role: 'trainer' })) : res).slice(0, 8);
-      setNewConvResults(mapped.map(u => ({ id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, publicId: u.publicId, role: u.role || 'member' })));
-    } catch { setNewConvResults([]); }
+      let mapped: Array<{ id: string; firstName: string; lastName: string; email: string; publicId?: string | null; role: string }> = [];
+
+      if (isTrainer) {
+        // Eğitmen: kendi öğrencilerini ve tenant üyelerini listele
+        if (tab === 'staff') {
+          // Eğitmen için "staff" sekmesi şu an aktif kullanılmıyor
+          mapped = [];
+        } else {
+          // Önce aktif öğrencileri, yoksa tüm tenant üyelerini göster
+          const students = await apiJson<Array<{ userId: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>(
+            '/trainer-panel/available-members',
+          );
+          const filtered = q.trim()
+            ? students.filter(
+                (m) =>
+                  `${m.firstName} ${m.lastName}`.toLowerCase().includes(q.toLowerCase()) ||
+                  (m.email || '').toLowerCase().includes(q.toLowerCase()),
+              )
+            : students;
+          mapped = filtered.slice(0, 10).map((u) => ({
+            id: u.userId,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email,
+            publicId: u.publicId,
+            role: 'member',
+          }));
+        }
+      } else {
+        const endpoint =
+          tab === 'staff' ? '/admin/trainers' : `/admin/members?search=${encodeURIComponent(q)}`;
+        const res = await apiJson<
+          Array<{
+            id: string;
+            userId?: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            publicId?: string | null;
+            role?: string;
+          }>
+        >(endpoint);
+        const arr =
+          tab === 'staff'
+            ? res.map((t) => ({ ...t, id: t.userId || t.id, role: 'trainer' }))
+            : res;
+        mapped = arr.slice(0, 8).map((u) => ({
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          publicId: u.publicId,
+          role: u.role || 'member',
+        }));
+      }
+
+      setNewConvResults(mapped);
+    } catch {
+      setNewConvResults([]);
+    }
   };
 
   const startNewConv = async (otherUserId: string) => {
@@ -243,14 +298,58 @@ export function MessagesPage() {
   // Bulk message
   const loadBulkMembers = async () => {
     try {
-      const [members, trainers] = await Promise.all([
-        apiJson<Array<{ id: string; userId?: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>('/admin/members?status=active'),
-        apiJson<Array<{ id: string; userId?: string; firstName: string; lastName: string; email: string; publicId?: string | null }>>('/admin/trainers'),
-      ]);
-      const allMembers = members.map(m => ({ ...m, role: 'member' }));
-      const allStaff = trainers.map(t => ({ ...t, id: t.userId || t.id, role: 'trainer' }));
-      setBulkMembers([...allMembers, ...allStaff]);
-    } catch { /* */ }
+      if (isTrainer) {
+        // Eğitmen sadece kendi aktif öğrencilerine toplu mesaj atabilir
+        const students = await apiJson<
+          Array<{
+            userId: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone?: string | null;
+            photoUrl?: string | null;
+          }>
+        >('/trainer-panel/students');
+        setBulkMembers(
+          (students || []).map((s) => ({
+            id: s.userId,
+            firstName: s.firstName,
+            lastName: s.lastName,
+            email: s.email,
+            publicId: null,
+            role: 'member',
+          })),
+        );
+      } else {
+        const [members, trainers] = await Promise.all([
+          apiJson<
+            Array<{
+              id: string;
+              userId?: string;
+              firstName: string;
+              lastName: string;
+              email: string;
+              publicId?: string | null;
+            }>
+          >('/admin/members?status=active'),
+          apiJson<
+            Array<{
+              id: string;
+              userId?: string;
+              firstName: string;
+              lastName: string;
+              email: string;
+              publicId?: string | null;
+            }>
+          >('/admin/trainers'),
+        ]);
+        const allMembers = members.map((m) => ({ ...m, role: 'member' }));
+        const allStaff = trainers.map((t) => ({ ...t, id: t.userId || t.id, role: 'trainer' }));
+        setBulkMembers([...allMembers, ...allStaff]);
+      }
+    } catch {
+      /* */
+    }
   };
 
   const sendBulkMessage = async () => {
@@ -494,8 +593,46 @@ export function MessagesPage() {
             <h3 style={{ margin: '0 0 12px', color: '#0f172a' }}>+ Yeni Sohbet</h3>
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-              <button onClick={() => { setNewConvTab('members'); void searchNewConv(newConvSearch, 'members'); }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid', borderColor: newConvTab === 'members' ? '#2563eb' : '#e2e8f0', background: newConvTab === 'members' ? '#eff6ff' : '#ffffff', color: newConvTab === 'members' ? '#2563eb' : '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>👥 Üyeler</button>
-              <button onClick={() => { setNewConvTab('staff'); void searchNewConv('', 'staff'); }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid', borderColor: newConvTab === 'staff' ? '#2563eb' : '#e2e8f0', background: newConvTab === 'staff' ? '#eff6ff' : '#ffffff', color: newConvTab === 'staff' ? '#2563eb' : '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🏋️ Personel</button>
+              <button
+                onClick={() => {
+                  setNewConvTab('members');
+                  void searchNewConv(newConvSearch, 'members');
+                }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: '1px solid',
+                  borderColor: newConvTab === 'members' ? '#2563eb' : '#e2e8f0',
+                  background: newConvTab === 'members' ? '#eff6ff' : '#ffffff',
+                  color: newConvTab === 'members' ? '#2563eb' : '#374151',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {isTrainer ? '🎓 Öğrenciler' : '👥 Üyeler'}
+              </button>
+              {!isTrainer && (
+                <button
+                  onClick={() => {
+                    setNewConvTab('staff');
+                    void searchNewConv('', 'staff');
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    border: '1px solid',
+                    borderColor: newConvTab === 'staff' ? '#2563eb' : '#e2e8f0',
+                    background: newConvTab === 'staff' ? '#eff6ff' : '#ffffff',
+                    color: newConvTab === 'staff' ? '#2563eb' : '#374151',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🏋️ Personel
+                </button>
+              )}
             </div>
             <input type="text" placeholder="İsim ile ara..." value={newConvSearch} onChange={(e) => { setNewConvSearch(e.target.value); void searchNewConv(e.target.value, newConvTab); }} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} />
             <div style={{ maxHeight: 280, overflowY: 'auto', marginTop: 8 }}>
