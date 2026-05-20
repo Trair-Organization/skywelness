@@ -10,6 +10,9 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
 import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
+import { TrainerMemberMeasurement } from '../database/entities/trainer-member-measurement.entity';
+import { TrainerMemberAssessment } from '../database/entities/trainer-member-assessment.entity';
+import { TrainerMemberPhoto } from '../database/entities/trainer-member-photo.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
@@ -28,6 +31,9 @@ import { TrainerPanelService } from './trainer-panel.service';
       TrainerProfile,
       TrainerMemberLink,
       TrainerMemberNote,
+      TrainerMemberMeasurement,
+      TrainerMemberAssessment,
+      TrainerMemberPhoto,
       Package,
       PackageType,
       User,

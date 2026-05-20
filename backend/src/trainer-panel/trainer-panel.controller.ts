@@ -478,4 +478,104 @@ export class TrainerPanelController {
   ) {
     return this.service.deleteTrainerEvent(user, id);
   }
+
+  // ─── Öğrenci Detay: Ölçümler ────────────────────────────────────────────────
+
+  @Get('students/:userId/measurements')
+  listMeasurements(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.service.listMeasurements(user, userId);
+  }
+
+  @Post('students/:userId/measurements')
+  addMeasurement(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.service.addMeasurement(user, userId, body as never);
+  }
+
+  @Patch('measurements/:id')
+  updateMeasurement(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.service.updateMeasurement(user, id, body as never);
+  }
+
+  @Delete('measurements/:id')
+  deleteMeasurement(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteMeasurement(user, id);
+  }
+
+  // ─── Öğrenci Detay: Değerlendirmeler (FMS, Postür, VO2 Max) ─────────────────
+
+  @Get('students/:userId/assessments')
+  listAssessments(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Query('type') type?: string,
+  ) {
+    return this.service.listAssessments(user, userId, type as never);
+  }
+
+  @Post('students/:userId/assessments')
+  addAssessment(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { type: string; assessedAt: string; data: Record<string, unknown>; notes?: string },
+  ) {
+    return this.service.addAssessment(user, userId, body as never);
+  }
+
+  @Patch('assessments/:id')
+  updateAssessment(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { assessedAt?: string; data?: Record<string, unknown>; notes?: string },
+  ) {
+    return this.service.updateAssessment(user, id, body);
+  }
+
+  @Delete('assessments/:id')
+  deleteAssessment(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteAssessment(user, id);
+  }
+
+  // ─── Öğrenci Detay: Fotoğraflar ─────────────────────────────────────────────
+
+  @Get('students/:userId/photos')
+  listMemberPhotos(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+  ) {
+    return this.service.listMemberPhotos(user, userId);
+  }
+
+  @Post('students/:userId/photos')
+  addMemberPhoto(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: { takenAt: string; photoUrl: string; tag?: string; notes?: string },
+  ) {
+    return this.service.addMemberPhoto(user, userId, body);
+  }
+
+  @Delete('photos/:id')
+  deleteMemberPhoto(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteMemberPhoto(user, id);
+  }
 }

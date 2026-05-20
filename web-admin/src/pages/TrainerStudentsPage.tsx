@@ -1,197 +1,138 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ApiError, apiJson } from '../lib/api';
+import { apiJson, ApiError } from '../lib/api';
 
-type StudentRow = {
-  memberUserId: string;
-  member: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string | null;
-  };
+type Student = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  photoUrl: string | null;
+  source: string;
+  connectedAt: string;
+  lastLessonAt: string | null;
 };
 
-type NoteRow = {
-  id: string;
-  createdAt: string;
-  note: string;
-};
+function formatDate(d: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    year: '2-digit',
+  });
+}
 
 export function TrainerStudentsPage() {
-  const { t } = useTranslation();
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [notes, setNotes] = useState<NoteRow[]>([]);
-  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
-  const [newNote, setNewNote] = useState('');
-  const [loadingStudents, setLoadingStudents] = useState(true);
-  const [loadingNotes, setLoadingNotes] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
-  const selectedMemberName = useMemo(() => {
-    const row = students.find((student) => student.memberUserId === selectedMemberId);
-    if (!row) return '';
-    return `${row.member.firstName} ${row.member.lastName}`.trim();
-  }, [students, selectedMemberId]);
-
-  const loadStudents = useCallback(async () => {
-    setLoadingStudents(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
-      const rows = await apiJson<StudentRow[]>('/trainer-network/my-students', { method: 'GET' });
+      const rows = await apiJson<Student[]>('/trainer-panel/students');
       setStudents(rows);
-      if (rows.length > 0 && !selectedMemberId) {
-        setSelectedMemberId(rows[0].memberUserId);
-      }
-      if (rows.length === 0) {
-        setSelectedMemberId('');
-      }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t('trainerStudents.loadError'));
+      setError(e instanceof ApiError ? e.message : 'Yüklenemedi');
     } finally {
-      setLoadingStudents(false);
+      setLoading(false);
     }
-  }, [selectedMemberId, t]);
-
-  const loadNotes = useCallback(
-    async (memberUserId: string) => {
-      if (!memberUserId) {
-        setNotes([]);
-        return;
-      }
-      setLoadingNotes(true);
-      setError(null);
-      try {
-        const rows = await apiJson<NoteRow[]>(
-          `/trainer-network/notes?memberUserId=${encodeURIComponent(memberUserId)}`,
-          { method: 'GET' },
-        );
-        setNotes(rows);
-      } catch (e) {
-        setError(e instanceof ApiError ? e.message : t('trainerStudents.notesError'));
-      } finally {
-        setLoadingNotes(false);
-      }
-    },
-    [t],
-  );
+  }, []);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      void loadStudents();
-    });
-  }, [loadStudents]);
+    void load();
+  }, [load]);
 
-  useEffect(() => {
-    if (selectedMemberId) {
-      const timer = window.setTimeout(() => {
-        void loadNotes(selectedMemberId);
-      }, 0);
-      return () => window.clearTimeout(timer);
-    }
-  }, [loadNotes, selectedMemberId]);
-
-  async function submitNote(e: FormEvent) {
-    e.preventDefault();
-    if (!selectedMemberId || !newNote.trim()) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await apiJson('/trainer-network/student-note', {
-        method: 'POST',
-        body: JSON.stringify({ memberUserId: selectedMemberId, note: newNote.trim() }),
-      });
-      setNewNote('');
-      await loadNotes(selectedMemberId);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : t('trainerStudents.saveError'));
-    } finally {
-      setSaving(false);
-    }
-  }
+  const filteredStudents = useMemo(() => {
+    if (!search.trim()) return students;
+    const q = search.toLowerCase();
+    return students.filter(
+      (s) =>
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        (s.phone && s.phone.includes(q)),
+    );
+  }, [students, search]);
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <h1>{t('trainerStudents.title')}</h1>
-        <Link className="secondary" to="/trainer/dashboard">
-          {t('trainerStudents.back')}
-        </Link>
-      </header>
-
-      {error ? <p className="error">{error}</p> : null}
-      <section className="card">
-        <div className="rowBetween">
-          <h2>{t('trainerStudents.students')}</h2>
-          <button type="button" className="secondary" onClick={() => void loadStudents()}>
-            {loadingStudents ? t('trainerStudents.loading') : t('trainerStudents.refresh')}
-          </button>
+    <div className="trainer-services">
+      <div className="services-header">
+        <div>
+          <h1>👥 Öğrencilerim</h1>
+          <p className="muted">
+            Bağlı olduğunuz {students.length} öğrenci. Detayları görmek için bir öğrenciye tıklayın.
+          </p>
         </div>
-        {loadingStudents ? (
-          <p className="muted">{t('trainerStudents.loading')}</p>
-        ) : students.length === 0 ? (
-          <p className="muted">{t('trainerStudents.empty')}</p>
-        ) : (
-          <label>
-            {t('trainerStudents.select')}
-            <select
-              className="inputLike"
-              value={selectedMemberId}
-              onChange={(e) => setSelectedMemberId(e.target.value)}
+      </div>
+
+      {error && <div className="profile-banner profile-banner-error">⚠️ {error}</div>}
+
+      {students.length > 0 && (
+        <div className="students-search-row">
+          <input
+            type="text"
+            className="profile-input"
+            placeholder="🔍 Ad, e-posta veya telefon ile ara..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      )}
+
+      {loading && <p className="muted">Yükleniyor...</p>}
+
+      {!loading && students.length === 0 && (
+        <div className="services-empty">
+          <span className="services-empty-icon">👥</span>
+          <p>Henüz bağlı öğrenciniz yok.</p>
+          <p className="muted" style={{ fontSize: '0.85rem', maxWidth: 400 }}>
+            Ajanda sayfasından bir öğrenciye ders oluşturduğunuzda otomatik bağlanır. Üyeleri kulüp
+            havuzundan seçebilirsiniz.
+          </p>
+          <Link to="/trainer/agenda" className="btn-primary" style={{ marginTop: '0.75rem' }}>
+            📅 Ajandaya Git
+          </Link>
+        </div>
+      )}
+
+      {!loading && filteredStudents.length === 0 && students.length > 0 && (
+        <p className="muted">Aramayla eşleşen öğrenci yok.</p>
+      )}
+
+      {filteredStudents.length > 0 && (
+        <div className="students-grid">
+          {filteredStudents.map((s) => (
+            <Link
+              key={s.userId}
+              to={`/trainer/students/${s.userId}`}
+              className="student-card"
             >
-              {students.map((student) => (
-                <option key={student.memberUserId} value={student.memberUserId}>
-                  {student.member.firstName} {student.member.lastName} - {student.member.email}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </section>
-
-      <section className="card">
-        <h2>{t('trainerStudents.addNote')}</h2>
-        <p className="muted">
-          {selectedMemberName
-            ? `${t('trainerStudents.selected')}: ${selectedMemberName}`
-            : t('trainerStudents.selectHint')}
-        </p>
-        <form className="form" onSubmit={submitNote}>
-          <label>
-            {t('trainerStudents.note')}
-            <textarea
-              rows={4}
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              maxLength={1000}
-              required
-            />
-          </label>
-          <button type="submit" disabled={!selectedMemberId || saving}>
-            {saving ? t('trainerStudents.saving') : t('trainerStudents.submit')}
-          </button>
-        </form>
-      </section>
-
-      <section className="card">
-        <h2>{t('trainerStudents.notes')}</h2>
-        {loadingNotes ? (
-          <p className="muted">{t('trainerStudents.loading')}</p>
-        ) : notes.length === 0 ? (
-          <p className="muted">{t('trainerStudents.noNotes')}</p>
-        ) : (
-          <ul className="notesList">
-            {notes.map((note) => (
-              <li key={note.id}>
-                <p>{note.note}</p>
-                <small className="muted">{new Date(note.createdAt).toLocaleString()}</small>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              <div className="student-card-photo">
+                {s.photoUrl ? (
+                  <img src={s.photoUrl} alt={`${s.firstName} ${s.lastName}`} />
+                ) : (
+                  <span>{s.firstName.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="student-card-info">
+                <strong>
+                  {s.firstName} {s.lastName}
+                </strong>
+                <span className="student-card-email">{s.email}</span>
+                {s.phone && <span className="student-card-phone">📞 {s.phone}</span>}
+              </div>
+              <div className="student-card-meta">
+                <span className="student-card-meta-label">Son ders</span>
+                <span className="student-card-meta-value">{formatDate(s.lastLessonAt)}</span>
+              </div>
+              <span className="student-card-arrow">→</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

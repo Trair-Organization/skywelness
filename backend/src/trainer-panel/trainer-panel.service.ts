@@ -14,6 +14,12 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
 import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
+import { TrainerMemberMeasurement } from '../database/entities/trainer-member-measurement.entity';
+import {
+  TrainerMemberAssessment,
+  type AssessmentType,
+} from '../database/entities/trainer-member-assessment.entity';
+import { TrainerMemberPhoto } from '../database/entities/trainer-member-photo.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
@@ -31,6 +37,12 @@ export class TrainerPanelService {
     @InjectRepository(TrainerProfile) private readonly profilesRepo: Repository<TrainerProfile>,
     @InjectRepository(TrainerMemberLink) private readonly linksRepo: Repository<TrainerMemberLink>,
     @InjectRepository(TrainerMemberNote) private readonly notesRepo: Repository<TrainerMemberNote>,
+    @InjectRepository(TrainerMemberMeasurement)
+    private readonly measurementsRepo: Repository<TrainerMemberMeasurement>,
+    @InjectRepository(TrainerMemberAssessment)
+    private readonly assessmentsRepo: Repository<TrainerMemberAssessment>,
+    @InjectRepository(TrainerMemberPhoto)
+    private readonly photosRepo: Repository<TrainerMemberPhoto>,
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
@@ -2057,5 +2069,195 @@ export class TrainerPanelService {
     });
 
     return this.eventsRepo.save(event);
+  }
+
+  // ─── Öğrenci Detay: Ölçümler ────────────────────────────────────────────────
+
+  /** Üyenin ölçüm geçmişini listele */
+  async listMeasurements(user: User, memberUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const rows = await this.measurementsRepo.find({
+      where: { trainerId: trainer.id, memberUserId },
+      order: { measuredAt: 'DESC' },
+    });
+    return rows.map((m) => ({
+      id: m.id,
+      measuredAt: m.measuredAt,
+      weightKg: m.weightKg,
+      heightCm: m.heightCm,
+      bodyFatPct: m.bodyFatPct,
+      muscleMassKg: m.muscleMassKg,
+      waistCm: m.waistCm,
+      hipCm: m.hipCm,
+      chestCm: m.chestCm,
+      bicepsLeftCm: m.bicepsLeftCm,
+      bicepsRightCm: m.bicepsRightCm,
+      thighLeftCm: m.thighLeftCm,
+      thighRightCm: m.thighRightCm,
+      calfLeftCm: m.calfLeftCm,
+      calfRightCm: m.calfRightCm,
+      notes: m.notes,
+    }));
+  }
+
+  /** Yeni ölçüm ekle */
+  async addMeasurement(
+    user: User,
+    memberUserId: string,
+    data: Partial<Omit<TrainerMemberMeasurement, 'id' | 'tenantId' | 'trainerId' | 'memberUserId' | 'createdAt' | 'tenant' | 'trainer' | 'memberUser'>>,
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.measuredAt) throw new BadRequestException('Tarih zorunlu');
+    const m = this.measurementsRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId,
+      ...data,
+    });
+    await this.measurementsRepo.save(m);
+    return { id: m.id, ok: true };
+  }
+
+  /** Ölçüm güncelle */
+  async updateMeasurement(
+    user: User,
+    measurementId: string,
+    data: Partial<Omit<TrainerMemberMeasurement, 'id' | 'tenantId' | 'trainerId' | 'memberUserId' | 'createdAt' | 'tenant' | 'trainer' | 'memberUser'>>,
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const m = await this.measurementsRepo.findOne({
+      where: { id: measurementId, trainerId: trainer.id },
+    });
+    if (!m) throw new NotFoundException('Ölçüm bulunamadı');
+    Object.assign(m, data);
+    await this.measurementsRepo.save(m);
+    return { ok: true };
+  }
+
+  /** Ölçüm sil */
+  async deleteMeasurement(user: User, measurementId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const m = await this.measurementsRepo.findOne({
+      where: { id: measurementId, trainerId: trainer.id },
+    });
+    if (!m) throw new NotFoundException('Ölçüm bulunamadı');
+    await this.measurementsRepo.remove(m);
+    return { ok: true };
+  }
+
+  // ─── Öğrenci Detay: Değerlendirmeler (FMS, Postür, VO2 Max) ─────────────────
+
+  async listAssessments(user: User, memberUserId: string, type?: AssessmentType) {
+    const trainer = await this.resolveTrainer(user);
+    const where: Record<string, unknown> = { trainerId: trainer.id, memberUserId };
+    if (type) where.type = type;
+    const rows = await this.assessmentsRepo.find({
+      where,
+      order: { assessedAt: 'DESC' },
+    });
+    return rows.map((a) => ({
+      id: a.id,
+      assessedAt: a.assessedAt,
+      type: a.type,
+      data: a.data,
+      notes: a.notes,
+      createdAt: a.createdAt,
+    }));
+  }
+
+  async addAssessment(
+    user: User,
+    memberUserId: string,
+    data: { type: AssessmentType; assessedAt: string; data: Record<string, unknown>; notes?: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.type || !data.assessedAt) {
+      throw new BadRequestException('Tip ve tarih zorunlu');
+    }
+    const a = this.assessmentsRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId,
+      type: data.type,
+      assessedAt: data.assessedAt,
+      data: data.data ?? {},
+      notes: data.notes ?? null,
+    });
+    await this.assessmentsRepo.save(a);
+    return { id: a.id, ok: true };
+  }
+
+  async updateAssessment(
+    user: User,
+    assessmentId: string,
+    data: { assessedAt?: string; data?: Record<string, unknown>; notes?: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const a = await this.assessmentsRepo.findOne({
+      where: { id: assessmentId, trainerId: trainer.id },
+    });
+    if (!a) throw new NotFoundException('Değerlendirme bulunamadı');
+    if (data.assessedAt !== undefined) a.assessedAt = data.assessedAt;
+    if (data.data !== undefined) a.data = data.data;
+    if (data.notes !== undefined) a.notes = data.notes;
+    await this.assessmentsRepo.save(a);
+    return { ok: true };
+  }
+
+  async deleteAssessment(user: User, assessmentId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const a = await this.assessmentsRepo.findOne({
+      where: { id: assessmentId, trainerId: trainer.id },
+    });
+    if (!a) throw new NotFoundException('Değerlendirme bulunamadı');
+    await this.assessmentsRepo.remove(a);
+    return { ok: true };
+  }
+
+  // ─── Öğrenci Detay: Fotoğraflar (timeline) ──────────────────────────────────
+
+  async listMemberPhotos(user: User, memberUserId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const rows = await this.photosRepo.find({
+      where: { trainerId: trainer.id, memberUserId },
+      order: { takenAt: 'DESC', createdAt: 'DESC' },
+    });
+    return rows.map((p) => ({
+      id: p.id,
+      takenAt: p.takenAt,
+      photoUrl: p.photoUrl,
+      tag: p.tag,
+      notes: p.notes,
+    }));
+  }
+
+  async addMemberPhoto(
+    user: User,
+    memberUserId: string,
+    data: { takenAt: string; photoUrl: string; tag?: string; notes?: string },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.photoUrl) throw new BadRequestException('Fotoğraf URL zorunlu');
+    const p = this.photosRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId,
+      takenAt: data.takenAt || new Date().toISOString().slice(0, 10),
+      photoUrl: data.photoUrl,
+      tag: data.tag ?? null,
+      notes: data.notes ?? null,
+    });
+    await this.photosRepo.save(p);
+    return { id: p.id, ok: true };
+  }
+
+  async deleteMemberPhoto(user: User, photoId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const p = await this.photosRepo.findOne({
+      where: { id: photoId, trainerId: trainer.id },
+    });
+    if (!p) throw new NotFoundException('Fotoğraf bulunamadı');
+    await this.photosRepo.remove(p);
+    return { ok: true };
   }
 }
