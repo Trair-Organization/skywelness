@@ -501,6 +501,43 @@ export class TrainerPanelService {
     return { inviteCode: trainer.inviteCode };
   }
 
+  /**
+   * Eğitmenin tenant'ındaki tüm aktif üyeleri listeler (ders oluştururken seçmek için).
+   * Bağlı öğrenciler `linked: true` olarak işaretlenir.
+   */
+  async listAvailableMembers(user: User) {
+    const trainer = await this.resolveTrainer(user);
+
+    const [members, links] = await Promise.all([
+      this.usersRepo.find({
+        where: {
+          tenantId: trainer.tenantId,
+          role: UserRole.MEMBER,
+          accountStatus: MemberAccountStatus.ACTIVE,
+        },
+        select: ['id', 'firstName', 'lastName', 'email', 'phone', 'photoUrl'],
+        order: { firstName: 'ASC' },
+        take: 500,
+      }),
+      this.linksRepo.find({
+        where: { trainerId: trainer.id, status: 'active' },
+        select: ['memberUserId'],
+      }),
+    ]);
+
+    const linkedIds = new Set(links.map((l) => l.memberUserId));
+
+    return members.map((m) => ({
+      userId: m.id,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      email: m.email,
+      phone: m.phone,
+      photoUrl: m.photoUrl,
+      linked: linkedIds.has(m.id),
+    }));
+  }
+
   /** Username veya e-posta ile kullanıcı ara */
   async searchUser(user: User, query: string) {
     const q = query.trim().toLowerCase();

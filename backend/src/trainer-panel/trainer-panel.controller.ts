@@ -87,6 +87,12 @@ export class TrainerPanelController {
     return this.service.listStudents(user);
   }
 
+  /** Eğitmenin tenant'ındaki tüm aktif üyeler (ders oluştururken kullanmak için). */
+  @Get('available-members')
+  listAvailableMembers(@CurrentUser() user: User) {
+    return this.service.listAvailableMembers(user);
+  }
+
   @Get('students/search')
   searchUser(@CurrentUser() user: User, @Query('q') query: string) {
     return this.service.searchUser(user, query ?? '');

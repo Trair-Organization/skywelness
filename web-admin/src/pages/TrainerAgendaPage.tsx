@@ -24,7 +24,9 @@ type Student = {
   lastName: string;
   email: string;
   phone: string | null;
-  lastLessonAt: string | null;
+  photoUrl?: string | null;
+  linked?: boolean;
+  lastLessonAt?: string | null;
 };
 
 type CellState =
@@ -87,14 +89,14 @@ export function TrainerAgendaPage() {
     try {
       const fromDate = viewMode === 'weekly' ? getWeekStart(date) : date;
       const toDate = viewMode === 'weekly' ? addDays(getWeekStart(date), 6) : date;
-      const [cal, stu] = await Promise.all([
+      const [cal, members] = await Promise.all([
         apiJson<CalendarResponse>(
           `/trainer-panel/calendar?from=${fromDate}T00:00:00Z&to=${toDate}T23:59:59Z`,
         ),
-        apiJson<Student[]>('/trainer-panel/students'),
+        apiJson<Student[]>('/trainer-panel/available-members'),
       ]);
       setData(cal);
-      setStudents(stu);
+      setStudents(members);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Yüklenemedi');
     } finally {
@@ -819,7 +821,7 @@ export function TrainerAgendaPage() {
                                 {s.email}
                               </span>
                             </div>
-                            {s.lastLessonAt ? (
+                            {s.linked ? (
                               <span
                                 style={{
                                   fontSize: '0.7rem',
@@ -830,7 +832,7 @@ export function TrainerAgendaPage() {
                                   color: '#166534',
                                 }}
                               >
-                                Son ders: {new Date(s.lastLessonAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' })}
+                                ✓ Bağlı
                               </span>
                             ) : (
                               <span
@@ -842,7 +844,7 @@ export function TrainerAgendaPage() {
                                   color: '#64748b',
                                 }}
                               >
-                                Yeni
+                                Üye
                               </span>
                             )}
                           </div>
