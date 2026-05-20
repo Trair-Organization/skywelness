@@ -446,89 +446,102 @@ export function TrainerAgendaPage() {
       )}
 
       {!loading && totalSlots > 0 && (
-        <div className="trainer-agenda-grid">
-          {hours.map((h) => {
-            const cell = getCellState(h);
-            const hourInt = parseInt(h);
-            const isPast = isToday && hourInt <= now.getHours();
-            const isDropTarget = dropTargetHour === h;
-
-            if (cell.kind === 'booked') {
-              return (
-                <div
-                  key={h}
-                  className={`trainer-agenda-cell agenda-cell-booked ${isPast ? 'agenda-cell-past' : ''}`}
-                  draggable={!isPast}
-                  onDragStart={() => setDragLesson(cell.lesson)}
-                  onDragEnd={() => {
-                    setDragLesson(null);
-                    setDropTargetHour(null);
-                  }}
-                  onClick={() => openCellMenu(h)}
-                >
-                  <div className="agenda-cell-time">{h}</div>
-                  <div className="agenda-cell-info">
-                    <strong>{cell.lesson.studentName}</strong>
-                    <span className="agenda-cell-status">
-                      {cell.lesson.status === 'confirmed' ? '✓ Onaylı' : '⏳ Bekliyor'}
-                    </span>
+        <div className="agenda-grid-wrapper">
+          <table className="agenda-table">
+            <thead>
+              <tr>
+                <th className="agenda-th-hour">Saat</th>
+                <th className="agenda-th-therapist">
+                  <div>
+                    <div className="agenda-therapist-name">📅 Ajandam</div>
+                    <div className="agenda-therapist-stat">
+                      {todayLessons}/{totalSlots} dolu
+                    </div>
                   </div>
-                  <span className="agenda-cell-icon">📌</span>
-                </div>
-              );
-            }
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {hours.map((h) => {
+                const cell = getCellState(h);
+                const hourInt = parseInt(h);
+                const isPast = isToday && hourInt <= now.getHours();
+                const nH = `${String(parseInt(h) + 1).padStart(2, '0')}:00`;
+                const isDropTarget = dropTargetHour === h;
 
-            if (cell.kind === 'available') {
-              return (
-                <div
-                  key={h}
-                  className={`trainer-agenda-cell agenda-cell-free ${isPast ? 'agenda-cell-past' : ''} ${isDropTarget ? 'agenda-cell-drop' : ''}`}
-                  onClick={() => !isPast && openCellMenu(h)}
-                  onDragOver={(e) => {
-                    if (!isPast) {
-                      e.preventDefault();
-                      setDropTargetHour(h);
-                    }
-                  }}
-                  onDragLeave={() => setDropTargetHour(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (!isPast) void handleDrop(h);
-                  }}
-                >
-                  <div className="agenda-cell-time">{h}</div>
-                  <div className="agenda-cell-info">
-                    <span className="agenda-cell-label">{isDropTarget ? '⬇ Bırak' : 'Müsait'}</span>
-                  </div>
-                  <span className="agenda-cell-icon">🟢</span>
-                </div>
-              );
-            }
-
-            return (
-              <div
-                key={h}
-                className={`trainer-agenda-cell agenda-cell-empty ${isPast ? 'agenda-cell-past' : ''} ${isDropTarget ? 'agenda-cell-drop' : ''}`}
-                onClick={() => !isPast && openCellMenu(h)}
-                onDragOver={(e) => {
-                  if (!isPast) {
-                    e.preventDefault();
-                    setDropTargetHour(h);
-                  }
-                }}
-                onDragLeave={() => setDropTargetHour(null)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (!isPast) void handleDrop(h);
-                }}
-              >
-                <div className="agenda-cell-time">{h}</div>
-                <div className="agenda-cell-info">
-                  <span className="agenda-cell-label">{isDropTarget ? '⬇ Bırak' : '+ Slot ekle'}</span>
-                </div>
-              </div>
-            );
-          })}
+                return (
+                  <tr key={h} className={isPast ? 'agenda-row-past' : ''}>
+                    <td className="agenda-td-hour">
+                      {h}–{nH}
+                    </td>
+                    {cell.kind === 'booked' && (
+                      <td
+                        className={`agenda-td agenda-td-booked ${isPast ? 'agenda-td-past' : 'agenda-td-draggable'}`}
+                        draggable={!isPast}
+                        onDragStart={() => setDragLesson(cell.lesson)}
+                        onDragEnd={() => {
+                          setDragLesson(null);
+                          setDropTargetHour(null);
+                        }}
+                        onClick={() => openCellMenu(h)}
+                      >
+                        <div className="agenda-td-content">
+                          <span className="agenda-td-name">
+                            {cell.lesson.studentName.split(' ')[0] || '—'}
+                          </span>
+                          <span className="agenda-td-status">
+                            {cell.lesson.status === 'confirmed' ? '✓' : '⏳'}
+                          </span>
+                        </div>
+                      </td>
+                    )}
+                    {cell.kind === 'available' && (
+                      <td
+                        className={`agenda-td agenda-td-free ${isPast ? 'agenda-td-past' : ''} ${isDropTarget ? 'agenda-td-drop-target' : ''}`}
+                        onClick={() => !isPast && openCellMenu(h)}
+                        onDragOver={(e) => {
+                          if (!isPast) {
+                            e.preventDefault();
+                            setDropTargetHour(h);
+                          }
+                        }}
+                        onDragLeave={() => setDropTargetHour(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!isPast) void handleDrop(h);
+                        }}
+                      >
+                        <span className="agenda-free-label">
+                          {isPast ? '—' : isDropTarget ? '⬇ Bırak' : 'Müsait'}
+                        </span>
+                      </td>
+                    )}
+                    {cell.kind === 'empty' && (
+                      <td
+                        className={`agenda-td agenda-td-empty ${isPast ? 'agenda-td-past' : ''} ${isDropTarget ? 'agenda-td-drop-target' : ''}`}
+                        onClick={() => !isPast && openCellMenu(h)}
+                        onDragOver={(e) => {
+                          if (!isPast) {
+                            e.preventDefault();
+                            setDropTargetHour(h);
+                          }
+                        }}
+                        onDragLeave={() => setDropTargetHour(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!isPast) void handleDrop(h);
+                        }}
+                      >
+                        <span className="agenda-empty-plus">
+                          {isPast ? '—' : isDropTarget ? '⬇' : '+'}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

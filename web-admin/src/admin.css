@@ -5045,32 +5045,34 @@ a.trainer-stat-card:hover {
 /* ─── Daily slot cards (vertical list) ─── */
 .trainer-agenda-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 1rem;
 }
 .trainer-agenda-cell {
-  display: grid;
-  grid-template-columns: 70px 1fr auto;
-  gap: 1rem;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 0.85rem 1rem;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s;
   border: 1px solid transparent;
+  min-height: 92px;
+  position: relative;
 }
 .agenda-cell-empty {
   background: #f8fafc;
   border-style: dashed;
-  border-color: #e2e8f0;
+  border-color: #cbd5e1;
 }
 .agenda-cell-empty:hover {
   background: #eff6ff;
   border-color: var(--accent);
+  transform: translateY(-2px);
 }
 .agenda-cell-free {
   background: #ecfdf5;
@@ -5078,15 +5080,19 @@ a.trainer-stat-card:hover {
 }
 .agenda-cell-free:hover {
   background: #d1fae5;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.12);
 }
 .agenda-cell-booked {
   background: #eff6ff;
   border-color: #bfdbfe;
+  border-left: 3px solid var(--accent);
 }
 .agenda-cell-booked:hover {
   background: #dbeafe;
   border-color: var(--accent);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  transform: translateY(-2px);
 }
 .agenda-cell-past {
   opacity: 0.5;
@@ -5100,25 +5106,38 @@ a.trainer-stat-card:hover {
 }
 
 .agenda-cell-time {
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #0f172a;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.25);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+.agenda-cell-time::after {
+  content: attr(data-end);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
 }
 .agenda-cell-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 .agenda-cell-info strong {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .agenda-cell-status {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #64748b;
   font-weight: 600;
 }
@@ -5126,19 +5145,29 @@ a.trainer-stat-card:hover {
   font-size: 0.85rem;
   color: #64748b;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .agenda-cell-icon {
-  font-size: 1.1rem;
-  color: #94a3b8;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 0.95rem;
+  opacity: 0.6;
 }
 
 @media (max-width: 640px) {
-  .trainer-agenda-cell {
-    grid-template-columns: 60px 1fr auto;
-    gap: 0.6rem;
-    padding: 0.65rem 0.85rem;
-  }
   .trainer-agenda-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
     padding: 0.6rem;
+  }
+  .trainer-agenda-cell {
+    padding: 0.6rem 0.7rem;
+    min-height: 80px;
+  }
+  .agenda-cell-time {
+    font-size: 0.85rem;
   }
 }
