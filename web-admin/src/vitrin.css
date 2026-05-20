@@ -4487,7 +4487,6 @@
   }
 }
 
-
 /* ═══════════════════════════════════════════════════════════════════════════
    Faz 1 — Profesyonel Marketplace iyileştirmeleri
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -4840,7 +4839,6 @@
   }
 }
 
-
 /* ═══════════════════════════════════════════════════════════════════════════
    STANDARDIZE KART SİSTEMİ (Marketplace Pro)
    Tüm kartlar için tutarlı boyut, oran, padding, hover davranışı.
@@ -5110,7 +5108,6 @@
   }
 }
 
-
 /* ─── Trainer Profile — Back Button ─── */
 .trainer-back-btn {
   display: inline-flex;
@@ -5132,7 +5129,6 @@
   border-color: rgba(56, 189, 248, 0.4);
   color: #38bdf8;
 }
-
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE — Profesyonel, tutarlı, marketplace standardı
@@ -5158,7 +5154,9 @@
   height: 2px;
   background: #e2e8f0;
   border-radius: 2px;
-  transition: transform 0.2s, opacity 0.2s;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
 }
 .vitrin-nav-toggle.open span:nth-child(1) {
   transform: translateY(7px) rotate(45deg);
@@ -5472,7 +5470,6 @@
   }
 }
 
-
 /* ─── Club Card — Logo Overlay + CTA + Service Count ─── */
 .vitrin-club-logo-overlay {
   position: absolute;
@@ -5518,7 +5515,6 @@
   background: rgba(56, 189, 248, 0.2);
   border-color: rgba(56, 189, 248, 0.5);
 }
-
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SABIT BOYUT KART SİSTEMİ — Tüm partner kartları eşit yükseklik
@@ -5686,7 +5682,6 @@
   }
 }
 
-
 /* ═══ Kart Görselleri — Kesilmeden tam sığsın, blur arka plan (Netflix tarzı) ═══ */
 .vitrin-club-cover,
 .vitrin-trainer-photo,
@@ -5718,4 +5713,200 @@
   filter: blur(18px) brightness(0.5) saturate(1.2);
   transform: scale(1.1);
   pointer-events: none;
+}
+
+/* ═══ Partner Badge Component ═══ */
+.partner-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.partner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 35%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--badge-color);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.partner-badge-icon {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+.partner-badge-label {
+  letter-spacing: 0.01em;
+}
+
+/* Size variants */
+.partner-badges-md .partner-badge {
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  gap: 4px;
+}
+.partner-badges-md .partner-badge-icon {
+  font-size: 0.8rem;
+}
+
+/* ═══ Kart İçi Kompakt Tipografi — Tüm bilgiler sığsın ═══ */
+
+/* Club Card body */
+.vitrin-club-body {
+  padding: 0.75rem 1rem;
+  gap: 4px;
+}
+.vitrin-club-body h3 {
+  font-size: 0.88rem;
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+.vitrin-card-location {
+  font-size: 0.72rem;
+  margin: 0;
+  color: #94a3b8;
+}
+.vitrin-card-meta {
+  font-size: 0.72rem;
+  gap: 6px;
+  margin: 2px 0;
+}
+.vitrin-card-rating {
+  font-size: 0.72rem;
+}
+.vitrin-card-reviews {
+  font-size: 0.68rem;
+}
+.vitrin-card-service-count {
+  font-size: 0.68rem;
+}
+.vitrin-card-tags {
+  gap: 4px;
+  margin: 2px 0;
+  max-height: none;
+  overflow: visible;
+}
+.vitrin-card-tag {
+  font-size: 0.62rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.vitrin-card-price-range {
+  font-size: 0.72rem;
+  margin: 2px 0 0;
+}
+.vitrin-card-cta {
+  padding-top: 6px;
+}
+.vitrin-card-cta-btn {
+  padding: 6px 0;
+  font-size: 0.78rem;
+}
+
+/* Trainer Card body */
+.vitrin-trainer-body {
+  padding: 0.65rem 0.85rem;
+  gap: 3px;
+}
+.vitrin-trainer-body h3 {
+  font-size: 0.85rem;
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+.vitrin-trainer-club {
+  font-size: 0.7rem;
+  margin: 0;
+}
+.vitrin-trainer-stats {
+  font-size: 0.72rem;
+  margin: 2px 0;
+}
+.vitrin-trainer-sessions {
+  font-size: 0.68rem;
+}
+
+/* Event Card body */
+.vitrin-event-body {
+  padding: 0.7rem 0.9rem;
+  gap: 3px;
+}
+.vitrin-event-body h3 {
+  font-size: 0.85rem;
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+.vitrin-event-category {
+  font-size: 0.65rem;
+}
+.vitrin-event-time {
+  font-size: 0.7rem;
+}
+.vitrin-event-club {
+  font-size: 0.7rem;
+}
+.vitrin-event-footer {
+  font-size: 0.72rem;
+}
+.vitrin-event-price {
+  font-size: 0.78rem;
+}
+.vitrin-event-coach {
+  font-size: 0.7rem;
+}
+
+/* Campaign Card body */
+.vitrin-campaign-body {
+  padding: 0.7rem 0.9rem;
+  gap: 3px;
+}
+.vitrin-campaign-body h3 {
+  font-size: 0.85rem;
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+.vitrin-campaign-desc {
+  font-size: 0.7rem;
+  margin: 2px 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vitrin-campaign-meta {
+  font-size: 0.7rem;
+}
+.vitrin-campaign-club {
+  font-size: 0.68rem;
+}
+.vitrin-campaign-time {
+  font-size: 0.68rem;
+}
+.vitrin-campaign-prices {
+  margin: 3px 0 0;
+}
+.vitrin-price-old {
+  font-size: 0.72rem;
+}
+.vitrin-price-new {
+  font-size: 0.88rem;
+}
+
+/* Badge'ler kart içinde küçük */
+.vitrin-club-body .partner-badges,
+.vitrin-trainer-body .partner-badges,
+.vitrin-event-body .partner-badges,
+.vitrin-campaign-body .partner-badges {
+  margin: 2px 0;
+}
+.vitrin-club-body .partner-badge,
+.vitrin-trainer-body .partner-badge,
+.vitrin-event-body .partner-badge,
+.vitrin-campaign-body .partner-badge {
+  font-size: 0.6rem;
+  padding: 1px 5px;
 }

@@ -8,6 +8,7 @@ const ClubMap = lazy(() => import('../components/ClubMap').then((m) => ({ defaul
 import { useFavorite } from '../hooks/useFavorite';
 import { trainerProfilePath } from '../lib/trainerUrl';
 import { PublicNav } from '../components/PublicNav';
+import { PartnerBadges } from '../components/PartnerBadges';
 
 type Club = {
   id: string;
@@ -25,6 +26,7 @@ type Club = {
   reviewCount: number | null;
   priceRange: string | null;
   featured: boolean;
+  badges: string[];
   latitude: string | null;
   longitude: string | null;
 };
@@ -41,6 +43,7 @@ type Trainer = {
   clubName: string;
   clubSubdomain: string;
   city: string | null;
+  badges: string[];
 };
 type Event = {
   id: string;
@@ -768,10 +771,6 @@ function ClubCard({ club }: { club: Club }) {
           ) : (
             <div className="vitrin-club-ph">{club.name.slice(0, 2).toUpperCase()}</div>
           )}
-          <div className="vitrin-club-badges">
-            {club.featured && <span className="vitrin-badge premium">⭐ Premium</span>}
-            <span className="vitrin-badge verified">✓ Doğrulanmış</span>
-          </div>
           {club.vertical && (
             <span className="vitrin-club-vertical">
               {VERTICALS.find((v) => v.key === club.vertical)?.icon || '🏢'}
@@ -780,6 +779,7 @@ function ClubCard({ club }: { club: Club }) {
         </div>
         <div className="vitrin-club-body">
           <h3>{club.name}</h3>
+          <PartnerBadges badges={club.badges ?? []} max={3} />
           {club.location && <p className="vitrin-card-location">📍 {club.location}</p>}
           <div className="vitrin-card-meta">
             {club.avgRating && Number(club.avgRating) > 0 && (
@@ -834,34 +834,23 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
         <div className="vitrin-trainer-photo">
           {trainer.photoUrl ? (
             <>
-              <img
-                src={trainer.photoUrl}
-                alt=""
-                className="vitrin-cover-blur"
-                aria-hidden="true"
-              />
+              <img src={trainer.photoUrl} alt="" className="vitrin-cover-blur" aria-hidden="true" />
               <img src={trainer.photoUrl} alt={trainer.name} />
             </>
           ) : (
             <div className="vitrin-trainer-ph">{trainer.name.charAt(0).toUpperCase()}</div>
           )}
-          <span className="vitrin-badge verified" style={{ position: 'absolute', top: 10, right: 10 }}>
-            ✓ Sertifikalı
-          </span>
         </div>
         <div className="vitrin-trainer-body">
           <h3>{trainer.name}</h3>
           <p className="vitrin-trainer-club">🏢 {trainer.clubName}</p>
-          <div className="vitrin-trainer-stats">
-            {Number(trainer.avgRating) > 0 && (
-              <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
-            )}
-            <span className="vitrin-trainer-sessions">{trainer.totalSessions} seans</span>
-          </div>
+          <PartnerBadges badges={trainer.badges ?? []} max={3} />
           {trainer.specialties.length > 0 && (
             <div className="vitrin-card-tags">
               {trainer.specialties.slice(0, 2).map((s) => (
-                <span key={s} className="vitrin-card-tag">{s}</span>
+                <span key={s} className="vitrin-card-tag">
+                  {s}
+                </span>
               ))}
             </div>
           )}
@@ -880,12 +869,7 @@ function EventCard({ event }: { event: Event }) {
     <Link to={`/event/${event.id}`} className="vitrin-event-card">
       {event.imageUrl && (
         <div className="vitrin-event-img">
-          <img
-            src={event.imageUrl}
-            alt=""
-            className="vitrin-cover-blur"
-            aria-hidden="true"
-          />
+          <img src={event.imageUrl} alt="" className="vitrin-cover-blur" aria-hidden="true" />
           <img src={event.imageUrl} alt={event.title} />
           <span className="vitrin-event-date-badge">
             {date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
@@ -925,12 +909,7 @@ function CampaignCard({ campaign, now }: { campaign: Campaign; now: number }) {
       <div className="vitrin-campaign-cover">
         {campaign.imageUrl ? (
           <>
-            <img
-              src={campaign.imageUrl}
-              alt=""
-              className="vitrin-cover-blur"
-              aria-hidden="true"
-            />
+            <img src={campaign.imageUrl} alt="" className="vitrin-cover-blur" aria-hidden="true" />
             <img src={campaign.imageUrl} alt={campaign.title} />
           </>
         ) : (
@@ -938,7 +917,17 @@ function CampaignCard({ campaign, now }: { campaign: Campaign; now: number }) {
         )}
         <span className="vitrin-campaign-badge">{discountText}</span>
         {daysLeft <= 3 && (
-          <span className="vitrin-badge" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(220,38,38,0.92)', color: '#fff', border: '1px solid rgba(220,38,38,0.3)' }}>
+          <span
+            className="vitrin-badge"
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              background: 'rgba(220,38,38,0.92)',
+              color: '#fff',
+              border: '1px solid rgba(220,38,38,0.3)',
+            }}
+          >
             🔥 Son {daysLeft} gün
           </span>
         )}
