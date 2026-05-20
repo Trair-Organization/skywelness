@@ -84,7 +84,8 @@ export async function apiJson<T>(
   const base = apiBaseUrl();
   const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
   const headers = new Headers(restInit.headers);
-  if (!headers.has('Content-Type') && restInit.body) {
+  // FormData ise Content-Type'ı browser otomatik set eder (boundary ile)
+  if (!headers.has('Content-Type') && restInit.body && !(restInit.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
   if (attachAuth) {
