@@ -2437,3 +2437,181 @@
     margin-left: 46px;
   }
 }
+
+
+/* ─── Trainer Hero Message Button ────────────────────────────────────────── */
+.trainer-hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.trainer-msg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.trainer-msg-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.25);
+}
+
+/* ─── Trainer Message Modal ──────────────────────────────────────────────── */
+.trainer-msg-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.trainer-msg-modal {
+  background: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.trainer-msg-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.trainer-msg-modal-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.trainer-msg-close {
+  background: rgba(148, 163, 184, 0.1);
+  border: none;
+  color: #cbd5e1;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.trainer-msg-close:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.2);
+  color: #f1f5f9;
+}
+
+.trainer-msg-hint {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.trainer-msg-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 110px;
+  transition: border-color 0.15s;
+}
+
+.trainer-msg-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.trainer-msg-char-count {
+  text-align: right;
+  color: #64748b;
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+}
+
+.trainer-msg-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.trainer-msg-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.trainer-msg-success {
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+
+.trainer-msg-success-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.trainer-msg-success p {
+  color: #cbd5e1;
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.trainer-msg-success p strong {
+  color: #f1f5f9;
+}
+
+@media (max-width: 640px) {
+  .trainer-msg-modal {
+    padding: 1.1rem;
+  }
+  .trainer-hero-actions {
+    width: 100%;
+  }
+  .trainer-msg-btn {
+    width: 100%;
+  }
+}

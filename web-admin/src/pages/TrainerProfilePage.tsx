@@ -191,6 +191,13 @@ export function TrainerProfilePage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
+  // Message state
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [messageSent, setMessageSent] = useState(false);
+
   const load = useCallback(async () => {
     if (!trainerId) return;
     try {
@@ -263,6 +270,43 @@ export function TrainerProfilePage() {
       await Promise.all([loadReviews(), loadCanReview(), load()]);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Silinemedi');
+    }
+  }
+
+  async function handleSendMessage() {
+    if (!profile || !messageText.trim()) return;
+    setSendingMessage(true);
+    setMessageError(null);
+    try {
+      // 1) Sohbeti oluştur veya getir
+      const conv = await apiJson<{ conversationId?: string; id?: string }>(
+        '/messages/conversations',
+        {
+          method: 'POST',
+          body: JSON.stringify({ otherUserId: profile.userId }),
+        },
+      );
+      const convId = conv.conversationId || conv.id;
+      if (!convId) throw new Error('Sohbet oluşturulamadı');
+
+      // 2) İlk mesajı gönder
+      await apiJson(`/messages/conversations/${convId}`, {
+        method: 'POST',
+        body: JSON.stringify({ content: messageText.trim() }),
+      });
+
+      setMessageSent(true);
+      setMessageText('');
+      // 2sn sonra modal'ı kapat ve mesajlar sayfasına yönlendir
+      setTimeout(() => {
+        setShowMessageDialog(false);
+        setMessageSent(false);
+        navigate('/messages');
+      }, 1500);
+    } catch (err) {
+      setMessageError(err instanceof Error ? err.message : 'Mesaj gönderilemedi');
+    } finally {
+      setSendingMessage(false);
     }
   }
 
@@ -341,6 +385,26 @@ export function TrainerProfilePage() {
                 {profile.club.location && <span className="trainer-club-loc">📍 {profile.club.location}</span>}
               </Link>
             )}
+
+            {/* Mesaj Gönder butonu — kullanıcı eğitmenle iletişim kurar */}
+            <div className="trainer-hero-actions">
+              {token ? (
+                <button
+                  type="button"
+                  className="btn-primary trainer-msg-btn"
+                  onClick={() => {
+                    setShowMessageDialog(true);
+                    setMessageError(null);
+                  }}
+                >
+                  💬 Mesaj Gönder
+                </button>
+              ) : (
+                <Link to="/login" className="btn-primary trainer-msg-btn">
+                  💬 Mesaj Göndermek İçin Giriş Yap
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
@@ -623,21 +687,101 @@ export function TrainerProfilePage() {
           )}
         </section>
 
-        {/* CTA - sadece PT eğitmenleri için kulüp linki */}
+        {/* CTA - kulüp linki ya da mesaj */}
         {profile.offersSessionTypes.includes('personal_training') && (
           <section className="profile-section profile-cta">
             {profile.club ? (
               <Link to={`/club/${profile.club.subdomain}`} className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
                 🏢 {profile.club.name} Sayfasını Görüntüle
               </Link>
+            ) : token ? (
+              <button
+                type="button"
+                className="btn-outline"
+                style={{ width: '100%', textAlign: 'center' }}
+                onClick={() => setShowMessageDialog(true)}
+              >
+                💬 Eğitmenle İletişime Geç
+              </button>
             ) : (
-              <a href="mailto:info@wellnessclub.com" className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
-                💬 İletişime Geç
-              </a>
+              <Link to="/login" className="btn-outline" style={{ width: '100%', textAlign: 'center' }}>
+                💬 İletişim İçin Giriş Yap
+              </Link>
             )}
           </section>
         )}
       </div>
+
+      {/* Mesaj Gönder Modal */}
+      {showMessageDialog && profile && (
+        <div
+          className="trainer-msg-overlay"
+          onClick={() => !sendingMessage && !messageSent && setShowMessageDialog(false)}
+        >
+          <div className="trainer-msg-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="trainer-msg-modal-head">
+              <h3>💬 {profile.name} ile İletişim</h3>
+              <button
+                type="button"
+                className="trainer-msg-close"
+                onClick={() => setShowMessageDialog(false)}
+                disabled={sendingMessage || messageSent}
+                aria-label="Kapat"
+              >
+                ✕
+              </button>
+            </div>
+            {messageSent ? (
+              <div className="trainer-msg-success">
+                <span className="trainer-msg-success-icon">✅</span>
+                <p>
+                  Mesajınız gönderildi! <strong>{profile.name}</strong> en kısa sürede dönüş
+                  yapacaktır.
+                </p>
+                <p className="muted" style={{ fontSize: '0.85rem' }}>
+                  Mesajlar sayfasına yönlendiriliyorsunuz...
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="trainer-msg-hint">
+                  Eğitmene sorularınızı yazın. Konuştuktan sonra paket alabilir veya rezervasyon
+                  yapabilirsiniz.
+                </p>
+                <textarea
+                  className="trainer-msg-input"
+                  rows={5}
+                  maxLength={1000}
+                  placeholder={`Merhaba ${profile.name.split(' ')[0]}, ...`}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  autoFocus
+                />
+                <div className="trainer-msg-char-count">{messageText.length}/1000</div>
+                {messageError && <p className="trainer-msg-error">{messageError}</p>}
+                <div className="trainer-msg-actions">
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={() => setShowMessageDialog(false)}
+                    disabled={sendingMessage}
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => void handleSendMessage()}
+                    disabled={sendingMessage || messageText.trim().length === 0}
+                  >
+                    {sendingMessage ? 'Gönderiliyor...' : '📤 Mesajı Gönder'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
