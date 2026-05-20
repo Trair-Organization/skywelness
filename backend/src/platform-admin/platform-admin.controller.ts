@@ -158,6 +158,15 @@ export class PlatformAdminController {
     );
   }
 
+  /** Eğitmen sertifika doğrulama rozeti */
+  @Patch('trainers/:trainerId/verified')
+  setTrainerVerified(
+    @Param('trainerId') trainerId: string,
+    @Body() body: { verified: boolean },
+  ) {
+    return this.platformAdminService.setTrainerVerified(trainerId, body.verified);
+  }
+
   /** Onay bekleyen etkinlikleri listele */
   @Get('events/pending')
   listPendingEvents() {

@@ -95,6 +95,9 @@ export class TrainerPublicProfileController {
       avgRating: trainer.avgRating,
       totalSessions: trainer.totalSessions,
       offersSessionTypes: trainer.offersSessionTypes ?? [],
+      verified: trainer.verified,
+      awayUntil: trainer.awayUntil,
+      awayMessage: trainer.awayMessage,
       club: tenant
         ? {
             id: tenant.id,

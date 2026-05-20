@@ -118,6 +118,9 @@ type TrainerProfile = {
   avgRating: string;
   totalSessions: number;
   offersSessionTypes: string[];
+  verified: boolean;
+  awayUntil: string | null;
+  awayMessage: string | null;
   club: {
     id: string;
     name: string;
@@ -205,7 +208,14 @@ export function TrainerProfilePage() {
             )}
           </div>
           <div className="trainer-hero-info">
-            <h1>{profile.name}</h1>
+            <h1>
+              {profile.name}
+              {profile.verified && (
+                <span className="trainer-verified-badge" title="Sertifika doğrulandı">
+                  ✓ Doğrulandı
+                </span>
+              )}
+            </h1>
             <div className="trainer-hero-stats">
               <span className="trainer-hero-rating">★ {Number(profile.avgRating).toFixed(1)}</span>
               <span className="trainer-hero-sessions">{profile.totalSessions} seans</span>
@@ -229,6 +239,14 @@ export function TrainerProfilePage() {
             )}
           </div>
         </div>
+
+        {/* Tatil banner */}
+        {profile.awayUntil && new Date(profile.awayUntil) >= new Date(new Date().toISOString().slice(0, 10)) && (
+          <div className="public-away-banner">
+            🏖️ <strong>{profile.name}</strong> şu an müsait değil ({new Date(profile.awayUntil).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihine kadar).
+            {profile.awayMessage && <p style={{ margin: '4px 0 0' }}>"{profile.awayMessage}"</p>}
+          </div>
+        )}
 
         {/* Bio */}
         {profile.bio && (

@@ -1705,6 +1705,9 @@ export class TrainerPanelService {
       totalSessions: trainer.totalSessions,
       commissionRate: trainer.commissionRate,
       defaultLessonPrice: trainer.defaultLessonPrice,
+      awayUntil: trainer.awayUntil,
+      awayMessage: trainer.awayMessage,
+      verified: trainer.verified,
       role: user.role,
     };
   }
@@ -1726,6 +1729,8 @@ export class TrainerPanelService {
       pricingNote?: string;
       offersSessionTypes?: string[];
       defaultLessonPrice?: number;
+      awayUntil?: string | null;
+      awayMessage?: string | null;
     },
   ) {
     const trainer = await this.resolveTrainer(user);
@@ -1761,6 +1766,8 @@ export class TrainerPanelService {
       trainer.offersSessionTypes = data.offersSessionTypes;
     if (data.defaultLessonPrice !== undefined && data.defaultLessonPrice >= 0)
       trainer.defaultLessonPrice = String(data.defaultLessonPrice);
+    if (data.awayUntil !== undefined) trainer.awayUntil = data.awayUntil;
+    if (data.awayMessage !== undefined) trainer.awayMessage = data.awayMessage;
     await this.trainersRepo.save(trainer);
 
     // Update user-level fields

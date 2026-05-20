@@ -7712,3 +7712,104 @@ a.trainer-stat-card:hover {
     size: A4;
   }
 }
+
+
+/* Verified badge in profile stats */
+.profile-stat-verified {
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+.profile-stat-verified strong {
+  color: #047857 !important;
+}
+
+/* Away banner in profile edit */
+.away-banner {
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  color: #92400e;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.away-banner strong {
+  color: #78350f;
+}
+
+/* Public profile away banner */
+.public-away-banner {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 12px;
+  color: #fef3c7;
+  font-size: 0.95rem;
+}
+.public-away-banner strong {
+  color: #fef3c7;
+}
+
+/* Verified badge on public profile */
+.trainer-verified-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 4px 10px;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  color: #4ade80;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
+/* Member progress page */
+.member-progress-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+.member-progress-header h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0.5rem 0 4px;
+  color: #0f172a;
+}
+.member-progress-header .muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+}
+.member-measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+.member-measurement-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.member-measurement-item span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.member-measurement-item strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}

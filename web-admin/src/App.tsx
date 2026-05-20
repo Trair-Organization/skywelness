@@ -41,6 +41,7 @@ import { TrainerAgendaPage } from './pages/TrainerAgendaPage';
 import { TrainerEarningsPage } from './pages/TrainerEarningsPage';
 import { TrainerStudentDetailPage } from './pages/TrainerStudentDetailPage';
 import { TrainerStudentReportPage } from './pages/TrainerStudentReportPage';
+import { MemberProgressPage } from './pages/MemberProgressPage';
 import { TrainerProfileEditPage } from './pages/TrainerProfileEditPage';
 import { TrainerServicesPage } from './pages/TrainerServicesPage';
 import { MarketingHomePage } from './pages/MarketingHomePage';
@@ -84,6 +85,7 @@ function AppRoutes() {
       <Route path="/event/:eventId" element={<EventDetailPage />} />
       <Route path="/campaign/:campaignId" element={<CampaignDetailPage />} />
       <Route path="/dashboard" element={<MemberDashboardPage />} />
+      <Route path="/dashboard/progress" element={<MemberProgressPage />} />
       <Route path="/marketing" element={<MarketingHomePage />} />
       <Route path="/pricing" element={<MarketingPricingPage />} />
       <Route path="/contact" element={<MarketingContactPage />} />

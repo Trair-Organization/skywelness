@@ -280,6 +280,7 @@ export class PlatformAdminService {
       totalSessions: row.totalSessions,
       offersSessionTypes: row.offersSessionTypes ?? [],
       commissionRate: row.commissionRate,
+      verified: row.verified,
       createdAt: row.createdAt,
     }));
   }
@@ -472,6 +473,25 @@ export class PlatformAdminService {
     });
 
     return { ok: true, sent: result.sent, total: result.total, target: data.target };
+  }
+
+  /** Eğitmen sertifika doğrulama (verified rozeti) */
+  async setTrainerVerified(trainerId: string, verified: boolean) {
+    const trainer = await this.trainersRepo.findOne({
+      where: { id: trainerId },
+      relations: ['user'],
+    });
+    if (!trainer) throw new NotFoundException('Trainer not found');
+    trainer.verified = verified;
+    await this.trainersRepo.save(trainer);
+    return {
+      ok: true,
+      trainerId,
+      trainerName: trainer.user
+        ? `${trainer.user.firstName} ${trainer.user.lastName}`.trim()
+        : '',
+      verified,
+    };
   }
 
   /** Tenant komisyon oranını güncelle */

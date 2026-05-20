@@ -80,6 +80,18 @@ export class Trainer {
   })
   defaultLessonPrice!: string;
 
+  /** Eğitmen tatilde mi? Bu tarihe kadar ajanda kapalı. */
+  @Column({ type: 'date', nullable: true, name: 'away_until' })
+  awayUntil!: string | null;
+
+  /** Tatil mesajı — üyelere ve keşif sayfasına gösterilir. */
+  @Column({ type: 'text', nullable: true, name: 'away_message' })
+  awayMessage!: string | null;
+
+  /** Süper admin tarafından sertifika/eğitim doğrulanmış mı? */
+  @Column({ type: 'boolean', default: false })
+  verified!: boolean;
+
   /** Which bookable service types this staff member offers (member UI filters by this). */
   @Column('text', {
     array: true,

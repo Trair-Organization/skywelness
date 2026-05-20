@@ -623,6 +623,9 @@ export function MemberDashboardPage() {
               <button className="overview-action-btn" onClick={() => setActiveTab('appointments')}>
                 📅 Randevularım
               </button>
+              <Link to="/dashboard/progress" className="overview-action-btn">
+                📊 İlerlemem
+              </Link>
               <button className="overview-action-btn" onClick={() => setActiveTab('messages')}>
                 💬 Mesajlar
               </button>

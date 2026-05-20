@@ -21,6 +21,9 @@ type TrainerProfileData = {
   totalSessions: number;
   defaultLessonPrice: string;
   commissionRate: string;
+  awayUntil: string | null;
+  awayMessage: string | null;
+  verified: boolean;
 };
 
 const SPECIALTY_SUGGESTIONS = [
@@ -68,6 +71,8 @@ export function TrainerProfileEditPage() {
   const [experienceYears, setExperienceYears] = useState<string>('');
   const [pricingNote, setPricingNote] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [awayUntil, setAwayUntil] = useState('');
+  const [awayMessage, setAwayMessage] = useState('');
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [newSpecialty, setNewSpecialty] = useState('');
   const [certifications, setCertifications] = useState<string[]>([]);
@@ -87,6 +92,8 @@ export function TrainerProfileEditPage() {
       setExperienceYears(data.experienceYears !== null ? String(data.experienceYears) : '');
       setPricingNote(data.pricingNote ?? '');
       setPhotoUrl(data.photoUrl ?? '');
+      setAwayUntil(data.awayUntil ?? '');
+      setAwayMessage(data.awayMessage ?? '');
       setSpecialties(data.specialties ?? []);
       setCertifications(data.certifications ?? []);
       setOffersSessionTypes(data.offersSessionTypes ?? []);
@@ -157,6 +164,8 @@ export function TrainerProfileEditPage() {
           experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
           pricingNote: pricingNote.trim() || undefined,
           photoUrl: photoUrl.trim() || undefined,
+          awayUntil: awayUntil || null,
+          awayMessage: awayMessage.trim() || null,
           specialties,
           certifications,
           offersSessionTypes,
@@ -246,6 +255,23 @@ export function TrainerProfileEditPage() {
               </div>
             </div>
           )}
+          {profile.verified && (
+            <div className="profile-stat profile-stat-verified">
+              <span className="profile-stat-icon">✅</span>
+              <div>
+                <strong>Doğrulandı</strong>
+                <span>Sertifika onaylı</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tatildeyim banner */}
+      {awayUntil && new Date(awayUntil) >= new Date(new Date().toISOString().slice(0, 10)) && (
+        <div className="away-banner">
+          🏖️ <strong>Tatil modunda</strong> — {new Date(awayUntil).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} tarihine kadar.
+          {awayMessage && <span> "{awayMessage}"</span>}
         </div>
       )}
 
@@ -518,6 +544,49 @@ export function TrainerProfileEditPage() {
             <small className="profile-hint">
               Verdiğiniz hizmetleri seçin — üyeler keşif sayfasında bu hizmetlere göre filtreliyor.
             </small>
+          </section>
+
+          <section className="profile-card">
+            <h2 className="profile-card-title">🏖️ Tatil / Müsait Değilim</h2>
+            <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.85rem' }}>
+              Belirli bir tarih aralığı için müsait olmadığınızı bildirin. Tatil bittiğinde otomatik aktif olursunuz.
+            </p>
+            <div className="services-grid-2">
+              <label className="profile-field">
+                <span>Dönüş Tarihi</span>
+                <input
+                  type="date"
+                  className="profile-input"
+                  value={awayUntil}
+                  onChange={(e) => setAwayUntil(e.target.value)}
+                  min={new Date().toISOString().slice(0, 10)}
+                />
+              </label>
+              <label className="profile-field">
+                <span>Tatil Mesajı (opsiyonel)</span>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={awayMessage}
+                  onChange={(e) => setAwayMessage(e.target.value)}
+                  placeholder="Örn: Tatildeyim, döndüğümde ulaşırım"
+                  maxLength={200}
+                />
+              </label>
+            </div>
+            {awayUntil && (
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={() => {
+                  setAwayUntil('');
+                  setAwayMessage('');
+                }}
+                style={{ alignSelf: 'flex-start', marginTop: 4 }}
+              >
+                ✕ Tatil Modunu Kaldır
+              </button>
+            )}
           </section>
 
           <section className="profile-card">

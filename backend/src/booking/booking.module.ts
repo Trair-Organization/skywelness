@@ -13,6 +13,9 @@ import { TimeSlot } from '../database/entities/time-slot.entity';
 import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerMemberLink } from '../database/entities/trainer-member-link.entity';
 import { TrainerMemberNote } from '../database/entities/trainer-member-note.entity';
+import { TrainerMemberGoal } from '../database/entities/trainer-member-goal.entity';
+import { TrainerMemberMeasurement } from '../database/entities/trainer-member-measurement.entity';
+import { TrainerMemberPhoto } from '../database/entities/trainer-member-photo.entity';
 import { User } from '../database/entities/user.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
 import { MailModule } from '../mail/mail.module';
@@ -32,6 +35,7 @@ import { CafeOrdersController } from './cafe-orders.controller';
 import { CafeOrdersService } from './cafe-orders.service';
 import { CafeProductsController } from './cafe-products.controller';
 import { CafeProductsService } from './cafe-products.service';
+import { MemberProgressController } from './member-progress.controller';
 
 @Module({
   imports: [
@@ -49,6 +53,9 @@ import { CafeProductsService } from './cafe-products.service';
       CafeProduct,
       TrainerMemberLink,
       TrainerMemberNote,
+      TrainerMemberGoal,
+      TrainerMemberMeasurement,
+      TrainerMemberPhoto,
       Availability,
     ]),
     AuthModule,
@@ -66,6 +73,7 @@ import { CafeProductsService } from './cafe-products.service';
     CafeOrdersController,
     CafeProductsController,
     PtMemberController,
+    MemberProgressController,
   ],
   providers: [BookingService, CafeOrdersService, CafeProductsService, PtMemberService, RolesGuard],
   exports: [CafeOrdersService, CafeProductsService, BookingService],

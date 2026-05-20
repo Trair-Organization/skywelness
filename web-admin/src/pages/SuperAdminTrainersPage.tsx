@@ -17,6 +17,7 @@ type TrainerRow = {
   totalSessions: number;
   offersSessionTypes: string[];
   commissionRate: string;
+  verified: boolean;
   createdAt: string;
 };
 
@@ -138,6 +139,21 @@ export function SuperAdminTrainersPage() {
     }
   }
 
+  async function toggleVerified(trainerId: string, currentValue: boolean) {
+    setActingId(trainerId);
+    try {
+      await apiJson(`/platform-admin/trainers/${trainerId}/verified`, {
+        method: 'PATCH',
+        body: JSON.stringify({ verified: !currentValue }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Güncellenemedi');
+    } finally {
+      setActingId(null);
+    }
+  }
+
   const filteredRows = useMemo(() => {
     if (scope === 'club') return rows.filter((row) => !row.isIndependent);
     if (scope === 'independent') return rows.filter((row) => row.isIndependent);
@@ -203,6 +219,7 @@ export function SuperAdminTrainersPage() {
                 <th>{t('superAdmin.trainers.sessions')}</th>
                 <th>{t('superAdmin.trainers.rating')}</th>
                 <th>Komisyon</th>
+                <th>Doğrulama</th>
                 <th>{t('superAdmin.trainers.services')}</th>
                 <th>{t('superAdmin.trainers.actions')}</th>
               </tr>
@@ -240,6 +257,26 @@ export function SuperAdminTrainersPage() {
                       title="Komisyon oranını düzenle"
                     >
                       %{(parseFloat(row.commissionRate) * 100).toFixed(1)}
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => void toggleVerified(row.id, row.verified)}
+                      disabled={actingId === row.id}
+                      style={{
+                        padding: '0.3rem 0.7rem',
+                        background: row.verified ? 'rgba(5, 150, 105, 0.1)' : '#f1f5f9',
+                        color: row.verified ? '#059669' : '#64748b',
+                        border: `1px solid ${row.verified ? '#059669' : '#e2e8f0'}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                      }}
+                      title={row.verified ? 'Doğrulamayı kaldır' : 'Doğrula'}
+                    >
+                      {row.verified ? '✓ Doğrulandı' : 'Doğrula'}
                     </button>
                   </td>
                   <td>{row.offersSessionTypes.join(', ') || '-'}</td>
