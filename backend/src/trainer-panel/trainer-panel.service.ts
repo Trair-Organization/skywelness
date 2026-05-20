@@ -30,6 +30,7 @@ import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
 import { Conversation } from '../database/entities/conversation.entity';
+import { Announcement } from '../database/entities/announcement.entity';
 import { ReservationStatus, SessionType, MemberAccountStatus, UserRole } from '../database/enums';
 import { PushService } from '../notifications/push.service';
 import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
@@ -54,6 +55,7 @@ export class TrainerPanelService {
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
+    @InjectRepository(Announcement) private readonly announcementRepo: Repository<Announcement>,
     @InjectRepository(Resource) private readonly resourcesRepo: Repository<Resource>,
     @InjectRepository(PackageType) private readonly packageTypesRepo: Repository<PackageType>,
     @InjectRepository(ClubEvent) private readonly eventsRepo: Repository<ClubEvent>,
@@ -1886,7 +1888,49 @@ export class TrainerPanelService {
       { type: 'trainer_notification', trainerId: trainer.id },
       data.imageUrl?.trim() ?? null,
     );
+
+    // Geçmiş için kayıt oluştur
+    try {
+      await this.announcementRepo.save(
+        this.announcementRepo.create({
+          tenantId: trainer.tenantId,
+          createdByUserId: user.id,
+          title: data.title.trim(),
+          content: `${data.message.trim()} [Push: ${result.sent}/${result.total} ulaştı]`,
+          target: 'students',
+          recipientCount: result.total,
+          pushSent: true,
+        }),
+      );
+    } catch {
+      /* log fail - non-critical */
+    }
+
     return { ok: true, sent: result.sent, total: result.total };
+  }
+
+  /** PT: kendi gönderdiği push bildirim geçmişi */
+  async listPushHistory(user: User) {
+    const rows = await this.announcementRepo.find({
+      where: { createdByUserId: user.id, target: 'students' as never },
+      order: { createdAt: 'DESC' },
+      take: 30,
+    });
+    return rows.map((r) => {
+      const pushMatch = r.content.match(/\[Push: (\d+)\/(\d+) ulaştı\]/);
+      const sent = pushMatch ? parseInt(pushMatch[1], 10) : r.recipientCount;
+      const total = pushMatch ? parseInt(pushMatch[2], 10) : r.recipientCount;
+      const cleanContent = r.content.replace(/\s*\[Push:.*?\]/, '');
+      return {
+        id: r.id,
+        title: r.title,
+        message: cleanContent,
+        target: r.target,
+        sent,
+        total,
+        createdAt: r.createdAt,
+      };
+    });
   }
 
   // ─── Hizmetlerim (Resource CRUD) ──────────────────────────────────────────────

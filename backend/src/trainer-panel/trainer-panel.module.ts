@@ -19,6 +19,7 @@ import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
 import { Conversation } from '../database/entities/conversation.entity';
+import { Announcement } from '../database/entities/announcement.entity';
 import { TrainerPanelController } from './trainer-panel.controller';
 import { TrainerPanelService } from './trainer-panel.service';
 
@@ -42,6 +43,7 @@ import { TrainerPanelService } from './trainer-panel.service';
       PackageType,
       User,
       Conversation,
+      Announcement,
     ]),
     AuthModule,
     NotificationsModule,

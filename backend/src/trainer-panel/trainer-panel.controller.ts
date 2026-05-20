@@ -364,6 +364,12 @@ export class TrainerPanelController {
     return this.service.sendPushToStudents(user, body);
   }
 
+  /** PT: gönderdiği push bildirim geçmişi */
+  @Get('push-notifications/history')
+  listPushHistory(@CurrentUser() user: User) {
+    return this.service.listPushHistory(user);
+  }
+
   // ─── Hizmetlerim (Resource CRUD) ───────────────────────────────────────────
 
   /** PT: hizmetlerimi listele */

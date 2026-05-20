@@ -96,7 +96,10 @@ export function PushNotificationsPage() {
   // Load notification history (from announcements as proxy)
   const loadHistory = useCallback(async () => {
     try {
-      if (user?.role === 'administrator') {
+      if (isTrainer) {
+        const rows = await apiJson<NotificationLog[]>('/trainer-panel/push-notifications/history');
+        setHistory(Array.isArray(rows) ? rows : []);
+      } else if (user?.role === 'administrator') {
         const rows = await apiJson<Array<{ id: string; title: string; content: string; target: string; recipientCount: number; createdAt: string }>>('/admin/announcements');
         setHistory(rows.map(r => {
           // Extract push stats from content if available
@@ -108,7 +111,7 @@ export function PushNotificationsPage() {
         }));
       }
     } catch { /* */ }
-  }, [user]);
+  }, [user, isTrainer]);
 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
@@ -368,8 +371,16 @@ export function PushNotificationsPage() {
                     </div>
                     <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{h.message.slice(0, 60)}</p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>📤 {h.sent}/{h.total} kişiye ulaştı</span>
-                      <span style={{ fontSize: 10, color: '#94a3b8' }}>{h.target === 'all' ? '👥 Herkes' : h.target === 'members' ? '🏠 Üyeler' : '🏋️ Personel'}</span>
+                      <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>📤 {h.sent}/{h.total} {isTrainer ? 'öğrenciye' : 'kişiye'} ulaştı</span>
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {h.target === 'students'
+                          ? '🎓 Öğrenciler'
+                          : h.target === 'all'
+                            ? '👥 Herkes'
+                            : h.target === 'members'
+                              ? '🏠 Üyeler'
+                              : '🏋️ Personel'}
+                      </span>
                     </div>
                   </div>
                 ))}
