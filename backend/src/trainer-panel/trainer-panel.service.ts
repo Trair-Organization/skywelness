@@ -20,6 +20,11 @@ import {
   type AssessmentType,
 } from '../database/entities/trainer-member-assessment.entity';
 import { TrainerMemberPhoto } from '../database/entities/trainer-member-photo.entity';
+import {
+  TrainerMemberGoal,
+  type GoalCategory,
+  type GoalStatus,
+} from '../database/entities/trainer-member-goal.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
@@ -43,6 +48,8 @@ export class TrainerPanelService {
     private readonly assessmentsRepo: Repository<TrainerMemberAssessment>,
     @InjectRepository(TrainerMemberPhoto)
     private readonly photosRepo: Repository<TrainerMemberPhoto>,
+    @InjectRepository(TrainerMemberGoal)
+    private readonly goalsRepo: Repository<TrainerMemberGoal>,
     @InjectRepository(Package) private readonly packagesRepo: Repository<Package>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Conversation) private readonly convRepo: Repository<Conversation>,
@@ -2258,6 +2265,134 @@ export class TrainerPanelService {
     });
     if (!p) throw new NotFoundException('Fotoğraf bulunamadı');
     await this.photosRepo.remove(p);
+    return { ok: true };
+  }
+
+  // ─── Öğrenci Detay: Hedefler ────────────────────────────────────────────────
+
+  async listGoals(user: User, memberUserId: string, status?: GoalStatus) {
+    const trainer = await this.resolveTrainer(user);
+    const where: Record<string, unknown> = { trainerId: trainer.id, memberUserId };
+    if (status) where.status = status;
+    const rows = await this.goalsRepo.find({
+      where,
+      order: { status: 'ASC', startDate: 'DESC' },
+    });
+    return rows.map((g) => {
+      const start = g.startValue ? parseFloat(g.startValue) : null;
+      const current = g.currentValue ? parseFloat(g.currentValue) : null;
+      const target = g.targetValue ? parseFloat(g.targetValue) : null;
+      let progressPct: number | null = null;
+      if (start !== null && current !== null && target !== null && start !== target) {
+        progressPct = Math.max(
+          0,
+          Math.min(100, ((current - start) / (target - start)) * 100),
+        );
+      }
+      return {
+        id: g.id,
+        title: g.title,
+        description: g.description,
+        category: g.category,
+        targetValue: g.targetValue,
+        targetUnit: g.targetUnit,
+        startValue: g.startValue,
+        currentValue: g.currentValue,
+        startDate: g.startDate,
+        targetDate: g.targetDate,
+        completedAt: g.completedAt,
+        status: g.status,
+        progressPct,
+        createdAt: g.createdAt,
+      };
+    });
+  }
+
+  async addGoal(
+    user: User,
+    memberUserId: string,
+    data: {
+      title: string;
+      description?: string;
+      category?: GoalCategory;
+      targetValue?: number;
+      targetUnit?: string;
+      startValue?: number;
+      currentValue?: number;
+      startDate: string;
+      targetDate?: string;
+    },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    if (!data.title?.trim()) throw new BadRequestException('Başlık zorunlu');
+    const g = this.goalsRepo.create({
+      tenantId: trainer.tenantId,
+      trainerId: trainer.id,
+      memberUserId,
+      title: data.title.trim(),
+      description: data.description?.trim() ?? null,
+      category: data.category ?? 'general',
+      targetValue: data.targetValue != null ? String(data.targetValue) : null,
+      targetUnit: data.targetUnit ?? null,
+      startValue: data.startValue != null ? String(data.startValue) : null,
+      currentValue:
+        data.currentValue != null
+          ? String(data.currentValue)
+          : data.startValue != null
+            ? String(data.startValue)
+            : null,
+      startDate: data.startDate,
+      targetDate: data.targetDate ?? null,
+      status: 'active',
+    });
+    await this.goalsRepo.save(g);
+    return { id: g.id, ok: true };
+  }
+
+  async updateGoal(
+    user: User,
+    goalId: string,
+    data: {
+      title?: string;
+      description?: string;
+      category?: GoalCategory;
+      targetValue?: number;
+      targetUnit?: string;
+      currentValue?: number;
+      targetDate?: string;
+      status?: GoalStatus;
+    },
+  ) {
+    const trainer = await this.resolveTrainer(user);
+    const g = await this.goalsRepo.findOne({
+      where: { id: goalId, trainerId: trainer.id },
+    });
+    if (!g) throw new NotFoundException('Hedef bulunamadı');
+    if (data.title !== undefined) g.title = data.title.trim();
+    if (data.description !== undefined) g.description = data.description.trim() || null;
+    if (data.category !== undefined) g.category = data.category;
+    if (data.targetValue !== undefined) g.targetValue = String(data.targetValue);
+    if (data.targetUnit !== undefined) g.targetUnit = data.targetUnit;
+    if (data.currentValue !== undefined) g.currentValue = String(data.currentValue);
+    if (data.targetDate !== undefined) g.targetDate = data.targetDate;
+    if (data.status !== undefined) {
+      g.status = data.status;
+      if (data.status === 'completed' && !g.completedAt) {
+        g.completedAt = new Date().toISOString().slice(0, 10);
+      }
+      if (data.status === 'active') g.completedAt = null;
+    }
+    await this.goalsRepo.save(g);
+    return { ok: true };
+  }
+
+  async deleteGoal(user: User, goalId: string) {
+    const trainer = await this.resolveTrainer(user);
+    const g = await this.goalsRepo.findOne({
+      where: { id: goalId, trainerId: trainer.id },
+    });
+    if (!g) throw new NotFoundException('Hedef bulunamadı');
+    await this.goalsRepo.remove(g);
     return { ok: true };
   }
 }

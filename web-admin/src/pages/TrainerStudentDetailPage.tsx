@@ -55,7 +55,24 @@ type MemberPhoto = {
   notes: string | null;
 };
 
-type Tab = 'overview' | 'photos' | 'measurements' | 'assessments' | 'history' | 'notes';
+type Goal = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  targetValue: string | null;
+  targetUnit: string | null;
+  startValue: string | null;
+  currentValue: string | null;
+  startDate: string;
+  targetDate: string | null;
+  completedAt: string | null;
+  status: 'active' | 'completed' | 'paused' | 'cancelled';
+  progressPct: number | null;
+  createdAt: string;
+};
+
+type Tab = 'overview' | 'photos' | 'measurements' | 'assessments' | 'goals' | 'notes';
 
 const FMS_TESTS = [
   { key: 'deepSquat', label: 'Deep Squat', bilateral: false },
@@ -82,6 +99,7 @@ export function TrainerStudentDetailPage() {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [photos, setPhotos] = useState<MemberPhoto[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -123,21 +141,49 @@ export function TrainerStudentDetailPage() {
   const [assessmentNotes, setAssessmentNotes] = useState('');
   const [savingAssessment, setSavingAssessment] = useState(false);
 
+  // Goal form
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [goalForm, setGoalForm] = useState<{
+    title: string;
+    description: string;
+    category: string;
+    targetValue: string;
+    targetUnit: string;
+    startValue: string;
+    currentValue: string;
+    startDate: string;
+    targetDate: string;
+  }>({
+    title: '',
+    description: '',
+    category: 'general',
+    targetValue: '',
+    targetUnit: '',
+    startValue: '',
+    currentValue: '',
+    startDate: new Date().toISOString().slice(0, 10),
+    targetDate: '',
+  });
+  const [savingGoal, setSavingGoal] = useState(false);
+
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     setError(null);
     try {
-      const [s, m, a, ph] = await Promise.all([
+      const [s, m, a, ph, gl] = await Promise.all([
         apiJson<StudentDetail>(`/trainer-panel/students/${userId}`),
         apiJson<Measurement[]>(`/trainer-panel/students/${userId}/measurements`),
         apiJson<Assessment[]>(`/trainer-panel/students/${userId}/assessments`),
         apiJson<MemberPhoto[]>(`/trainer-panel/students/${userId}/photos`),
+        apiJson<Goal[]>(`/trainer-panel/students/${userId}/goals`),
       ]);
       setStudent(s);
       setMeasurements(m);
       setAssessments(a);
       setPhotos(ph);
+      setGoals(gl);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Yüklenemedi');
     } finally {
@@ -361,6 +407,122 @@ export function TrainerStudentDetailPage() {
     }
   }
 
+  // ─── Goals ───────────────────────────
+  function resetGoalForm() {
+    setShowGoalForm(false);
+    setEditingGoalId(null);
+    setGoalForm({
+      title: '',
+      description: '',
+      category: 'general',
+      targetValue: '',
+      targetUnit: '',
+      startValue: '',
+      currentValue: '',
+      startDate: new Date().toISOString().slice(0, 10),
+      targetDate: '',
+    });
+  }
+
+  function startEditGoal(g: Goal) {
+    setEditingGoalId(g.id);
+    setGoalForm({
+      title: g.title,
+      description: g.description ?? '',
+      category: g.category,
+      targetValue: g.targetValue ?? '',
+      targetUnit: g.targetUnit ?? '',
+      startValue: g.startValue ?? '',
+      currentValue: g.currentValue ?? '',
+      startDate: g.startDate,
+      targetDate: g.targetDate ?? '',
+    });
+    setShowGoalForm(true);
+  }
+
+  async function handleSaveGoal() {
+    if (!userId || !goalForm.title.trim()) return flashErr('Başlık zorunlu');
+    setSavingGoal(true);
+    try {
+      const body: Record<string, unknown> = {
+        title: goalForm.title.trim(),
+        description: goalForm.description.trim() || undefined,
+        category: goalForm.category,
+        startDate: goalForm.startDate,
+      };
+      if (goalForm.targetValue) body.targetValue = parseFloat(goalForm.targetValue);
+      if (goalForm.targetUnit.trim()) body.targetUnit = goalForm.targetUnit.trim();
+      if (goalForm.startValue) body.startValue = parseFloat(goalForm.startValue);
+      if (goalForm.currentValue) body.currentValue = parseFloat(goalForm.currentValue);
+      if (goalForm.targetDate) body.targetDate = goalForm.targetDate;
+
+      if (editingGoalId) {
+        await apiJson(`/trainer-panel/goals/${editingGoalId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        });
+        flash('✅ Hedef güncellendi');
+      } else {
+        await apiJson(`/trainer-panel/students/${userId}/goals`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        flash('✅ Hedef oluşturuldu');
+      }
+      resetGoalForm();
+      await load();
+    } catch (e) {
+      flashErr(e instanceof ApiError ? e.message : 'Kaydedilemedi');
+    } finally {
+      setSavingGoal(false);
+    }
+  }
+
+  async function handleUpdateGoalProgress(goalId: string, currentValue: number) {
+    try {
+      await apiJson(`/trainer-panel/goals/${goalId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ currentValue }),
+      });
+      await load();
+      flash('✅ İlerleme güncellendi');
+    } catch (e) {
+      flashErr(e instanceof ApiError ? e.message : 'Güncellenemedi');
+    }
+  }
+
+  async function handleGoalStatusChange(goalId: string, status: Goal['status']) {
+    try {
+      await apiJson(`/trainer-panel/goals/${goalId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      await load();
+      flash(
+        status === 'completed'
+          ? '🎉 Hedef tamamlandı!'
+          : status === 'paused'
+            ? '⏸️ Hedef duraklatıldı'
+            : status === 'cancelled'
+              ? 'Hedef iptal edildi'
+              : '✅ Hedef aktif',
+      );
+    } catch (e) {
+      flashErr(e instanceof ApiError ? e.message : 'Güncellenemedi');
+    }
+  }
+
+  async function handleDeleteGoal(id: string) {
+    if (!confirm('Hedefi silmek istediğinize emin misiniz?')) return;
+    try {
+      await apiJson(`/trainer-panel/goals/${id}`, { method: 'DELETE' });
+      await load();
+      flash('✅ Hedef silindi');
+    } catch (e) {
+      flashErr(e instanceof ApiError ? e.message : 'Silinemedi');
+    }
+  }
+
   // ─── Calculations ───────────────────
   const latestMeasurement = measurements[0];
   const oldestMeasurement = measurements[measurements.length - 1];
@@ -467,6 +629,17 @@ export function TrainerStudentDetailPage() {
           🎯 Değerlendirmeler
           {assessments.length > 0 && (
             <span className="services-tab-count">{assessments.length}</span>
+          )}
+        </button>
+        <button
+          className={`services-tab ${tab === 'goals' ? 'active' : ''}`}
+          onClick={() => setTab('goals')}
+        >
+          🚩 Hedefler
+          {goals.filter((g) => g.status === 'active').length > 0 && (
+            <span className="services-tab-count">
+              {goals.filter((g) => g.status === 'active').length}
+            </span>
           )}
         </button>
         <button
@@ -1100,6 +1273,191 @@ export function TrainerStudentDetailPage() {
         </div>
       )}
 
+      {/* GOALS TAB */}
+      {tab === 'goals' && (
+        <div>
+          <div className="services-tab-header">
+            <h2 className="services-card-title" style={{ margin: 0 }}>
+              🚩 Hedefler
+            </h2>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                resetGoalForm();
+                setShowGoalForm(true);
+              }}
+            >
+              + Yeni Hedef
+            </button>
+          </div>
+
+          {showGoalForm && (
+            <section className="services-card services-form-card">
+              <h3 className="services-form-title">
+                {editingGoalId ? '✏️ Hedefi Düzenle' : '➕ Yeni Hedef'}
+              </h3>
+              <label className="profile-field">
+                <span>Başlık *</span>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={goalForm.title}
+                  onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
+                  placeholder="Örn: Bel çevremi 80 cm'e indir"
+                />
+              </label>
+              <label className="profile-field">
+                <span>Açıklama</span>
+                <textarea
+                  className="profile-input profile-textarea"
+                  rows={2}
+                  value={goalForm.description}
+                  onChange={(e) =>
+                    setGoalForm({ ...goalForm, description: e.target.value })
+                  }
+                  placeholder="Detay, motivasyon..."
+                />
+              </label>
+              <div className="services-grid-2">
+                <label className="profile-field">
+                  <span>Kategori</span>
+                  <select
+                    className="profile-input"
+                    value={goalForm.category}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, category: e.target.value })
+                    }
+                  >
+                    <option value="weight_loss">⚖️ Kilo Verme</option>
+                    <option value="weight_gain">📈 Kilo Alma</option>
+                    <option value="muscle_gain">💪 Kas Kazanımı</option>
+                    <option value="fat_loss">🔥 Yağ Yakma</option>
+                    <option value="strength">🏋️ Kuvvet</option>
+                    <option value="endurance">🏃 Dayanıklılık</option>
+                    <option value="flexibility">🤸 Esneklik</option>
+                    <option value="rehab">🩹 Rehabilitasyon</option>
+                    <option value="general">🎯 Genel</option>
+                  </select>
+                </label>
+                <label className="profile-field">
+                  <span>Birim</span>
+                  <input
+                    type="text"
+                    className="profile-input"
+                    value={goalForm.targetUnit}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, targetUnit: e.target.value })
+                    }
+                    placeholder="kg, cm, %, dk..."
+                  />
+                </label>
+              </div>
+              <div className="services-grid-3">
+                <label className="profile-field">
+                  <span>Başlangıç Değeri</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="profile-input"
+                    value={goalForm.startValue}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, startValue: e.target.value })
+                    }
+                    placeholder="85"
+                  />
+                </label>
+                <label className="profile-field">
+                  <span>Şu Anki Değer</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="profile-input"
+                    value={goalForm.currentValue}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, currentValue: e.target.value })
+                    }
+                    placeholder="83"
+                  />
+                </label>
+                <label className="profile-field">
+                  <span>Hedef Değer</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="profile-input"
+                    value={goalForm.targetValue}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, targetValue: e.target.value })
+                    }
+                    placeholder="80"
+                  />
+                </label>
+              </div>
+              <div className="services-grid-2">
+                <label className="profile-field">
+                  <span>Başlangıç Tarihi *</span>
+                  <input
+                    type="date"
+                    className="profile-input"
+                    value={goalForm.startDate}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, startDate: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="profile-field">
+                  <span>Hedef Tarih</span>
+                  <input
+                    type="date"
+                    className="profile-input"
+                    value={goalForm.targetDate}
+                    onChange={(e) =>
+                      setGoalForm({ ...goalForm, targetDate: e.target.value })
+                    }
+                  />
+                </label>
+              </div>
+              <div className="services-form-actions">
+                <button
+                  className="btn-primary"
+                  onClick={() => void handleSaveGoal()}
+                  disabled={savingGoal}
+                >
+                  {savingGoal ? '⏳' : editingGoalId ? '💾 Güncelle' : '✓ Oluştur'}
+                </button>
+                <button className="btn-outline" onClick={resetGoalForm}>
+                  İptal
+                </button>
+              </div>
+            </section>
+          )}
+
+          {goals.length === 0 ? (
+            <div className="services-empty">
+              <span className="services-empty-icon">🚩</span>
+              <p>Henüz hedef yok.</p>
+              <p className="muted" style={{ fontSize: '0.85rem', maxWidth: 400 }}>
+                Öğrenciye somut, ölçülebilir hedefler koyun. Örn: "Bel çevremi 80 cm'e indir"
+                veya "Bench press'imi 80 kg'a çıkar".
+              </p>
+            </div>
+          ) : (
+            <div className="goals-list">
+              {goals.map((g) => (
+                <GoalCard
+                  key={g.id}
+                  goal={g}
+                  onEdit={() => startEditGoal(g)}
+                  onDelete={() => void handleDeleteGoal(g.id)}
+                  onUpdateProgress={(v) => void handleUpdateGoalProgress(g.id, v)}
+                  onStatusChange={(s) => void handleGoalStatusChange(g.id, s)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* NOTES TAB */}
       {tab === 'notes' && (
         <div>
@@ -1142,6 +1500,204 @@ export function TrainerStudentDetailPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Goal Card ────────────────────────
+function GoalCard({
+  goal: g,
+  onEdit,
+  onDelete,
+  onUpdateProgress,
+  onStatusChange,
+}: {
+  goal: Goal;
+  onEdit: () => void;
+  onDelete: () => void;
+  onUpdateProgress: (v: number) => void;
+  onStatusChange: (s: Goal['status']) => void;
+}) {
+  const [editingProgress, setEditingProgress] = useState(false);
+  const [progressValue, setProgressValue] = useState(g.currentValue ?? '');
+
+  const categoryLabels: Record<string, string> = {
+    weight_loss: '⚖️ Kilo Verme',
+    weight_gain: '📈 Kilo Alma',
+    muscle_gain: '💪 Kas Kazanımı',
+    fat_loss: '🔥 Yağ Yakma',
+    strength: '🏋️ Kuvvet',
+    endurance: '🏃 Dayanıklılık',
+    flexibility: '🤸 Esneklik',
+    rehab: '🩹 Rehabilitasyon',
+    general: '🎯 Genel',
+  };
+
+  const targetVal = g.targetValue ? parseFloat(g.targetValue) : null;
+  const currentVal = g.currentValue ? parseFloat(g.currentValue) : null;
+  const startVal = g.startValue ? parseFloat(g.startValue) : null;
+
+  const daysLeft = useMemo(() => {
+    if (!g.targetDate || g.status !== 'active') return null;
+    const days = Math.ceil(
+      (new Date(g.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    return days;
+  }, [g.targetDate, g.status]);
+
+  return (
+    <div className={`goal-card goal-card-${g.status}`}>
+      <div className="goal-card-header">
+        <div className="goal-card-title">
+          <strong>{g.title}</strong>
+          <span className="goal-card-category">{categoryLabels[g.category] ?? g.category}</span>
+        </div>
+        <div className="goal-card-actions">
+          {g.status === 'active' && (
+            <>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={() => onStatusChange('completed')}
+                title="Tamamlandı"
+              >
+                ✅
+              </button>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={() => onStatusChange('paused')}
+                title="Duraklat"
+              >
+                ⏸️
+              </button>
+            </>
+          )}
+          {g.status === 'paused' && (
+            <button
+              type="button"
+              className="btn-outline btn-sm"
+              onClick={() => onStatusChange('active')}
+              title="Aktif yap"
+            >
+              ▶️
+            </button>
+          )}
+          {g.status === 'completed' && (
+            <button
+              type="button"
+              className="btn-outline btn-sm"
+              onClick={() => onStatusChange('active')}
+              title="Yeniden aç"
+            >
+              🔓
+            </button>
+          )}
+          <button type="button" className="btn-outline btn-sm" onClick={onEdit}>
+            ✏️
+          </button>
+          <button
+            type="button"
+            className="btn-outline btn-sm services-btn-danger"
+            onClick={onDelete}
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      {g.description && <p className="goal-card-desc">{g.description}</p>}
+
+      {/* Progress */}
+      {targetVal !== null && currentVal !== null && startVal !== null && (
+        <>
+          <div className="goal-progress-bar">
+            <div
+              className="goal-progress-fill"
+              style={{ width: `${g.progressPct ?? 0}%` }}
+            />
+          </div>
+          <div className="goal-progress-meta">
+            <span>
+              <strong>{currentVal}</strong> {g.targetUnit}
+              {' / '}
+              <span className="muted">
+                Hedef: {targetVal} {g.targetUnit}
+              </span>
+            </span>
+            <strong className="goal-progress-pct">
+              {g.progressPct !== null ? `%${g.progressPct.toFixed(0)}` : '—'}
+            </strong>
+          </div>
+        </>
+      )}
+
+      {/* Quick update */}
+      {g.status === 'active' && targetVal !== null && (
+        <div className="goal-card-update">
+          {editingProgress ? (
+            <>
+              <input
+                type="number"
+                step="0.01"
+                className="profile-input"
+                value={progressValue}
+                onChange={(e) => setProgressValue(e.target.value)}
+                style={{ width: 120 }}
+                placeholder={g.targetUnit ?? ''}
+              />
+              <button
+                className="btn-sm btn-primary"
+                onClick={() => {
+                  const v = parseFloat(progressValue);
+                  if (!isNaN(v)) {
+                    onUpdateProgress(v);
+                    setEditingProgress(false);
+                  }
+                }}
+              >
+                ✓ Güncelle
+              </button>
+              <button
+                className="btn-sm btn-outline"
+                onClick={() => {
+                  setProgressValue(g.currentValue ?? '');
+                  setEditingProgress(false);
+                }}
+              >
+                ✕
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn-sm btn-outline"
+              onClick={() => setEditingProgress(true)}
+            >
+              📊 İlerleme Gir
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="goal-card-meta">
+        <span>📅 {formatDate(g.startDate)}</span>
+        {g.targetDate && (
+          <span>
+            🎯 {formatDate(g.targetDate)}
+            {daysLeft !== null && (
+              <span
+                style={{
+                  marginLeft: 6,
+                  color: daysLeft < 0 ? '#dc2626' : daysLeft < 7 ? '#d97706' : '#64748b',
+                }}
+              >
+                ({daysLeft >= 0 ? `${daysLeft} gün kaldı` : `${Math.abs(daysLeft)} gün geçti`})
+              </span>
+            )}
+          </span>
+        )}
+        {g.completedAt && <span>🏆 {formatDate(g.completedAt)} tamamlandı</span>}
+      </div>
     </div>
   );
 }

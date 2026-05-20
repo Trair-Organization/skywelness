@@ -13,6 +13,7 @@ import { TrainerMemberNote } from '../database/entities/trainer-member-note.enti
 import { TrainerMemberMeasurement } from '../database/entities/trainer-member-measurement.entity';
 import { TrainerMemberAssessment } from '../database/entities/trainer-member-assessment.entity';
 import { TrainerMemberPhoto } from '../database/entities/trainer-member-photo.entity';
+import { TrainerMemberGoal } from '../database/entities/trainer-member-goal.entity';
 import { Package } from '../database/entities/package.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { User } from '../database/entities/user.entity';
@@ -34,6 +35,7 @@ import { TrainerPanelService } from './trainer-panel.service';
       TrainerMemberMeasurement,
       TrainerMemberAssessment,
       TrainerMemberPhoto,
+      TrainerMemberGoal,
       Package,
       PackageType,
       User,

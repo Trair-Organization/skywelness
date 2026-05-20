@@ -578,4 +578,41 @@ export class TrainerPanelController {
   ) {
     return this.service.deleteMemberPhoto(user, id);
   }
+
+  // ─── Öğrenci Detay: Hedefler ────────────────────────────────────────────────
+
+  @Get('students/:userId/goals')
+  listGoals(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Query('status') status?: string,
+  ) {
+    return this.service.listGoals(user, userId, status as never);
+  }
+
+  @Post('students/:userId/goals')
+  addGoal(
+    @CurrentUser() user: User,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.service.addGoal(user, userId, body as never);
+  }
+
+  @Patch('goals/:id')
+  updateGoal(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.service.updateGoal(user, id, body as never);
+  }
+
+  @Delete('goals/:id')
+  deleteGoal(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteGoal(user, id);
+  }
 }
