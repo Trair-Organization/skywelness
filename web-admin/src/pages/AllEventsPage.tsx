@@ -58,7 +58,7 @@ export function AllEventsPage() {
               <p>Yakında yeni etkinlikler eklenecek.</p>
             </div>
           ) : (
-            <div className="vitrin-events-grid">
+            <div className="vitrin-events-grid vitrin-grid-full">
               {events.map((ev) => {
                 const date = new Date(ev.startsAt);
                 const dateStr = date.toLocaleDateString('tr-TR', {

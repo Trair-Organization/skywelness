@@ -206,7 +206,7 @@ export function AllClubsPage() {
           </div>
 
           {loading ? (
-            <div className="vitrin-clubs-grid">
+            <div className="vitrin-clubs-grid vitrin-grid-full">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="vitrin-skeleton-card">
                   <div className="vitrin-skeleton-cover" />
@@ -225,7 +225,7 @@ export function AllClubsPage() {
               <p>Farklı filtreler deneyerek tekrar arayın.</p>
             </div>
           ) : (
-            <div className="vitrin-clubs-grid">
+            <div className="vitrin-clubs-grid vitrin-grid-full">
               {clubs.map((club) => (
                 <ClubCardItem key={club.id} club={club} />
               ))}

@@ -56,7 +56,7 @@ export function AllTrainersPage() {
               <p>Yakında daha fazla eğitmen eklenecek.</p>
             </div>
           ) : (
-            <div className="vitrin-trainers-grid">
+            <div className="vitrin-trainers-grid vitrin-grid-full">
               {trainers.map((tr) => (
                 <Link
                   key={tr.id}

@@ -5086,16 +5086,35 @@
 
 /* ─── Mobil (≤768px) ─── */
 @media (max-width: 768px) {
+  /* Mobil: Apple Music tarzı yatay scroll — 2 kart görünür */
   .vitrin-featured-grid,
   .vitrin-clubs-grid,
   .vitrin-events-grid,
-  .vitrin-campaigns-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
+  .vitrin-campaigns-grid,
   .vitrin-trainers-grid {
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     gap: 0.75rem;
+    padding-bottom: 4px;
+  }
+  .vitrin-featured-grid::-webkit-scrollbar,
+  .vitrin-clubs-grid::-webkit-scrollbar,
+  .vitrin-events-grid::-webkit-scrollbar,
+  .vitrin-campaigns-grid::-webkit-scrollbar,
+  .vitrin-trainers-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .vitrin-featured-grid > *,
+  .vitrin-clubs-grid > *,
+  .vitrin-events-grid > *,
+  .vitrin-campaigns-grid > *,
+  .vitrin-trainers-grid > * {
+    flex: 0 0 47%;
+    min-width: 47%;
+    scroll-snap-align: start;
   }
   .vitrin-featured-card .vitrin-featured-body h3 {
     font-size: 0.95rem;
@@ -5103,8 +5122,28 @@
 }
 
 @media (max-width: 480px) {
-  .vitrin-trainers-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .vitrin-featured-grid > *,
+  .vitrin-clubs-grid > *,
+  .vitrin-events-grid > *,
+  .vitrin-campaigns-grid > *,
+  .vitrin-trainers-grid > * {
+    flex: 0 0 46%;
+    min-width: 46%;
+  }
+}
+
+/* "Tümünü Gör" sayfalarında: mobilde yatay scroll yerine 2 sütun grid */
+@media (max-width: 768px) {
+  .vitrin-grid-full {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none !important;
+    flex-wrap: wrap;
+  }
+  .vitrin-grid-full > * {
+    flex: unset !important;
+    min-width: unset !important;
   }
 }
 
@@ -5456,13 +5495,6 @@
   .vitrin-section-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .vitrin-clubs-grid,
-  .vitrin-events-grid,
-  .vitrin-campaigns-grid,
-  .vitrin-trainers-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
   }
   /* Hero text daha küçük */
   .vitrin-slide-content h1 {

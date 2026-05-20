@@ -72,7 +72,7 @@ export function AllCampaignsPage() {
               <p>Şu an aktif kampanya bulunmuyor. Yakında geri gelin.</p>
             </div>
           ) : (
-            <div className="vitrin-campaigns-grid">
+            <div className="vitrin-campaigns-grid vitrin-grid-full">
               {campaigns.map((c) => {
                 const discountLabel =
                   c.discountKind === 'percentage' ? `%${c.discountValue}` : `${c.discountValue}₺`;
