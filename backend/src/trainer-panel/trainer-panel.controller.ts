@@ -320,6 +320,9 @@ export class TrainerPanelController {
     @CurrentUser() user: User,
     @Body()
     body: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
       bio?: string;
       specialties?: string[];
       certifications?: string[];
@@ -327,6 +330,7 @@ export class TrainerPanelController {
       city?: string;
       photoUrl?: string;
       pricingNote?: string;
+      offersSessionTypes?: string[];
     },
   ) {
     return this.service.updateProfile(user, body);
@@ -345,23 +349,6 @@ export class TrainerPanelController {
   @Get('profile')
   getMyProfile(@CurrentUser() user: User) {
     return this.service.getMyProfile(user);
-  }
-
-  /** Eğitmen kendi profil bilgilerini günceller */
-  @Patch('profile')
-  updateMyProfile(
-    @CurrentUser() user: User,
-    @Body()
-    body: {
-      bio?: string;
-      specializations?: string[];
-      certifications?: string[];
-      photoUrl?: string;
-      offersSessionTypes?: string[];
-      pricingNote?: string;
-    },
-  ) {
-    return this.service.updateMyProfile(user, body);
   }
 
   // ─── Push Bildirim ──────────────────────────────────────────────────────────

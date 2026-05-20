@@ -1,73 +1,175 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiJson } from '../lib/api';
+import { apiJson, ApiError } from '../lib/api';
+import { CITY_LIST } from '@rezidans-fitness/shared';
 
 type TrainerProfileData = {
-  id: string;
-  bio: string | null;
-  photoUrl: string | null;
-  specializations: string[];
+  trainerId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  publicId: string | null;
+  bio: string;
+  specialties: string[];
   certifications: string[];
+  experienceYears: number | null;
+  city: string;
+  photoUrl: string | null;
+  pricingNote: string | null;
   offersSessionTypes: string[];
   avgRating: string;
   totalSessions: number;
-  pricingNote: string | null;
-  city: string | null;
-  experienceYears: number | null;
 };
+
+const SPECIALTY_SUGGESTIONS = [
+  'Fitness',
+  'Personal Training',
+  'Pilates',
+  'Yoga',
+  'CrossFit',
+  'Boks',
+  'Kickboks',
+  'MMA',
+  'Atletik Performans',
+  'Kuvvet & Kondisyon',
+  'Mobilite',
+  'Postür Düzeltici',
+  'Rehabilitasyon',
+  'Hipertrofi',
+  'Kilo Verme',
+  'Beslenme Danışmanlığı',
+  'Yüzme',
+  'Koşu',
+  'TRX',
+  'Padel',
+];
+
+const SESSION_TYPE_OPTIONS = [
+  { value: 'personal_training', label: '🏋️ Personal Training' },
+  { value: 'massage', label: '💆 Masaj' },
+];
 
 export function TrainerProfileEditPage() {
   const [profile, setProfile] = useState<TrainerProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
   const [bio, setBio] = useState('');
-  const [specializations, setSpecializations] = useState('');
-  const [certifications, setCertifications] = useState('');
-  const [offersSessionTypes, setOffersSessionTypes] = useState('');
+  const [experienceYears, setExperienceYears] = useState<string>('');
   const [pricingNote, setPricingNote] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [specialties, setSpecialties] = useState<string[]>([]);
+  const [newSpecialty, setNewSpecialty] = useState('');
+  const [certifications, setCertifications] = useState<string[]>([]);
+  const [newCert, setNewCert] = useState('');
+  const [offersSessionTypes, setOffersSessionTypes] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiJson<TrainerProfileData>('/trainer-panel/profile');
       setProfile(data);
+      setFirstName(data.firstName ?? '');
+      setLastName(data.lastName ?? '');
+      setPhone(data.phone ?? '');
+      setCity(data.city ?? '');
       setBio(data.bio ?? '');
-      setSpecializations((data.specializations ?? []).join(', '));
-      setCertifications((data.certifications ?? []).join(', '));
-      setOffersSessionTypes((data.offersSessionTypes ?? []).join(', '));
+      setExperienceYears(data.experienceYears !== null ? String(data.experienceYears) : '');
       setPricingNote(data.pricingNote ?? '');
       setPhotoUrl(data.photoUrl ?? '');
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+      setSpecialties(data.specialties ?? []);
+      setCertifications(data.certifications ?? []);
+      setOffersSessionTypes(data.offersSessionTypes ?? []);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Profil yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const handleSave = async () => {
+  function flash(msg: string) {
+    setSuccess(msg);
+    setError(null);
+    setTimeout(() => setSuccess(null), 3000);
+  }
+
+  function flashError(msg: string) {
+    setError(msg);
+    setSuccess(null);
+    setTimeout(() => setError(null), 4000);
+  }
+
+  function addSpecialty(value: string) {
+    const v = value.trim();
+    if (!v) return;
+    if (specialties.includes(v)) return;
+    setSpecialties((prev) => [...prev, v]);
+    setNewSpecialty('');
+  }
+  function removeSpecialty(v: string) {
+    setSpecialties((prev) => prev.filter((s) => s !== v));
+  }
+  function addCertification(value: string) {
+    const v = value.trim();
+    if (!v) return;
+    if (certifications.includes(v)) return;
+    setCertifications((prev) => [...prev, v]);
+    setNewCert('');
+  }
+  function removeCertification(v: string) {
+    setCertifications((prev) => prev.filter((c) => c !== v));
+  }
+  function toggleSessionType(t: string) {
+    setOffersSessionTypes((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
+    );
+  }
+
+  async function handleSave() {
+    if (!firstName.trim() || !lastName.trim()) {
+      flashError('Ad ve soyad zorunludur');
+      return;
+    }
     setSaving(true);
     try {
       await apiJson('/trainer-panel/profile', {
         method: 'PATCH',
         body: JSON.stringify({
-          bio: bio.trim() || null,
-          specializations: specializations.split(',').map((s) => s.trim()).filter(Boolean),
-          certifications: certifications.split(',').map((s) => s.trim()).filter(Boolean),
-          offersSessionTypes: offersSessionTypes.split(',').map((s) => s.trim()).filter(Boolean),
-          pricingNote: pricingNote.trim() || null,
-          photoUrl: photoUrl.trim() || null,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: phone.trim() || undefined,
+          city: city.trim() || undefined,
+          bio: bio.trim() || undefined,
+          experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
+          pricingNote: pricingNote.trim() || undefined,
+          photoUrl: photoUrl.trim() || undefined,
+          specialties,
+          certifications,
+          offersSessionTypes,
         }),
       });
-      alert('✅ Profil güncellendi');
+      flash('✅ Profil güncellendi');
+      await load();
     } catch (e) {
-      alert(`Hata: ${e instanceof Error ? e.message : 'Kaydedilemedi'}`);
+      flashError(e instanceof ApiError ? e.message : 'Kaydedilemedi');
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  const handleUploadPhoto = async (file: File) => {
+  async function handleUploadPhoto(file: File) {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -77,122 +179,358 @@ export function TrainerProfileEditPage() {
         body: formData,
         headers: undefined,
       });
-      const fullUrl = `https://www.wellnessclub.tech${res.url}`;
+      const fullUrl = res.url.startsWith('http')
+        ? res.url
+        : `https://www.wellnessclub.tech${res.url}`;
       setPhotoUrl(fullUrl);
+      flash('✅ Fotoğraf yüklendi');
     } catch (e) {
-      alert(`Yükleme hatası: ${e instanceof Error ? e.message : 'Başarısız'}`);
+      flashError(e instanceof ApiError ? e.message : 'Yükleme başarısız');
     } finally {
       setUploading(false);
     }
-  };
+  }
 
-  if (loading) return <div className="page-container"><p className="muted">Yükleniyor...</p></div>;
+  if (loading) {
+    return (
+      <div className="trainer-profile-edit">
+        <p className="muted">Yükleniyor...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div className="trainer-profile-edit">
+      <div className="profile-edit-header">
         <div>
-          <h1>🏋️ Profilimi Düzenle</h1>
-          <p className="muted">Uzmanlık alanlarınızı, bio ve sertifikalarınızı güncelleyin</p>
+          <h1>🏋️ Profilim</h1>
+          <p className="muted">Bilgilerinizi güncelleyin — keşif sayfasında görünür.</p>
         </div>
         <button
-          onClick={handleSave}
+          className="btn-primary profile-save-btn"
+          onClick={() => void handleSave()}
           disabled={saving}
-          style={{ padding: '0.75rem 1.5rem', borderRadius: '10px', background: '#38bdf8', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', opacity: saving ? 0.5 : 1 }}
         >
           {saving ? '⏳ Kaydediliyor...' : '💾 Kaydet'}
         </button>
       </div>
 
-      {/* Metrikler */}
+      {success && <div className="profile-banner profile-banner-success">{success}</div>}
+      {error && <div className="profile-banner profile-banner-error">⚠️ {error}</div>}
+
+      {/* Üst stat şeridi */}
       {profile && (
-        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem', marginBottom: '1.5rem' }}>
-          <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#38bdf8' }}>★ {profile.avgRating}</div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Puan</div>
+        <div className="profile-stats-row">
+          <div className="profile-stat">
+            <span className="profile-stat-icon">⭐</span>
+            <div>
+              <strong>{Number(profile.avgRating).toFixed(1)}</strong>
+              <span>Ortalama Puan</span>
+            </div>
           </div>
-          <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#34d399' }}>{profile.totalSessions}</div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Toplam Seans</div>
+          <div className="profile-stat">
+            <span className="profile-stat-icon">🏋️</span>
+            <div>
+              <strong>{profile.totalSessions}</strong>
+              <span>Toplam Seans</span>
+            </div>
           </div>
+          {profile.publicId && (
+            <div className="profile-stat">
+              <span className="profile-stat-icon">🆔</span>
+              <div>
+                <strong>{profile.publicId}</strong>
+                <span>Eğitmen ID</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        {/* Sol */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div className="form-card">
-            <label className="form-label">📝 Hakkımda (Bio)</label>
+      <div className="profile-edit-grid">
+        {/* SOL — Kişisel Bilgiler + Fotoğraf */}
+        <div className="profile-edit-col">
+          <section className="profile-card">
+            <h2 className="profile-card-title">🖼️ Profil Fotoğrafı</h2>
+            <div className="profile-photo-row">
+              <div className="profile-photo-preview">
+                {photoUrl ? (
+                  <img src={photoUrl} alt="Profil" />
+                ) : (
+                  <span className="profile-photo-placeholder">
+                    {firstName.charAt(0).toUpperCase() || '?'}
+                  </span>
+                )}
+              </div>
+              <div className="profile-photo-actions">
+                <label className="btn-outline btn-sm profile-photo-upload-btn">
+                  {uploading ? '⏳ Yükleniyor...' : '📷 Fotoğraf Yükle'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void handleUploadPhoto(f);
+                    }}
+                    disabled={uploading}
+                  />
+                </label>
+                {photoUrl && (
+                  <button
+                    type="button"
+                    className="btn-outline btn-sm"
+                    onClick={() => setPhotoUrl('')}
+                  >
+                    Kaldır
+                  </button>
+                )}
+                <p className="profile-hint">
+                  Kare formatlı, en az 400x400 px önerilir.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="profile-card">
+            <h2 className="profile-card-title">👤 Kişisel Bilgiler</h2>
+            <div className="profile-grid-2">
+              <label className="profile-field">
+                <span>Ad *</span>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="profile-field">
+                <span>Soyad *</span>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <label className="profile-field">
+              <span>E-posta</span>
+              <input
+                type="email"
+                className="profile-input"
+                value={profile?.email ?? ''}
+                disabled
+                title="E-posta değiştirilemez"
+              />
+              <small className="profile-hint">E-posta değiştirmek için yöneticinize başvurun.</small>
+            </label>
+            <div className="profile-grid-2">
+              <label className="profile-field">
+                <span>Telefon</span>
+                <input
+                  type="tel"
+                  className="profile-input"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+90 5XX XXX XX XX"
+                />
+              </label>
+              <label className="profile-field">
+                <span>Şehir</span>
+                <select
+                  className="profile-input"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                >
+                  <option value="">Seçin...</option>
+                  {CITY_LIST.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="profile-field">
+              <span>Deneyim (yıl)</span>
+              <input
+                type="number"
+                className="profile-input"
+                value={experienceYears}
+                onChange={(e) => setExperienceYears(e.target.value)}
+                min={0}
+                max={50}
+                placeholder="ör: 5"
+              />
+            </label>
+          </section>
+        </div>
+
+        {/* SAĞ — Profesyonel Bilgiler */}
+        <div className="profile-edit-col">
+          <section className="profile-card">
+            <h2 className="profile-card-title">📝 Hakkımda</h2>
             <textarea
+              className="profile-input profile-textarea"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={6}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.9rem', resize: 'vertical' }}
-              placeholder="Kendinizi tanıtın, deneyimlerinizi ve yaklaşımınızı yazın..."
+              placeholder="Kendinizi tanıtın, deneyimlerinizi ve eğitim yaklaşımınızı yazın..."
             />
-          </div>
+            <small className="profile-hint">
+              Bu metin keşif sayfasında ve profilinizde görünür. Min 20 karakter önerilir.
+            </small>
+          </section>
 
-          <div className="form-card">
-            <label className="form-label">🎯 Uzmanlık Alanları (virgülle ayırın)</label>
-            <input
-              value={specializations}
-              onChange={(e) => setSpecializations(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}
-              placeholder="Örn: Kickboks, Boks, Fitness, Yoga"
-            />
-          </div>
-
-          <div className="form-card">
-            <label className="form-label">📜 Sertifikalar (virgülle ayırın)</label>
-            <input
-              value={certifications}
-              onChange={(e) => setCertifications(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}
-              placeholder="Örn: ACE CPT, Kickboks 3. Kademe Antrenör"
-            />
-          </div>
-        </div>
-
-        {/* Sağ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div className="form-card">
-            <label className="form-label">🖼️ Profil Fotoğrafı</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {photoUrl && <img src={photoUrl} alt="Profil" style={{ width: 64, height: 64, borderRadius: 32, objectFit: 'cover', background: 'rgba(0,0,0,0.3)' }} />}
+          <section className="profile-card">
+            <h2 className="profile-card-title">🎯 Uzmanlık Alanları</h2>
+            {specialties.length > 0 && (
+              <div className="profile-chips">
+                {specialties.map((s) => (
+                  <span key={s} className="profile-chip">
+                    {s}
+                    <button
+                      type="button"
+                      onClick={() => removeSpecialty(s)}
+                      aria-label="Kaldır"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="profile-input-row">
               <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadPhoto(f); }}
-                style={{ fontSize: '0.85rem', color: '#94a3b8' }}
-                disabled={uploading}
+                type="text"
+                className="profile-input"
+                value={newSpecialty}
+                onChange={(e) => setNewSpecialty(e.target.value)}
+                placeholder="Yeni uzmanlık ekle..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addSpecialty(newSpecialty);
+                  }
+                }}
               />
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={() => addSpecialty(newSpecialty)}
+              >
+                Ekle
+              </button>
             </div>
-            {uploading && <p style={{ fontSize: '0.8rem', color: '#38bdf8', marginTop: '0.5rem' }}>⏳ Yükleniyor...</p>}
-          </div>
+            <div className="profile-suggestions">
+              <span className="profile-suggestions-label">Öneriler:</span>
+              {SPECIALTY_SUGGESTIONS.filter((s) => !specialties.includes(s))
+                .slice(0, 8)
+                .map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="profile-suggestion"
+                    onClick={() => addSpecialty(s)}
+                  >
+                    + {s}
+                  </button>
+                ))}
+            </div>
+          </section>
 
-          <div className="form-card">
-            <label className="form-label">🏋️ Verdiğim Hizmetler (virgülle ayırın)</label>
-            <input
-              value={offersSessionTypes}
-              onChange={(e) => setOffersSessionTypes(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}
-              placeholder="Örn: personal_training, massage"
-            />
-            <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
-              Değerler: personal_training, massage
-            </p>
-          </div>
+          <section className="profile-card">
+            <h2 className="profile-card-title">📜 Sertifikalar</h2>
+            {certifications.length > 0 && (
+              <div className="profile-chips">
+                {certifications.map((c) => (
+                  <span key={c} className="profile-chip">
+                    {c}
+                    <button
+                      type="button"
+                      onClick={() => removeCertification(c)}
+                      aria-label="Kaldır"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="profile-input-row">
+              <input
+                type="text"
+                className="profile-input"
+                value={newCert}
+                onChange={(e) => setNewCert(e.target.value)}
+                placeholder="Sertifika adı (örn. ACE CPT)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCertification(newCert);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={() => addCertification(newCert)}
+              >
+                Ekle
+              </button>
+            </div>
+          </section>
 
-          <div className="form-card">
-            <label className="form-label">💰 Fiyat Notu</label>
+          <section className="profile-card">
+            <h2 className="profile-card-title">🏋️ Sunduğum Hizmetler</h2>
+            <div className="profile-chips-toggle">
+              {SESSION_TYPE_OPTIONS.map((opt) => {
+                const active = offersSessionTypes.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`profile-chip-toggle ${active ? 'active' : ''}`}
+                    onClick={() => toggleSessionType(opt.value)}
+                  >
+                    {active ? '✓ ' : ''}
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <small className="profile-hint">
+              Hangi hizmetleri verebildiğinizi seçin — üyeler keşif sayfasında bu hizmetlere göre filtreliyor.
+            </small>
+          </section>
+
+          <section className="profile-card">
+            <h2 className="profile-card-title">💰 Fiyat Bilgisi</h2>
             <input
+              type="text"
+              className="profile-input"
               value={pricingNote}
               onChange={(e) => setPricingNote(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0' }}
-              placeholder="Örn: Seans başı ve paket seçenekleri mevcuttur."
+              placeholder="Örn: Seans başı 800₺ — paket seçenekleri mevcuttur"
             />
-          </div>
+            <small className="profile-hint">
+              Üyelere gösterilecek kısa fiyat notu. Detaylı paketleri "Hizmet & Paket" sayfasından yönetin.
+            </small>
+          </section>
         </div>
+      </div>
+
+      <div className="profile-save-bottom">
+        <button
+          className="btn-primary"
+          onClick={() => void handleSave()}
+          disabled={saving}
+        >
+          {saving ? '⏳ Kaydediliyor...' : '💾 Tüm Değişiklikleri Kaydet'}
+        </button>
       </div>
     </div>
   );

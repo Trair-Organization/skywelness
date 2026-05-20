@@ -1552,13 +1552,24 @@ export class TrainerPanelService {
     const profile = await this.profilesRepo.findOne({ where: { trainerId: trainer.id } });
     return {
       trainerId: trainer.id,
-      bio: profile?.bio ?? trainer.bio,
-      specialties: profile?.specialties ?? [],
-      certifications: profile?.certifications ?? [],
+      // Kullanıcı bilgileri
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone ?? '',
+      publicId: user.publicId,
+      // Trainer bilgileri
+      bio: profile?.bio ?? trainer.bio ?? '',
+      specialties: profile?.specialties ?? (trainer.specializations as string[]) ?? [],
+      certifications:
+        profile?.certifications ?? (trainer.certifications as string[]) ?? [],
       experienceYears: profile?.experienceYears ?? null,
-      city: profile?.city ?? '',
-      photoUrl: profile?.photoUrl ?? trainer.photoUrl,
+      city: profile?.city ?? user.city ?? '',
+      photoUrl: profile?.photoUrl ?? trainer.photoUrl ?? user.photoUrl ?? null,
       pricingNote: profile?.pricingNote ?? null,
+      offersSessionTypes: trainer.offersSessionTypes ?? [],
+      avgRating: trainer.avgRating,
+      totalSessions: trainer.totalSessions,
       role: user.role,
     };
   }
@@ -1566,6 +1577,11 @@ export class TrainerPanelService {
   async updateProfile(
     user: User,
     data: {
+      // User-level
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      // Trainer-level
       bio?: string;
       specialties?: string[];
       certifications?: string[];
@@ -1573,6 +1589,7 @@ export class TrainerPanelService {
       city?: string;
       photoUrl?: string;
       pricingNote?: string;
+      offersSessionTypes?: string[];
     },
   ) {
     const trainer = await this.resolveTrainer(user);
@@ -1601,8 +1618,23 @@ export class TrainerPanelService {
 
     // Also update trainer entity
     if (data.bio !== undefined) trainer.bio = data.bio;
+    if (data.specialties !== undefined) trainer.specializations = data.specialties;
+    if (data.certifications !== undefined) trainer.certifications = data.certifications;
     if (data.photoUrl !== undefined) trainer.photoUrl = data.photoUrl;
+    if (data.offersSessionTypes !== undefined)
+      trainer.offersSessionTypes = data.offersSessionTypes;
     await this.trainersRepo.save(trainer);
+
+    // Update user-level fields
+    const userUpdates: Partial<User> = {};
+    if (data.firstName !== undefined) userUpdates.firstName = data.firstName.trim();
+    if (data.lastName !== undefined) userUpdates.lastName = data.lastName.trim();
+    if (data.phone !== undefined) userUpdates.phone = data.phone.trim() || null;
+    if (data.city !== undefined) userUpdates.city = data.city.trim() || null;
+    if (data.photoUrl !== undefined) userUpdates.photoUrl = data.photoUrl || null;
+    if (Object.keys(userUpdates).length > 0) {
+      await this.usersRepo.update({ id: user.id }, userUpdates);
+    }
 
     return { ok: true };
   }
