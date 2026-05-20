@@ -497,7 +497,7 @@ export function PublicDiscoverPage() {
                   .filter((c) => c.featured)
                   .slice(0, 4)
                   .map((club) => (
-                    <FeaturedClubCard key={club.id} club={club} />
+                    <ClubCard key={club.id} club={club} />
                   ))}
               </div>
             </section>
@@ -734,47 +734,6 @@ export function PublicDiscoverPage() {
 }
 
 // ─── Card Components ─────────────────────────────────────────────────────────
-
-function FeaturedClubCard({ club }: { club: Club }) {
-  return (
-    <Link to={`/club/${club.subdomain}`} className="vitrin-featured-card">
-      <div className="vitrin-featured-cover">
-        {club.coverImageUrl || club.logoUrl ? (
-          <img src={club.coverImageUrl || club.logoUrl || ''} alt={club.name} />
-        ) : (
-          <div className="vitrin-featured-ph">{club.name.slice(0, 2).toUpperCase()}</div>
-        )}
-        <span className="vitrin-featured-badge">⭐ Öne Çıkan</span>
-      </div>
-      <div className="vitrin-featured-body">
-        {club.logoUrl && <img src={club.logoUrl} alt="" className="vitrin-featured-logo" />}
-        <h3>{club.name}</h3>
-        {club.location && <p className="vitrin-card-location">📍 {club.location}</p>}
-        <div className="vitrin-card-meta">
-          {club.avgRating && Number(club.avgRating) > 0 && (
-            <span className="vitrin-card-rating">★ {Number(club.avgRating).toFixed(1)}</span>
-          )}
-          {club.reviewCount ? (
-            <span className="vitrin-card-reviews">({club.reviewCount})</span>
-          ) : null}
-          {club.priceRange && <span className="vitrin-card-price">{club.priceRange}</span>}
-        </div>
-        {club.services.length > 0 && (
-          <div className="vitrin-card-tags">
-            {club.services.slice(0, 3).map((s) => (
-              <span key={s} className="vitrin-card-tag">
-                {s}
-              </span>
-            ))}
-            {club.services.length > 3 && (
-              <span className="vitrin-card-tag more">+{club.services.length - 3}</span>
-            )}
-          </div>
-        )}
-      </div>
-    </Link>
-  );
-}
 
 function ClubCard({ club }: { club: Club }) {
   const { isFavorite, toggle, isLoggedIn } = useFavorite('club', club.id);
