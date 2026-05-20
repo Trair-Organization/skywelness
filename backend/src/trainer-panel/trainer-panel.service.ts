@@ -1104,6 +1104,24 @@ export class TrainerPanelService {
     });
     await this.resRepo.save(reservation);
 
+    // Otomatik link: eğer üye eğitmenin portföyünde değilse ekle
+    const existingLink = await this.linksRepo.findOne({
+      where: { trainerId: trainer.id, memberUserId: data.studentUserId },
+    });
+    if (!existingLink) {
+      const link = this.linksRepo.create({
+        tenantId: trainer.tenantId,
+        trainerId: trainer.id,
+        memberUserId: data.studentUserId,
+        status: 'active',
+        source: 'trainer_added',
+      });
+      await this.linksRepo.save(link);
+    } else if (existingLink.status === 'archived') {
+      existingLink.status = 'active';
+      await this.linksRepo.save(existingLink);
+    }
+
     // Notify student
     const student = await this.usersRepo.findOne({ where: { id: data.studentUserId } });
     if (student) {

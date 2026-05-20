@@ -5190,3 +5190,48 @@ a.trainer-stat-card:hover {
 .view-toggle .btn-sm + .btn-sm {
   border-left: 1px solid var(--border);
 }
+
+
+/* Student tabs in trainer book modal */
+.student-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.student-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.student-tab:hover {
+  color: var(--accent);
+}
+.student-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.student-tab-count {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.student-tab.active .student-tab-count {
+  background: var(--accent);
+  color: #fff;
+}

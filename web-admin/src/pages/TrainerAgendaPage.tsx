@@ -41,6 +41,8 @@ type ActionMode =
   | { mode: 'reschedule'; lesson: Lesson }
   | null;
 
+type StudentTab = 'mine' | 'all';
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -68,7 +70,9 @@ export function TrainerAgendaPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [date, setDate] = useState<string>(todayISO());
   const [data, setData] = useState<CalendarResponse | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [myStudents, setMyStudents] = useState<Student[]>([]);
+  const [allMembers, setAllMembers] = useState<Student[]>([]);
+  const [studentTab, setStudentTab] = useState<StudentTab>('mine');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -83,20 +87,24 @@ export function TrainerAgendaPage() {
   const [dragLesson, setDragLesson] = useState<Lesson | null>(null);
   const [dropTargetHour, setDropTargetHour] = useState<string | null>(null);
 
+  const students = studentTab === 'mine' ? myStudents : allMembers;
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const fromDate = viewMode === 'weekly' ? getWeekStart(date) : date;
       const toDate = viewMode === 'weekly' ? addDays(getWeekStart(date), 6) : date;
-      const [cal, members] = await Promise.all([
+      const [cal, mine, all] = await Promise.all([
         apiJson<CalendarResponse>(
           `/trainer-panel/calendar?from=${fromDate}T00:00:00Z&to=${toDate}T23:59:59Z`,
         ),
+        apiJson<Student[]>('/trainer-panel/students'),
         apiJson<Student[]>('/trainer-panel/available-members'),
       ]);
       setData(cal);
-      setStudents(members);
+      setMyStudents(mine);
+      setAllMembers(all);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Yüklenemedi');
     } finally {
@@ -774,11 +782,36 @@ export function TrainerAgendaPage() {
                   <span>🕐 {action.hour}–{`${String(parseInt(action.hour) + 1).padStart(2, '0')}:00`}</span>
                 </div>
                 <div className="agenda-modal-form">
-                  <label className="form-label">Öğrenci Seç</label>
+                  <div className="student-tabs">
+                    <button
+                      type="button"
+                      className={`student-tab ${studentTab === 'mine' ? 'active' : ''}`}
+                      onClick={() => {
+                        setStudentTab('mine');
+                        setSelectedStudent(null);
+                      }}
+                    >
+                      👥 Öğrencilerim
+                      <span className="student-tab-count">{myStudents.length}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`student-tab ${studentTab === 'all' ? 'active' : ''}`}
+                      onClick={() => {
+                        setStudentTab('all');
+                        setSelectedStudent(null);
+                      }}
+                    >
+                      ➕ Yeni Öğrenci
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="İsim ile ara..."
+                    placeholder={
+                      studentTab === 'mine' ? 'Öğrencimi ara...' : 'Tüm üyelerden ara...'
+                    }
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
                   />
@@ -797,7 +830,9 @@ export function TrainerAgendaPage() {
                     <div className="agenda-member-list">
                       {filteredStudents.length === 0 && (
                         <p className="muted" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
-                          Öğrenci bulunamadı.
+                          {studentTab === 'mine'
+                            ? 'Henüz bağlı öğrenciniz yok. "Yeni Öğrenci" sekmesinden ekleyin.'
+                            : 'Üye bulunamadı.'}
                         </p>
                       )}
                       {filteredStudents.map((s) => (
@@ -821,7 +856,20 @@ export function TrainerAgendaPage() {
                                 {s.email}
                               </span>
                             </div>
-                            {s.linked ? (
+                            {studentTab === 'mine' ? (
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  background: '#dcfce7',
+                                  color: '#166534',
+                                }}
+                              >
+                                ✓ Bağlı
+                              </span>
+                            ) : s.linked ? (
                               <span
                                 style={{
                                   fontSize: '0.7rem',
@@ -840,11 +888,11 @@ export function TrainerAgendaPage() {
                                   fontSize: '0.7rem',
                                   padding: '2px 8px',
                                   borderRadius: 6,
-                                  background: '#f1f5f9',
-                                  color: '#64748b',
+                                  background: '#dbeafe',
+                                  color: '#1e40af',
                                 }}
                               >
-                                Üye
+                                + Otomatik bağlanır
                               </span>
                             )}
                           </div>
