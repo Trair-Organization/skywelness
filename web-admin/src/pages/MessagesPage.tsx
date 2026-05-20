@@ -356,26 +356,80 @@ export function MessagesPage() {
     if (bulkSelected.size === 0) { showToast('⚠️ Lütfen en az bir kişi seçin.', 'warning'); return; }
     if (!bulkText.trim()) { showToast('⚠️ Lütfen mesaj alanına mesaj yazın.', 'warning'); return; }
     setBulkSending(true);
-    let sent = 0;
-    const errors: string[] = [];
-    for (const memberId of bulkSelected) {
-      try {
-        const conv = await apiJson<{ conversationId?: string; id?: string }>('/messages/conversations', { method: 'POST', body: JSON.stringify({ otherUserId: memberId }) });
-        const convId = conv.conversationId || conv.id;
-        if (!convId) { errors.push(memberId + ': no conversation id'); continue; }
-        await apiJson(`/messages/conversations/${convId}`, { method: 'POST', body: JSON.stringify({ content: bulkText.trim() }) });
-        sent++;
-      } catch (e) {
-        errors.push(memberId + ': ' + (e instanceof Error ? e.message : 'hata'));
+
+    try {
+      if (isTrainer) {
+        // Tek API çağrısıyla bulk gönder
+        const res = await apiJson<{ ok: boolean; sent: number; failed: number; failedIds: string[] }>(
+          '/trainer-panel/messages/bulk',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              studentIds: Array.from(bulkSelected),
+              content: bulkText.trim(),
+            }),
+          },
+        );
+        if (res.failed > 0) {
+          showToast(`✅ ${res.sent} öğrenciye gönderildi, ${res.failed} başarısız`, res.sent > 0 ? 'success' : 'error');
+        } else {
+          showToast(`✅ ${res.sent} öğrenciye mesaj başarıyla gönderildi!`, 'success');
+        }
+        setAnnouncements((prev) => [
+          { date: new Date().toISOString(), text: bulkText.trim(), recipientCount: res.sent },
+          ...prev,
+        ]);
+      } else {
+        // Admin: tek tek gönder (eski davranış)
+        let sent = 0;
+        const errors: string[] = [];
+        for (const memberId of bulkSelected) {
+          try {
+            const conv = await apiJson<{ conversationId?: string; id?: string }>(
+              '/messages/conversations',
+              {
+                method: 'POST',
+                body: JSON.stringify({ otherUserId: memberId }),
+              },
+            );
+            const convId = conv.conversationId || conv.id;
+            if (!convId) {
+              errors.push(memberId + ': no conversation id');
+              continue;
+            }
+            await apiJson(`/messages/conversations/${convId}`, {
+              method: 'POST',
+              body: JSON.stringify({ content: bulkText.trim() }),
+            });
+            sent++;
+          } catch (e) {
+            errors.push(memberId + ': ' + (e instanceof Error ? e.message : 'hata'));
+          }
+        }
+        if (errors.length > 0) {
+          showToast(
+            `✅ ${sent} kişiye gönderildi, ${errors.length} başarısız`,
+            sent > 0 ? 'success' : 'error',
+          );
+        } else {
+          showToast(`✅ ${sent} kişiye mesaj başarıyla gönderildi!`, 'success');
+        }
+        setAnnouncements((prev) => [
+          { date: new Date().toISOString(), text: bulkText.trim(), recipientCount: sent },
+          ...prev,
+        ]);
       }
+    } catch (e) {
+      showToast(
+        `❌ Toplu mesaj gönderilemedi: ${e instanceof Error ? e.message : 'hata'}`,
+        'error',
+      );
     }
-    if (errors.length > 0) {
-      showToast(`✅ ${sent} kişiye gönderildi, ${errors.length} başarısız`, sent > 0 ? 'success' : 'error');
-    } else {
-      showToast(`✅ ${sent} kişiye mesaj başarıyla gönderildi!`, 'success');
-    }
-    setAnnouncements(prev => [{ date: new Date().toISOString(), text: bulkText.trim(), recipientCount: sent }, ...prev]);
-    setShowBulkMsg(false); setBulkText(''); setBulkSelected(new Set()); await loadConversations();
+
+    setShowBulkMsg(false);
+    setBulkText('');
+    setBulkSelected(new Set());
+    await loadConversations();
     setBulkSending(false);
   };
 

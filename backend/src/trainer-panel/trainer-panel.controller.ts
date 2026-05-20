@@ -370,6 +370,15 @@ export class TrainerPanelController {
     return this.service.listPushHistory(user);
   }
 
+  /** PT: birden fazla öğrenciye aynı mesajı tek istek ile gönder */
+  @Post('messages/bulk')
+  sendBulkMessage(
+    @CurrentUser() user: User,
+    @Body() body: { studentIds: string[]; content: string },
+  ) {
+    return this.service.sendBulkMessage(user, body);
+  }
+
   // ─── Hizmetlerim (Resource CRUD) ───────────────────────────────────────────
 
   /** PT: hizmetlerimi listele */

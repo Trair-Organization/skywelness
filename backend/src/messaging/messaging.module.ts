@@ -18,5 +18,6 @@ import { MessagingService } from './messaging.service';
   ],
   controllers: [MessagingController],
   providers: [MessagingService],
+  exports: [MessagingService],
 })
 export class MessagingModule {}

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { MessagingModule } from '../messaging/messaging.module';
 import { Availability } from '../database/entities/availability.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
@@ -47,6 +48,7 @@ import { TrainerPanelService } from './trainer-panel.service';
     ]),
     AuthModule,
     NotificationsModule,
+    MessagingModule,
   ],
   controllers: [TrainerPanelController],
   providers: [TrainerPanelService],

@@ -34,6 +34,7 @@ import { Announcement } from '../database/entities/announcement.entity';
 import { ReservationStatus, SessionType, MemberAccountStatus, UserRole } from '../database/enums';
 import { PushService } from '../notifications/push.service';
 import { NotificationDispatcher } from '../notifications/notification-dispatcher.service';
+import { MessagingService } from '../messaging/messaging.service';
 
 @Injectable()
 export class TrainerPanelService {
@@ -63,6 +64,7 @@ export class TrainerPanelService {
     private readonly eventRegRepo: Repository<ClubEventRegistration>,
     private readonly pushService: PushService,
     private readonly notifier: NotificationDispatcher,
+    private readonly messagingService: MessagingService,
   ) {}
 
   private async resolveTrainer(user: User): Promise<Trainer> {
@@ -1931,6 +1933,52 @@ export class TrainerPanelService {
         createdAt: r.createdAt,
       };
     });
+  }
+
+  /**
+   * PT: birden fazla öğrenciye aynı mesajı tek istek ile gönder.
+   * Her öğrenci için sohbet açılır (varsa kullanılır), mesaj ileri.
+   * Aynı zamanda gönderim geçmişine kayıt oluşturur.
+   */
+  async sendBulkMessage(
+    user: User,
+    data: { studentIds: string[]; content: string },
+  ): Promise<{ ok: true; sent: number; failed: number; failedIds: string[] }> {
+    if (!data.content?.trim()) {
+      throw new BadRequestException('Mesaj boş olamaz');
+    }
+    if (!Array.isArray(data.studentIds) || data.studentIds.length === 0) {
+      throw new BadRequestException('Öğrenci seçmelisiniz');
+    }
+
+    const trainer = await this.resolveTrainer(user);
+    // Sadece bu eğitmenin aktif öğrencilerine gönderim
+    const links = await this.linksRepo.find({
+      where: { trainerId: trainer.id, status: 'active' },
+      select: ['memberUserId'],
+    });
+    const allowedIds = new Set(links.map((l) => l.memberUserId));
+    const validIds = data.studentIds.filter((id) => allowedIds.has(id));
+
+    let sent = 0;
+    const failedIds: string[] = [];
+
+    for (const studentId of validIds) {
+      try {
+        const conv = await this.messagingService.getOrCreateConversation(user.id, studentId);
+        await this.messagingService.sendMessage(user.id, conv.conversationId, data.content.trim(), 'text');
+        sent++;
+      } catch {
+        failedIds.push(studentId);
+      }
+    }
+
+    // İlgili olmayan id'leri de failed olarak ekle
+    for (const id of data.studentIds) {
+      if (!allowedIds.has(id)) failedIds.push(id);
+    }
+
+    return { ok: true, sent, failed: failedIds.length, failedIds };
   }
 
   // ─── Hizmetlerim (Resource CRUD) ──────────────────────────────────────────────
