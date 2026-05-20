@@ -21,6 +21,41 @@ const TEMPLATES = [
   { title: '💪 Motivasyon', message: 'Harika gidiyorsunuz! Bu haftaki hedefinize ulaşmaya çok yakınsınız.' },
 ];
 
+const TRAINER_TEMPLATES = [
+  {
+    title: '⏰ Yarınki Dersinizi Unutmayın',
+    message: 'Yarın görüşeceğiz. Lütfen 5 dakika önce stüdyoda olun, su ve havlunuzu yanınızda getirin.',
+  },
+  {
+    title: '💪 Bugün Harikasın!',
+    message: 'Dersini başarıyla tamamladın. Hedefine bir adım daha yaklaştın, bu ritmi kaybetme!',
+  },
+  {
+    title: '📋 Bu Haftaki Ödevin Hazır',
+    message: 'Bu hafta için hazırladığım antrenman programını inceleyebilir misin? Sorun olursa mesaj at.',
+  },
+  {
+    title: '🥗 Beslenme Tavsiyesi',
+    message: 'Antrenmandan 1-2 saat önce hafif karbonhidrat almayı unutma. Sonrasında protein şart!',
+  },
+  {
+    title: '📅 Ders Saatim Değişti',
+    message: 'Bir sonraki dersimiz için saatte küçük bir değişiklik yapıldı. Lütfen ajandadan kontrol et.',
+  },
+  {
+    title: '🎯 Aylık Değerlendirme',
+    message: 'Bu ay harika bir gelişim gösterdin! Yeni hedeflerini konuşmak için bir görüşme planlayalım.',
+  },
+  {
+    title: '🏃 Bugün Antrenman Var',
+    message: 'Bugün aramızda görüşeceğiz. Enerjini topla, seni bekliyorum!',
+  },
+  {
+    title: '💧 Su İçmeyi Unutma',
+    message: 'Günlük 2-3 litre su tüketimi performansını ciddi şekilde etkiliyor. Hatırlatma!',
+  },
+];
+
 export function PushNotificationsPage() {
   const { user } = useAuth();
   const isTrainer = user?.role === 'trainer' || user?.role === 'independent_trainer';
@@ -200,10 +235,10 @@ export function PushNotificationsPage() {
           <div>
             <button onClick={() => setShowTemplates(!showTemplates)} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>📋 Hazır Şablonlar {showTemplates ? '▲' : '▼'}</button>
             {showTemplates && (
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {TEMPLATES.map((t, i) => (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
+                {(isTrainer ? TRAINER_TEMPLATES : TEMPLATES).map((t, i) => (
                   <button key={i} onClick={() => { setTitle(t.title); setMessage(t.message); setShowTemplates(false); }} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>
-                    <strong>{t.title}</strong><br /><span style={{ color: '#64748b', fontSize: 12 }}>{t.message.slice(0, 50)}...</span>
+                    <strong>{t.title}</strong><br /><span style={{ color: '#64748b', fontSize: 12 }}>{t.message.slice(0, 60)}{t.message.length > 60 ? '...' : ''}</span>
                   </button>
                 ))}
               </div>
