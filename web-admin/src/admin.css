@@ -7815,3 +7815,35 @@ a.trainer-stat-card:hover {
   font-weight: 800;
   color: #0f172a;
 }
+
+
+/* Assessment create buttons (FMS, VO2, Posture) - prominent */
+.assessment-create-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.assessment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1rem;
+  background: #ffffff;
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.assessment-btn:hover {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+  transform: translateY(-1px);
+}
+.assessment-btn:active {
+  transform: translateY(0);
+}

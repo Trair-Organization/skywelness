@@ -1209,14 +1209,14 @@ export function TrainerStudentDetailPage() {
             <h2 className="services-card-title" style={{ margin: 0 }}>
               🎯 Değerlendirmeler
             </h2>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button className="btn-outline btn-sm" onClick={startFmsForm}>
+            <div className="assessment-create-buttons">
+              <button className="assessment-btn" onClick={startFmsForm}>
                 🏃 FMS Testi
               </button>
-              <button className="btn-outline btn-sm" onClick={startVo2Form}>
+              <button className="assessment-btn" onClick={startVo2Form}>
                 💓 VO2 Max
               </button>
-              <button className="btn-outline btn-sm" onClick={startPostureForm}>
+              <button className="assessment-btn" onClick={startPostureForm}>
                 🧍 Postür Analizi
               </button>
             </div>
