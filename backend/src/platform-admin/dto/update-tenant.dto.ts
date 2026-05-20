@@ -55,4 +55,9 @@ export class UpdateTenantDto {
   @IsString()
   @MaxLength(500)
   website?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  badges?: string[];
 }

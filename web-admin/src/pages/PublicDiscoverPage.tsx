@@ -756,7 +756,15 @@ function ClubCard({ club }: { club: Club }) {
       <Link to={`/club/${club.subdomain}`} className="vitrin-club-card">
         <div className="vitrin-club-cover">
           {club.coverImageUrl || club.logoUrl ? (
-            <img src={club.coverImageUrl || club.logoUrl || ''} alt={club.name} />
+            <>
+              <img
+                src={club.coverImageUrl || club.logoUrl || ''}
+                alt=""
+                className="vitrin-cover-blur"
+                aria-hidden="true"
+              />
+              <img src={club.coverImageUrl || club.logoUrl || ''} alt={club.name} />
+            </>
           ) : (
             <div className="vitrin-club-ph">{club.name.slice(0, 2).toUpperCase()}</div>
           )}
@@ -825,21 +833,41 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
       >
         <div className="vitrin-trainer-photo">
           {trainer.photoUrl ? (
-            <img src={trainer.photoUrl} alt={trainer.name} />
+            <>
+              <img
+                src={trainer.photoUrl}
+                alt=""
+                className="vitrin-cover-blur"
+                aria-hidden="true"
+              />
+              <img src={trainer.photoUrl} alt={trainer.name} />
+            </>
           ) : (
             <div className="vitrin-trainer-ph">{trainer.name.charAt(0).toUpperCase()}</div>
           )}
+          <span className="vitrin-badge verified" style={{ position: 'absolute', top: 10, right: 10 }}>
+            ✓ Sertifikalı
+          </span>
         </div>
         <div className="vitrin-trainer-body">
           <h3>{trainer.name}</h3>
-          <p className="vitrin-trainer-club">{trainer.clubName}</p>
+          <p className="vitrin-trainer-club">🏢 {trainer.clubName}</p>
           <div className="vitrin-trainer-stats">
-            <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
+            {Number(trainer.avgRating) > 0 && (
+              <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
+            )}
             <span className="vitrin-trainer-sessions">{trainer.totalSessions} seans</span>
           </div>
           {trainer.specialties.length > 0 && (
-            <p className="vitrin-trainer-specs">{trainer.specialties.slice(0, 2).join(' · ')}</p>
+            <div className="vitrin-card-tags">
+              {trainer.specialties.slice(0, 2).map((s) => (
+                <span key={s} className="vitrin-card-tag">{s}</span>
+              ))}
+            </div>
           )}
+          <div className="vitrin-card-cta">
+            <span className="vitrin-card-cta-btn">Profili Gör →</span>
+          </div>
         </div>
       </Link>
     </div>
@@ -852,6 +880,12 @@ function EventCard({ event }: { event: Event }) {
     <Link to={`/event/${event.id}`} className="vitrin-event-card">
       {event.imageUrl && (
         <div className="vitrin-event-img">
+          <img
+            src={event.imageUrl}
+            alt=""
+            className="vitrin-cover-blur"
+            aria-hidden="true"
+          />
           <img src={event.imageUrl} alt={event.title} />
           <span className="vitrin-event-date-badge">
             {date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
@@ -890,7 +924,15 @@ function CampaignCard({ campaign, now }: { campaign: Campaign; now: number }) {
     <Link to={`/campaign/${campaign.id}`} className="vitrin-campaign-card">
       <div className="vitrin-campaign-cover">
         {campaign.imageUrl ? (
-          <img src={campaign.imageUrl} alt={campaign.title} />
+          <>
+            <img
+              src={campaign.imageUrl}
+              alt=""
+              className="vitrin-cover-blur"
+              aria-hidden="true"
+            />
+            <img src={campaign.imageUrl} alt={campaign.title} />
+          </>
         ) : (
           <div className="vitrin-campaign-ph">🔥</div>
         )}

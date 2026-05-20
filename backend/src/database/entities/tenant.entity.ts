@@ -102,6 +102,10 @@ export class Tenant {
   @Column({ type: 'jsonb', default: '[]', name: 'gallery_images' })
   galleryImages!: string[];
 
+  /** Manuel atanan partner badge'leri (örn. ['premium', 'elite']) */
+  @Column('text', { array: true, default: '{}' })
+  badges!: string[];
+
   /**
    * Platform komisyon oranı (0.00 – 1.00).
    * Varsayılan 0.15 (%15). Süper Admin panelinden partner bazlı ayarlanabilir.

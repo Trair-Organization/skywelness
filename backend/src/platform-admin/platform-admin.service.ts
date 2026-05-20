@@ -145,6 +145,7 @@ export class PlatformAdminService {
     if (dto.phone !== undefined) tenant.phone = dto.phone?.trim() || null;
     if (dto.email !== undefined) tenant.email = dto.email?.trim() || null;
     if (dto.website !== undefined) tenant.website = dto.website?.trim() || null;
+    if (dto.badges !== undefined) tenant.badges = dto.badges;
     tenant.settings = nextSettings;
     await this.tenantsRepo.save(tenant);
     await this.logAction({
@@ -220,6 +221,7 @@ export class PlatformAdminService {
         tenantId: nextTenantId,
         role: nextRole,
         accountStatus: nextStatus,
+        ...(dto.badges !== undefined ? { badges: dto.badges } : {}),
       },
     );
     await this.trainersRepo.update(

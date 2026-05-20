@@ -39,6 +39,10 @@ export class User {
   @Column({ type: 'varchar', length: 80, nullable: true, unique: true })
   slug!: string | null;
 
+  /** Manuel atanan partner badge'leri (örn. ['certified', 'expert']) */
+  @Column('text', { array: true, default: '{}' })
+  badges!: string[];
+
   @Column({ type: 'varchar', length: 255, name: 'password_hash' })
   passwordHash!: string;
 

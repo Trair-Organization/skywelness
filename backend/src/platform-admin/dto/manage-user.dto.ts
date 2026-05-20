@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { MemberAccountStatus, UserRole } from '../../database/enums';
 
 export class ManageUserDto {
@@ -17,4 +17,9 @@ export class ManageUserDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  badges?: string[];
 }

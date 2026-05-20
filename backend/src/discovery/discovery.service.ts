@@ -6,6 +6,7 @@ import { Trainer } from '../database/entities/trainer.entity';
 import { TrainerProfile } from '../database/entities/trainer-profile.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { User } from '../database/entities/user.entity';
+import { computeClubBadges, computeTrainerBadges } from '../common/badge.service';
 
 @Injectable()
 export class DiscoveryService {
@@ -94,6 +95,14 @@ export class DiscoveryService {
         email: t.email,
         latitude: t.latitude,
         longitude: t.longitude,
+        badges: computeClubBadges({
+          badges: t.badges ?? [],
+          featured: t.featured,
+          avgRating: t.avgRating,
+          reviewCount: t.reviewCount,
+          services: t.services,
+          createdAt: t.createdAt,
+        }),
       }));
   }
 
@@ -155,6 +164,13 @@ export class DiscoveryService {
       totalSessions: p.trainer.totalSessions,
       clubName: p.tenant.name,
       clubSubdomain: p.tenant.subdomain,
+      badges: computeTrainerBadges({
+        badges: p.user.badges ?? [],
+        createdAt: p.user.createdAt,
+        avgRating: p.trainer.avgRating,
+        totalSessions: p.trainer.totalSessions,
+        certifications: p.certifications,
+      }),
     }));
   }
 
