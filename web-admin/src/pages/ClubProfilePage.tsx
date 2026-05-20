@@ -589,8 +589,12 @@ export function ClubProfilePage() {
                         })}
                       </span>
                       {e.coachName && <span>🏋️ {e.coachName}</span>}
-                      {e.price && parseFloat(e.price) > 0 && (
+                      {e.price && parseFloat(e.price) > 0 ? (
                         <span className="pp-event-price">💰 {e.price}₺</span>
+                      ) : (
+                        <span className="pp-event-price" style={{ color: '#059669' }}>
+                          Ücretsiz
+                        </span>
                       )}
                     </div>
                   </Link>

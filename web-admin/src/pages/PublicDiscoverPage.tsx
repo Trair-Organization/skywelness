@@ -889,7 +889,11 @@ function EventCard({ event }: { event: Event }) {
         {event.location && <p className="vitrin-card-location">📍 {event.location}</p>}
         {event.clubName && <p className="vitrin-event-club">🏢 {event.clubName}</p>}
         <div className="vitrin-event-footer">
-          {event.price !== '0' && <span className="vitrin-event-price">{event.price}₺</span>}
+          {event.price !== '0' && Number(event.price) > 0 ? (
+            <span className="vitrin-event-price">{event.price}₺</span>
+          ) : (
+            <span className="vitrin-event-price vitrin-event-free">Ücretsiz</span>
+          )}
           {event.coachName && <span className="vitrin-event-coach">🏋️ {event.coachName}</span>}
         </div>
       </div>

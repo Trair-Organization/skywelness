@@ -5871,6 +5871,13 @@
 .vitrin-event-price {
   font-size: 0.78rem;
 }
+.vitrin-event-free {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
 .vitrin-event-coach {
   font-size: 0.7rem;
 }
