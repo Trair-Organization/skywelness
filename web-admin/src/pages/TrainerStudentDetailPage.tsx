@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiJson, ApiError } from '../lib/api';
 
 type StudentDetail = {
-  id: string;
+  userId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -11,12 +11,19 @@ type StudentDetail = {
   photoUrl: string | null;
   source: string;
   connectedAt: string;
+  linkStatus?: string;
   totalLessons: number;
   completedLessons: number;
   cancelledLessons: number;
-  upcomingLessons: number;
-  remainingSessions: number;
+  upcomingCount: number;
+  nextLesson: { startTime: string; endTime: string } | null;
   notes: Array<{ id: string; note: string; createdAt: string }>;
+  packages?: Array<{
+    id: string;
+    name: string;
+    remainingSessions: number;
+    expiresAt: string;
+  }>;
 };
 
 type Measurement = {
@@ -590,11 +597,11 @@ export function TrainerStudentDetailPage() {
               <span className="student-stat-pill">
                 ✅ {student.completedLessons} tamamlandı
               </span>
-              <span className="student-stat-pill">📅 {student.upcomingLessons} bekliyor</span>
+              <span className="student-stat-pill">📅 {student.upcomingCount} bekliyor</span>
               <span className="student-stat-pill">❌ {student.cancelledLessons} iptal</span>
-              {student.remainingSessions > 0 && (
+              {student.packages && student.packages.length > 0 && (
                 <span className="student-stat-pill student-stat-package">
-                  📦 {student.remainingSessions} seans paket
+                  📦 {student.packages.reduce((sum, p) => sum + p.remainingSessions, 0)} seans paket
                 </span>
               )}
             </div>
