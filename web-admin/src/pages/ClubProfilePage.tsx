@@ -25,6 +25,7 @@ type ProfileData = {
     id: string;
     name: string;
     publicId?: string | null;
+    slug?: string | null;
     photoUrl: string | null;
     specializations: string[];
     offersSessionTypes: string[];
@@ -888,7 +889,11 @@ function TrainerCard({
         </button>
       )}
       <Link
-        to={trainerProfilePath({ publicId: trainer.publicId, fallbackId: trainer.id })}
+        to={trainerProfilePath({
+          slug: trainer.slug,
+          publicId: trainer.publicId,
+          fallbackId: trainer.id,
+        })}
         className="vitrin-trainer-card"
       >
         <div className="vitrin-trainer-photo">

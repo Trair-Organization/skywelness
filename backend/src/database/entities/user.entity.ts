@@ -35,6 +35,10 @@ export class User {
   @Column({ type: 'varchar', length: 12, nullable: true, unique: true, name: 'public_id' })
   publicId!: string | null;
 
+  /** SEO-dostu URL slug'ı: 'baha-citir', 'baha-citir-2'. Public profil URL'lerinde kullanılır. */
+  @Column({ type: 'varchar', length: 80, nullable: true, unique: true })
+  slug!: string | null;
+
   @Column({ type: 'varchar', length: 255, name: 'password_hash' })
   passwordHash!: string;
 

@@ -128,6 +128,59 @@ export class AuthService {
     return value.replace(/[^a-z0-9çğıöşü_.-]/g, '').slice(0, 40);
   }
 
+  /**
+   * SEO-friendly URL slug üretir.
+   * 'Baha Çıtır' → 'baha-citir'
+   * Çakışma varsa -2, -3 ekler.
+   */
+  private async generateUserSlug(firstName: string, lastName: string): Promise<string> {
+    const trMap: Record<string, string> = {
+      ç: 'c',
+      ğ: 'g',
+      ı: 'i',
+      ö: 'o',
+      ş: 's',
+      ü: 'u',
+      â: 'a',
+      î: 'i',
+      û: 'u',
+      Ç: 'C',
+      Ğ: 'G',
+      I: 'I',
+      İ: 'I',
+      Ö: 'O',
+      Ş: 'S',
+      Ü: 'U',
+      Â: 'A',
+      Î: 'I',
+      Û: 'U',
+    };
+    const slugify = (input: string): string => {
+      let s = input;
+      for (const [k, v] of Object.entries(trMap)) {
+        s = s.split(k).join(v);
+      }
+      return s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/-+/g, '-');
+    };
+
+    const base = slugify(`${firstName} ${lastName}`);
+    if (!base) return 'kullanici';
+
+    // Çakışma kontrolü
+    let candidate = base;
+    let suffix = 1;
+    while (await this.usersRepo.findOne({ where: { slug: candidate }, select: ['id'] })) {
+      suffix += 1;
+      candidate = `${base}-${suffix}`;
+      if (suffix > 1000) break; // güvenlik
+    }
+    return candidate;
+  }
+
   async checkUsernameAvailability(
     tenantSubdomain: string,
     rawUsername: string,
@@ -259,11 +312,13 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const publicId = await this.generatePublicId('UYE');
+    const slug = await this.generateUserSlug(dto.firstName, dto.lastName);
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email: dto.email.toLowerCase(),
       username,
       publicId,
+      slug,
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -355,11 +410,13 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const trainerPublicId = await this.generatePublicId('EGT');
+    const trainerSlug = await this.generateUserSlug(dto.firstName, dto.lastName);
     const user = this.usersRepo.create({
       tenantId: tenant.id,
       email,
       username,
       publicId: trainerPublicId,
+      slug: trainerSlug,
       passwordHash,
       firstName: dto.firstName.trim(),
       lastName: dto.lastName.trim(),

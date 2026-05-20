@@ -35,10 +35,20 @@ export class TrainerPublicProfileController {
         where: { id: slug },
         relations: ['user'],
       });
-    } else {
-      // publicId (örn. EGT-4R8N) — case-insensitive
+    } else if (/^[A-Z]{3}-[A-Z0-9]+$/i.test(slug)) {
+      // publicId formatı (EGT-XXXX) — backward compat
       const upper = slug.toUpperCase();
       const user = await this.usersRepo.findOne({ where: { publicId: upper } });
+      if (user) {
+        trainer = await this.trainersRepo.findOne({
+          where: { userId: user.id },
+          relations: ['user'],
+        });
+      }
+    } else {
+      // SEO slug (örn. baha-citir)
+      const lower = slug.toLowerCase();
+      const user = await this.usersRepo.findOne({ where: { slug: lower } });
       if (user) {
         trainer = await this.trainersRepo.findOne({
           where: { userId: user.id },

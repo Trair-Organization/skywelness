@@ -119,6 +119,7 @@ export class TenantProfileService {
         id: t.id,
         userId: t.userId,
         publicId: t.user.publicId,
+        slug: t.user.slug,
         name: `${t.user.firstName} ${t.user.lastName}`.trim(),
         photoUrl: t.photoUrl ?? t.user.photoUrl,
         specializations: t.specializations ?? [],

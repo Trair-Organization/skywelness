@@ -142,6 +142,7 @@ export class DiscoveryService {
       id: p.trainerId,
       userId: p.userId,
       publicId: p.user.publicId,
+      slug: p.user.slug,
       name: `${p.user.firstName} ${p.user.lastName}`.trim(),
       photoUrl: p.photoUrl ?? p.user.photoUrl,
       city: p.city,

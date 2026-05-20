@@ -8,6 +8,7 @@ type Trainer = {
   id: string;
   userId: string;
   publicId: string | null;
+  slug: string | null;
   name: string;
   photoUrl: string | null;
   specialties: string[];
@@ -59,7 +60,11 @@ export function AllTrainersPage() {
               {trainers.map((tr) => (
                 <Link
                   key={tr.id}
-                  to={trainerProfilePath({ publicId: tr.publicId, fallbackId: tr.userId })}
+                  to={trainerProfilePath({
+                    slug: tr.slug,
+                    publicId: tr.publicId,
+                    fallbackId: tr.userId,
+                  })}
                   className="vitrin-trainer-card"
                 >
                   <div className="vitrin-trainer-photo">
