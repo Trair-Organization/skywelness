@@ -1626,14 +1626,14 @@ export class TrainerPanelService {
     await this.trainersRepo.save(trainer);
 
     // Update user-level fields
-    const userUpdates: Partial<User> = {};
+    const userUpdates: Record<string, string | null> = {};
     if (data.firstName !== undefined) userUpdates.firstName = data.firstName.trim();
     if (data.lastName !== undefined) userUpdates.lastName = data.lastName.trim();
     if (data.phone !== undefined) userUpdates.phone = data.phone.trim() || null;
     if (data.city !== undefined) userUpdates.city = data.city.trim() || null;
     if (data.photoUrl !== undefined) userUpdates.photoUrl = data.photoUrl || null;
     if (Object.keys(userUpdates).length > 0) {
-      await this.usersRepo.update({ id: user.id }, userUpdates);
+      await this.usersRepo.update({ id: user.id }, userUpdates as never);
     }
 
     return { ok: true };
