@@ -43,7 +43,27 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Returns the Monday of the week containing the given date (ISO week). */
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+const WEEKDAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Pzr'];
+
+type ViewMode = 'daily' | 'weekly';
+
 export function TrainerAgendaPage() {
+  const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [date, setDate] = useState<string>(todayISO());
   const [data, setData] = useState<CalendarResponse | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -65,8 +85,12 @@ export function TrainerAgendaPage() {
     setLoading(true);
     setError(null);
     try {
+      const fromDate = viewMode === 'weekly' ? getWeekStart(date) : date;
+      const toDate = viewMode === 'weekly' ? addDays(getWeekStart(date), 6) : date;
       const [cal, stu] = await Promise.all([
-        apiJson<CalendarResponse>(`/trainer-panel/calendar?from=${date}T00:00:00Z&to=${date}T23:59:59Z`),
+        apiJson<CalendarResponse>(
+          `/trainer-panel/calendar?from=${fromDate}T00:00:00Z&to=${toDate}T23:59:59Z`,
+        ),
         apiJson<Student[]>('/trainer-panel/students'),
       ]);
       setData(cal);
@@ -76,16 +100,15 @@ export function TrainerAgendaPage() {
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, viewMode]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   function navigateDate(off: number) {
-    const d = new Date(date);
-    d.setDate(d.getDate() + off);
-    setDate(d.toISOString().slice(0, 10));
+    const step = viewMode === 'weekly' ? off * 7 : off;
+    setDate(addDays(date, step));
   }
 
   function flash(msg: string) {
@@ -93,23 +116,26 @@ export function TrainerAgendaPage() {
     setTimeout(() => setSuccess(null), 2500);
   }
 
-  function getCellState(hour: string): CellState {
+  function getCellStateForDate(targetDate: string, hour: string): CellState {
     if (!data) return { kind: 'empty' };
     const slot = data.availabilities.find(
-      (a) => a.date === date && a.startTime.slice(0, 5) === hour,
+      (a) => a.date === targetDate && a.startTime.slice(0, 5) === hour,
     );
     const lesson = data.lessons.find((l) => {
       const t = new Date(l.startTime).toISOString().slice(11, 16);
       const d = new Date(l.startTime).toISOString().slice(0, 10);
-      return d === date && t === hour;
+      return d === targetDate && t === hour;
     });
     if (lesson) return { kind: 'booked', slot: slot ?? null, lesson };
     if (slot) return { kind: 'available', slot };
     return { kind: 'empty' };
   }
 
-  function openCellMenu(hour: string) {
-    const cell = getCellState(hour);
+  function openCellMenu(hour: string, targetDate?: string) {
+    if (targetDate && targetDate !== date) {
+      setDate(targetDate);
+    }
+    const cell = getCellStateForDate(targetDate ?? date, hour);
     setAction({ mode: 'menu', cell, hour });
     setSelectedStudent(null);
     setStudentSearch('');
@@ -320,10 +346,16 @@ export function TrainerAgendaPage() {
     }
   }
 
-  // Stats
+  // Stats — week aware
+  const weekDates = (() => {
+    if (viewMode !== 'weekly') return [date];
+    const start = getWeekStart(date);
+    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  })();
+
   const allHours = data
     ? data.availabilities
-        .filter((a) => a.date === date)
+        .filter((a) => weekDates.includes(a.date))
         .map((a) => parseInt(a.startTime))
     : [];
   const minHour = allHours.length > 0 ? Math.min(...allHours) : 9;
@@ -333,7 +365,9 @@ export function TrainerAgendaPage() {
   );
   const totalSlots = allHours.length;
   const todayLessons = data
-    ? data.lessons.filter((l) => new Date(l.startTime).toISOString().slice(0, 10) === date).length
+    ? data.lessons.filter((l) =>
+        weekDates.includes(new Date(l.startTime).toISOString().slice(0, 10)),
+      ).length
     : 0;
   const occupancyPct = totalSlots > 0 ? Math.round((todayLessons / totalSlots) * 100) : 0;
 
@@ -347,9 +381,6 @@ export function TrainerAgendaPage() {
           )
           .slice(0, 10)
       : students.slice(0, 10);
-
-  const now = new Date();
-  const isToday = date === todayISO();
 
   return (
     <div className="trainer-panel">
@@ -377,22 +408,38 @@ export function TrainerAgendaPage() {
             ›
           </button>
           <span className="agenda-date-label">
-            {new Date(date).toLocaleDateString('tr-TR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
+            {viewMode === 'weekly'
+              ? `${new Date(getWeekStart(date)).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} – ${new Date(addDays(getWeekStart(date), 6)).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+              : new Date(date).toLocaleDateString('tr-TR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
           </span>
         </div>
         <div className="agenda-actions">
+          <div className="view-toggle">
+            <button
+              className={`btn-sm ${viewMode === 'daily' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setViewMode('daily')}
+            >
+              Günlük
+            </button>
+            <button
+              className={`btn-sm ${viewMode === 'weekly' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setViewMode('weekly')}
+            >
+              Haftalık
+            </button>
+          </div>
           <button
             className="btn-sm btn-primary"
             onClick={() => setAction({ mode: 'bulkSlot' })}
           >
             🕐 Çalışma Saatleri
           </button>
-          {totalSlots > 0 && (
+          {viewMode === 'daily' && totalSlots > 0 && (
             <button className="btn-sm btn-outline" onClick={() => void handleClearDay()}>
               ✕ Günü Kapat
             </button>
@@ -434,7 +481,11 @@ export function TrainerAgendaPage() {
       {!loading && totalSlots === 0 && (
         <div className="empty-state" style={{ padding: '3rem 1rem' }}>
           <span className="empty-icon">📅</span>
-          <p>Bugün için slot oluşturulmamış.</p>
+          <p>
+            {viewMode === 'weekly'
+              ? 'Bu hafta için slot oluşturulmamış.'
+              : 'Bugün için slot oluşturulmamış.'}
+          </p>
           <button
             className="btn-sm btn-primary"
             onClick={() => setAction({ mode: 'bulkSlot' })}
@@ -451,92 +502,136 @@ export function TrainerAgendaPage() {
             <thead>
               <tr>
                 <th className="agenda-th-hour">Saat</th>
-                <th className="agenda-th-therapist">
-                  <div>
-                    <div className="agenda-therapist-name">📅 Ajandam</div>
-                    <div className="agenda-therapist-stat">
-                      {todayLessons}/{totalSlots} dolu
+                {viewMode === 'weekly' ? (
+                  weekDates.map((d) => {
+                    const dayDate = new Date(d + 'T12:00:00');
+                    const isCurrentDay = d === todayISO();
+                    return (
+                      <th key={d} className="agenda-th-therapist">
+                        <div>
+                          <div
+                            className="agenda-therapist-name"
+                            style={{ color: isCurrentDay ? 'var(--accent)' : undefined }}
+                          >
+                            {WEEKDAY_LABELS[(dayDate.getDay() + 6) % 7]}
+                          </div>
+                          <div className="agenda-therapist-stat">
+                            {dayDate.getDate()}{' '}
+                            {dayDate.toLocaleDateString('tr-TR', { month: 'short' })}
+                          </div>
+                        </div>
+                      </th>
+                    );
+                  })
+                ) : (
+                  <th className="agenda-th-therapist">
+                    <div>
+                      <div className="agenda-therapist-name">📅 Ajandam</div>
+                      <div className="agenda-therapist-stat">
+                        {todayLessons}/{totalSlots} dolu
+                      </div>
                     </div>
-                  </div>
-                </th>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {hours.map((h) => {
-                const cell = getCellState(h);
                 const hourInt = parseInt(h);
-                const isPast = isToday && hourInt <= now.getHours();
-                const nH = `${String(parseInt(h) + 1).padStart(2, '0')}:00`;
-                const isDropTarget = dropTargetHour === h;
+                const nH = `${String(hourInt + 1).padStart(2, '0')}:00`;
 
                 return (
-                  <tr key={h} className={isPast ? 'agenda-row-past' : ''}>
+                  <tr key={h}>
                     <td className="agenda-td-hour">
                       {h}–{nH}
                     </td>
-                    {cell.kind === 'booked' && (
-                      <td
-                        className={`agenda-td agenda-td-booked ${isPast ? 'agenda-td-past' : 'agenda-td-draggable'}`}
-                        draggable={!isPast}
-                        onDragStart={() => setDragLesson(cell.lesson)}
-                        onDragEnd={() => {
-                          setDragLesson(null);
-                          setDropTargetHour(null);
-                        }}
-                        onClick={() => openCellMenu(h)}
-                      >
-                        <div className="agenda-td-content">
-                          <span className="agenda-td-name">
-                            {cell.lesson.studentName.split(' ')[0] || '—'}
-                          </span>
-                          <span className="agenda-td-status">
-                            {cell.lesson.status === 'confirmed' ? '✓' : '⏳'}
-                          </span>
-                        </div>
-                      </td>
-                    )}
-                    {cell.kind === 'available' && (
-                      <td
-                        className={`agenda-td agenda-td-free ${isPast ? 'agenda-td-past' : ''} ${isDropTarget ? 'agenda-td-drop-target' : ''}`}
-                        onClick={() => !isPast && openCellMenu(h)}
-                        onDragOver={(e) => {
-                          if (!isPast) {
+                    {(viewMode === 'weekly' ? weekDates : [date]).map((cellDate) => {
+                      const cell = getCellStateForDate(cellDate, h);
+                      const cellNow = new Date();
+                      const isPastDay = cellDate < todayISO();
+                      const isPast =
+                        isPastDay ||
+                        (cellDate === todayISO() && hourInt <= cellNow.getHours());
+                      const dropKey = `${cellDate}-${h}`;
+                      const isDropTarget = dropTargetHour === dropKey;
+
+                      if (cell.kind === 'booked') {
+                        return (
+                          <td
+                            key={cellDate}
+                            className={`agenda-td agenda-td-booked ${isPast ? 'agenda-td-past' : 'agenda-td-draggable'}`}
+                            draggable={!isPast}
+                            onDragStart={() => setDragLesson(cell.lesson)}
+                            onDragEnd={() => {
+                              setDragLesson(null);
+                              setDropTargetHour(null);
+                            }}
+                            onClick={() => openCellMenu(h, cellDate)}
+                          >
+                            <div className="agenda-td-content">
+                              <span className="agenda-td-name">
+                                {cell.lesson.studentName.split(' ')[0] || '—'}
+                              </span>
+                              <span className="agenda-td-status">
+                                {cell.lesson.status === 'confirmed' ? '✓' : '⏳'}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      }
+                      if (cell.kind === 'available') {
+                        return (
+                          <td
+                            key={cellDate}
+                            className={`agenda-td agenda-td-free ${isPast ? 'agenda-td-past' : ''} ${isDropTarget ? 'agenda-td-drop-target' : ''}`}
+                            onClick={() => !isPast && openCellMenu(h, cellDate)}
+                            onDragOver={(e) => {
+                              if (!isPast) {
+                                e.preventDefault();
+                                setDropTargetHour(dropKey);
+                              }
+                            }}
+                            onDragLeave={() => setDropTargetHour(null)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (!isPast) {
+                                if (cellDate !== date) setDate(cellDate);
+                                void handleDrop(h);
+                              }
+                            }}
+                          >
+                            <span className="agenda-free-label">
+                              {isPast ? '—' : isDropTarget ? '⬇' : 'Müsait'}
+                            </span>
+                          </td>
+                        );
+                      }
+                      return (
+                        <td
+                          key={cellDate}
+                          className={`agenda-td agenda-td-empty ${isPast ? 'agenda-td-past' : ''} ${isDropTarget ? 'agenda-td-drop-target' : ''}`}
+                          onClick={() => !isPast && openCellMenu(h, cellDate)}
+                          onDragOver={(e) => {
+                            if (!isPast) {
+                              e.preventDefault();
+                              setDropTargetHour(dropKey);
+                            }
+                          }}
+                          onDragLeave={() => setDropTargetHour(null)}
+                          onDrop={(e) => {
                             e.preventDefault();
-                            setDropTargetHour(h);
-                          }
-                        }}
-                        onDragLeave={() => setDropTargetHour(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (!isPast) void handleDrop(h);
-                        }}
-                      >
-                        <span className="agenda-free-label">
-                          {isPast ? '—' : isDropTarget ? '⬇ Bırak' : 'Müsait'}
-                        </span>
-                      </td>
-                    )}
-                    {cell.kind === 'empty' && (
-                      <td
-                        className={`agenda-td agenda-td-empty ${isPast ? 'agenda-td-past' : ''} ${isDropTarget ? 'agenda-td-drop-target' : ''}`}
-                        onClick={() => !isPast && openCellMenu(h)}
-                        onDragOver={(e) => {
-                          if (!isPast) {
-                            e.preventDefault();
-                            setDropTargetHour(h);
-                          }
-                        }}
-                        onDragLeave={() => setDropTargetHour(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (!isPast) void handleDrop(h);
-                        }}
-                      >
-                        <span className="agenda-empty-plus">
-                          {isPast ? '—' : isDropTarget ? '⬇' : '+'}
-                        </span>
-                      </td>
-                    )}
+                            if (!isPast) {
+                              if (cellDate !== date) setDate(cellDate);
+                              void handleDrop(h);
+                            }
+                          }}
+                        >
+                          <span className="agenda-empty-plus">
+                            {isPast ? '—' : isDropTarget ? '⬇' : '+'}
+                          </span>
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })}

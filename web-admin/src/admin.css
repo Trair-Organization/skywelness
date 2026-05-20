@@ -5171,3 +5171,22 @@ a.trainer-stat-card:hover {
     font-size: 0.85rem;
   }
 }
+
+
+/* Trainer agenda — view toggle (Daily/Weekly) */
+.view-toggle {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.view-toggle .btn-sm {
+  border-radius: 0;
+  border: none;
+  margin: 0;
+}
+.view-toggle .btn-sm + .btn-sm {
+  border-left: 1px solid var(--border);
+}
