@@ -66,8 +66,19 @@ const QUICK_REPLIES = [
   'Detaylı bilgi için lütfen kulübümüzü ziyaret edin.',
 ];
 
+const TRAINER_QUICK_REPLIES = [
+  'Merhaba! Size nasıl yardımcı olabilirim?',
+  'Yarınki dersinizi unutmayın, görüşmek üzere!',
+  'Bugün harika bir antrenman yaptık, tebrikler!',
+  'Bu haftaki ödevini hatırlatmak istedim.',
+  'Lütfen su ve havlu yanınızda olsun.',
+  'Ders saatimde küçük bir değişiklik var, ajandadan kontrol edebilir misin?',
+  'Beslenme planını uyguluyor musun? Sorun olursa söyle.',
+];
+
 export function MessagesPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isTrainer = user?.role === 'trainer' || user?.role === 'independent_trainer';
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [archivedConvs, setArchivedConvs] = useState<ConversationRow[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUserRow[]>([]);
@@ -279,8 +290,18 @@ export function MessagesPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   const channels: Array<{ key: Channel; icon: string; label: string; badge?: number }> = [
-    { key: 'members', icon: '👥', label: 'Üyeler', badge: memberUnread || undefined },
-    { key: 'staff', icon: '🏋️', label: 'Personel', badge: staffUnread || undefined },
+    {
+      key: 'members',
+      icon: isTrainer ? '🎓' : '👥',
+      label: isTrainer ? 'Öğrenciler' : 'Üyeler',
+      badge: memberUnread || undefined,
+    },
+    {
+      key: 'staff',
+      icon: '🏢',
+      label: isTrainer ? 'Kulüp & Diğer' : 'Personel',
+      badge: staffUnread || undefined,
+    },
     { key: 'announcements', icon: '📢', label: 'Duyurular' },
     { key: 'archived', icon: '📦', label: 'Arşiv' },
     { key: 'blocked', icon: '🚫', label: 'Engellenenler' },
@@ -390,7 +411,15 @@ export function MessagesPage() {
               </div>
             )}
             {loading ? <p style={{ color: '#64748b' }}>Yükleniyor...</p> : currentList.length === 0 ? (
-              <p style={{ color: '#64748b' }}>{channel === 'staff' ? 'Personel ile sohbet yok.' : 'Üye ile sohbet yok.'}</p>
+              <p style={{ color: '#64748b' }}>
+                {channel === 'staff'
+                  ? isTrainer
+                    ? 'Kulüp ile sohbet yok.'
+                    : 'Personel ile sohbet yok.'
+                  : isTrainer
+                    ? 'Henüz öğrenci sohbeti yok.'
+                    : 'Üye ile sohbet yok.'}
+              </p>
             ) : currentList.map(conv => (
               <div key={conv.id} className={`conv-row ${activeConv?.id === conv.id ? 'conv-row-active' : ''}`} onClick={() => openConversation(conv)} style={{ position: 'relative' }}>
                 <input type="checkbox" checked={selectedConvs.has(conv.id)} onChange={(e) => { e.stopPropagation(); const n = new Set(selectedConvs); if (n.has(conv.id)) n.delete(conv.id); else n.add(conv.id); setSelectedConvs(n); }} onClick={(e) => e.stopPropagation()} style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0 }} />
@@ -447,7 +476,7 @@ export function MessagesPage() {
                 </form>
                 {showQuickReplies && (
                   <div style={{ padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid #e2e8f0' }}>
-                    {QUICK_REPLIES.map((qr, i) => (
+                    {(isTrainer ? TRAINER_QUICK_REPLIES : QUICK_REPLIES).map((qr, i) => (
                       <button key={i} onClick={() => { setText(qr); setShowQuickReplies(false); }} style={{ padding: '5px 10px', borderRadius: 16, border: '1px solid #e2e8f0', background: '#ffffff', color: '#374151', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{qr.slice(0, 30)}...</button>
                     ))}
                   </div>
