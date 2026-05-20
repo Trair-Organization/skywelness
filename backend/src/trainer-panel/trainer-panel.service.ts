@@ -1570,6 +1570,7 @@ export class TrainerPanelService {
       offersSessionTypes: trainer.offersSessionTypes ?? [],
       avgRating: trainer.avgRating,
       totalSessions: trainer.totalSessions,
+      commissionRate: trainer.commissionRate,
       role: user.role,
     };
   }

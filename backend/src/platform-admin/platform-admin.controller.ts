@@ -137,6 +137,27 @@ export class PlatformAdminController {
     return this.platformAdminService.updateCommissionRate(tenantId, body.commissionRate);
   }
 
+  /** Eğitmen komisyon oranını güncelle (0.00 – 1.00 arası) */
+  @Patch('trainers/:trainerId/commission')
+  updateTrainerCommissionRate(
+    @Param('trainerId') trainerId: string,
+    @Body() body: { commissionRate: number },
+  ) {
+    return this.platformAdminService.updateTrainerCommissionRate(
+      trainerId,
+      body.commissionRate,
+    );
+  }
+
+  /** Toplu eğitmen komisyon oranı güncelle (opsiyonel: tenantId ile filtre) */
+  @Patch('trainers/commission/bulk')
+  bulkUpdateTrainerCommission(@Body() body: { commissionRate: number; tenantId?: string }) {
+    return this.platformAdminService.bulkUpdateTrainerCommission(
+      body.commissionRate,
+      body.tenantId,
+    );
+  }
+
   /** Onay bekleyen etkinlikleri listele */
   @Get('events/pending')
   listPendingEvents() {

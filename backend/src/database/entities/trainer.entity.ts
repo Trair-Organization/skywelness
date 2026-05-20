@@ -53,6 +53,20 @@ export class Trainer {
   @Column({ type: 'int', default: 0, name: 'total_sessions' })
   totalSessions!: number;
 
+  /**
+   * Platform komisyon oranı (0.00–1.00 arası).
+   * Eğitmenin öğrenci ders gelirlerinden platforma ödediği yüzde.
+   * Varsayılan %7 (0.070). Süper Admin tarafından değiştirilebilir.
+   */
+  @Column({
+    type: 'numeric',
+    precision: 4,
+    scale: 3,
+    default: 0.07,
+    name: 'commission_rate',
+  })
+  commissionRate!: string;
+
   /** Which bookable service types this staff member offers (member UI filters by this). */
   @Column('text', {
     array: true,

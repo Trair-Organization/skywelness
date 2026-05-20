@@ -16,6 +16,7 @@ type TrainerRow = {
   avgRating: string;
   totalSessions: number;
   offersSessionTypes: string[];
+  commissionRate: string;
   createdAt: string;
 };
 
@@ -86,6 +87,57 @@ export function SuperAdminTrainersPage() {
     }
   }
 
+  async function updateCommission(trainerId: string, currentRate: string) {
+    const currentPct = (parseFloat(currentRate) * 100).toFixed(1);
+    const input = prompt(`Yeni komisyon oranı (%):\n(Şu an %${currentPct})`, currentPct);
+    if (input === null) return;
+    const pct = parseFloat(input);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      alert('Geçersiz oran (0-100 arası bir sayı girin)');
+      return;
+    }
+    const rate = pct / 100;
+    setActingId(trainerId);
+    try {
+      await apiJson(`/platform-admin/trainers/${trainerId}/commission`, {
+        method: 'PATCH',
+        body: JSON.stringify({ commissionRate: rate }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Komisyon güncellenemedi');
+    } finally {
+      setActingId(null);
+    }
+  }
+
+  async function bulkUpdateCommission() {
+    const input = prompt(
+      'Tüm eğitmenlerin komisyon oranını yüzde olarak girin:\n(Örn: 7 = %7)',
+      '7',
+    );
+    if (input === null) return;
+    const pct = parseFloat(input);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      alert('Geçersiz oran');
+      return;
+    }
+    if (!confirm(`Tüm eğitmenlerin komisyon oranı %${pct} olarak güncellenecek. Devam?`)) return;
+    try {
+      const res = await apiJson<{ updated: number }>(
+        '/platform-admin/trainers/commission/bulk',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ commissionRate: pct / 100 }),
+        },
+      );
+      alert(`✅ ${res.updated} eğitmen güncellendi`);
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Toplu güncelleme başarısız');
+    }
+  }
+
   const filteredRows = useMemo(() => {
     if (scope === 'club') return rows.filter((row) => !row.isIndependent);
     if (scope === 'independent') return rows.filter((row) => row.isIndependent);
@@ -101,21 +153,40 @@ export function SuperAdminTrainersPage() {
         </Link>
       </header>
       <section className="card">
-        <label>
-          {t('superAdmin.common.search')}
-          <input value={q} onChange={(e) => setQ(e.target.value)} />
-        </label>
-        <label>
-          {t('superAdmin.trainers.scopeLabel')}
-          <select
-            value={scope}
-            onChange={(e) => setScope(e.target.value as 'all' | 'club' | 'independent')}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <label>
+              {t('superAdmin.common.search')}
+              <input value={q} onChange={(e) => setQ(e.target.value)} />
+            </label>
+            <label>
+              {t('superAdmin.trainers.scopeLabel')}
+              <select
+                value={scope}
+                onChange={(e) => setScope(e.target.value as 'all' | 'club' | 'independent')}
+              >
+                <option value="all">{t('superAdmin.trainers.scopeAll')}</option>
+                <option value="club">{t('superAdmin.trainers.scopeClub')}</option>
+                <option value="independent">{t('superAdmin.trainers.scopeIndependent')}</option>
+              </select>
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={() => void bulkUpdateCommission()}
+            style={{
+              padding: '0.6rem 1rem',
+              background: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
           >
-            <option value="all">{t('superAdmin.trainers.scopeAll')}</option>
-            <option value="club">{t('superAdmin.trainers.scopeClub')}</option>
-            <option value="independent">{t('superAdmin.trainers.scopeIndependent')}</option>
-          </select>
-        </label>
+            💰 Tüm Eğitmenler İçin Komisyon Belirle
+          </button>
+        </div>
         {error ? <p className="error">{error}</p> : null}
         {loading ? (
           <p className="muted">{t('superAdmin.common.loading')}</p>
@@ -131,6 +202,7 @@ export function SuperAdminTrainersPage() {
                 <th>{t('superAdmin.trainers.tenant')}</th>
                 <th>{t('superAdmin.trainers.sessions')}</th>
                 <th>{t('superAdmin.trainers.rating')}</th>
+                <th>Komisyon</th>
                 <th>{t('superAdmin.trainers.services')}</th>
                 <th>{t('superAdmin.trainers.actions')}</th>
               </tr>
@@ -150,6 +222,26 @@ export function SuperAdminTrainersPage() {
                   <td>{row.tenantName ?? '-'}</td>
                   <td>{row.totalSessions}</td>
                   <td>{row.avgRating}</td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => void updateCommission(row.id, row.commissionRate)}
+                      disabled={actingId === row.id}
+                      style={{
+                        padding: '0.3rem 0.7rem',
+                        background: 'rgba(37,99,235,0.1)',
+                        color: '#2563eb',
+                        border: '1px solid #2563eb',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                      }}
+                      title="Komisyon oranını düzenle"
+                    >
+                      %{(parseFloat(row.commissionRate) * 100).toFixed(1)}
+                    </button>
+                  </td>
                   <td>{row.offersSessionTypes.join(', ') || '-'}</td>
                   <td>
                     <select

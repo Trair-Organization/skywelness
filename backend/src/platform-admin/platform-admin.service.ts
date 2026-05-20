@@ -279,6 +279,7 @@ export class PlatformAdminService {
       avgRating: row.avgRating,
       totalSessions: row.totalSessions,
       offersSessionTypes: row.offersSessionTypes ?? [],
+      commissionRate: row.commissionRate,
       createdAt: row.createdAt,
     }));
   }
@@ -488,6 +489,48 @@ export class PlatformAdminService {
       ok: true,
       tenantId,
       tenantName: tenant.name,
+      commissionRate: rate,
+      commissionPercent: `%${(rate * 100).toFixed(1)}`,
+    };
+  }
+
+  /** Eğitmen komisyon oranını güncelle */
+  async updateTrainerCommissionRate(trainerId: string, rate: number) {
+    if (rate < 0 || rate > 1) {
+      throw new BadRequestException('Komisyon oranı 0.00 ile 1.00 arasında olmalıdır');
+    }
+    const trainer = await this.trainersRepo.findOne({
+      where: { id: trainerId },
+      relations: ['user'],
+    });
+    if (!trainer) throw new NotFoundException('Trainer not found');
+
+    trainer.commissionRate = String(rate);
+    await this.trainersRepo.save(trainer);
+
+    return {
+      ok: true,
+      trainerId,
+      trainerName: trainer.user
+        ? `${trainer.user.firstName} ${trainer.user.lastName}`.trim()
+        : '',
+      commissionRate: rate,
+      commissionPercent: `%${(rate * 100).toFixed(1)}`,
+    };
+  }
+
+  /** Toplu eğitmen komisyon oranı güncelle (default değiştirme) */
+  async bulkUpdateTrainerCommission(rate: number, tenantId?: string) {
+    if (rate < 0 || rate > 1) {
+      throw new BadRequestException('Komisyon oranı 0.00 ile 1.00 arasında olmalıdır');
+    }
+    const where = tenantId ? { tenantId } : {};
+    const result = await this.trainersRepo.update(where, {
+      commissionRate: String(rate),
+    });
+    return {
+      ok: true,
+      updated: result.affected ?? 0,
       commissionRate: rate,
       commissionPercent: `%${(rate * 100).toFixed(1)}`,
     };
