@@ -38,6 +38,7 @@ export function PushNotificationsPage() {
   const [history, setHistory] = useState<NotificationLog[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [clubName, setClubName] = useState('Wellness Club');
+  const [studentCount, setStudentCount] = useState<number | null>(null);
 
   // Load club name
   useEffect(() => {
@@ -48,6 +49,14 @@ export function PushNotificationsPage() {
       });
     }
   }, [user]);
+
+  // Eğitmen için öğrenci sayısını yükle
+  useEffect(() => {
+    if (!isTrainer) return;
+    apiJson<Array<{ userId: string }>>('/trainer-panel/students')
+      .then((rows) => setStudentCount(Array.isArray(rows) ? rows.length : 0))
+      .catch(() => setStudentCount(0));
+  }, [isTrainer]);
 
   // Load notification history (from announcements as proxy)
   const loadHistory = useCallback(async () => {
@@ -131,9 +140,56 @@ export function PushNotificationsPage() {
         </div>
       </div>
 
+      {/* Eğitmen için öğrenci sayısı bilgi kutusu */}
+      {isTrainer && studentCount !== null && (
+        <div
+          style={{
+            padding: '14px 18px',
+            borderRadius: 12,
+            background: studentCount === 0 ? '#fef3c7' : '#eff6ff',
+            border: `1px solid ${studentCount === 0 ? '#fcd34d' : '#bfdbfe'}`,
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={{ fontSize: '1.5rem' }}>{studentCount === 0 ? '⚠️' : '👥'}</span>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                fontWeight: 700,
+                color: studentCount === 0 ? '#92400e' : '#1e40af',
+              }}
+            >
+              {studentCount === 0
+                ? 'Henüz aktif öğrenciniz yok'
+                : `${studentCount} aktif öğrenciniz var`}
+            </p>
+            <p
+              style={{
+                margin: '2px 0 0',
+                fontSize: '0.82rem',
+                color: studentCount === 0 ? '#78350f' : '#1e40af',
+              }}
+            >
+              {studentCount === 0
+                ? 'Önce "Öğrencilerim" sekmesinden öğrenci eklemelisiniz. Sadece sizinle aktif bağlantısı olan öğrenciler bildirim alabilir.'
+                : 'Bildiriminiz tüm aktif öğrencilerinize iletilecek (sadece mobil uygulama yüklü olanlar push alır).'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {result && (
         <div style={{ padding: '14px 18px', borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', marginBottom: 20 }}>
-          <p style={{ color: '#059669', fontWeight: 700, margin: 0 }}>✅ Bildirim gönderildi! {result.sent}/{result.total} kişiye ulaştı.</p>
+          <p style={{ color: '#059669', fontWeight: 700, margin: 0 }}>
+            ✅ Bildirim gönderildi!{' '}
+            {isTrainer
+              ? `${result.sent}/${result.total} öğrenciye ulaştı (mobil uygulaması açık olanlar).`
+              : `${result.sent}/${result.total} kişiye ulaştı.`}
+          </p>
         </div>
       )}
 
@@ -205,8 +261,43 @@ export function PushNotificationsPage() {
           )}
 
           {/* Gönder */}
-          <button onClick={() => void handleSend()} disabled={sending || !title.trim() || !message.trim()} style={{ width: '100%', padding: '14px', borderRadius: 12, background: (sending || !title.trim() || !message.trim()) ? '#e2e8f0' : '#2563eb', color: (sending || !title.trim() || !message.trim()) ? '#94a3b8' : '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: sending ? 'not-allowed' : 'pointer' }}>
-            {sending ? '⏳ Gönderiliyor...' : '🚀 Bildirimi Gönder'}
+          <button
+            onClick={() => void handleSend()}
+            disabled={
+              sending ||
+              !title.trim() ||
+              !message.trim() ||
+              (isTrainer && studentCount === 0)
+            }
+            style={{
+              width: '100%',
+              padding: '14px',
+              borderRadius: 12,
+              background:
+                sending ||
+                !title.trim() ||
+                !message.trim() ||
+                (isTrainer && studentCount === 0)
+                  ? '#e2e8f0'
+                  : '#2563eb',
+              color:
+                sending ||
+                !title.trim() ||
+                !message.trim() ||
+                (isTrainer && studentCount === 0)
+                  ? '#94a3b8'
+                  : '#fff',
+              fontWeight: 800,
+              fontSize: '1rem',
+              border: 'none',
+              cursor: sending ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {sending
+              ? '⏳ Gönderiliyor...'
+              : isTrainer && studentCount === 0
+                ? '⚠️ Önce öğrenci ekleyin'
+                : '🚀 Bildirimi Gönder'}
           </button>
         </div>
 
