@@ -12,6 +12,8 @@ import { Booking } from '../database/entities/booking.entity';
 import { ClubEvent } from '../database/entities/club-event.entity';
 import { PackageType } from '../database/entities/package-type.entity';
 import { ServiceCatalog } from '../database/entities/service-catalog.entity';
+import { Availability } from '../database/entities/availability.entity';
+import { Reservation } from '../database/entities/reservation.entity';
 import { TenantsController } from './tenants.controller';
 import { TenantsService } from './tenants.service';
 import { TenantJoinRequestController } from './tenant-join-request.controller';
@@ -38,6 +40,8 @@ import { TenantVisibilityService } from './tenant-visibility.service';
       ClubEvent,
       PackageType,
       ServiceCatalog,
+      Availability,
+      Reservation,
     ]),
     AuthModule,
     NotificationsModule,

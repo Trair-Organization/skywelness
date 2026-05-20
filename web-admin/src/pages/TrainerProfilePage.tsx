@@ -4,6 +4,7 @@ import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
 type V2Slot = { id: string; serviceId: string; serviceName: string; startTime: string; endTime: string; price: string; remainingCapacity: number };
+type LegacySlot = { id: string; date: string; startTime: string; endTime: string };
 
 function getWeekDays(weekOffset: number) {
   const days = [];
@@ -22,20 +23,40 @@ function getWeekDays(weekOffset: number) {
   return days;
 }
 
-function ProviderSchedule({ subdomain, providerId }: { subdomain: string; providerId: string }) {
+function ProviderSchedule({
+  subdomain,
+  providerId,
+  trainerSlug,
+}: {
+  subdomain: string;
+  providerId: string;
+  trainerSlug: string;
+}) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [slots, setSlots] = useState<V2Slot[]>([]);
+  const [legacySlots, setLegacySlots] = useState<LegacySlot[]>([]);
   const [booking, setBooking] = useState(false);
   const [booked, setBooked] = useState<string | null>(null);
   const days = getWeekDays(weekOffset);
 
   useEffect(() => {
+    // Önce v2 schedule slot'larını dene
     apiJson<V2Slot[]>(
       `/v2/schedule/provider?tenant=${encodeURIComponent(subdomain)}&providerId=${providerId}&date=${selectedDate}`,
       { auth: false },
-    ).then(setSlots).catch(() => setSlots([]));
-  }, [subdomain, providerId, selectedDate]);
+    )
+      .then(setSlots)
+      .catch(() => setSlots([]));
+
+    // Eğitmen panelinde oluşturulan availability slot'ları (legacy)
+    apiJson<LegacySlot[]>(
+      `/trainers/${encodeURIComponent(trainerSlug)}/slots?date=${selectedDate}`,
+      { auth: false },
+    )
+      .then(setLegacySlots)
+      .catch(() => setLegacySlots([]));
+  }, [subdomain, providerId, trainerSlug, selectedDate]);
 
   async function handleBook(slotId: string) {
     setBooking(true);
@@ -46,6 +67,25 @@ function ProviderSchedule({ subdomain, providerId }: { subdomain: string; provid
     } catch (err) { alert(err instanceof Error ? err.message : 'Rezervasyon başarısız'); }
     finally { setBooking(false); }
   }
+
+  async function handleBookLegacy(slot: LegacySlot) {
+    setBooking(true);
+    try {
+      // Üye rezervasyonu - availability slot üzerinden
+      await apiJson('/booking/pt/book-slot', {
+        method: 'POST',
+        body: JSON.stringify({ availabilityId: slot.id }),
+      });
+      setBooked(slot.id);
+      setLegacySlots((prev) => prev.filter((s) => s.id !== slot.id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Rezervasyon talebi başarısız');
+    } finally {
+      setBooking(false);
+    }
+  }
+
+  const hasAnySlots = slots.length > 0 || legacySlots.length > 0;
 
   return (
     <div>
@@ -66,7 +106,7 @@ function ProviderSchedule({ subdomain, providerId }: { subdomain: string; provid
       </div>
       {booked ? (
         <div className="event-joined-box"><span>✅</span><p>Rezervasyon talebiniz oluşturuldu!</p></div>
-      ) : slots.length === 0 ? (
+      ) : !hasAnySlots ? (
         <p className="no-slots">Bu tarihte müsait saat yok</p>
       ) : (
         <div className="slots-grid">
@@ -74,6 +114,19 @@ function ProviderSchedule({ subdomain, providerId }: { subdomain: string; provid
             <button key={s.id} className="slot-btn" onClick={() => handleBook(s.id)} disabled={booking}>
               <span className="slot-time">{s.startTime} - {s.endTime}</span>
               <span className="slot-price">{s.price}₺</span>
+            </button>
+          ))}
+          {legacySlots.map((s) => (
+            <button
+              key={s.id}
+              className="slot-btn"
+              onClick={() => void handleBookLegacy(s)}
+              disabled={booking}
+            >
+              <span className="slot-time">
+                {s.startTime} - {s.endTime}
+              </span>
+              <span className="slot-price">Rezerve Et</span>
             </button>
           ))}
         </div>
@@ -297,7 +350,7 @@ export function TrainerProfilePage() {
             <>
               <h3 style={{ color: '#fff', marginTop: '2rem', marginBottom: '0.75rem' }}>📅 Müsait PT Saatleri</h3>
               {token ? (
-                <ProviderSchedule subdomain={profile.club.subdomain} providerId={profile.id} />
+                <ProviderSchedule subdomain={profile.club.subdomain} providerId={profile.id} trainerSlug={trainerId || profile.id} />
               ) : (
                 <p className="no-slots">Müsait saatleri görmek için <Link to="/login">giriş yapın</Link></p>
               )}
@@ -311,7 +364,7 @@ export function TrainerProfilePage() {
         <section className="profile-section">
           <h2>📅 Müsait Masaj Saatleri</h2>
           {token ? (
-            <ProviderSchedule subdomain={profile.club.subdomain} providerId={profile.id} />
+            <ProviderSchedule subdomain={profile.club.subdomain} providerId={profile.id} trainerSlug={trainerId || profile.id} />
           ) : (
             <div className="login-required-box">
               <p>Müsait saatleri görmek ve rezervasyon yapmak için üye olmanız gerekiyor.</p>
