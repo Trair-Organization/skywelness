@@ -5684,7 +5684,7 @@ a.trainer-stat-card:hover {
 .profile-photo-preview {
   width: 100px;
   height: 100px;
-  border-radius: 50%;
+  border-radius: 12px;
   background: #f1f5f9;
   border: 2px solid #e2e8f0;
   overflow: hidden;
