@@ -5798,8 +5798,9 @@
 .vitrin-card-tags {
   gap: 4px;
   margin: 2px 0;
-  max-height: none;
-  overflow: visible;
+  max-height: 24px;
+  overflow: hidden;
+  flex-wrap: wrap;
 }
 .vitrin-card-tag {
   font-size: 0.62rem;
