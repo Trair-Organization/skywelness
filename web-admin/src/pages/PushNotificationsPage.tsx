@@ -165,7 +165,7 @@ export function PushNotificationsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div className="push-page" style={{ maxWidth: 900 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>🔔 Push Bildirimleri</h1>
@@ -228,7 +228,7 @@ export function PushNotificationsPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+      <div className="push-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         {/* Sol: Gönderim Formu */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Şablonlar */}
@@ -258,6 +258,7 @@ export function PushNotificationsPage() {
           <div style={{ padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', background: '#ffffff' }}>
             <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>📌 Başlık *</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} placeholder="Bildirim başlığı..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 14 }} />
+            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>{title.length}/100</p>
           </div>
 
           {/* Mesaj */}

@@ -8463,3 +8463,21 @@ a.trainer-stat-card:hover {
     flex: 1;
   }
 }
+
+
+/* ─── Push Notifications Page Responsive ─────────────────────────────────── */
+.push-page {
+  padding: 1rem 1.25rem 2rem;
+}
+
+@media (max-width: 860px) {
+  .push-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .push-page {
+    padding: 0.75rem 1rem 2rem;
+  }
+}
