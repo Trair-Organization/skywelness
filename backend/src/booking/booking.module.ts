@@ -18,6 +18,8 @@ import { TrainerMemberMeasurement } from '../database/entities/trainer-member-me
 import { TrainerMemberPhoto } from '../database/entities/trainer-member-photo.entity';
 import { User } from '../database/entities/user.entity';
 import { WaitingListEntry } from '../database/entities/waiting-list.entity';
+import { MemberCalendarEntry } from '../database/entities/member-calendar-entry.entity';
+import { ClubEventRegistration } from '../database/entities/club-event-registration.entity';
 import { MailModule } from '../mail/mail.module';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { TrainerPanelModule } from '../trainer-panel/trainer-panel.module';
@@ -36,6 +38,7 @@ import { CafeOrdersService } from './cafe-orders.service';
 import { CafeProductsController } from './cafe-products.controller';
 import { CafeProductsService } from './cafe-products.service';
 import { MemberProgressController } from './member-progress.controller';
+import { MemberCalendarController } from './member-calendar.controller';
 
 @Module({
   imports: [
@@ -57,6 +60,8 @@ import { MemberProgressController } from './member-progress.controller';
       TrainerMemberMeasurement,
       TrainerMemberPhoto,
       Availability,
+      MemberCalendarEntry,
+      ClubEventRegistration,
     ]),
     AuthModule,
     MailModule,
@@ -74,6 +79,7 @@ import { MemberProgressController } from './member-progress.controller';
     CafeProductsController,
     PtMemberController,
     MemberProgressController,
+    MemberCalendarController,
   ],
   providers: [BookingService, CafeOrdersService, CafeProductsService, PtMemberService, RolesGuard],
   exports: [CafeOrdersService, CafeProductsService, BookingService],

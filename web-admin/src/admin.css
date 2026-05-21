@@ -9240,3 +9240,460 @@ a.trainer-stat-card:hover {
     padding: 0.75rem !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Member Calendar — Full Ajanda
+   ═══════════════════════════════════════════════════════════════════════════ */
+.member-calendar-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.mcal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.mcal-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mcal-subtitle {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.mcal-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.mcal-view-toggle {
+  display: flex;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mcal-view-toggle button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.mcal-view-toggle button.active {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.mcal-week-nav,
+.mcal-day-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mcal-week-nav button,
+.mcal-day-nav button {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+}
+
+.mcal-week-nav button:hover,
+.mcal-day-nav button:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.mcal-week-label,
+.mcal-day-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mcal-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.mcal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mcal-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ─── Haftalık Grid ─── */
+.mcal-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.mcal-day-col {
+  background: #ffffff;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mcal-day-col.mcal-today {
+  background: #fafbff;
+}
+
+.mcal-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mcal-day-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.mcal-day-num {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.mcal-today .mcal-day-num {
+  background: #2563eb;
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcal-day-items {
+  flex: 1;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.mcal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 3px 6px;
+  border-left: 3px solid;
+  border-radius: 4px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.mcal-item:hover {
+  background: #eff6ff;
+}
+
+.mcal-item-done {
+  opacity: 0.5;
+}
+
+.mcal-item-done .mcal-item-title {
+  text-decoration: line-through;
+}
+
+.mcal-check {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mcal-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.mcal-item-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcal-item-time {
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+.mcal-add-mini {
+  margin-top: auto;
+  background: none;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px;
+  transition: all 0.1s;
+}
+
+.mcal-add-mini:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* ─── Günlük Görünüm ─── */
+.mcal-day-view {
+  margin-top: 0.5rem;
+}
+
+.mcal-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: #ffffff;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+}
+
+.mcal-empty span {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.mcal-empty p {
+  color: #64748b;
+  margin: 0 0 1rem;
+}
+
+.mcal-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mcal-day-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid;
+  border-radius: 10px;
+}
+
+.mcal-day-card-done {
+  opacity: 0.6;
+}
+
+.mcal-day-card-done strong {
+  text-decoration: line-through;
+}
+
+.mcal-day-card-left {
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.mcal-type-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.mcal-day-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcal-day-card-body strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.mcal-day-card-time {
+  display: block;
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.mcal-day-card-desc {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.mcal-day-card-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.mcal-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.mcal-action-btn:hover {
+  background: #f1f5f9;
+}
+
+.mcal-action-delete:hover {
+  background: #fee2e2;
+}
+
+/* ─── Kategori Chips ─── */
+.mcal-category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.mcal-cat-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.mcal-cat-chip:hover {
+  border-color: #2563eb;
+}
+
+.mcal-cat-chip.active {
+  font-weight: 700;
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 768px) {
+  .mcal-week-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .mcal-day-col {
+    min-height: auto;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .mcal-day-col:last-child {
+    border-bottom: none;
+  }
+
+  .mcal-day-header {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .mcal-day-items {
+    padding: 0.35rem 0.75rem 0.5rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .mcal-item {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 120px;
+  }
+
+  .mcal-add-mini {
+    display: none;
+  }
+
+  .mcal-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mcal-header {
+    flex-direction: column;
+  }
+
+  .mcal-header .btn-primary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .member-calendar-page {
+    padding: 0.85rem;
+  }
+
+  .mcal-day-card {
+    padding: 0.7rem 0.85rem;
+  }
+
+  .mcal-item {
+    flex: 1 1 100%;
+  }
+}
