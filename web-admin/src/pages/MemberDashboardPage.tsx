@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { readStoredTenantSubdomain, writeStoredTenantSubdomain } from '../auth/storage';
@@ -119,6 +119,7 @@ type PaymentItem = {
 
 export function MemberDashboardPage() {
   const { user, token, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [packages, setPackages] = useState<Package[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -289,10 +290,10 @@ export function MemberDashboardPage() {
             <span className="member-stat-label">Favori</span>
           </div>
           <div className="member-stat-divider" />
-          <div className="member-stat-item" onClick={() => setActiveTab('appointments')}>
+          <Link to="/dashboard/calendar" className="member-stat-item" style={{ textDecoration: 'none', color: 'inherit' }}>
             <span className="member-stat-num">{upcomingAppointments.length}</span>
             <span className="member-stat-label">Randevu</span>
-          </div>
+          </Link>
           <div className="member-stat-divider" />
           <div className="member-stat-item" onClick={() => setActiveTab('packages')}>
             <span className="member-stat-num">{ptCredits + massageCredits}</span>
@@ -326,7 +327,13 @@ export function MemberDashboardPage() {
             <button
               key={key}
               className={`member-menu-item ${activeTab === key ? 'active' : ''}`}
-              onClick={() => setActiveTab(key)}
+              onClick={() => {
+                if (key === 'appointments') {
+                  navigate('/dashboard/calendar');
+                } else {
+                  setActiveTab(key);
+                }
+              }}
             >
               <span className="member-menu-icon">{icon}</span>
               <span className="member-menu-label">{label}</span>
