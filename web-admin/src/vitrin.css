@@ -5984,3 +5984,42 @@
   font-size: 0.78rem;
   color: #94a3b8;
 }
+
+
+/* ─── Card Name Row — isim sol, puan sağ ─────────────────────────────────── */
+.vitrin-card-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vitrin-card-name-row h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vitrin-card-rating-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vitrin-trainer-sessions-text {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 2px;
+  display: block;
+}

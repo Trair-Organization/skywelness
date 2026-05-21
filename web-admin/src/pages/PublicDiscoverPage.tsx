@@ -778,13 +778,15 @@ function ClubCard({ club }: { club: Club }) {
           )}
         </div>
         <div className="vitrin-club-body">
-          <h3>{club.name}</h3>
+          <div className="vitrin-card-name-row">
+            <h3>{club.name}</h3>
+            {club.avgRating && Number(club.avgRating) > 0 && (
+              <span className="vitrin-card-rating-inline">★ {Number(club.avgRating).toFixed(1)}</span>
+            )}
+          </div>
           <PartnerBadges badges={club.badges ?? []} max={3} />
           {club.location && <p className="vitrin-card-location">📍 {club.location}</p>}
           <div className="vitrin-card-meta">
-            {club.avgRating && Number(club.avgRating) > 0 && (
-              <span className="vitrin-card-rating">★ {Number(club.avgRating).toFixed(1)}</span>
-            )}
             {club.reviewCount ? (
               <span className="vitrin-card-reviews">({club.reviewCount} değerlendirme)</span>
             ) : null}
@@ -842,16 +844,16 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
           )}
         </div>
         <div className="vitrin-trainer-body">
-          <h3>{trainer.name}</h3>
+          <div className="vitrin-card-name-row">
+            <h3>{trainer.name}</h3>
+            {Number(trainer.avgRating) > 0 && (
+              <span className="vitrin-card-rating-inline">★ {Number(trainer.avgRating).toFixed(1)}</span>
+            )}
+          </div>
           <p className="vitrin-trainer-club">🏢 {trainer.clubName}</p>
           <PartnerBadges badges={trainer.badges ?? []} max={3} />
-          {Number(trainer.avgRating) > 0 && (
-            <div className="vitrin-trainer-rating">
-              <span>★ {Number(trainer.avgRating).toFixed(1)}</span>
-              {trainer.totalSessions > 0 && (
-                <span className="vitrin-trainer-sessions">· {trainer.totalSessions} seans</span>
-              )}
-            </div>
+          {trainer.totalSessions > 0 && (
+            <span className="vitrin-trainer-sessions-text">{trainer.totalSessions} seans</span>
           )}
           {trainer.specialties.length > 0 && (
             <div className="vitrin-card-tags">

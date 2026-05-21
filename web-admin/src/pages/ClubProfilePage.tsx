@@ -908,16 +908,16 @@ function TrainerCard({
           )}
         </div>
         <div className="vitrin-trainer-body">
-          <h3>{trainer.name}</h3>
-          {clubName && <p className="vitrin-trainer-club">{clubName}</p>}
-          <div className="vitrin-trainer-stats">
+          <div className="vitrin-card-name-row">
+            <h3>{trainer.name}</h3>
             {Number(trainer.avgRating) > 0 && (
-              <span className="vitrin-card-rating">★ {Number(trainer.avgRating).toFixed(1)}</span>
-            )}
-            {trainer.totalSessions > 0 && (
-              <span className="vitrin-trainer-sessions">{trainer.totalSessions} seans</span>
+              <span className="vitrin-card-rating-inline">★ {Number(trainer.avgRating).toFixed(1)}</span>
             )}
           </div>
+          {clubName && <p className="vitrin-trainer-club">{clubName}</p>}
+          {trainer.totalSessions > 0 && (
+            <span className="vitrin-trainer-sessions-text">{trainer.totalSessions} seans</span>
+          )}
           {trainer.specializations.length > 0 && (
             <p className="vitrin-trainer-specs">
               {trainer.specializations.slice(0, 2).join(' · ')}
