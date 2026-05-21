@@ -11,6 +11,7 @@ import { ClubEventRegistration } from '../database/entities/club-event-registrat
 import { EventWaitingList } from '../database/entities/event-waiting-list.entity';
 import { EventReview } from '../database/entities/event-review.entity';
 import { StripeService } from '../payments/stripe.service';
+import { PushService } from '../notifications/push.service';
 import type { User } from '../database/entities/user.entity';
 
 export type ClubEventPublicRow = {
@@ -40,6 +41,7 @@ export class ClubEventsMemberService {
     private readonly reviewRepo: Repository<EventReview>,
     private readonly stripeService: StripeService,
     private readonly dataSource: DataSource,
+    private readonly pushService: PushService,
   ) {}
 
   async listUpcoming(user: User, limit = 20): Promise<ClubEventPublicRow[]> {
@@ -153,6 +155,28 @@ export class ClubEventsMemberService {
         userId: user.id,
         paymentStatus: 'free',
       });
+
+      // Üyeye push bildirim
+      const dateStr = event.startsAt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const timeStr = event.startsAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      void this.pushService.sendToUser(
+        user.id,
+        '✅ Etkinlik Kaydınız Onaylandı',
+        `${event.title} · ${dateStr} ${timeStr}${event.location ? ` · 📍 ${event.location}` : ''}`,
+        { type: 'event_joined', eventId: event.id },
+      );
+
+      // Etkinliği oluşturan eğitmene bildirim
+      if (event.createdByUserId && event.createdByUserId !== user.id) {
+        const memberName = `${user.firstName} ${user.lastName}`.trim();
+        void this.pushService.sendToUser(
+          event.createdByUserId,
+          '👥 Yeni Katılımcı',
+          `${memberName} "${event.title}" etkinliğinize katıldı.`,
+          { type: 'event_new_participant', eventId: event.id },
+        );
+      }
+
       return { ok: true as const };
     });
   }

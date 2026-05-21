@@ -97,6 +97,14 @@ export function TrainerEventsPage() {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
+  // Katılımcı modal
+  const [participants, setParticipants] = useState<Array<{
+    id: string; userId: string; firstName: string; lastName: string;
+    email: string; phone: string | null; photoUrl: string | null;
+    registeredAt: string; checkedIn: boolean;
+  }> | null>(null);
+  const [participantsTitle, setParticipantsTitle] = useState('');
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -131,6 +139,19 @@ export function TrainerEventsPage() {
       flash('✅ Etkinlik silindi');
     } catch (err) {
       flashErr(err instanceof ApiError ? err.message : 'Silinemedi');
+    }
+  }
+
+  async function loadParticipants(eventId: string) {
+    try {
+      const data = await apiJson<{
+        eventTitle: string;
+        participants: typeof participants;
+      }>(`/trainer-panel/events/${eventId}/participants`);
+      setParticipantsTitle(data.eventTitle);
+      setParticipants(data.participants);
+    } catch (err) {
+      flashErr(err instanceof ApiError ? err.message : 'Katılımcılar yüklenemedi');
     }
   }
 
@@ -710,6 +731,15 @@ export function TrainerEventsPage() {
                         : 'Ücretsiz'}
                     </span>
                     <div className="trainer-event-actions">
+                      {(ev.registrationCount ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          className="btn-sm btn-outline"
+                          onClick={() => void loadParticipants(ev.id)}
+                        >
+                          👥 Katılımcılar
+                        </button>
+                      )}
                       {!isPast && (
                         <button
                           type="button"
@@ -732,6 +762,42 @@ export function TrainerEventsPage() {
               </article>
             );
           })}
+        </div>
+      )}
+
+      {/* Katılımcılar Modal */}
+      {participants && (
+        <div className="modal-overlay" onClick={() => setParticipants(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <h3>👥 {participantsTitle} — Katılımcılar</h3>
+              <button className="modal-close" onClick={() => setParticipants(null)}>✕</button>
+            </div>
+            {participants.length === 0 ? (
+              <p className="muted" style={{ padding: '1rem 0' }}>Henüz katılımcı yok.</p>
+            ) : (
+              <div className="add-student-list" style={{ marginTop: '0.75rem' }}>
+                {participants.map((p) => (
+                  <div key={p.id} className="add-student-row">
+                    <div className="add-student-avatar">
+                      {p.photoUrl ? (
+                        <img src={p.photoUrl} alt="" />
+                      ) : (
+                        <span>{p.firstName.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="add-student-info">
+                      <strong>{p.firstName} {p.lastName}</strong>
+                      <span className="muted">{p.email}{p.phone ? ` · ${p.phone}` : ''}</span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      {new Date(p.registeredAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -2293,7 +2293,7 @@ export class TrainerPanelService {
     const event = await this.eventsRepo.findOne({ where: { id: eventId, createdByUserId: user.id } });
     if (!event) throw new NotFoundException('Etkinlik bulunamadı');
 
-    // Katılımcı varsa silme — önce iptal edilmeli
+    // Katılımcı varsa silme
     const regCount = await this.eventRegRepo.count({ where: { clubEventId: eventId } });
     if (regCount > 0) {
       throw new BadRequestException(
@@ -2303,6 +2303,38 @@ export class TrainerPanelService {
 
     await this.eventsRepo.remove(event);
     return { ok: true };
+  }
+
+  /** Eğitmenin etkinliğinin katılımcı listesi */
+  async listEventParticipants(user: User, eventId: string) {
+    const event = await this.eventsRepo.findOne({
+      where: { id: eventId, createdByUserId: user.id },
+    });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+
+    const registrations = await this.eventRegRepo.find({
+      where: { clubEventId: eventId },
+      relations: ['user'],
+      order: { createdAt: 'ASC' },
+    });
+
+    return {
+      eventId: event.id,
+      eventTitle: event.title,
+      capacity: event.capacity,
+      participantCount: registrations.length,
+      participants: registrations.map((r) => ({
+        id: r.id,
+        userId: r.userId,
+        firstName: r.user.firstName,
+        lastName: r.user.lastName,
+        email: r.user.email,
+        phone: r.user.phone,
+        photoUrl: r.user.photoUrl,
+        registeredAt: r.createdAt,
+        checkedIn: r.checkedIn,
+      })),
+    };
   }
 
   /** Eğitmen kendi etkinliğini günceller (sadece taslak veya beklemedeyken) */

@@ -524,6 +524,15 @@ export class TrainerPanelController {
     return this.service.updateTrainerEvent(user, id, body);
   }
 
+  /** Eğitmen: etkinlik katılımcı listesi */
+  @Get('events/:id/participants')
+  listEventParticipants(
+    @CurrentUser() user: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.listEventParticipants(user, id);
+  }
+
   // ─── Öğrenci Detay: Ölçümler ────────────────────────────────────────────────
 
   @Get('students/:userId/measurements')
