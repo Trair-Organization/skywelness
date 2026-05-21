@@ -8994,3 +8994,115 @@ a.trainer-stat-card:hover {
     justify-content: center;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Assessment Forms — Mobile Responsive (FMS, VO2, Posture)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  /* Genel form kartı overflow engelle */
+  .services-form-card {
+    overflow-x: hidden;
+    padding: 1rem 0.85rem;
+  }
+
+  /* FMS: bilateral (sol/sağ) satırları alt alta */
+  .fms-bilateral {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* FMS: score butonları küçülsün */
+  .fms-score-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.82rem;
+  }
+
+  .fms-score-group {
+    gap: 4px;
+  }
+
+  .fms-score-label {
+    font-size: 0.68rem;
+    width: 22px;
+  }
+
+  .fms-test-label {
+    font-size: 0.82rem;
+  }
+
+  .fms-test-row {
+    padding: 0.5rem 0;
+  }
+
+  /* Postür: chip'ler wrap olsun */
+  .posture-chip-options {
+    flex-wrap: wrap;
+  }
+
+  .posture-chip {
+    padding: 3px 10px;
+    font-size: 0.72rem;
+  }
+
+  .posture-chip-label {
+    font-size: 0.8rem;
+    min-width: unset;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  /* VO2 Max / Genel form grid: tek sütun */
+  .services-form-card .services-grid-2,
+  .services-form-card .services-grid-3,
+  .services-form-card .services-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Assessment butonları (FMS Testi, VO2 Max, Postür Analizi) */
+  .assessment-btn {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  /* Form title küçülsün */
+  .services-form-title {
+    font-size: 0.88rem;
+  }
+
+  /* Notes textarea */
+  .services-form-card textarea {
+    min-height: 60px;
+  }
+
+  /* Form actions */
+  .services-form-card .services-form-actions {
+    flex-direction: column;
+  }
+
+  .services-form-card .services-form-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Çok küçük ekranlarda FMS butonları daha da küçük */
+  .fms-score-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+
+  .fms-score-buttons {
+    gap: 3px;
+  }
+
+  /* Postur chip'leri 2 sıra olabilir */
+  .posture-chip {
+    padding: 2px 8px;
+    font-size: 0.68rem;
+  }
+}
