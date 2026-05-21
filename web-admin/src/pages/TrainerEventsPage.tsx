@@ -731,15 +731,13 @@ export function TrainerEventsPage() {
                         : 'Ücretsiz'}
                     </span>
                     <div className="trainer-event-actions">
-                      {(ev.registrationCount ?? 0) > 0 && (
-                        <button
-                          type="button"
-                          className="btn-sm btn-outline"
-                          onClick={() => void loadParticipants(ev.id)}
-                        >
-                          👥 Katılımcılar
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="btn-sm btn-outline"
+                        onClick={() => void loadParticipants(ev.id)}
+                      >
+                        👥 {ev.registrationCount ?? 0} Katılımcı
+                      </button>
                       {!isPast && (
                         <button
                           type="button"
