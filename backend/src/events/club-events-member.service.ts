@@ -199,6 +199,14 @@ export class ClubEventsMemberService {
     return { ok: true as const };
   }
 
+  /** Üye bu etkinliğe katılmış mı? */
+  async getMyStatus(user: User, eventId: string) {
+    const reg = await this.regRepo.findOne({
+      where: { clubEventId: eventId, userId: user.id },
+    });
+    return { isJoined: !!reg };
+  }
+
   /** Bekleme listesine katıl */
   async joinWaitlist(user: User, eventId: string) {
     const event = await this.eventRepo.findOne({

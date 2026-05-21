@@ -30,13 +30,20 @@ export function EventDetailPage() {
   const load = useCallback(async () => {
     if (!eventId) return;
     try {
-      // Discovery events endpoint'inden tüm etkinlikleri çekip ID ile filtrele
       const events = await apiJson<EventDetail[]>('/discovery/events?limit=50', { auth: false });
       const found = events.find((e) => e.id === eventId);
       setEvent(found || null);
+
+      // Login'li ise katılım durumunu kontrol et
+      if (found && token) {
+        try {
+          const status = await apiJson<{ isJoined: boolean }>(`/events/${found.id}/my-status`);
+          if (status.isJoined) setJoined(true);
+        } catch { /* ignore - muhtemelen yetki sorunu */ }
+      }
     } catch { /* */ }
     finally { setLoading(false); }
-  }, [eventId]);
+  }, [eventId, token]);
 
   useEffect(() => { void load(); }, [load]);
 

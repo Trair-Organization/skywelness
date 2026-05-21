@@ -40,6 +40,13 @@ export class MemberEventsController {
     return this.clubEvents.join(user, id);
   }
 
+  /** Üye bu etkinliğe katılmış mı? */
+  @Get(':id/my-status')
+  @UseGuards(JwtAuthGuard)
+  myStatus(@CurrentUser() user: User, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+    return this.clubEvents.getMyStatus(user, id);
+  }
+
   @Delete(':id/join')
   @UseGuards(JwtAuthGuard, RolesGuard, MemberApprovalGuard)
   @Roles(UserRole.MEMBER)
