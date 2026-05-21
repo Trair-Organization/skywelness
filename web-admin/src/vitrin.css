@@ -6030,3 +6030,20 @@
   margin-top: 2px;
   display: block;
 }
+
+
+/* ─── Fix: Profili Gör butonu tüm kartlarda alt hizada ───────────────────── */
+.vitrin-trainer-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.vitrin-trainer-card .vitrin-trainer-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.vitrin-trainer-card .vitrin-trainer-body .vitrin-card-cta {
+  margin-top: auto;
+}
