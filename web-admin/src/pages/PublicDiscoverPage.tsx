@@ -781,10 +781,14 @@ function ClubCard({ club }: { club: Club }) {
           <div className="vitrin-card-name-row">
             <h3>{club.name}</h3>
             {club.avgRating && Number(club.avgRating) > 0 && (
-              <span className="vitrin-card-rating-inline">
+              <Link
+                to={`/club/${club.subdomain}#pp-reviews`}
+                className="vitrin-card-rating-inline"
+                onClick={(e) => e.stopPropagation()}
+              >
                 ★ {Number(club.avgRating).toFixed(1)}
                 {club.reviewCount ? ` (${club.reviewCount})` : ''}
-              </span>
+              </Link>
             )}
           </div>
           <PartnerBadges badges={club.badges ?? []} max={3} />
@@ -847,7 +851,13 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
           <div className="vitrin-card-name-row">
             <h3>{trainer.name}</h3>
             {Number(trainer.avgRating) > 0 && (
-              <span className="vitrin-card-rating-inline">★ {Number(trainer.avgRating).toFixed(1)}</span>
+              <Link
+                to={`${trainerProfilePath({ slug: trainer.slug, publicId: trainer.publicId, fallbackId: trainer.id })}#reviews`}
+                className="vitrin-card-rating-inline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                ★ {Number(trainer.avgRating).toFixed(1)}
+              </Link>
             )}
           </div>
           <p className="vitrin-trainer-club">🏢 {trainer.clubName}</p>

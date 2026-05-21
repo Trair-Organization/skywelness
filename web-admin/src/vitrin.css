@@ -6015,6 +6015,13 @@
   border-radius: 6px;
   white-space: nowrap;
   flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.vitrin-card-rating-inline:hover {
+  background: rgba(251, 191, 36, 0.22);
 }
 
 .vitrin-trainer-sessions-text {

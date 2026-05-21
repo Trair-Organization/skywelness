@@ -258,6 +258,17 @@ export function ClubProfilePage() {
     });
   }, [loadProfile]);
 
+  // Hash scroll (karttan #pp-reviews gibi link geldiğinde)
+  useEffect(() => {
+    const hash = window.location.hash?.slice(1);
+    if (!hash || loading) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   // IntersectionObserver for active section
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -797,7 +808,7 @@ export function ClubProfilePage() {
           className="pp-section"
           id="pp-reviews"
         >
-          <h2>⭐ Değerlendirmeler</h2>
+          <h2>⭐ Yorumlar</h2>
           {reviewCount > 0 && (
             <div className="pp-review-summary">
               <div className="pp-review-avg">{Number(avgRating).toFixed(1)}</div>

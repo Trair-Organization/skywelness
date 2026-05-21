@@ -238,6 +238,17 @@ export function TrainerProfilePage() {
   useEffect(() => { void loadReviews(); }, [loadReviews]);
   useEffect(() => { void loadCanReview(); }, [loadCanReview]);
 
+  // Hash scroll (#reviews link'lerinden geldiğinde)
+  useEffect(() => {
+    const hash = window.location.hash?.slice(1);
+    if (!hash || loading) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   async function handleSubmitReview() {
     if (!trainerId) return;
     if (reviewRating < 1 || reviewRating > 5) {
@@ -536,7 +547,7 @@ export function TrainerProfilePage() {
         )}
 
         {/* Yorumlar & Puanlar */}
-        <section className="profile-section trainer-reviews-section">
+        <section className="profile-section trainer-reviews-section" id="reviews">
           <div className="trainer-reviews-head">
             <h2>⭐ Yorumlar ve Puanlar</h2>
             {reviewMeta.reviewCount > 0 && (
