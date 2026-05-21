@@ -203,6 +203,32 @@ export function EventsPage() {
     } catch (err) { setError(err instanceof ApiError ? err.message : 'Kopyalanamadı'); }
   }
 
+  async function approveEvent(id: string) {
+    try {
+      await apiJson(`/admin/events/${id}/approve`, { method: 'POST' });
+      setSuccess('✅ Etkinlik onaylandı ve yayına alındı');
+      await load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Onaylanamadı');
+    }
+  }
+
+  async function rejectEvent(id: string) {
+    const reason = prompt('Red sebebi (opsiyonel):');
+    try {
+      await apiJson(`/admin/events/${id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: reason?.trim() || undefined }),
+      });
+      setSuccess('Etkinlik reddedildi');
+      await load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Reddedilemedi');
+    }
+  }
+
   async function loadParticipants(eventId: string) {
     setParticipantsEventId(eventId);
     try {
@@ -405,7 +431,13 @@ export function EventsPage() {
                     {priceNum === 0 && <span style={{ color: '#059669', fontWeight: 600 }}>Ücretsiz</span>}
                     {ev.requirements && <span>📋 {ev.requirements}</span>}
                   </div>
-                  <div className="trainer-actions" style={{ marginTop: 8 }}>
+                  <div className="trainer-actions" style={{ marginTop: 8, flexWrap: 'wrap' }}>
+                    {ev.status === 'pending_approval' && (
+                      <>
+                        <button className="btn-sm btn-primary" onClick={() => void approveEvent(ev.id)}>✅ Onayla</button>
+                        <button className="btn-sm btn-danger" onClick={() => void rejectEvent(ev.id)}>❌ Reddet</button>
+                      </>
+                    )}
                     <button className="btn-sm btn-outline" onClick={() => void loadParticipants(ev.id)}>👥 Katılımcılar</button>
                     <button className="btn-sm btn-outline" onClick={() => openEdit(ev)}>✏️</button>
                     <button className="btn-sm btn-outline" onClick={() => void duplicate(ev.id)} title="Kopyala">📋</button>
