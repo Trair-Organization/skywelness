@@ -8776,3 +8776,221 @@ a.trainer-stat-card:hover {
     white-space: normal;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Trainer Students Page — Mobile Responsive Fixes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Sayfa header — başlık ve buton yan yana */
+.trainer-services .services-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.trainer-services .services-header > div {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.trainer-services .services-header h1 {
+  word-wrap: break-word;
+}
+
+.students-search-row {
+  width: 100%;
+}
+
+.students-search-row .profile-input {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Add Student Modal — mobile fixes */
+@media (max-width: 600px) {
+  .add-student-modal {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 14px 14px 0 0;
+    max-height: 92vh;
+    width: 100%;
+  }
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .add-student-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .add-student-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .add-student-tab {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+  }
+
+  .add-student-row {
+    padding: 0.55rem 0.7rem;
+  }
+
+  .add-student-info strong {
+    font-size: 0.88rem;
+  }
+
+  .add-student-info .muted {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .trainer-services {
+    padding: 0.85rem;
+  }
+
+  .trainer-services .services-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trainer-services .services-header > div {
+    flex: none;
+  }
+
+  .trainer-services .services-header .btn-primary {
+    width: 100%;
+    justify-content: center;
+    padding: 0.7rem;
+  }
+
+  .trainer-services .services-header h1 {
+    font-size: 1.25rem;
+  }
+
+  /* Boş durum action butonları stack */
+  .services-empty .btn-primary,
+  .services-empty .btn-outline {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Davet kodu boyutu küçük ekranlarda */
+  .invite-code-display {
+    font-size: 1.4rem;
+    letter-spacing: 0.15em;
+  }
+
+  /* Add student row mobile — avatar küçülür, içerik akar */
+  .add-student-row {
+    gap: 0.5rem;
+  }
+
+  .add-student-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .add-student-row .btn-sm,
+  .add-student-row .add-student-badge {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.55rem;
+    white-space: nowrap;
+  }
+}
+
+/* Students grid — küçük ekranlarda min-width küçülsün */
+@media (max-width: 600px) {
+  .students-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .student-card {
+    padding: 0.85rem 1rem;
+    gap: 0.65rem;
+  }
+
+  .student-card-photo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .student-card-info strong {
+    font-size: 0.88rem;
+  }
+
+  .student-card-email,
+  .student-card-phone {
+    font-size: 0.72rem;
+  }
+
+  .student-card-meta-label {
+    font-size: 0.6rem;
+  }
+
+  .student-card-meta-value {
+    font-size: 0.72rem;
+  }
+}
+
+/* External form 2-step stepper mobile */
+@media (max-width: 600px) {
+  .ext-stepper {
+    padding: 0.5rem 0.65rem;
+    gap: 0.4rem;
+  }
+
+  .ext-step {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .ext-step span:not(.ext-step-num) {
+    font-size: 0.78rem;
+  }
+
+  .ext-invite-toggle {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .ext-invite-toggle span {
+    font-size: 0.85rem;
+  }
+}
+
+
+/* External actions row — mobile stack */
+@media (max-width: 480px) {
+  .ext-actions-row {
+    flex-direction: column-reverse;
+    align-items: stretch !important;
+  }
+
+  .ext-actions-row > * {
+    width: 100%;
+  }
+
+  .ext-actions-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ext-actions-row button {
+    width: 100%;
+    justify-content: center;
+  }
+}

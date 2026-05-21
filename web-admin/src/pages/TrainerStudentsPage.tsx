@@ -829,11 +829,13 @@ export function TrainerStudentsPage() {
                   )}
 
                   <div
+                    className="ext-actions-row"
                     style={{
                       marginTop: '1.25rem',
                       display: 'flex',
                       justifyContent: 'space-between',
                       gap: '0.5rem',
+                      flexWrap: 'wrap',
                     }}
                   >
                     {extStep === 2 ? (
