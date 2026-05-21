@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiJson } from '../lib/api';
 
 type CalendarItem = {
@@ -190,6 +191,7 @@ export function MemberCalendarPage() {
       {/* Header */}
       <div className="mcal-header">
         <div>
+          <Link to="/dashboard" className="mcal-back-btn">← Panele Dön</Link>
           <h1 className="mcal-title">📅 Ajandam</h1>
           <p className="mcal-subtitle">Dersleriniz, etkinlikleriniz ve kişisel planlarınız</p>
         </div>

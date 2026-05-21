@@ -9912,3 +9912,20 @@ a.trainer-stat-card:hover {
     gap: 4px;
   }
 }
+
+
+/* Panele dön butonu */
+.mcal-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.mcal-back-btn:hover {
+  text-decoration: underline;
+}
