@@ -781,15 +781,15 @@ function ClubCard({ club }: { club: Club }) {
           <div className="vitrin-card-name-row">
             <h3>{club.name}</h3>
             {club.avgRating && Number(club.avgRating) > 0 && (
-              <span className="vitrin-card-rating-inline">★ {Number(club.avgRating).toFixed(1)}</span>
+              <span className="vitrin-card-rating-inline">
+                ★ {Number(club.avgRating).toFixed(1)}
+                {club.reviewCount ? ` (${club.reviewCount})` : ''}
+              </span>
             )}
           </div>
           <PartnerBadges badges={club.badges ?? []} max={3} />
           {club.location && <p className="vitrin-card-location">📍 {club.location}</p>}
           <div className="vitrin-card-meta">
-            {club.reviewCount ? (
-              <span className="vitrin-card-reviews">({club.reviewCount} değerlendirme)</span>
-            ) : null}
           </div>
           {club.services.length > 0 && (
             <div className="vitrin-card-tags">
