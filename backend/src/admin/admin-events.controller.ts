@@ -84,4 +84,23 @@ export class AdminEventsController {
   ) {
     return this.adminEvents.checkInParticipant(admin.tenantId, id, registrationId);
   }
+
+  /** Kulüp admin: eğitmenin oluşturduğu etkinliği onayla */
+  @Post(':id/approve')
+  approveEvent(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.adminEvents.approveEvent(admin.tenantId, id);
+  }
+
+  /** Kulüp admin: eğitmenin oluşturduğu etkinliği reddet */
+  @Post(':id/reject')
+  rejectEvent(
+    @CurrentUser() admin: User,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminEvents.rejectEvent(admin.tenantId, id, body.reason);
+  }
 }

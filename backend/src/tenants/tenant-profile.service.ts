@@ -54,10 +54,10 @@ export class TenantProfileService {
       order: { sortOrder: 'ASC' },
     });
 
-    // Yaklaşan etkinlikler
+    // Yaklaşan etkinlikler (sadece onaylı + yayında olanlar)
     const now = new Date();
     const events = await this.eventsRepo.find({
-      where: { tenantId: tenant.id, startsAt: MoreThanOrEqual(now) },
+      where: { tenantId: tenant.id, startsAt: MoreThanOrEqual(now), published: true, status: 'approved' },
       order: { startsAt: 'ASC' },
       take: 10,
     });

@@ -63,8 +63,8 @@ export class AdminEventsService {
       requirements: dto.requirements?.trim() || null,
       schedule: dto.schedule ?? null,
       price: dto.price != null ? String(dto.price) : '0',
-      published: false,
-      status: 'pending_approval',
+      published: true,
+      status: 'approved',
       createdByUserId: createdByUserId || null,
     });
     const saved = await this.eventsRepo.save(row);
@@ -290,5 +290,55 @@ export class AdminEventsService {
     await this.registrationsRepo.save(registration);
 
     return { ok: true, checkedIn: true, checkedInAt: registration.checkedInAt };
+  }
+
+  /** Kulüp admin: eğitmenin oluşturduğu etkinliği onayla */
+  async approveEvent(tenantId: string, eventId: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId, tenantId } });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+    if (event.status !== 'pending_approval') {
+      throw new BadRequestException('Bu etkinlik onay bekliyor durumunda değil');
+    }
+
+    event.status = 'approved';
+    event.published = true;
+    await this.eventsRepo.save(event);
+
+    // Etkinliği oluşturana bildirim
+    if (event.createdByUserId) {
+      void this.pushService.sendToUser(
+        event.createdByUserId,
+        '✅ Etkinlik Onaylandı',
+        `"${event.title}" etkinliğiniz kulüp yönetimi tarafından onaylandı ve yayına alındı!`,
+        { type: 'event_approved', eventId },
+      );
+    }
+
+    return { ok: true, eventId, status: 'approved' };
+  }
+
+  /** Kulüp admin: eğitmenin oluşturduğu etkinliği reddet */
+  async rejectEvent(tenantId: string, eventId: string, reason?: string) {
+    const event = await this.eventsRepo.findOne({ where: { id: eventId, tenantId } });
+    if (!event) throw new NotFoundException('Etkinlik bulunamadı');
+    if (event.status !== 'pending_approval') {
+      throw new BadRequestException('Bu etkinlik onay bekliyor durumunda değil');
+    }
+
+    event.status = 'rejected';
+    event.published = false;
+    await this.eventsRepo.save(event);
+
+    // Etkinliği oluşturana bildirim
+    if (event.createdByUserId) {
+      void this.pushService.sendToUser(
+        event.createdByUserId,
+        '❌ Etkinlik Reddedildi',
+        `"${event.title}" etkinliğiniz reddedildi.${reason ? ` Sebep: ${reason}` : ''}`,
+        { type: 'event_rejected', eventId },
+      );
+    }
+
+    return { ok: true, eventId, status: 'rejected' };
   }
 }

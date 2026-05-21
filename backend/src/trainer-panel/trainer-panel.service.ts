@@ -2388,7 +2388,24 @@ export class TrainerPanelService {
       recurringRule: data.recurringRule || null,
     });
 
-    return this.eventsRepo.save(event);
+    const saved = await this.eventsRepo.save(event);
+
+    // Kulüp admin'e bildirim: "Eğitmeniniz etkinlik oluşturdu, onayınızı bekliyor"
+    const admins = await this.usersRepo.find({
+      where: { tenantId: user.tenantId, role: 'administrator' as never },
+      select: ['id'],
+    });
+    const trainerName = `${user.firstName} ${user.lastName}`.trim();
+    for (const admin of admins) {
+      void this.pushService.sendToUser(
+        admin.id,
+        '📅 Yeni Etkinlik Talebi',
+        `${trainerName} "${data.title}" adlı bir etkinlik oluşturdu. Onayınızı bekliyor.`,
+        { type: 'event_pending_approval', eventId: saved.id },
+      );
+    }
+
+    return saved;
   }
 
   // ─── Öğrenci Detay: Ölçümler ────────────────────────────────────────────────

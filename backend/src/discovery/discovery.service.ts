@@ -178,7 +178,7 @@ export class DiscoveryService {
   async listUpcomingEvents(limit = 10) {
     const now = new Date();
     const events = await this.eventsRepo.find({
-      where: { startsAt: MoreThanOrEqual(now) },
+      where: { startsAt: MoreThanOrEqual(now), published: true, status: 'approved' },
       relations: ['tenant'],
       order: { startsAt: 'ASC' },
       take: Math.min(limit, 30),
