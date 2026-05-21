@@ -341,9 +341,9 @@ export function ClubProfilePage() {
         <Link
           to="/"
           className="public-nav-brand"
-          style={{ color: '#38bdf8', fontWeight: 800, fontSize: '1.1rem', textDecoration: 'none' }}
         >
-          WellnessClub
+          <img src="/wellnesslogodaire.png?v=2" alt="Wellness Club" className="nav-logo" />
+          <img src="/wellnesslogoyazi.png?v=2" alt="Wellness Club" className="nav-logo-text" />
         </Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>
