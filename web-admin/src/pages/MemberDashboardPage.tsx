@@ -620,9 +620,9 @@ export function MemberDashboardPage() {
               <Link to="/discover" className="overview-action-btn">
                 🔍 Kulüp Keşfet
               </Link>
-              <button className="overview-action-btn" onClick={() => setActiveTab('appointments')}>
+              <Link to="/dashboard/calendar" className="overview-action-btn">
                 📅 Randevularım
-              </button>
+              </Link>
               <Link to="/dashboard/progress" className="overview-action-btn">
                 📊 İlerlemem
               </Link>
