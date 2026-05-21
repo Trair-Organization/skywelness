@@ -6049,7 +6049,7 @@
 }
 
 
-/* ─── Eğitmen fotoğrafları: yüz üstte, ayaklar kırpılır ─────────────────── */
+/* ─── Eğitmen fotoğrafları: yüz üst bölgede, dengeli kırpma ─────────────── */
 .vitrin-trainer-photo > img:not(.vitrin-cover-blur) {
-  object-position: top center;
+  object-position: center 20%;
 }
