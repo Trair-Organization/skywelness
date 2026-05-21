@@ -6047,3 +6047,9 @@
 .vitrin-trainer-card .vitrin-trainer-body .vitrin-card-cta {
   margin-top: auto;
 }
+
+
+/* ─── Eğitmen fotoğrafları: yüz üstte, ayaklar kırpılır ─────────────────── */
+.vitrin-trainer-photo > img:not(.vitrin-cover-blur) {
+  object-position: top center;
+}
