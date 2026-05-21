@@ -5741,7 +5741,7 @@
 .vitrin-campaign-cover > img:not(.vitrin-cover-blur) {
   position: relative;
   z-index: 1;
-  object-fit: contain;
+  object-fit: cover;
   width: 100%;
   height: 100%;
 }
