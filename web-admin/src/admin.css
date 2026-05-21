@@ -7722,10 +7722,11 @@ a.trainer-stat-card:hover {
   }
   .report-document {
     box-shadow: none !important;
-    padding: 1rem 1.5rem !important;
+    padding: 0.75rem 1rem !important;
     max-width: 100% !important;
     margin: 0 !important;
     border-radius: 0 !important;
+    font-size: 11px !important;
   }
   .report-section {
     page-break-inside: avoid;
@@ -7733,8 +7734,59 @@ a.trainer-stat-card:hover {
   .report-photos {
     page-break-inside: avoid;
   }
+  /* Student card — taşmasın */
+  .report-student-card {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem !important;
+  }
+  .report-student-photo {
+    width: 56px;
+    height: 56px;
+  }
+  .report-student-info h2 {
+    font-size: 1.1rem;
+  }
+  .report-student-info p {
+    font-size: 0.75rem;
+  }
+  .report-student-stats {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .report-stat {
+    min-width: 55px;
+    padding: 0.35rem 0.6rem;
+  }
+  .report-stat strong {
+    font-size: 1rem;
+  }
+  /* Genel küçültmeler */
+  .report-header h1 {
+    font-size: 1.3rem;
+  }
+  .report-section-title {
+    font-size: 0.95rem;
+  }
+  .report-goal-card,
+  .report-assessment-card {
+    padding: 0.6rem !important;
+  }
+  /* Posture grid print */
+  .report-posture-grid {
+    grid-template-columns: 1fr 1fr !important;
+    font-size: 0.72rem;
+  }
+  /* Measurements table */
+  .report-table th,
+  .report-table td {
+    padding: 4px 6px !important;
+    font-size: 0.72rem !important;
+  }
   @page {
-    margin: 1.5cm;
+    margin: 1cm;
     size: A4;
   }
 }
