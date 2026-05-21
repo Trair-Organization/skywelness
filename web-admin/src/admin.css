@@ -8515,6 +8515,17 @@ a.trainer-stat-card:hover {
   transition: all 0.15s;
 }
 
+.trainer-event-actions .btn-sm.btn-outline {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.trainer-event-actions .btn-sm.btn-outline:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
 .btn-danger {
   background: #fee2e2;
   color: #991b1b;
