@@ -21,7 +21,7 @@ type EventDetail = {
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
@@ -63,7 +63,16 @@ export function EventDetailPage() {
         </Link>
         <div className="public-nav-links">
           <Link to="/discover">Keşfet</Link>
-          <Link to="/login" className="public-nav-login">Giriş Yap</Link>
+          {!token ? (
+            <Link to="/login" className="public-nav-login">Giriş Yap</Link>
+          ) : (
+            <Link
+              to={user?.role === 'member' ? '/dashboard' : user?.role === 'trainer' ? '/trainer/dashboard' : '/club/dashboard'}
+              className="public-nav-login"
+            >
+              {user?.role === 'member' ? '👤 Panelim' : '🏢 Panele Geç'}
+            </Link>
+          )}
         </div>
       </nav>
 
